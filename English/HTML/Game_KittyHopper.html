@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<!-- ▼ Head ▼ ---------------------------------------------------------------------------->
+
+<head>
+
+    <link rel="shortcut icon" type="image/x-icon" href="../../Image/favicon.ico">
+
+    <!-- Setting -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+
+</head>
+<!---------------------------------------------------------------------------------------->
+
+<!-- ▼ Body ▼ ---------------------------------------------------------------------------->
+
+<body>
+
+    <div id="WebGL-Output"></div>
+
+    <!-- ▼ CSS ▼ ------------------------------------------------------------------------->
+    <style>
+        body {
+            margin: 0px;
+            position: relative;
+        }
+
+        #ui-gameover {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: "#ffffff00";
+        }
+
+        #ui-restart {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: "#ffffff00";
+        }
+    </style>
+    <!------------------------------------------------------------------------------------>
+
+    <!-- ▼ Script Load ▼ ----------------------------------------------------------------->
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <!------------------------------------------------------------------------------------>
+
+    <!-- Script Content ------------------------------------------------------------------>
+    <script type="module">
+        // Import
+        import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+        import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
+        import { FBXLoader } from 'https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js';
+
+        //// Variable
+        // System
+        let Camera_Object, Camera_UI, Scene_Object, Scene_UI, Renderer;
+        let Loader, Camera_Controller;
+        let DeltaTime = 1 / 60;
+        let Gravity = .98 * 10;
+        let Game_Play = true;
+        let Can_Retry = false;
+        let Score = 0;
+        let Score_Acceleration = 1 * DeltaTime;
+        // Cat
+        const Cat_Jump_Speed = 2.5;
+        const Cat_Jump_SpeedAcceleration = 1.2;
+        const Cat_Size = 1.0;
+        let Cat = null;
+        let Cat_Speed_Past = 1.2;
+        let Cat_Speed = Cat_Speed_Past;
+        let Cat_SpeedAcceleration = 0;//Cat_Speed * 0.001 * DeltaTime;
+        let Cat_JumpFlag = false;
+        let Cat_JumpTime = 0;
+        let Cat_JumpNumber = 0;
+        // Bar
+        const Bars_Number = 20;
+        const Bars_FirstNumber = 3;
+        const Bars_FirstDistance = 5;
+        const Bars_FirstRange = 3.0;
+        const Bars_ShortestRange = .6;
+        const Bars_FarthestRange = Bars_ShortestRange + Bars_FirstRange;
+        let Bars = [];
+        let Bars_FarthestDistance = Bars_FirstNumber * Bars_FirstDistance;// + (Bars_Number - Bars_FirstNumber) * Bars_FirstRange;
+        let Bars_Point = 10;
+        let Bars_Flag_Point = false;
+        // Bar Danger
+        // UI
+        let UI_Score;
+        let UI_GameOver;
+        let UI_Restart;
+        let UI_Home;
+
+        // Function
+        Initialize();
+        Draw();
+        // Accion
+        document.getElementById("WebGL-Output").addEventListener('touchstart', function () { MainAccion(); });
+        document.getElementById("WebGL-Output").addEventListener('mousedown', function () { MainAccion(); });
+
+        // Update-------------------------------------------------------------------------
+        function Update() {
+            if (Game_Play) {
+                // Base for Camera_Controller
+                // if (Cat) Cat.rotation.y += 0.01;
+                // Camera_Controller.update();
+
+                // Cat
+                if (Cat) {
+                    // Default Move
+                    Cat.position.z += Cat_Speed * DeltaTime;
+                    Camera_Object.position.z += Cat_Speed * DeltaTime;
+                    Camera_Object.lookAt(0, 0, Cat.position.z + 1);
+
+                    if (Cat_JumpFlag) {
+                        // Move
+                        Cat.position.y = Cat_Jump_Speed * Cat_JumpTime - 0.5 * Gravity * Cat_JumpTime * Cat_JumpTime;
+                        Cat_JumpTime += DeltaTime;
+
+                        // Landing
+                        if (Cat.position.y < 0) {
+                            Cat.position.y = 0;
+                            Cat_JumpFlag = false;
+
+                            Cat_Speed = Cat_Speed_Past;
+
+                            if (Bars_Flag_Point) {
+                                Add_Score(Bars_Point);
+                                Bars_Flag_Point = false;
+                            }
+                        }
+                    }
+
+                    // Hit
+                    if (Bars) {
+                        for (let i = 0; i < Bars.length; i++) {
+                            if (Cat.position.z > Bars[i].position.z - .2 && Cat.position.z < Bars[i].position.z + .23) {
+                                if (!Cat_JumpFlag) GameOver();
+                                else Bars_Flag_Point = true;
+                            }
+                        }
+                    }
+
+                    // Bars
+                    if (Bars) {
+                        for (let i = 0; i < Bars.length; i++) {
+                            // Debug for Hit
+                            // console.log(Bars[i].position.z);
+                            // console.log(Cat.position.z)
+
+                            if (Bars[i].position.z < Cat.position.z - 10) {
+                                Update_BarPosition(i);
+                            }
+                        }
+                    }
+                }
+
+                // Acceleration
+                Cat_Speed += Cat_SpeedAcceleration;
+                Add_Score(Score_Acceleration);
+            }
+        }
+        //--------------------------------------------------------------------------------
+
+        // Initialize---------------------------------------------------------------------
+        function Initialize() {
+
+            // Scene Object
+            Scene_Object = new THREE.Scene();
+            // Scene_Object.add(new THREE.AxesHelper(10000));
+            Scene_Object.fog = new THREE.Fog(0xFCA3B7, 0, 10);
+
+            // Camera Object
+            Camera_Object = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 1000);
+            Camera_Object.position.set(-2, 0.5, -1);
+            // Camera Controller
+            // Camera_Controller = new OrbitControls(Camera_Object, document.body);
+            // Camera_Controller.enableDamping = true;
+            // Camera_Controller.dampingFactor = 0.2;
+
+            // Light
+            // const dirLight = new THREE.SpotLight(0xffffff, 1.5);//color,強度
+            // dirLight.position.set(-200, 300, 300);
+            // dirLight.castShadow = true;
+            // Scene_Object.add(dirLight);
+
+            // Renderer
+            Renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            Renderer.setClearColor(new THREE.Color(0xFCA3B7));
+            Renderer.setSize(window.innerWidth, window.innerHeight);
+            //test Renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            Renderer.shadowMap.enabled = true;
+
+            // FBX Model
+            Loader = new FBXLoader();
+            Loader.load(
+                '../../Model/Cat_1.fbx',
+                function (object) {
+                    Cat = object;
+
+                    object.scale.set(0.01, 0.01, 0.01);
+                    object.position.set(0, 0, 0);
+                    
+
+                    // Animation
+                    const mixer = new THREE.AnimationMixer(object);
+                    const animation = object.animations[0];
+                    const action = mixer.clipAction(animation);
+                    action.play();
+
+
+                    //オブジェクトとすべての子孫に対してコールバックを実行
+                    object.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    Scene_Object.add(object);
+
+
+                    // Animation
+                    function animate() {
+                        requestAnimationFrame(animate);
+                        mixer.update(0.02); // 0.01は時間の経過を表します
+                        Render();
+                    }
+                    animate();
+                },
+                // (xhr) => { console.log((xhr.loaded / xhr.total) * 100 + '% loaded') },
+                // (error) => { console.log(error) }
+            );
+            // const geometry_test = new THREE.BoxGeometry(1, 1, 1);
+            // const material_test = new THREE.MeshBasicMaterial({ color: 0xCFD8DC });
+            // const cube_test = new THREE.Mesh(geometry_test, material_test);
+            // cube_test.scale.set(0.2, 0.2, .4);
+            // Cat = cube_test;
+            // Scene_Object.add(cube_test);
+
+            // Bar for Check Distance
+            for (let i = 0; i < 100; i++) {
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const material = new THREE.MeshBasicMaterial({ color: 0xCFD8DC });
+                const cube = new THREE.Mesh(geometry, material);
+                cube.scale.set(0.2, 1, 0.5);
+                cube.position.set(0.5, cube.scale.y * 0.5, i * 5);
+                Scene_Object.add(cube);
+            }
+
+            // Bar for Jump
+            for (let i = 0; i < Bars_FirstNumber; i++) {
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const material = new THREE.MeshBasicMaterial({ color: 0xCF0000 });
+                const cube = new THREE.Mesh(geometry, material);
+                cube.scale.set(1, 0.1, 0.02);
+                cube.position.set(0, cube.scale.y * 0.5, (i + 1) * Bars_FirstDistance);
+                Scene_Object.add(cube);
+                Bars.push(cube);
+            }
+            for (let i = Bars_FirstNumber; i < Bars_Number; i++) {
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const material = new THREE.MeshBasicMaterial({ color: 0xCF0000 });
+                const cube = new THREE.Mesh(geometry, material);
+                cube.scale.set(1, 0.1, 0.02);
+
+                cube.position.set(0, cube.scale.y * 0.5, 0);
+
+                Bars.push(cube);
+                Update_BarPosition(i);
+
+                Scene_Object.add(cube);
+            }
+
+            //// UI
+            // Score
+            UI_Score = document.createElement('div');
+            UI_Score.style.position = 'absolute';
+            //UI_Score.style.zIndex = 1;
+            UI_Score.style.width = 100;
+            UI_Score.style.height = 100;
+            UI_Score.style.backgroundColor = "#ffffff00";
+            UI_Score.innerHTML = "<b>" + "Score : " + Math.floor(Score) + "</b>";
+            UI_Score.style.top = 20 + 'px';
+            UI_Score.style.left = 20 + 'px';
+            document.body.appendChild(UI_Score);
+            // GameOver
+            UI_GameOver = document.createElement('div');
+            UI_GameOver.setAttribute("id", "ui-gameover");
+            UI_GameOver.innerHTML = "";
+            document.body.appendChild(UI_GameOver);
+            // Restart
+            UI_Restart = document.createElement('div');
+            UI_Restart.setAttribute("id", "ui-restart");
+            UI_Restart.innerHTML = "";
+            document.body.appendChild(UI_Restart);
+            // Home
+            UI_Home = document.createElement('div');
+            UI_Home.setAttribute("id", "ui-home");
+            UI_Home.style.position = 'absolute';
+            UI_Home.style.width = 100;
+            UI_Home.style.height = 100;
+            UI_Home.style.backgroundColor = "#ffffff00";
+            UI_Home.innerHTML = "<b>" + "Home" + "</b>";
+            UI_Home.style.top = 20 + 'px';
+            UI_Home.style.left = (window.innerWidth - 70) + 'px';
+            document.body.appendChild(UI_Home);
+
+            // BGM
+            var bgm = new Audio();
+            bgm.src = '../../Audio/lofi_2.wav';
+            bgm.loop = true;
+            bgm.volume = 0.5;
+            bgm.play();
+        }
+        //--------------------------------------------------------------------------------
+
+        // Render-------------------------------------------------------------------------
+        function Render() {
+            Renderer.render(Scene_Object, Camera_Object);
+        }
+        //--------------------------------------------------------------------------------
+
+        // Resize-------------------------------------------------------------------------
+        window.addEventListener('resize', Resize);
+        function Resize() {
+            Camera_Object.aspect = window.innerWidth / window.innerHeight;
+            Camera_Object.updateProjectionMatrix();
+            Renderer.setSize(window.innerWidth, window.innerHeight);
+            Render();
+        }
+        //--------------------------------------------------------------------------------
+
+        // Draw---------------------------------------------------------------------------
+        function Draw() {
+            requestAnimationFrame(Draw);    // 60FPS
+            Update();
+            Render();
+        }
+        //--------------------------------------------------------------------------------
+
+        // Setting------------------------------------------------------------------------
+        Renderer.outputEncoding = THREE.sRGBEncoding;
+        document.getElementById("WebGL-Output").appendChild(Renderer.domElement);
+        function MainAccion() {
+            if (Game_Play) {
+                Cat_Set_Jump();
+            }
+            else {
+                if (Can_Retry) Restart();
+            }
+        }
+        //--------------------------------------------------------------------------------
+
+        // Restart------------------------------------------------------------------------
+        function Restart() {
+            // System
+            Game_Play = true;
+            Can_Retry = false;
+            Score = 0;
+            // Camera
+            if (Camera_Object) {
+                Camera_Object.position.set(-2, 0.5, -1);
+                Camera_Object.lookAt(0, 0, Cat.position.z + 1);
+            }
+            // Cat
+            Cat_Speed_Past = 1.2;
+            Cat_Speed = Cat_Speed_Past;
+            Cat_JumpFlag = false;
+            Cat_JumpTime = 0;
+            Cat_JumpNumber = 0;
+            if (Cat) {
+                Cat.position.set(0, 0, 0);
+            }
+            // Bar for Jump
+            Bars_FarthestDistance = Bars_FirstNumber * Bars_FirstDistance;
+            if (Bars) {
+                for (let i = 0; i < Bars_FirstNumber; i++) {
+                    Bars[i].position.set(0, Bars[i].scale.y * 0.5, (i + 1) * Bars_FirstDistance);
+                }
+                for (let i = Bars_FirstNumber; i < Bars_Number; i++) {
+                    Bars[i].position.set(0, Bars[i].scale.y * 0.5, 0);
+                    Update_BarPosition(i);
+                }
+            }
+            // UI
+            UI_GameOver.innerHTML = "";
+            UI_Restart.innerHTML = "";
+        }
+        //--------------------------------------------------------------------------------
+
+        // Add Score----------------------------------------------------------------------
+        function Add_Score(_point) {
+            Score += _point;
+            UI_Score.innerHTML = "<b>" + "Score : " + Math.floor(Score) + "</b>";
+        }
+        //--------------------------------------------------------------------------------
+
+        // GameOver-----------------------------------------------------------------------
+        function GameOver() {
+            Game_Play = false;
+            UI_GameOver.innerHTML = "<b><font color='red'>GameOver</font></b>";
+            UI_Restart.innerHTML = "<b><font color='red'>Restart</font></b>";
+
+            setTimeout(function () {
+                Can_Retry = true;
+            }, 1000);
+        }
+        //--------------------------------------------------------------------------------
+
+        // Cat----------------------------------------------------------------------------
+        function Cat_Set_Jump() {
+            if (Cat && Cat.position.z > 0.5) {
+                if (!Cat_JumpFlag) {
+                    Cat_JumpFlag = true;
+                    Cat_JumpTime = 0;
+
+                    Cat_Speed_Past = Cat_Speed;
+                    Cat_Speed *= Cat_Jump_SpeedAcceleration;
+
+                    Cat_JumpNumber++;
+                }
+            }
+        }
+        //--------------------------------------------------------------------------------
+
+        // Check New Bar------------------------------------------------------------------
+        // function Check_NewBar(_position_z, _near, _far) {
+        //     if (Bars) {
+        //         for (let i = 0; i < Bars.length; i++) {
+        //             while (Math.abs(_position_z - Bars[i].position.z) < Bars_ShortestRange) {
+        //                 _position_z = Math.random() * (_far - _near) + _near;
+        //                 Check_NewBar(_position_z, _near, _far);
+        //             }
+        //         }
+        //     }
+
+        //     return _position_z;
+        // }
+        //--------------------------------------------------------------------------------
+
+        // Make Bar-----------------------------------------------------------------------
+        function Update_BarPosition(_index) {
+            if (Bars) {
+                const near = Bars_FarthestDistance + Bars_ShortestRange;
+                const far = Bars_FarthestDistance + Bars_FarthestRange;
+                Bars[_index].position.z = (Math.random() * (far - near) + near);
+                Bars_FarthestDistance = Bars[_index].position.z;
+            }
+        }
+        //--------------------------------------------------------------------------------
+
+        // jQuery-------------------------------------------------------------------------
+        $("#ui-home").click(function () {
+            window.location.href = '../../English/HTML/index.html';
+        });
+        //--------------------------------------------------------------------------------
+
+    </script>
+    <!------------------------------------------------------------------------------------>
+
+</body>
+<!---------------------------------------------------------------------------------------->
+
+</html>

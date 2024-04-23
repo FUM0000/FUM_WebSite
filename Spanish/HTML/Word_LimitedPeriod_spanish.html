@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+
+<!-- ▼ Head ▼ ---------------------------------------------------------------------------->
+
+<head>
+
+    <link rel="shortcut icon" type="image/x-icon" href="../../Image/favicon.ico">
+
+    <!-- Setting -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+
+    <!-- Vue -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+
+    <!-- CSS -->
+    <link href="../../Common/CSS/common.css" rel="stylesheet" />
+    <link href="../../Common/CSS/common_word_japanese.css" rel="stylesheet" />
+
+</head>
+
+<!---------------------------------------------------------------------------------------->
+
+<!-- ▼ Body ▼ ---------------------------------------------------------------------------->
+
+<body>
+
+    <!-- ▼ App ▼ ------------------------------------------------------------------------->
+    <v-app id="app">
+        <template>
+
+            <!-- ▼ Header ▼ ------------------------------------------------------------------>
+            <main-system-bar-spanish :drawer="drawer" @change-drawer="Change_Drawer">Palabra - Plazo Limitado ( {{ Date }} )
+            </main-system-bar-spanish>
+            <!-------------------------------------------------------------------------------->
+
+            <!-- ▼ Navigation ▼ -------------------------------------------------------------->
+            <main-navigation-spanish :drawer="drawer" @change-drawer="Change_Drawer"></main-navigation-spanish>
+            <!-------------------------------------------------------------------------------->
+
+            <!-- ▼ Main ▼ -------------------------------------------------------------------->
+            <v-main id="main" class="blue-grey lighten-4">
+                <v-container fluid fill-height>
+                    <v-row no-gutters><v-col cols="2" md="1" lg="1"></v-col><v-spacer></v-spacer><v-col cols="5" md="2" lg="2"><v-switch v-model="Switch" :label="`Cambiar Todo`" inset hide-details="false"/></v-col></v-row>
+                    <v-row justify="center" class="ma-0">
+                        <v-col cols="12" md="3" lg="3" v-model="List" v-for="list in List" :key="list.id">
+                            <card-double :all_show="Switch">
+                                <template v-slot:first>{{ list.japanese }}<br>
+                                    <font size="5">{{ list.reading }}</font>
+                                </template>
+                                <template v-slot:second>{{ list.spanish }}</template>
+                            </card-double>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-main>
+            <!-------------------------------------------------------------------------------->
+
+            <!-- ▼ Footer ▼ ------------------------------------------------------------------>
+            <main-footer>Universe</main-footer>
+            <!-------------------------------------------------------------------------------->
+
+        </template>
+    </v-app>
+    <!------------------------------------------------------------------------------------>
+
+    <!-- ▼ Script Load ▼ ----------------------------------------------------------------->
+    <!-- Main -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <!-- Compornent -->
+    <script src="../../Common/Javascript/common.js"></script>
+    <script src="../../Common/Javascript/main-footer.js"></script>
+    <script src="../Javascript/main-system-bar-spanish.js"></script>
+    <script src="../Javascript/main-navigation-spanish.js"></script>
+    <script src="../Javascript/card-double-spanish.js"></script>
+    <!------------------------------------------------------------------------------------>
+
+    <!-- Script Content ------------------------------------------------------------------>
+    <script>
+
+        // Variable ----------------------------------------------------------------------
+        let vue = new Vue({
+            el: '#app',
+            vuetify: new Vuetify(),
+            data: {
+                // Determined
+                drawer: false,
+                // Myself
+                Switch: false,
+                Date: "",
+                List: [],
+            },
+            methods: {
+                Change_Drawer(_value) {
+                    this.drawer = _value;
+                },
+            },
+            created: function () {
+                let japanese = [
+                    "宇宙",
+                    "星(恒星)",
+                    "惑星",
+                    "地球",
+                    "太陽",
+                    "銀河系",
+                    "望遠鏡",
+                    "暗い",
+                    "綺麗",
+                    "寒い",
+                    "熱い",
+                    "遠い",
+                    "近い",
+                    "飛ぶ",
+                    "離陸する",
+                    "着陸する",
+                    "観測する",
+                ];
+                let reading = [
+                    "uchuu",
+                    "hoshi(kousei)",
+                    "wakusei",
+                    "chikyuu",
+                    "taiyou",
+                    "gingakei",
+                    "bouenkyou",
+                    "kurai",
+                    "kirei",
+                    "samui",
+                    "atsui",
+                    "tooi",
+                    "chikai",
+                    "tobu",
+                    "ririkusuru",
+                    "chakurikusuru",
+                    "kansokusuru",
+                ];
+                let spanish = [
+                    "Universe",
+                    "Star",
+                    "Planet",
+                    "Earth",
+                    "Sun",
+                    "Galaxy",
+                    "Telescope",
+                    "Dark",
+                    "Beautiful",
+                    "Cold",
+                    "Hot",
+                    "Far",
+                    "Close",
+                    "Flying",
+                    "Take off",
+                    "Make a landing",
+                    "Observe",
+                ];
+                for (let i = 0; i < japanese.length; i++) {
+                    let row = {};
+                    row.id = i;
+                    row.japanese = japanese[i];
+                    row.reading = reading[i];
+                    row.spanish = spanish[i];
+                    this.List.push(row);
+                }
+            },
+        })
+        // -------------------------------------------------------------------------------
+
+        // Javascript --------------------------------------------------------------------
+        $(function () {
+            Get_CountDown();
+        });
+        window.onload = function () {
+            setInterval(Get_CountDown, 1000);
+        }
+        function Get_CountDown() {
+            let current = new Date();
+            let period = new Date(2022, 9, 10, 0, 0, 0);
+            let different = period - current;
+            let day = Math.floor(different / (1000 * 60 * 60 * 24));
+            let hour = Math.floor(different / (1000 * 60 * 60)) - (24 * day);
+            let minute = Math.floor(different / (1000 * 60)) - (24 * day * 60) - (60 * hour);
+            let second = Math.floor(different / 1000) - (24 * day * 60 * 60) - (60 * hour * 60) - (60 * minute);
+
+            if (day > 1) vue.Date = day + " days : " + hour + " : " + minute + " : " + second;
+            else vue.Date = day + " day : " + hour + " : " + minute + " : " + second;
+
+            if (current.getTime() > period.getTime()) vue.Date = "0 day : 0 : 0 : 0";
+        }
+
+        // -------------------------------------------------------------------------------
+
+    </script>
+    <!------------------------------------------------------------------------------------>
+
+</body>
+
+<!---------------------------------------------------------------------------------------->
+
+</html>
