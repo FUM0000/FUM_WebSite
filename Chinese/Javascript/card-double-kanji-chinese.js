@@ -8,7 +8,7 @@ Vue.component('card-double-kanji', {
             </div>
         </v-card-title>
         <v-card-actions class="justify-center">
-            <v-btn color="primary" @click="reveal = true" text>Answer</v-btn>
+            <v-btn color="primary" @click="reveal = true" text>答案</v-btn>
         </v-card-actions>
 
         <v-expand-transition>
@@ -19,7 +19,7 @@ Vue.component('card-double-kanji', {
                     </div>
                 </v-card-title>
                 <v-card-actions class="justify-center">
-                    <v-btn color="teal accent-4" @click="reveal = false" text>Close</v-btn>
+                    <v-btn color="teal accent-4" @click="reveal = false" text>关闭</v-btn>
                 </v-card-actions>
             </v-card>
         </v-expand-transition>
