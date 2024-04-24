@@ -110,7 +110,7 @@ Vue.component('main-navigation-chinese', {
                     </v-list-item>
                     <v-list-item href="./Food_Italian_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>意大利菜</v-list-item-title>
+                        <v-list-item-title>意大利菜菜</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Food_Seafood_chinese.html">
                         <v-list-item-icon />
@@ -504,11 +504,11 @@ Vue.component('main-navigation-chinese', {
                 </v-list-item>
                 <v-list-item href="./Youtube_Cooking_Chinese_chinese.html">
                     <v-list-item-icon />
-                    <v-list-item-title>中菜</v-list-item-title>
+                    <v-list-item-title>中国菜</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Youtube_Cooking_Pasta_chinese.html">
                     <v-list-item-icon />
-                    <v-list-item-title>意大利面</v-list-item-title>
+                    <v-list-item-title>意大利菜面</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Youtube_Cooking_Ramen_chinese.html">
                     <v-list-item-icon />
