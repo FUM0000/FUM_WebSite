@@ -15,7 +15,7 @@ Vue.component('main-navigation-chinese', {
             <!-- ▼ Home ▼ ------------------------------------------------------------------------------------->
             <v-list-item href="./index_chinese.html">
                 <v-list-item-icon><v-icon>mdi-home</v-icon></v-list-item-icon>
-                <v-list-item-title>主页</v-list-item-title>
+                <v-list-item-title>首页</v-list-item-title>
             </v-list-item>
             <!-- ▲ Home ▲ ------------------------------------------------------------------------------------->
 
@@ -306,7 +306,7 @@ Vue.component('main-navigation-chinese', {
                 <!-- ▼ Outside ▼ ---------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
-                        <v-list-item-title>单词 - 外部</v-list-item-title>
+                        <v-list-item-title>单词 - 户外</v-list-item-title>
                         
                         <v-list-item-icon>
                             <v-icon>mdi-beach</v-icon>
@@ -373,7 +373,7 @@ Vue.component('main-navigation-chinese', {
 
                     <v-list-item href="./Verb_Type_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>类型</v-list-item-title>
+                        <v-list-item-title>种类</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Verb ▲ ------------------------------------------------------------------------------------->
@@ -404,7 +404,7 @@ Vue.component('main-navigation-chinese', {
             <!-- ▼ Plant ▼ ------------------------------------------------------------------------------------>
             <v-list-group :value="false" prepend-icon="mdi-sprout">
                 <template v-slot:activator>
-                    <v-list-item-title>种植植物</v-list-item-title>
+                    <v-list-item-title>种植</v-list-item-title>
                 </template>
 
                 <!-- ▼ Flower ▼ ----------------------------------------------------------------------------------->
@@ -490,27 +490,27 @@ Vue.component('main-navigation-chinese', {
                     <v-list-item-title>烹饪</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Youtube_Cooking_Simple_spanish.html">
+                <v-list-item href="./Youtube_Cooking_Simple_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>简单</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Normal_spanish.html">
+                <v-list-item href="./Youtube_Cooking_Normal_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>普通</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Intricate_spanish.html">
+                <v-list-item href="./Youtube_Cooking_Intricate_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>复杂</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Chinese_spanish.html">
+                <v-list-item href="./Youtube_Cooking_Chinese_chinese.html">
                     <v-list-item-icon />
-                    <v-list-item-title>中式</v-list-item-title>
+                    <v-list-item-title>中菜</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Pasta_spanish.html">
+                <v-list-item href="./Youtube_Cooking_Pasta_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>意大利面</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Ramen_spanish.html">
+                <v-list-item href="./Youtube_Cooking_Ramen_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>拉面</v-list-item-title>
                 </v-list-item>
@@ -524,15 +524,15 @@ Vue.component('main-navigation-chinese', {
                     <v-list-item-title>音乐</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Youtube_Music_UtadaHikaru_spanish.html">
+                <v-list-item href="./Youtube_Music_UtadaHikaru_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>Utada Hikaru</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Music_Showgo_spanish.html">
+                <v-list-item href="./Youtube_Music_Showgo_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>Show-Go</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Music_Ua_spanish.html">
+                <v-list-item href="./Youtube_Music_Ua_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>UA</v-list-item-title>
                 </v-list-item>
