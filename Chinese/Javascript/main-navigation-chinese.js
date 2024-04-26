@@ -110,7 +110,7 @@ Vue.component('main-navigation-chinese', {
                     </v-list-item>
                     <v-list-item href="./Food_Italian_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>意大利菜菜</v-list-item-title>
+                        <v-list-item-title>意大利菜</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Food_Seafood_chinese.html">
                         <v-list-item-icon />
