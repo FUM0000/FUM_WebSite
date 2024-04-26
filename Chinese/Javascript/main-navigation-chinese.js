@@ -395,6 +395,18 @@ Vue.component('main-navigation-chinese', {
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Kanji ▲ ------------------------------------------------------------------------------------>
+                
+
+                <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
+                <v-list-item href="./Recommend_Learning_chinese.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>推荐</v-list-item-title>
+
+                    <v-list-item-icon>
+                        <v-icon>mdi-hand-heart-outline</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+                <!-- ▲ Recommend ▲ -------------------------------------------------------------------------------->
 
 
             </v-list-group>
@@ -479,6 +491,10 @@ Vue.component('main-navigation-chinese', {
                 <v-list-item href="./Game_KittyHopper_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>Kitty Hopper</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-cat</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->

@@ -395,6 +395,18 @@ Vue.component('main-navigation', {
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Kanji ▲ ------------------------------------------------------------------------------------>
+                
+
+                <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
+                <v-list-item href="./Recommend_Learning.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Recommend</v-list-item-title>
+
+                    <v-list-item-icon>
+                        <v-icon>mdi-hand-heart-outline</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+                <!-- ▲ Recommend ▲ -------------------------------------------------------------------------------->
 
 
             </v-list-group>
@@ -404,7 +416,7 @@ Vue.component('main-navigation', {
             <!-- ▼ Plant ▼ ------------------------------------------------------------------------------------>
             <v-list-group :value="false" prepend-icon="mdi-sprout">
                 <template v-slot:activator>
-                    <v-list-item-title>Growing Plants</v-list-item-title>
+                    <v-list-item-title>Plants</v-list-item-title>
                 </template>
 
 
@@ -484,6 +496,10 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Game_KittyHopper.html">
                     <v-list-item-icon />
                     <v-list-item-title>Kitty Hopper</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-cat</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->

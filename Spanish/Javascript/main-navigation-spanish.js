@@ -395,6 +395,18 @@ Vue.component('main-navigation-spanish', {
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Kanji ▲ ------------------------------------------------------------------------------------>
+                
+
+                <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
+                <v-list-item href="./Recommend_Learning_spanish.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Recomendar</v-list-item-title>
+
+                    <v-list-item-icon>
+                        <v-icon>mdi-hand-heart-outline</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+                <!-- ▲ Recommend ▲ -------------------------------------------------------------------------------->
 
 
             </v-list-group>
@@ -484,6 +496,10 @@ Vue.component('main-navigation-spanish', {
                 <v-list-item href="./Game_KittyHopper_spanish.html">
                     <v-list-item-icon />
                     <v-list-item-title>Kitty Hopper</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-cat</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->
