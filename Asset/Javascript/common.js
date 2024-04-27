@@ -17,7 +17,7 @@ $(function() {
         else {
             $(this).removeClass("mdi-volume-variant-off");
             $(this).addClass("mdi-volume-source");
-            audio.src = "../../Audio/" + Name;
+            audio.src = "../../Asset/Audio/" + Name;
             audio.play();
         }
     });

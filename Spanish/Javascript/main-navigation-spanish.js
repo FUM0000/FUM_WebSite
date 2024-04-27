@@ -400,7 +400,7 @@ Vue.component('main-navigation-spanish', {
                 <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
                 <v-list-item href="./Recommend_Learning_spanish.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Recomendar</v-list-item-title>
+                    <v-list-item-title>Sitio Recomendado</v-list-item-title>
 
                     <v-list-item-icon>
                         <v-icon>mdi-hand-heart-outline</v-icon>

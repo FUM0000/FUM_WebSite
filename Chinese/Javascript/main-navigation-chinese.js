@@ -400,7 +400,7 @@ Vue.component('main-navigation-chinese', {
                 <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
                 <v-list-item href="./Recommend_Learning_chinese.html">
                     <v-list-item-icon />
-                    <v-list-item-title>推荐</v-list-item-title>
+                    <v-list-item-title>推荐网站</v-list-item-title>
 
                     <v-list-item-icon>
                         <v-icon>mdi-hand-heart-outline</v-icon>

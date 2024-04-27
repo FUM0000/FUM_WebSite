@@ -400,7 +400,7 @@ Vue.component('main-navigation', {
                 <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
                 <v-list-item href="./Recommend_Learning.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Recommend</v-list-item-title>
+                    <v-list-item-title>Recommend Site</v-list-item-title>
 
                     <v-list-item-icon>
                         <v-icon>mdi-hand-heart-outline</v-icon>
