@@ -561,6 +561,24 @@ Vue.component('main-navigation', {
             <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
 
 
+            <!-- ▼ Japan ▼ ------------------------------------------------------------------------------------>
+            <v-list-group :value="false" prepend-icon="mdi-circle">
+                <template v-slot:activator>
+                    <v-list-item-title>Japan Life</v-list-item-title>
+                </template>
+
+                <v-list-item href="./Japan_Shop.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Shop</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Japan_Snack.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Snack</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
+            <!-- ▲ Japan ▲ ------------------------------------------------------------------------------------>
+
+
             <!-- ▼ Language ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-hand-heart-outline">
                 <template v-slot:activator>
