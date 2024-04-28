@@ -112,10 +112,6 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Italian</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Food_Seafood.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Seafood</v-list-item-title>
-                    </v-list-item>
                     <v-list-item href="./Food_Seasoning.html">
                         <v-list-item-icon />
                         <v-list-item-title>Seasoning</v-list-item-title>
@@ -123,10 +119,6 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Food_Sushi.html">
                         <v-list-item-icon />
                         <v-list-item-title>Sushi</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Food_Vegetable.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Vegetable</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Food ▲ ------------------------------------------------------------------------------------->

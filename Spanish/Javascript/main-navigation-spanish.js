@@ -112,10 +112,6 @@ Vue.component('main-navigation-spanish', {
                         <v-list-item-icon />
                         <v-list-item-title>Italiano</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Food_Seafood_spanish.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Mariscos</v-list-item-title>
-                    </v-list-item>
                     <v-list-item href="./Food_Seasoning_spanish.html">
                         <v-list-item-icon />
                         <v-list-item-title>Condimento</v-list-item-title>
@@ -123,10 +119,6 @@ Vue.component('main-navigation-spanish', {
                     <v-list-item href="./Food_Sushi_spanish.html">
                         <v-list-item-icon />
                         <v-list-item-title>Sushi</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Food_Vegetable_spanish.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Vegetal</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Food ▲ ------------------------------------------------------------------------------------->
