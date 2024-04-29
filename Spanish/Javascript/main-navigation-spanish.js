@@ -563,7 +563,7 @@ Vue.component('main-navigation-spanish', {
                     <v-list-item-icon />
                     <v-list-item-title>Tienda</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Japan_Snack.html">
+                <v-list-item href="./Japan_Snack_spanish.html">
                     <v-list-item-icon />
                     <v-list-item-title>Snack</v-list-item-title>
                 </v-list-item>
