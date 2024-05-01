@@ -31,5 +31,5 @@ function Get_PlayingBGM() {
 
 function Change_BGM_Name(_name) {
     Name = _name;
-    localStorage.setItem("BGM_Name", _name);
+    localStorage.setItem("BGM_Name", "clair_de_lune.wav");
 }
