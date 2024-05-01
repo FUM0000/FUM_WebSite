@@ -567,6 +567,10 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Snack</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Japan_Daiso.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>DAISO</v-list-item-title>
+                </v-list-item>
             </v-list-group>
             <!-- ▲ Japan ▲ ------------------------------------------------------------------------------------>
 
