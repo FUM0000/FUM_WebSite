@@ -602,7 +602,7 @@ Vue.component('main-navigation', {
 
 
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
-            <v-list-item>
+            <v-list-item href="./AboutMe.html">
                 <v-list-item-icon><v-icon>mdi-stamper</v-icon></v-list-item-icon>
                 <v-list-item-title>About Me</v-list-item-title>
             </v-list-item>

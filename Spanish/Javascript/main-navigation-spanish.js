@@ -602,7 +602,7 @@ Vue.component('main-navigation-spanish', {
 
 
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
-            <v-list-item>
+            <v-list-item href="./AboutMe_spanish.html">
                 <v-list-item-icon><v-icon>mdi-stamper</v-icon></v-list-item-icon>
                 <v-list-item-title>Sobre Mí</v-list-item-title>
             </v-list-item>

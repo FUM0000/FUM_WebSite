@@ -597,7 +597,7 @@ Vue.component('main-navigation-chinese', {
 
 
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
-            <v-list-item>
+            <v-list-item href="./AboutMe_chinese.html">
                 <v-list-item-icon><v-icon>mdi-stamper</v-icon></v-list-item-icon>
                 <v-list-item-title>关于我</v-list-item-title>
             </v-list-item>
