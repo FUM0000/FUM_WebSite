@@ -562,6 +562,10 @@ Vue.component('main-navigation-chinese', {
                     <v-list-item-icon />
                     <v-list-item-title>点心</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Japan_Food_chinese.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>食物</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Japan_Daiso_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>DAISO</v-list-item-title>
