@@ -19,10 +19,11 @@
 
 
         // Setting Variable // 使用頻度が高いものだけ一時的にグローバル化
-        let Gravity = 9.8 * 5;
+        let Gravity = 9.8;
         let DeltaTime = 1 / 60;
-        const Resistance = 0.997;
-        const CalculationError = 0.01;
+        const Resistance = 0.998;
+        const CalculationError = 0.001;
+        const CalculationError_Time = 0.1;
 
 
         // Create Classe
@@ -101,15 +102,16 @@
             constructor() {
                 // Variables
                 this.Bounce_Count = 0;
-                this.Bounce_Max = 15;
-                this.Direction_Move = new THREE.Vector3(0, 1, 1);
+                this.Bounce_Max = 38;
+                this.Direction_Move = new THREE.Vector3(0, -1, 1);
                 this.ElapsedFrame_Firing = 0;
                 this.ElapsedFrame_Gravity= 0;
                 this.Firing = true;
                 this.Radius = 0.022;
+                this.Restitution = 0.95;
                 this.StartHeight = 1;
-                this.Velocity_Initial = 1;
-                this.Velocity_Past = this.Velocity_Initial;
+                this.Velocity = 0.5;
+                this.Velocity_Past = this.Velocity;
 
                 Loader_FBX.load(
                     "https://fum0000.github.io/FUM_WebSite/Asset/Model/Ball_PinPon_1.fbx",
@@ -125,33 +127,33 @@
             Update() {
                 if (this.Object && this.Firing) {
                     this.ElapsedFrame_Firing++;
-                    this.Velocity_Initial *= Resistance;
+                    if (this.Velocity > CalculationError) this.Velocity *= Resistance;
+                    else this.Velocity = 0;
                     this.Gravity();
-                    // this.Move();
+                    this.Move();
                 }
             }
 
             Gravity() {
-                // Count
-                this.ElapsedFrame_Gravity++;
                 // Variables
                 const elapsed_time = this.ElapsedFrame_Gravity * DeltaTime;
+                // Count
+                this.ElapsedFrame_Gravity++;
 
 
                 // UP
                 if (this.Direction_Move.y > 0) {
-
                     // Variables
-                    const maximum_arrival_time = this.Velocity_Initial / Gravity; console.log(maximum_arrival_time);
+                    const maximum_arrival_time = this.Velocity_Past / Gravity;
                     const velocity = Gravity * elapsed_time;
 
                     // Gravity Move
-                    this.Object.position.add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.abs((this.Velocity_Past - velocity) * elapsed_time)));
+                    this.Object.position.add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.abs((this.Velocity_Past - velocity) * DeltaTime)));
                     
                     // MaximumArrivalTime
                     if (
-                        elapsed_time > maximum_arrival_time - CalculationError &&
-                        elapsed_time < maximum_arrival_time + CalculationError
+                        elapsed_time > maximum_arrival_time - CalculationError_Time &&
+                        elapsed_time < maximum_arrival_time + CalculationError_Time
                     ) {
                         this.Direction_Move.y = -1;
                         this.ElapsedFrame_Gravity = 0;
@@ -160,48 +162,29 @@
 
 
                 // DOWN
-                // else {
+                else {
+                    // Variables
+                    const velocity = Gravity * elapsed_time;
 
-                //     // Variables
-                //     const maximum_arrival_time = this.Velocity_Initial / Gravity; console.log(maximum_arrival_time);
-                //     const velocity = Gravity * elapsed_time;
+                    // Gravity Move
+                    this.Object.position.add(new THREE.Vector3(0, -1, 0).multiplyScalar(velocity * DeltaTime));
 
-                //     // Gravity Move
-                //     this.Object.position.add(new THREE.Vector3(0, -1, 0).multiplyScalar(Gravity * elapsed_time));
+                    // Bounce
+                    if (this.Object.position.y < this.Radius) {
+                        this.Object.position.y = this.Radius;
+                        if (this.Bounce_Count < this.Bounce_Max) this.Direction_Move.y = 1;
+                        this.Velocity_Past = (Gravity * elapsed_time) * this.Restitution;
+                        this.ElapsedFrame_Gravity = 0;
 
-                //     // Bounce
-                //     if (this.Object.position.y < this.Radius) {
-                //         this.Object.position.y = this.Radius;
-                //         this.Direction_Move.y = 1;
-                //         const bounce_ratio = (this.Bounce_Max - this.Bounce_Count) * 0.01;
-                //         this.Velocity_Past = (Gravity * elapsed_time) * bounce_ratio;
-                //         this.ElapsedFrame_Gravity = 0;
-
-                //         // Count
-                //         if (this.Bounce_Count < this.Bounce_Max) this.Bounce_Count++;
-                //     }
-                // }
-
-
-                // if (this.Bounce_Count > 0) this.Direction_Move.y >= 0 ? this.ElapsedFrame_Gravity-- : this.ElapsedFrame_Gravity++;
-                // else this.ElapsedFrame_Gravity++;
-                // const elapsed_time = this.ElapsedFrame_Gravity * DeltaTime;
-                // const bounce_ratio = (this.Bounce_Max - this.Bounce_Count) * 0.01;
-                // let velocity;
-                // if (this.Bounce_Count > 0) velocity = (Gravity * elapsed_time * bounce_ratio) * DeltaTime;
-                // else velocity = (this.Direction_Move.y * this.Velocity_Initial - Gravity * elapsed_time * bounce_ratio) * DeltaTime;
-                // this.Object.position.add(new THREE.Vector3(0, this.Direction_Move.y, 0).multiplyScalar(Math.abs(velocity)));
-                
-                // if (velocity == 0) this.Direction_Move.y = -1;
-                // if (this.Object.position.y < this.Radius) {
-                //     this.Object.position.y = this.Radius;
-                //     this.Direction_Move.y = 1;
-                //     if (this.Bounce_Count < this.Bounce_Max) this.Bounce_Count++;
-                // }
+                        // Count
+                        if (this.Bounce_Count < this.Bounce_Max) this.Bounce_Count++;
+                    }
+                }
             }
+
             Move() {
                 const vector = this.Direction_Move.clone(); vector.y = 0;
-                this.Object.position.add(vector.multiplyScalar(this.Velocity_Initial * DeltaTime));
+                this.Object.position.add(vector.multiplyScalar(this.Velocity * DeltaTime));
                 if (this.Object.position.z > 2 || this.Object.position.z < 0) {
                     this.Direction_Move.z *= -1;
                 }
