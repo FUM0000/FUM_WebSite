@@ -2,6 +2,7 @@
 
 <head>
     <meta charset="utf-8" />
+    <div id="input-element"></div>
     <script type="module">
 
 
@@ -18,12 +19,13 @@
         const Loader_FBX = new FBXLoader();
 
 
-        // Setting Variable // 使用頻度が高いものだけ一時的にグローバル化
-        let Gravity = 9.8;
+        // Setting Variable
         let DeltaTime = 1 / 60;
-        const Resistance = 0.998;
+        let Flag_Clear = false;
+        let Gravity = 9.8;
         const CalculationError = 0.001;
         const CalculationError_Time = 0.1;
+        const Resistance = 0.998;
 
 
         // Create Classe
@@ -53,10 +55,9 @@
 
                     this.#FPS = 1000 / deltaTime;
                     DeltaTime = deltaTime * 0.001;
+                    Log("FPS: " + this.#FPS);
                 }
             }
-
-            Get_Checking() { return this.#Checking; }
 
             Set_Checking(bool) {
                 this.#Checking = bool;
@@ -105,12 +106,13 @@
                 this.Bounce_Max = 38;
                 this.Direction_Move = new THREE.Vector3(0, -1, 1);
                 this.ElapsedFrame_Firing = 0;
-                this.ElapsedFrame_Gravity= 0;
+                this.ElapsedFrame_Gravity = 0;
                 this.Firing = true;
+                this.Flag_Cup = false;
                 this.Radius = 0.022;
                 this.Restitution = 0.95;
                 this.StartHeight = 1;
-                this.Velocity = 0.5;
+                this.Velocity = 0.3;
                 this.Velocity_Past = this.Velocity;
 
                 Loader_FBX.load(
@@ -131,9 +133,11 @@
                     else this.Velocity = 0;
                     this.Gravity();
                     this.Move();
+                    this.CheckCollision();
                 }
             }
 
+            // Gravity
             Gravity() {
                 // Variables
                 const elapsed_time = this.ElapsedFrame_Gravity * DeltaTime;
@@ -149,7 +153,7 @@
 
                     // Gravity Move
                     this.Object.position.add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.abs((this.Velocity_Past - velocity) * DeltaTime)));
-                    
+
                     // MaximumArrivalTime
                     if (
                         elapsed_time > maximum_arrival_time - CalculationError_Time &&
@@ -182,6 +186,7 @@
                 }
             }
 
+            // Move
             Move() {
                 const vector = this.Direction_Move.clone(); vector.y = 0;
                 this.Object.position.add(vector.multiplyScalar(this.Velocity * DeltaTime));
@@ -192,9 +197,51 @@
                     this.Direction_Move.x *= -1;
                 }
             }
+
+            // Check Collision
+            CheckCollision() {
+                if (PaperCup_1.Object) {
+                    // Variables
+                    const position = this.Object.position;
+                    const position_xz = new THREE.Vector3(position.x, 0, position.z);
+
+                    // Search
+                    const cup_position = PaperCup_1.Object.position;
+                    const cup_position_xz = new THREE.Vector3(cup_position.x, 0, cup_position.z);
+                    const distance = position_xz.distanceTo(cup_position_xz);
+                    if (distance < PaperCup_1.Radius) {
+                        if (position.y < PaperCup_1.Height) {
+                            this.Flag_Cup = true;
+                        }
+                        else this.Flag_Cup = false;
+
+                        if (this.Flag_Cup) {
+                            if (position.y == this.Radius) {
+                                Log("Goooooooooal!");
+                                Flag_Clear = true;
+                                this.Object.position.x = cup_position.x;
+                                this.Object.position.z = cup_position.z;
+                            }
+                        }
+                    }
+                    else if (
+                        distance > PaperCup_1.Radius &&
+                        distance < PaperCup_1.Radius + this.Radius
+                    ) {
+                        if (position.y < PaperCup_1.Height) {
+                            this.Direction_Move.z *= -1;
+                            this.Direction_Move.x *= -1;
+                        }
+                    }
+                }
+            }
         }
         class PaperCup_1_CLASS {
             constructor() {
+                // Variables
+                this.Height = 0.08;
+                this.Radius = 0.073 * 0.5;
+
                 Loader_FBX.load(
                     "https://fum0000.github.io/FUM_WebSite/Asset/Model/Cup_Paper_1.fbx",
                     (object) => {
@@ -219,6 +266,17 @@
 
 
         // Initialize
+
+
+        // Debug
+        function Log(content) { console.log(content); }
+        window.addEventListener('keydown', (event) => {
+            switch (event.keyCode) {
+                case 65: // Aキー
+                    Log(Scene.children);
+                    break;
+            }
+        });
         Checker_Time_1.Set_Checking(false);
         // Camera_1.Set_ForcusTarget(Ball_1);
 
@@ -226,9 +284,12 @@
         // Loop
         Loop();
         function Loop() {
-            // Object Actions
-            Camera_1.Update();
-            Ball_1.Update();
+            if (!Flag_Clear) {
+                // Object Actions
+                Checker_Time_1.Update();
+                Camera_1.Update();
+                Ball_1.Update();
+            }
 
 
             // Threejs
