@@ -1,55 +1,259 @@
 <html>
+
 <head>
-    <meta charset="utf-8"/>
+    <meta charset="utf-8" />
     <script type="module">
 
 
         // Setup Threejs
-        import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js";
+        import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+        import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
         const Screen_Width = 960;
         const Screen_Height = 540;
-        const Renderer = new THREE.WebGLRenderer({
-            canvas: document.querySelector("#Canvas_1"),
-        });
+        const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas_1") });
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(Screen_Width, Screen_Height);
+        Renderer.setClearColor(new THREE.Color(0xFCA3B7));
         const Scene = new THREE.Scene();
-        // const Camera = new THREE.PerspectiveCamera(75, Screen_Width / Screen_Height, 0.01, 10);
-        // Camera.position.set(0, 0, -1); Camera.lookAt(new THREE.Vector3(0, 0, 0));
+        const Loader_FBX = new FBXLoader();
 
 
-        // Create Classes
-        class Test_Camera_1 {
+        // Setting Variable // 使用頻度が高いものだけ一時的にグローバル化
+        let Gravity = 9.8 * 5;
+        let DeltaTime = 1 / 60;
+        const Resistance = 0.997;
+        const CalculationError = 0.01;
+
+
+        // Create Classe
+        class Light_Ambient_1_CLASS {
             constructor() {
-                this.Object = new THREE.PerspectiveCamera(75, Screen_Width / Screen_Height, 0.01, 10);
-                this.Object.position.set(0, 0, -1);
-                this.Object.lookAt(new THREE.Vector3(0, 0, 1));
+                this.Object = new THREE.AmbientLight(0xffffff, 0.8);
+                Scene.add(this.Object);
             }
         }
-        class Test_Box_1 {
+        class Light_Directional_1_CLASS {
+            constructor() {
+                this.Object = new THREE.DirectionalLight(0xffffff, 0.8);
+                Scene.add(this.Object);
+            }
+        }
+        class Checker_Time_1_CLASS {
+            #Checking; #PreviousTime; #FPS;
+            constructor() {
+                this.#Checking = false;
+                this.#PreviousTime = 0;
+            }
+            Update() {
+                if (this.#Checking) {
+                    const currentTime = performance.now();
+                    const deltaTime = currentTime - this.#PreviousTime;
+                    this.#PreviousTime = currentTime;
+
+                    this.#FPS = 1000 / deltaTime;
+                    DeltaTime = deltaTime * 0.001;
+                }
+            }
+
+            Get_Checking() { return this.#Checking; }
+
+            Set_Checking(bool) {
+                this.#Checking = bool;
+                this.#PreviousTime = 0;
+            }
+        }
+        class Camera_1_CLASS {
+            constructor() {
+                this.Object = new THREE.PerspectiveCamera(40, Screen_Width / Screen_Height, 0.01, 20);
+                this.Object.position.set(0, 1.5, -1);
+                this.Object.lookAt(new THREE.Vector3(0, 0, 1));
+
+                this.Forcusing_Target = false;
+                this.ForcusTarget = null;
+            }
+            Update() {
+                if (this.Forcusing_Target && this.ForcusTarget.Object) {
+                    this.Object.lookAt(this.ForcusTarget.Object.position);
+                }
+            }
+
+            Set_ForcusTarget(target) {
+                this.Forcusing_Target = true;
+                this.ForcusTarget = target;
+            }
+        }
+        class Box_1_CLASS {
             constructor() {
                 this.Geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
                 this.Material = new THREE.MeshNormalMaterial();
                 this.Object = new THREE.Mesh(this.Geometry, this.Material);
-
                 Scene.add(this.Object);
+            }
+            Update() {
+                this.AutoRotate();
+            }
+
+            AutoRotate() {
+                this.Object.rotation.y += 0.01;
+            }
+        }
+        class Ball_1_CLASS {
+            constructor() {
+                // Variables
+                this.Bounce_Count = 0;
+                this.Bounce_Max = 15;
+                this.Direction_Move = new THREE.Vector3(0, 1, 1);
+                this.ElapsedFrame_Firing = 0;
+                this.ElapsedFrame_Gravity= 0;
+                this.Firing = true;
+                this.Radius = 0.022;
+                this.StartHeight = 1;
+                this.Velocity_Initial = 1;
+                this.Velocity_Past = this.Velocity_Initial;
+
+                Loader_FBX.load(
+                    "https://fum0000.github.io/FUM_WebSite/Asset/Model/Ball_PinPon_1.fbx",
+                    (object) => {
+                        // Initialize
+                        object.scale.set(0.01, 0.01, 0.01);
+                        object.position.set(0, this.StartHeight, 0);
+                        this.Object = object;
+                        Scene.add(this.Object);
+                    }
+                );
+            }
+            Update() {
+                if (this.Object && this.Firing) {
+                    this.ElapsedFrame_Firing++;
+                    this.Velocity_Initial *= Resistance;
+                    this.Gravity();
+                    // this.Move();
+                }
+            }
+
+            Gravity() {
+                // Count
+                this.ElapsedFrame_Gravity++;
+                // Variables
+                const elapsed_time = this.ElapsedFrame_Gravity * DeltaTime;
+
+
+                // UP
+                if (this.Direction_Move.y > 0) {
+
+                    // Variables
+                    const maximum_arrival_time = this.Velocity_Initial / Gravity; console.log(maximum_arrival_time);
+                    const velocity = Gravity * elapsed_time;
+
+                    // Gravity Move
+                    this.Object.position.add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.abs((this.Velocity_Past - velocity) * elapsed_time)));
+                    
+                    // MaximumArrivalTime
+                    if (
+                        elapsed_time > maximum_arrival_time - CalculationError &&
+                        elapsed_time < maximum_arrival_time + CalculationError
+                    ) {
+                        this.Direction_Move.y = -1;
+                        this.ElapsedFrame_Gravity = 0;
+                    }
+                }
+
+
+                // DOWN
+                // else {
+
+                //     // Variables
+                //     const maximum_arrival_time = this.Velocity_Initial / Gravity; console.log(maximum_arrival_time);
+                //     const velocity = Gravity * elapsed_time;
+
+                //     // Gravity Move
+                //     this.Object.position.add(new THREE.Vector3(0, -1, 0).multiplyScalar(Gravity * elapsed_time));
+
+                //     // Bounce
+                //     if (this.Object.position.y < this.Radius) {
+                //         this.Object.position.y = this.Radius;
+                //         this.Direction_Move.y = 1;
+                //         const bounce_ratio = (this.Bounce_Max - this.Bounce_Count) * 0.01;
+                //         this.Velocity_Past = (Gravity * elapsed_time) * bounce_ratio;
+                //         this.ElapsedFrame_Gravity = 0;
+
+                //         // Count
+                //         if (this.Bounce_Count < this.Bounce_Max) this.Bounce_Count++;
+                //     }
+                // }
+
+
+                // if (this.Bounce_Count > 0) this.Direction_Move.y >= 0 ? this.ElapsedFrame_Gravity-- : this.ElapsedFrame_Gravity++;
+                // else this.ElapsedFrame_Gravity++;
+                // const elapsed_time = this.ElapsedFrame_Gravity * DeltaTime;
+                // const bounce_ratio = (this.Bounce_Max - this.Bounce_Count) * 0.01;
+                // let velocity;
+                // if (this.Bounce_Count > 0) velocity = (Gravity * elapsed_time * bounce_ratio) * DeltaTime;
+                // else velocity = (this.Direction_Move.y * this.Velocity_Initial - Gravity * elapsed_time * bounce_ratio) * DeltaTime;
+                // this.Object.position.add(new THREE.Vector3(0, this.Direction_Move.y, 0).multiplyScalar(Math.abs(velocity)));
+                
+                // if (velocity == 0) this.Direction_Move.y = -1;
+                // if (this.Object.position.y < this.Radius) {
+                //     this.Object.position.y = this.Radius;
+                //     this.Direction_Move.y = 1;
+                //     if (this.Bounce_Count < this.Bounce_Max) this.Bounce_Count++;
+                // }
+            }
+            Move() {
+                const vector = this.Direction_Move.clone(); vector.y = 0;
+                this.Object.position.add(vector.multiplyScalar(this.Velocity_Initial * DeltaTime));
+                if (this.Object.position.z > 2 || this.Object.position.z < 0) {
+                    this.Direction_Move.z *= -1;
+                }
+                if (this.Object.position.x > 1 || this.Object.position.x < -1) {
+                    this.Direction_Move.x *= -1;
+                }
+            }
+        }
+        class PaperCup_1_CLASS {
+            constructor() {
+                Loader_FBX.load(
+                    "https://fum0000.github.io/FUM_WebSite/Asset/Model/Cup_Paper_1.fbx",
+                    (object) => {
+                        // Initialize
+                        object.scale.set(0.01, 0.01, 0.01);
+                        object.position.set(0, 0, 1);
+                        this.Object = object;
+                        Scene.add(this.Object);
+                    }
+                );
             }
         }
 
 
         // Create Objects
-        const Camera_1 = new Test_Camera_1();
-        const Box_1 = new Test_Box_1();
+        const Light_Ambient_1 = new Light_Ambient_1_CLASS();
+        const Light_Directional_1 = new Light_Directional_1_CLASS();
+        const Checker_Time_1 = new Checker_Time_1_CLASS();
+        const Camera_1 = new Camera_1_CLASS();
+        const Ball_1 = new Ball_1_CLASS();
+        const PaperCup_1 = new PaperCup_1_CLASS();
+
+
+        // Initialize
+        Checker_Time_1.Set_Checking(false);
+        // Camera_1.Set_ForcusTarget(Ball_1);
 
 
         // Loop
         Loop();
         function Loop() {
-            Box_1.Object.rotation.y += 0.01;
-            Renderer.render(Scene, Camera_1.Object);
+            // Object Actions
+            Camera_1.Update();
+            Ball_1.Update();
 
+
+            // Threejs
+            Renderer.render(Scene, Camera_1.Object);
             requestAnimationFrame(Loop);
         }
+
+
     </script>
 </head>
 
