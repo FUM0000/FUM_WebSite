@@ -2,18 +2,16 @@
 
 <head>
     <meta charset="utf-8" />
-    <div id="input-element"></div>
     <script type="module">
 
 
         // Setup Threejs
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
         import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
-        const Screen_Width = 960;
-        const Screen_Height = 540;
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas_1") });
         Renderer.setPixelRatio(window.devicePixelRatio);
-        Renderer.setSize(Screen_Width, Screen_Height);
+        Renderer.setSize(window.innerWidth, window.innerHeight);
+        window.addEventListener('resize', ResizeScreen, false);
         Renderer.setClearColor(new THREE.Color(0xFCA3B7));
         const Scene = new THREE.Scene();
         const Loader_FBX = new FBXLoader();
@@ -29,76 +27,6 @@
 
 
         // Create Classe
-        class Light_Ambient_1_CLASS {
-            constructor() {
-                this.Object = new THREE.AmbientLight(0xffffff, 0.8);
-                Scene.add(this.Object);
-            }
-        }
-        class Light_Directional_1_CLASS {
-            constructor() {
-                this.Object = new THREE.DirectionalLight(0xffffff, 0.8);
-                Scene.add(this.Object);
-            }
-        }
-        class Checker_Time_1_CLASS {
-            #Checking; #PreviousTime; #FPS;
-            constructor() {
-                this.#Checking = false;
-                this.#PreviousTime = 0;
-            }
-            Update() {
-                if (this.#Checking) {
-                    const currentTime = performance.now();
-                    const deltaTime = currentTime - this.#PreviousTime;
-                    this.#PreviousTime = currentTime;
-
-                    this.#FPS = 1000 / deltaTime;
-                    DeltaTime = deltaTime * 0.001;
-                    Log("FPS: " + this.#FPS);
-                }
-            }
-
-            Set_Checking(bool) {
-                this.#Checking = bool;
-                this.#PreviousTime = 0;
-            }
-        }
-        class Camera_1_CLASS {
-            constructor() {
-                this.Object = new THREE.PerspectiveCamera(40, Screen_Width / Screen_Height, 0.01, 20);
-                this.Object.position.set(0, 1.5, -1);
-                this.Object.lookAt(new THREE.Vector3(0, 0, 1));
-
-                this.Forcusing_Target = false;
-                this.ForcusTarget = null;
-            }
-            Update() {
-                if (this.Forcusing_Target && this.ForcusTarget.Object) {
-                    this.Object.lookAt(this.ForcusTarget.Object.position);
-                }
-            }
-
-            Set_ForcusTarget(target) {
-                this.Forcusing_Target = true;
-                this.ForcusTarget = target;
-            }
-        }
-        class Box_1_CLASS {
-            constructor() {
-                this.Geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-                this.Material = new THREE.MeshNormalMaterial();
-                this.Object = new THREE.Mesh(this.Geometry, this.Material);
-                Scene.add(this.Object);
-            }
-            Update() {
-                this.AutoRotate();
-            }
-
-            AutoRotate() {
-                this.Object.rotation.y += 0.01;
-            }
-        }
         class Ball_1_CLASS {
             constructor() {
                 // Variables
@@ -107,8 +35,8 @@
                 this.Direction_Move = new THREE.Vector3(0, -1, 1);
                 this.ElapsedFrame_Firing = 0;
                 this.ElapsedFrame_Gravity = 0;
-                this.Firing = true;
                 this.Flag_Cup = false;
+                this.Flag_Shoot = false;
                 this.Radius = 0.022;
                 this.Restitution = 0.95;
                 this.StartHeight = 1;
@@ -127,7 +55,7 @@
                 );
             }
             Update() {
-                if (this.Object && this.Firing) {
+                if (this.Object && this.Flag_Shoot) {
                     this.ElapsedFrame_Firing++;
                     if (this.Velocity > CalculationError) this.Velocity *= Resistance;
                     else this.Velocity = 0;
@@ -136,6 +64,7 @@
                     this.CheckCollision();
                 }
             }
+            Get_Flag_Shoot() { return this.Flag_Shoot; }
 
             // Gravity
             Gravity() {
@@ -236,6 +165,76 @@
                 }
             }
         }
+        class Box_1_CLASS {
+            constructor() {
+                this.Geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+                this.Material = new THREE.MeshNormalMaterial();
+                this.Object = new THREE.Mesh(this.Geometry, this.Material);
+                Scene.add(this.Object);
+            }
+            Update() {
+                this.AutoRotate();
+            }
+
+            AutoRotate() {
+                this.Object.rotation.y += 0.01;
+            }
+        }
+        class Camera_1_CLASS {
+            constructor() {
+                this.Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 20);
+                this.Object.position.set(0, 1.5, -1);
+                this.Object.lookAt(new THREE.Vector3(0, 0, 1));
+
+                this.Forcusing_Target = false;
+                this.ForcusTarget = null;
+            }
+            Update() {
+                if (this.Forcusing_Target && this.ForcusTarget.Object) {
+                    this.Object.lookAt(this.ForcusTarget.Object.position);
+                }
+            }
+
+            Set_ForcusTarget(target) {
+                this.Forcusing_Target = true;
+                this.ForcusTarget = target;
+            }
+        }
+        class Checker_Time_1_CLASS {
+            #Checking; #PreviousTime; #FPS;
+            constructor() {
+                this.#Checking = false;
+                this.#PreviousTime = 0;
+            }
+            Update() {
+                if (this.#Checking) {
+                    const currentTime = performance.now();
+                    const deltaTime = currentTime - this.#PreviousTime;
+                    this.#PreviousTime = currentTime;
+
+                    this.#FPS = 1000 / deltaTime;
+                    DeltaTime = deltaTime * 0.001;
+                    Log("FPS: " + this.#FPS);
+                }
+            }
+
+            Set_Checking(bool) {
+                this.#Checking = bool;
+                this.#PreviousTime = 0;
+            }
+        }
+        class Light_Ambient_1_CLASS {
+            constructor() {
+                this.Object = new THREE.AmbientLight(0xffffff, 0.8);
+                Scene.add(this.Object);
+            }
+        }
+        class Light_Directional_1_CLASS {
+            constructor() {
+                this.Object = new THREE.DirectionalLight(0xffffff, 0.8);
+                Scene.add(this.Object);
+            }
+        }
         class PaperCup_1_CLASS {
             constructor() {
                 // Variables
@@ -254,15 +253,41 @@
                 );
             }
         }
+        class Progress_1_CLASS {
+            constructor() {
+                this.Element = document.getElementById("Progress_1");
+                this.Element.value = 0;
+                this.MeterSpeed = 100; // 0~100 per second
+                this.MoveDirection = 1;
+            }
+
+            Update() {
+                if (!Ball_1.Get_Flag_Shoot()) {
+                    this.MoveDirection == 1 ?
+                        this.Element.value += this.MeterSpeed * DeltaTime :
+                        this.Element.value -= this.MeterSpeed * DeltaTime;
+                    if (this.Element.value >= this.Element.max) {
+                        this.Element.value = this.Element.max;
+                        this.MoveDirection = -1;
+                    }
+                    else if (this.Element.value <= 0) {
+                        this.Element.value = 0;
+                        this.MoveDirection = 1;
+                    }
+                    Log(this.Element.value);
+                }
+            }
+        }
 
 
         // Create Objects
+        const Ball_1 = new Ball_1_CLASS();
+        const Camera_1 = new Camera_1_CLASS();
+        const Checker_Time_1 = new Checker_Time_1_CLASS();
         const Light_Ambient_1 = new Light_Ambient_1_CLASS();
         const Light_Directional_1 = new Light_Directional_1_CLASS();
-        const Checker_Time_1 = new Checker_Time_1_CLASS();
-        const Camera_1 = new Camera_1_CLASS();
-        const Ball_1 = new Ball_1_CLASS();
         const PaperCup_1 = new PaperCup_1_CLASS();
+        const Progress_1 = new Progress_1_CLASS();
 
 
         // Initialize
@@ -284,11 +309,12 @@
         // Loop
         Loop();
         function Loop() {
+            // Object Actions
             if (!Flag_Clear) {
-                // Object Actions
                 Checker_Time_1.Update();
-                Camera_1.Update();
                 Ball_1.Update();
+                Camera_1.Update();
+                Progress_1.Update();
             }
 
 
@@ -298,11 +324,35 @@
         }
 
 
+        //// Functions
+        // Resize
+        function ResizeScreen() {
+            Camera_1.Object.aspect = window.innerWidth / window.innerHeight;
+            Camera_1.Object.updateProjectionMatrix();
+            Renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+
     </script>
 </head>
 
 <body>
     <canvas id="Canvas_1"></canvas>
+    <progress id="Progress_1" value="100" max="100"></progress>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #Progress_1 {
+            position: absolute;
+            block-size: 2em;
+            inline-size: 20em;
+            left: 50%;
+            top: 90%;
+            transform: translateX(-50%) translateY(-100%);
+        }
+    </style>
 </body>
 
 </html>
