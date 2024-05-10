@@ -45,6 +45,10 @@ Vue.component('main-navigation-spanish', {
                         </v-list-item-icon>
                     </template>
         
+                    <v-list-item href="./Basic_Memory_spanish.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Mecanismo de Memoria</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Basic_LearningPoints_spanish.html">
                         <v-list-item-icon />
                         <v-list-item-title>Puntos de aprendizaje</v-list-item-title>

@@ -45,6 +45,10 @@ Vue.component('main-navigation-chinese', {
                         </v-list-item-icon>
                     </template>
 
+                    <v-list-item href="./Basic_Memory_chinese.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>记忆机制</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Basic_LearningPoints_chinese.html">
                         <v-list-item-icon />
                         <v-list-item-title>学习要点</v-list-item-title>

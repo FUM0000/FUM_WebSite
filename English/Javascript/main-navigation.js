@@ -45,6 +45,10 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
+                    <v-list-item href="./Basic_Memory.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Memory Mechanism</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Basic_LearningPoints.html">
                         <v-list-item-icon />
                         <v-list-item-title>Learning Points</v-list-item-title>
