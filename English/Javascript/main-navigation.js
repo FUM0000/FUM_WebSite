@@ -497,6 +497,14 @@ Vue.component('main-navigation', {
                         <v-icon>mdi-cat</v-icon>
                     </v-list-item-icon>
                 </v-list-item>
+                <v-list-item href="./Game_Ball.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Ping-Pong Ping-Pong</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-circle-multiple-outline</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
             </v-list-group>
             <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->
 

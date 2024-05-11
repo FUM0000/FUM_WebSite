@@ -1,0 +1,167 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <script type="module">
+
+
+        // Setup Threejs
+        import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+        import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
+        const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas_1") });
+        Renderer.setPixelRatio(window.devicePixelRatio);
+        Renderer.setSize(window.innerWidth, window.innerHeight);
+        window.addEventListener('resize', ResizeScreen, false);
+        Renderer.setClearColor(new THREE.Color(0xFCA3B7));
+        const Scene = new THREE.Scene();
+        const Loader_FBX = new FBXLoader();
+
+
+        // Setting Variable
+        let DeltaTime = 1 / 60;
+        let Flag_Clear = false;
+        let Gravity = 9.8;
+        const CalculationError = 0.001;
+        const CalculationError_Time = 0.1;
+        const Resistance = 0.998;
+
+
+        // Create Classe
+        class Box_1_CLASS {
+            constructor() {
+                this.Geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+                this.Material = new THREE.MeshNormalMaterial();
+                this.Object = new THREE.Mesh(this.Geometry, this.Material);
+                Scene.add(this.Object);
+            }
+            Update() {
+                this.AutoRotate();
+            }
+
+            AutoRotate() {
+                this.Object.rotation.y += 0.01;
+                this.Object.rotation.x += 0.01;
+            }
+        }
+        class Camera_1_CLASS {
+            constructor() {
+                this.Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 20);
+                this.Object.position.set(0, 1.5, -1);
+                this.Object.lookAt(new THREE.Vector3(0, 0, 1));
+
+                this.Forcusing_Target = false;
+                this.ForcusTarget = null;
+            }
+            Update() {
+                if (this.Forcusing_Target && this.ForcusTarget.Object) {
+                    this.Object.lookAt(this.ForcusTarget.Object.position);
+                }
+            }
+
+            Set_ForcusTarget(target) {
+                this.Forcusing_Target = true;
+                this.ForcusTarget = target;
+            }
+        }
+        class Checker_Time_1_CLASS {
+            #Checking; #PreviousTime; #FPS;
+            constructor() {
+                this.#Checking = false;
+                this.#PreviousTime = 0;
+            }
+            Update() {
+                if (this.#Checking) {
+                    const currentTime = performance.now();
+                    const deltaTime = currentTime - this.#PreviousTime;
+                    this.#PreviousTime = currentTime;
+
+                    this.#FPS = 1000 / deltaTime;
+                    DeltaTime = deltaTime * 0.001;
+                    Log("FPS: " + this.#FPS);
+                }
+            }
+
+            Set_Checking(bool) {
+                this.#Checking = bool;
+                this.#PreviousTime = 0;
+            }
+        }
+        class Light_Ambient_1_CLASS {
+            constructor() {
+                this.Object = new THREE.AmbientLight(0xffffff, 0.8);
+                Scene.add(this.Object);
+            }
+        }
+        class Light_Directional_1_CLASS {
+            constructor() {
+                this.Object = new THREE.DirectionalLight(0xffffff, 0.8);
+                Scene.add(this.Object);
+            }
+        }
+
+
+        // Create Objects
+        const Box_1 = new Box_1_CLASS();
+        const Camera_1 = new Camera_1_CLASS();
+        const Checker_Time_1 = new Checker_Time_1_CLASS();
+        const Light_Ambient_1 = new Light_Ambient_1_CLASS();
+        const Light_Directional_1 = new Light_Directional_1_CLASS();
+
+
+        // Initialize
+        Camera_1.Set_ForcusTarget(Box_1);
+
+
+        // Debug
+        function Log(content) { console.log(content); }
+        window.addEventListener('keydown', (event) => {
+            switch (event.keyCode) {
+                case 65: // Aキー
+                    Log(Scene.children);
+                    break;
+            }
+        });
+        Checker_Time_1.Set_Checking(false);
+        // Camera_1.Set_ForcusTarget(Ball_1);
+
+
+        // Loop
+        Loop();
+        function Loop() {
+            // Object Actions
+            if (!Flag_Clear) {
+                Box_1.Update();
+                Checker_Time_1.Update();
+                Camera_1.Update();
+            }
+
+
+            // Threejs
+            Renderer.render(Scene, Camera_1.Object);
+            requestAnimationFrame(Loop);
+        }
+
+
+        //// Functions
+        // Resize
+        function ResizeScreen() {
+            Camera_1.Object.aspect = window.innerWidth / window.innerHeight;
+            Camera_1.Object.updateProjectionMatrix();
+            Renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+
+    </script>
+</head>
+
+<body>
+    <canvas id="Canvas_1"></canvas>
+    <style>
+        body {
+            margin: 0;
+        }
+    </style>
+</body>
+
+</html>

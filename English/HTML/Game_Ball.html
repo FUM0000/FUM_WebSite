@@ -2,6 +2,7 @@
 
 <head>
     <meta charset="utf-8" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <script type="module">
 
 
@@ -15,11 +16,12 @@
         Renderer.setClearColor(new THREE.Color(0xFCA3B7));
         const Scene = new THREE.Scene();
         const Loader_FBX = new FBXLoader();
+        Renderer.domElement.addEventListener('touchstart', function () { TouchStart(); });
+        Renderer.domElement.addEventListener('mousedown', function () { TouchStart(); });
 
 
         // Setting Variable
         let DeltaTime = 1 / 60;
-        let Flag_Clear = false;
         let Gravity = 9.8;
         const CalculationError = 0.001;
         const CalculationError_Time = 0.1;
@@ -40,7 +42,7 @@
                 this.Radius = 0.022;
                 this.Restitution = 0.95;
                 this.StartHeight = 1;
-                this.Velocity = 0.3;
+                this.Velocity = 0;
                 this.Velocity_Past = this.Velocity;
 
                 Loader_FBX.load(
@@ -58,7 +60,10 @@
                 if (this.Object && this.Flag_Shoot) {
                     this.ElapsedFrame_Firing++;
                     if (this.Velocity > CalculationError) this.Velocity *= Resistance;
-                    else this.Velocity = 0;
+                    else { 
+                        this.Velocity = 0;
+                        Manager_1.Ready();
+                    }
                     this.Gravity();
                     this.Move();
                     this.CheckCollision();
@@ -66,7 +71,27 @@
             }
             Get_Flag_Shoot() { return this.Flag_Shoot; }
 
-            // Gravity
+
+            Ready() {
+                this.Bounce_Count = 0;
+                this.Bounce_Max = 38;
+                this.Direction_Move = new THREE.Vector3(0, -1, 1);
+                this.ElapsedFrame_Firing = 0;
+                this.ElapsedFrame_Gravity = 0;
+                this.Flag_Cup = false;
+                this.Flag_Shoot = false;
+                this.Radius = 0.022;
+                this.Restitution = 0.95;
+                this.StartHeight = 1;
+                this.Velocity = 0;
+                this.Velocity_Past = this.Velocity;
+                if (this.Object) this.Object.position.set(0, this.StartHeight, 0);
+            }
+            Shoot() {
+                this.Flag_Shoot = true;
+                this.Velocity = Progress_1.Get_Percentage() * 0.01;
+                this.Velocity_Past = this.Velocity;
+            }
             Gravity() {
                 // Variables
                 const elapsed_time = this.ElapsedFrame_Gravity * DeltaTime;
@@ -114,8 +139,6 @@
                     }
                 }
             }
-
-            // Move
             Move() {
                 const vector = this.Direction_Move.clone(); vector.y = 0;
                 this.Object.position.add(vector.multiplyScalar(this.Velocity * DeltaTime));
@@ -126,8 +149,6 @@
                     this.Direction_Move.x *= -1;
                 }
             }
-
-            // Check Collision
             CheckCollision() {
                 if (PaperCup_1.Object) {
                     // Variables
@@ -146,8 +167,7 @@
 
                         if (this.Flag_Cup) {
                             if (position.y == this.Radius) {
-                                Log("Goooooooooal!");
-                                Flag_Clear = true;
+                                Manager_1.Goal();
                                 this.Object.position.x = cup_position.x;
                                 this.Object.position.z = cup_position.z;
                             }
@@ -235,6 +255,54 @@
                 Scene.add(this.Object);
             }
         }
+        class Manager_1_CLASS {
+            constructor() {
+                this.Flag_Clear = false;
+                this.Flag_Start = false;
+                //// UI
+                // Home
+                this.UI_Home_1 = document.createElement('div');
+                this.UI_Home_1.setAttribute("id", "UI_Home_1");
+                this.UI_Home_1.innerHTML = "HOME";
+                document.body.appendChild(this.UI_Home_1);
+                // Start
+                this.UI_Start_1 = document.createElement('div');
+                this.UI_Start_1.setAttribute("id", "UI_Start_1");
+                this.UI_Start_1.innerHTML = "";
+                document.body.appendChild(this.UI_Start_1);
+                // WOOOW
+                this.UI_Clear_1 = document.createElement('div');
+                this.UI_Clear_1.setAttribute("id", "UI_Clear_1");
+                this.UI_Clear_1.innerHTML = "";
+                document.body.appendChild(this.UI_Clear_1);
+            }
+            Get_Flag_Clear() { return this.Flag_Clear; }
+            Get_Flag_Start() { return this.Flag_Start; }
+            Set_Flag_Start(_bool) { this.Flag_Start = _bool; }
+
+
+            Initialize() {
+                this.Flag_Clear = false;
+                this.Flag_Start = false;
+                this.UI_Start_1.innerHTML = "";
+            }
+            Ready() {
+                this.Flag_Clear = false;
+                this.Flag_Start = false;
+                this.UI_Start_1.innerHTML = "START";
+                this.UI_Clear_1.innerHTML = "";
+                Ball_1.Ready();
+                Progress_1.Ready();
+            }
+            Start() {
+                this.Flag_Start = true;
+                this.UI_Start_1.innerHTML = "";
+            }
+            Goal() {
+                this.Flag_Clear = true;
+                this.UI_Clear_1.innerHTML = "WOOOW!";
+            }
+        }
         class PaperCup_1_CLASS {
             constructor() {
                 // Variables
@@ -257,10 +325,10 @@
             constructor() {
                 this.Element = document.getElementById("Progress_1");
                 this.Element.value = 0;
+                this.Element.max = 100;
                 this.MeterSpeed = 100; // 0~100 per second
                 this.MoveDirection = 1;
             }
-
             Update() {
                 if (!Ball_1.Get_Flag_Shoot()) {
                     this.MoveDirection == 1 ?
@@ -274,8 +342,13 @@
                         this.Element.value = 0;
                         this.MoveDirection = 1;
                     }
-                    Log(this.Element.value);
                 }
+            }
+            Get_Percentage() { return this.Element.value / this.Element.max * 100; }
+
+
+            Ready() {
+                this.Element.value = 0;
             }
         }
 
@@ -286,11 +359,13 @@
         const Checker_Time_1 = new Checker_Time_1_CLASS();
         const Light_Ambient_1 = new Light_Ambient_1_CLASS();
         const Light_Directional_1 = new Light_Directional_1_CLASS();
+        const Manager_1 = new Manager_1_CLASS();
         const PaperCup_1 = new PaperCup_1_CLASS();
         const Progress_1 = new Progress_1_CLASS();
 
 
-        // Initialize
+        //// Initialize
+        Manager_1.Ready();
 
 
         // Debug
@@ -310,7 +385,7 @@
         Loop();
         function Loop() {
             // Object Actions
-            if (!Flag_Clear) {
+            if (Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
                 Checker_Time_1.Update();
                 Ball_1.Update();
                 Camera_1.Update();
@@ -330,6 +405,17 @@
             Camera_1.Object.aspect = window.innerWidth / window.innerHeight;
             Camera_1.Object.updateProjectionMatrix();
             Renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function TouchStart() {
+            if (!Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
+                Manager_1.Start();
+            }
+            else if (Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
+                Ball_1.Shoot();
+            }
+            else if (Manager_1.Get_Flag_Start() && Manager_1.Get_Flag_Clear()) {
+                Manager_1.Ready();
+            }
         }
 
 
@@ -352,7 +438,50 @@
             top: 90%;
             transform: translateX(-50%) translateY(-100%);
         }
+
+        #UI_Start_1 {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2vh;
+            font-weight: bold;
+            color: red;
+        }
+
+        #UI_Home_1 {
+            position: absolute;
+            top: 20px;
+            font-size: 2vh;
+            font-weight: bold;
+            right: 20px;
+            color: red;
+        }
+
+        #UI_Clear_1 {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2vh;
+            font-weight: bold;
+            color: red;
+        }
     </style>
+
+
+    <!-- ▼ Script Load ▼ ----------------------------------------------------------------->
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <!------------------------------------------------------------------------------------>
+
+    <script type="module">
+        // jQuery-------------------------------------------------------------------------
+        $("#UI_Home_1").click(function () {
+            window.location.href = '../../English/HTML/index.html';
+        });
+        //--------------------------------------------------------------------------------
+    </script>
 </body>
 
 </html>
