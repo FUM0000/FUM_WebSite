@@ -59,14 +59,14 @@
             Update() {
                 if (this.Object && this.Flag_Shoot) {
                     this.ElapsedFrame_Firing++;
-                    if (this.Velocity > CalculationError) this.Velocity *= Resistance;
-                    else { 
-                        this.Velocity = 0;
-                        Manager_1.Ready();
-                    }
+                    if (this.Velocity > 0.1) this.Velocity *= Resistance;
+                    else this.Velocity = 0;
+                        
                     this.Gravity();
                     this.Move();
                     this.CheckCollision();
+
+                    if (this.Bounce_Count >= this.Bounce_Max) Manager_1.Ready();
                 }
             }
             Get_Flag_Shoot() { return this.Flag_Shoot; }
@@ -243,6 +243,37 @@
                 this.#PreviousTime = 0;
             }
         }
+        class InputControler_1_CLASS {
+            #Time_Count_Frame;
+            #Time_Flag_Finishing;
+            #Time_Flag_Using;
+            #Time_Timer;
+            constructor() {
+                this.#Time_Count_Frame = 0;
+                this.#Time_Flag_Finishing = true;
+                this.#Time_Flag_Using = false;
+                this.#Time_Timer = 0;
+            }
+            Update() {
+                if ( this.#Time_Flag_Using ) {
+                    this.#Time_Count_Frame++;
+                    if (this.#Time_Count_Frame * DeltaTime > this.#Time_Timer) {
+                        this.#Time_Flag_Using = false;
+                        this.#Time_Flag_Finishing = true;
+                        this.#Time_Count_Frame = 0;
+                    }
+                }
+            }
+            Get_Time_Flag_Finishing() { return this.#Time_Flag_Finishing; }
+
+            Set_Timer(_time) {
+                if (!this.#Time_Flag_Using) {
+                    this.#Time_Timer = _time;
+                    this.#Time_Flag_Using = true;
+                    this.#Time_Flag_Finishing = false;
+                }
+            }
+        }
         class Light_Ambient_1_CLASS {
             constructor() {
                 this.Object = new THREE.AmbientLight(0xffffff, 0.8);
@@ -351,12 +382,13 @@
                 this.Element.value = 0;
             }
         }
-
+        
 
         // Create Objects
         const Ball_1 = new Ball_1_CLASS();
         const Camera_1 = new Camera_1_CLASS();
         const Checker_Time_1 = new Checker_Time_1_CLASS();
+        const InputControler_1 = new InputControler_1_CLASS();
         const Light_Ambient_1 = new Light_Ambient_1_CLASS();
         const Light_Directional_1 = new Light_Directional_1_CLASS();
         const Manager_1 = new Manager_1_CLASS();
@@ -385,8 +417,9 @@
         Loop();
         function Loop() {
             // Object Actions
+            Checker_Time_1.Update();
+            InputControler_1.Update();
             if (Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
-                Checker_Time_1.Update();
                 Ball_1.Update();
                 Camera_1.Update();
                 Progress_1.Update();
@@ -407,15 +440,18 @@
             Renderer.setSize(window.innerWidth, window.innerHeight);
         }
         function TouchStart() {
-            if (!Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
-                Manager_1.Start();
+            if (InputControler_1.Get_Time_Flag_Finishing()) {
+                if (!Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
+                    Manager_1.Start();
+                }
+                else if (Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
+                    Ball_1.Shoot();
+                }
+                else if (Manager_1.Get_Flag_Start() && Manager_1.Get_Flag_Clear()) {
+                    Manager_1.Ready();
+                }
             }
-            else if (Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
-                Ball_1.Shoot();
-            }
-            else if (Manager_1.Get_Flag_Start() && Manager_1.Get_Flag_Clear()) {
-                Manager_1.Ready();
-            }
+            InputControler_1.Set_Timer(0.1);
         }
 
 
