@@ -1,10 +1,15 @@
 <html>
 
 <head>
-    <meta charset="utf-8" />
-    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
-    <script type="module">
 
+    <!-- Setting -->
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta charset="utf-8" />
+
+
+    <script type="module">
 
         // Setup Threejs
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
@@ -29,92 +34,251 @@
 
 
         // Create Classe
-        class Ball_1_CLASS {
-            constructor() {
-                // Variables
-                this.Bounce_Count = 0;
-                this.Bounce_Max = 38;
-                this.Direction_Move = new THREE.Vector3(0, -1, 1);
-                this.ElapsedFrame_Firing = 0;
-                this.ElapsedFrame_Gravity = 0;
-                this.Flag_Cup = false;
-                this.Flag_Shoot = false;
-                this.Radius = 0.022;
-                this.Restitution = 0.95;
-                this.StartHeight = 1;
-                this.Velocity = 0;
-                this.Velocity_Past = this.Velocity;
+        class Base_Camera_1_CLASS {
+            // Varibales
+            #Forcusing_Target;
+            #ForcusTarget;
+            #Object;
 
+
+            // Base
+            constructor() {
+                this.#Forcusing_Target = false;
+                this.#ForcusTarget = null;
+
+                this.#Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 20);
+                this.#Object.position.set(0, 1.5, -1);
+                this.#Object.lookAt(new THREE.Vector3(0, 0, 1));
+            }
+            Update() {
+                if (this.#Forcusing_Target && this.#ForcusTarget.Get_Object()) {
+                    this.#Object.lookAt(this.#ForcusTarget.Get_Object().position);
+                }
+            }
+
+
+            // Get Set
+            Get_Object() { return this.#Object; }
+            Set_ForcusTarget(target) {
+                this.#Forcusing_Target = true;
+                this.#ForcusTarget = target;
+            }
+
+
+            // Funcitons
+            Finish_ForcusTarget() { this.#Forcusing_Target; }
+        }
+        class Base_InputControler_1_CLASS {
+            // Varibales
+            #Time_Flag_Finishing;
+            #Time_Flag_Using;
+            #Time_Timer;
+
+
+            // Base
+            constructor() {
+                this.#Time_Flag_Finishing = true;
+                this.#Time_Flag_Using = false;
+                this.#Time_Timer = 0;
+            }
+            Update() {
+                if (this.#Time_Flag_Using) {
+                    setTimeout(() => {
+                        this.#Time_Flag_Using = false;
+                        this.#Time_Flag_Finishing = true;
+                    }, this.#Time_Timer * 1000);
+                }
+            }
+
+
+            // Get Set
+            Get_Time_Flag_Finishing() { return this.#Time_Flag_Finishing; }
+            Set_Timer(_time) {
+                if (!this.#Time_Flag_Using) {
+                    this.#Time_Timer = _time;
+                    this.#Time_Flag_Using = true;
+                    this.#Time_Flag_Finishing = false;
+                }
+            }
+        }
+        class Base_Light_Ambient_1_CLASS {
+            // Variables
+            #Object;
+
+
+            // Base
+            constructor() {
+                this.#Object = new THREE.AmbientLight(0xffffff, 0.8);
+                Scene.add(this.#Object);
+            }
+        }
+        class Base_Light_Directional_1_CLASS {
+            // Variables
+            #Object;
+
+
+            // Base
+            constructor() {
+                this.#Object = new THREE.DirectionalLight(0xffffff, 0.8);
+                Scene.add(this.#Object);
+            }
+        }
+        class Base_Manager_1_CLASS {
+            // Variables
+            #Flag_Clear;
+            #Flag_Start;
+            #UI_Home_1;
+            #UI_Start_1;
+            #UI_Clear_1;
+
+
+            // Base
+            constructor() {
+                this.#Flag_Clear = false;
+                this.#Flag_Start = false;
+                //// UI
+                // Home
+                this.#UI_Home_1 = document.createElement('div');
+                this.#UI_Home_1.setAttribute("id", "UI_Home_1");
+                this.#UI_Home_1.innerHTML = "HOME";
+                document.body.appendChild(this.#UI_Home_1);
+                // Start
+                this.#UI_Start_1 = document.createElement('div');
+                this.#UI_Start_1.setAttribute("id", "UI_Start_1");
+                this.#UI_Start_1.innerHTML = "";
+                document.body.appendChild(this.#UI_Start_1);
+                // WOOOW
+                this.#UI_Clear_1 = document.createElement('div');
+                this.#UI_Clear_1.setAttribute("id", "UI_Clear_1");
+                this.#UI_Clear_1.innerHTML = "";
+                document.body.appendChild(this.#UI_Clear_1);
+            }
+            Initialize() {
+                this.#Flag_Clear = false;
+                this.#Flag_Start = false;
+                this.#UI_Start_1.innerHTML = "";
+            }
+
+
+            // Get Set
+            Get_Flag_Clear() { return this.#Flag_Clear; }
+            Get_Flag_Start() { return this.#Flag_Start; }
+            Set_Flag_Start(_bool) { this.#Flag_Start = _bool; }
+
+
+            // Functions
+            Ready() {
+                this.#Flag_Clear = false;
+                this.#Flag_Start = false;
+                this.#UI_Start_1.innerHTML = "START";
+                this.#UI_Clear_1.innerHTML = "";
+                Ball_1.Initialize();
+                Progress_1.Ready();
+            }
+            Start() {
+                this.#Flag_Start = true;
+                this.#UI_Start_1.innerHTML = "";
+            }
+            Goal() {
+                this.#Flag_Clear = true;
+                this.#UI_Clear_1.innerHTML = "WOOOW!";
+            }
+        }
+        class Ball_1_CLASS {
+            // Variables
+            #Bounce_Count;
+            #Bounce_Max;
+            #Direction_Move;
+            #ElapsedFrame_Firing;
+            #ElapsedFrame_Gravity;
+            #Flag_Cup;
+            #Flag_Shoot;
+            #Object;
+            #Radius;
+            #Restitution;
+            #StartHeight;
+            #Velocity;
+            #Velocity_Past;
+
+
+            // Base
+            constructor() {
+                this.Initialize();
                 Loader_FBX.load(
                     "https://fum0000.github.io/FUM_WebSite/Asset/Model/Ball_PinPon_1.fbx",
-                    (object) => {
+                    (_object) => {
                         // Initialize
-                        object.scale.set(0.01, 0.01, 0.01);
-                        object.position.set(0, this.StartHeight, 0);
-                        this.Object = object;
-                        Scene.add(this.Object);
+                        _object.scale.set(0.01, 0.01, 0.01);
+                        _object.position.set(0, this.#StartHeight, 0);
+                        this.#Object = _object;
+                        Scene.add(this.#Object);
                     }
                 );
             }
+            Initialize() {
+                // Variables
+                this.#Bounce_Count = 0;
+                this.#Bounce_Max = 38;
+                this.#Direction_Move = new THREE.Vector3(0, -1, 1);
+                this.#ElapsedFrame_Firing = 0;
+                this.#ElapsedFrame_Gravity = 0;
+                this.#Flag_Cup = false;
+                this.#Flag_Shoot = false;
+                this.#Radius = 0.022;
+                this.#Restitution = 0.95;
+                this.#StartHeight = 1;
+                this.#Velocity = 0;
+                this.#Velocity_Past = this.#Velocity;
+                if (this.#Object) this.#Object.position.set(0, this.#StartHeight, 0);
+            }
             Update() {
-                if (this.Object && this.Flag_Shoot) {
-                    this.ElapsedFrame_Firing++;
-                    if (this.Velocity > 0.1) this.Velocity *= Resistance;
-                    else this.Velocity = 0;
-                        
+                if (this.#Object && this.#Flag_Shoot) {
+                    this.#ElapsedFrame_Firing++;
+                    if (this.#Velocity > 0.1) this.#Velocity *= Resistance;
+                    else this.#Velocity = 0;
+
                     this.Gravity();
                     this.Move();
                     this.CheckCollision();
 
-                    if (this.Bounce_Count >= this.Bounce_Max) Manager_1.Ready();
+                    if (this.#Bounce_Count >= this.#Bounce_Max) Base_Manager_1.Ready();
                 }
             }
-            Get_Flag_Shoot() { return this.Flag_Shoot; }
 
 
-            Ready() {
-                this.Bounce_Count = 0;
-                this.Bounce_Max = 38;
-                this.Direction_Move = new THREE.Vector3(0, -1, 1);
-                this.ElapsedFrame_Firing = 0;
-                this.ElapsedFrame_Gravity = 0;
-                this.Flag_Cup = false;
-                this.Flag_Shoot = false;
-                this.Radius = 0.022;
-                this.Restitution = 0.95;
-                this.StartHeight = 1;
-                this.Velocity = 0;
-                this.Velocity_Past = this.Velocity;
-                if (this.Object) this.Object.position.set(0, this.StartHeight, 0);
-            }
+            // Get Set
+            Get_Flag_Shoot() { return this.#Flag_Shoot; }
+
+
+            // Functions
             Shoot() {
-                this.Flag_Shoot = true;
-                this.Velocity = Progress_1.Get_Percentage() * 0.01;
-                this.Velocity_Past = this.Velocity;
+                this.#Flag_Shoot = true;
+                this.#Velocity = Progress_1.Get_Percentage() * 0.01;
+                this.#Velocity_Past = this.#Velocity;
             }
             Gravity() {
                 // Variables
-                const elapsed_time = this.ElapsedFrame_Gravity * DeltaTime;
+                const elapsed_time = this.#ElapsedFrame_Gravity * DeltaTime;
                 // Count
-                this.ElapsedFrame_Gravity++;
+                this.#ElapsedFrame_Gravity++;
 
 
                 // UP
-                if (this.Direction_Move.y > 0) {
+                if (this.#Direction_Move.y > 0) {
                     // Variables
-                    const maximum_arrival_time = this.Velocity_Past / Gravity;
+                    const maximum_arrival_time = this.#Velocity_Past / Gravity;
                     const velocity = Gravity * elapsed_time;
 
                     // Gravity Move
-                    this.Object.position.add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.abs((this.Velocity_Past - velocity) * DeltaTime)));
+                    this.#Object.position.add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.abs((this.#Velocity_Past - velocity) * DeltaTime)));
 
                     // MaximumArrivalTime
                     if (
                         elapsed_time > maximum_arrival_time - CalculationError_Time &&
                         elapsed_time < maximum_arrival_time + CalculationError_Time
                     ) {
-                        this.Direction_Move.y = -1;
-                        this.ElapsedFrame_Gravity = 0;
+                        this.#Direction_Move.y = -1;
+                        this.#ElapsedFrame_Gravity = 0;
                     }
                 }
 
@@ -125,103 +289,202 @@
                     const velocity = Gravity * elapsed_time;
 
                     // Gravity Move
-                    this.Object.position.add(new THREE.Vector3(0, -1, 0).multiplyScalar(velocity * DeltaTime));
+                    this.#Object.position.add(new THREE.Vector3(0, -1, 0).multiplyScalar(velocity * DeltaTime));
 
                     // Bounce
-                    if (this.Object.position.y < this.Radius) {
-                        this.Object.position.y = this.Radius;
-                        if (this.Bounce_Count < this.Bounce_Max) this.Direction_Move.y = 1;
-                        this.Velocity_Past = (Gravity * elapsed_time) * this.Restitution;
-                        this.ElapsedFrame_Gravity = 0;
+                    if (this.#Object.position.y < this.#Radius) {
+                        this.#Object.position.y = this.#Radius;
+                        if (this.#Bounce_Count < this.#Bounce_Max) this.#Direction_Move.y = 1;
+                        this.#Velocity_Past = (Gravity * elapsed_time) * this.#Restitution;
+                        this.#ElapsedFrame_Gravity = 0;
 
                         // Count
-                        if (this.Bounce_Count < this.Bounce_Max) this.Bounce_Count++;
+                        if (this.#Bounce_Count < this.#Bounce_Max) this.#Bounce_Count++;
                     }
                 }
             }
             Move() {
-                const vector = this.Direction_Move.clone(); vector.y = 0;
-                this.Object.position.add(vector.multiplyScalar(this.Velocity * DeltaTime));
-                if (this.Object.position.z > 2 || this.Object.position.z < 0) {
-                    this.Direction_Move.z *= -1;
+                const vector = this.#Direction_Move.clone(); vector.y = 0;
+                this.#Object.position.add(vector.multiplyScalar(this.#Velocity * DeltaTime));
+                if (this.#Object.position.z > 2 || this.#Object.position.z < 0) {
+                    this.#Direction_Move.z *= -1;
                 }
-                if (this.Object.position.x > 1 || this.Object.position.x < -1) {
-                    this.Direction_Move.x *= -1;
+                if (this.#Object.position.x > 1 || this.#Object.position.x < -1) {
+                    this.#Direction_Move.x *= -1;
                 }
             }
             CheckCollision() {
-                if (PaperCup_1.Object) {
+                if (PaperCup_1.Get_Object()) {
                     // Variables
-                    const position = this.Object.position;
+                    const position = this.#Object.position;
                     const position_xz = new THREE.Vector3(position.x, 0, position.z);
 
                     // Search
-                    const cup_position = PaperCup_1.Object.position;
+                    const cup_position = PaperCup_1.Get_Object().position;
                     const cup_position_xz = new THREE.Vector3(cup_position.x, 0, cup_position.z);
                     const distance = position_xz.distanceTo(cup_position_xz);
-                    if (distance < PaperCup_1.Radius) {
-                        if (position.y < PaperCup_1.Height) {
-                            this.Flag_Cup = true;
+                    if (distance < PaperCup_1.Get_Radius()) {
+                        if (position.y < PaperCup_1.Get_Height()) {
+                            this.#Flag_Cup = true;
                         }
-                        else this.Flag_Cup = false;
+                        else this.#Flag_Cup = false;
 
-                        if (this.Flag_Cup) {
-                            if (position.y == this.Radius) {
-                                Manager_1.Goal();
-                                this.Object.position.x = cup_position.x;
-                                this.Object.position.z = cup_position.z;
+                        if (this.#Flag_Cup) {
+                            if (position.y == this.#Radius) {
+                                Base_Manager_1.Goal();
+                                this.#Object.position.x = cup_position.x;
+                                this.#Object.position.z = cup_position.z;
                             }
                         }
                     }
                     else if (
-                        distance > PaperCup_1.Radius &&
-                        distance < PaperCup_1.Radius + this.Radius
+                        distance > PaperCup_1.Get_Radius() &&
+                        distance < PaperCup_1.Get_Radius() + this.#Radius
                     ) {
-                        if (position.y < PaperCup_1.Height) {
-                            this.Direction_Move.z *= -1;
-                            this.Direction_Move.x *= -1;
+                        if (position.y < PaperCup_1.Get_Height()) {
+                            this.#Direction_Move.z *= -1;
+                            this.#Direction_Move.x *= -1;
                         }
                     }
                 }
             }
         }
-        class Box_1_CLASS {
+        class PaperCup_1_CLASS {
+            // Variables
+            #Height;
+            #Object;
+            #Radius;
+
+
+            // Base
             constructor() {
-                this.Geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-                this.Material = new THREE.MeshNormalMaterial();
-                this.Object = new THREE.Mesh(this.Geometry, this.Material);
-                Scene.add(this.Object);
-            }
-            Update() {
-                this.AutoRotate();
+                // Variables
+                this.#Height = 0.08;
+                this.#Radius = 0.073 * 0.5;
+
+                Loader_FBX.load(
+                    "https://fum0000.github.io/FUM_WebSite/Asset/Model/Cup_Paper_1.fbx",
+                    (_object) => {
+                        // Initialize
+                        _object.scale.set(0.01, 0.01, 0.01);
+                        _object.position.set(0, 0, 1);
+                        this.#Object = _object;
+                        Scene.add(this.#Object);
+                    }
+                );
             }
 
-            AutoRotate() {
-                this.Object.rotation.y += 0.01;
-            }
+
+            // Get Set
+            Get_Height() { return this.#Height; }
+            Get_Object() { return this.#Object; }
+            Get_Radius() { return this.#Radius; }
         }
-        class Camera_1_CLASS {
-            constructor() {
-                this.Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 20);
-                this.Object.position.set(0, 1.5, -1);
-                this.Object.lookAt(new THREE.Vector3(0, 0, 1));
+        class Progress_1_CLASS {
+            // Variables
+            #Element;
+            #MeterSpeed;
+            #MoveDirection;
 
-                this.Forcusing_Target = false;
-                this.ForcusTarget = null;
+
+            // Base
+            constructor() {
+                this.#Element = document.getElementById("Progress_1");
+                this.#Element.value = 0;
+                this.#Element.max = 100;
+                this.#MeterSpeed = 100; // 0~100 per second
+                this.#MoveDirection = 1;
             }
             Update() {
-                if (this.Forcusing_Target && this.ForcusTarget.Object) {
-                    this.Object.lookAt(this.ForcusTarget.Object.position);
+                if (!Ball_1.Get_Flag_Shoot()) {
+                    this.#MoveDirection == 1 ?
+                        this.#Element.value += this.#MeterSpeed * DeltaTime :
+                        this.#Element.value -= this.#MeterSpeed * DeltaTime;
+                    if (this.#Element.value >= this.#Element.max) {
+                        this.#Element.value = this.#Element.max;
+                        this.#MoveDirection = -1;
+                    }
+                    else if (this.#Element.value <= 0) {
+                        this.#Element.value = 0;
+                        this.#MoveDirection = 1;
+                    }
                 }
             }
 
-            Set_ForcusTarget(target) {
-                this.Forcusing_Target = true;
-                this.ForcusTarget = target;
-            }
+
+            // Get Set
+            Get_Percentage() { return this.#Element.value / this.#Element.max * 100; }
+
+
+            // Functions
+            Ready() { this.#Element.value = 0; }
         }
-        class Checker_Time_1_CLASS {
-            #Checking; #PreviousTime; #FPS;
+
+
+        // Create Objects
+        const Base_Camera_1 = new Base_Camera_1_CLASS();
+        const Base_InputControler_1 = new Base_InputControler_1_CLASS();
+        const Base_Light_Ambient_1 = new Base_Light_Ambient_1_CLASS();
+        const Base_Light_Directional_1 = new Base_Light_Directional_1_CLASS();
+        const Base_Manager_1 = new Base_Manager_1_CLASS();
+        const Ball_1 = new Ball_1_CLASS();
+        const PaperCup_1 = new PaperCup_1_CLASS();
+        const Progress_1 = new Progress_1_CLASS();
+
+
+        // Initialize
+        Base_Manager_1.Ready();
+
+
+        // Loop
+        Loop();
+        function Loop() {
+            // Object Actions
+            Base_InputControler_1.Update();
+            if (Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_Clear()) {
+                Ball_1.Update();
+                Progress_1.Update();
+                Base_Camera_1.Update();
+            }
+
+
+            // Threejs
+            Renderer.render(Scene, Base_Camera_1.Get_Object());
+            requestAnimationFrame(Loop);
+        }
+
+
+        // Functions
+        function ResizeScreen() {
+            Base_Camera_1.Get_Object().aspect = window.innerWidth / window.innerHeight;
+            Base_Camera_1.Get_Object().updateProjectionMatrix();
+            Renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function TouchStart() {
+            if (Base_InputControler_1.Get_Time_Flag_Finishing()) {
+                if (!Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_Clear()) {
+                    Base_Manager_1.Start();
+                }
+                else if (Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_Clear()) {
+                    Ball_1.Shoot();
+                }
+                else if (Base_Manager_1.Get_Flag_Start() && Base_Manager_1.Get_Flag_Clear()) {
+                    Base_Manager_1.Ready();
+                }
+            }
+            Base_InputControler_1.Set_Timer(0.1);
+        }
+
+
+        // Debug
+        class Debug_Checker_Time_1_CLASS {
+            // Varibales
+            #Checking;
+            #FPS;
+            #PreviousTime;
+
+
+            // Base
             constructor() {
                 this.#Checking = false;
                 this.#PreviousTime = 0;
@@ -238,229 +501,26 @@
                 }
             }
 
+
+            // Get Set
             Set_Checking(bool) {
                 this.#Checking = bool;
                 this.#PreviousTime = 0;
             }
         }
-        class InputControler_1_CLASS {
-            #Time_Count_Frame;
-            #Time_Flag_Finishing;
-            #Time_Flag_Using;
-            #Time_Timer;
-            constructor() {
-                this.#Time_Count_Frame = 0;
-                this.#Time_Flag_Finishing = true;
-                this.#Time_Flag_Using = false;
-                this.#Time_Timer = 0;
-            }
-            Update() {
-                if ( this.#Time_Flag_Using ) {
-                    this.#Time_Count_Frame++;
-                    if (this.#Time_Count_Frame * DeltaTime > this.#Time_Timer) {
-                        this.#Time_Flag_Using = false;
-                        this.#Time_Flag_Finishing = true;
-                        this.#Time_Count_Frame = 0;
-                    }
-                }
-            }
-            Get_Time_Flag_Finishing() { return this.#Time_Flag_Finishing; }
-
-            Set_Timer(_time) {
-                if (!this.#Time_Flag_Using) {
-                    this.#Time_Timer = _time;
-                    this.#Time_Flag_Using = true;
-                    this.#Time_Flag_Finishing = false;
-                }
-            }
-        }
-        class Light_Ambient_1_CLASS {
-            constructor() {
-                this.Object = new THREE.AmbientLight(0xffffff, 0.8);
-                Scene.add(this.Object);
-            }
-        }
-        class Light_Directional_1_CLASS {
-            constructor() {
-                this.Object = new THREE.DirectionalLight(0xffffff, 0.8);
-                Scene.add(this.Object);
-            }
-        }
-        class Manager_1_CLASS {
-            constructor() {
-                this.Flag_Clear = false;
-                this.Flag_Start = false;
-                //// UI
-                // Home
-                this.UI_Home_1 = document.createElement('div');
-                this.UI_Home_1.setAttribute("id", "UI_Home_1");
-                this.UI_Home_1.innerHTML = "HOME";
-                document.body.appendChild(this.UI_Home_1);
-                // Start
-                this.UI_Start_1 = document.createElement('div');
-                this.UI_Start_1.setAttribute("id", "UI_Start_1");
-                this.UI_Start_1.innerHTML = "";
-                document.body.appendChild(this.UI_Start_1);
-                // WOOOW
-                this.UI_Clear_1 = document.createElement('div');
-                this.UI_Clear_1.setAttribute("id", "UI_Clear_1");
-                this.UI_Clear_1.innerHTML = "";
-                document.body.appendChild(this.UI_Clear_1);
-            }
-            Get_Flag_Clear() { return this.Flag_Clear; }
-            Get_Flag_Start() { return this.Flag_Start; }
-            Set_Flag_Start(_bool) { this.Flag_Start = _bool; }
-
-
-            Initialize() {
-                this.Flag_Clear = false;
-                this.Flag_Start = false;
-                this.UI_Start_1.innerHTML = "";
-            }
-            Ready() {
-                this.Flag_Clear = false;
-                this.Flag_Start = false;
-                this.UI_Start_1.innerHTML = "START";
-                this.UI_Clear_1.innerHTML = "";
-                Ball_1.Ready();
-                Progress_1.Ready();
-            }
-            Start() {
-                this.Flag_Start = true;
-                this.UI_Start_1.innerHTML = "";
-            }
-            Goal() {
-                this.Flag_Clear = true;
-                this.UI_Clear_1.innerHTML = "WOOOW!";
-            }
-        }
-        class PaperCup_1_CLASS {
-            constructor() {
-                // Variables
-                this.Height = 0.08;
-                this.Radius = 0.073 * 0.5;
-
-                Loader_FBX.load(
-                    "https://fum0000.github.io/FUM_WebSite/Asset/Model/Cup_Paper_1.fbx",
-                    (object) => {
-                        // Initialize
-                        object.scale.set(0.01, 0.01, 0.01);
-                        object.position.set(0, 0, 1);
-                        this.Object = object;
-                        Scene.add(this.Object);
-                    }
-                );
-            }
-        }
-        class Progress_1_CLASS {
-            constructor() {
-                this.Element = document.getElementById("Progress_1");
-                this.Element.value = 0;
-                this.Element.max = 100;
-                this.MeterSpeed = 100; // 0~100 per second
-                this.MoveDirection = 1;
-            }
-            Update() {
-                if (!Ball_1.Get_Flag_Shoot()) {
-                    this.MoveDirection == 1 ?
-                        this.Element.value += this.MeterSpeed * DeltaTime :
-                        this.Element.value -= this.MeterSpeed * DeltaTime;
-                    if (this.Element.value >= this.Element.max) {
-                        this.Element.value = this.Element.max;
-                        this.MoveDirection = -1;
-                    }
-                    else if (this.Element.value <= 0) {
-                        this.Element.value = 0;
-                        this.MoveDirection = 1;
-                    }
-                }
-            }
-            Get_Percentage() { return this.Element.value / this.Element.max * 100; }
-
-
-            Ready() {
-                this.Element.value = 0;
-            }
-        }
-        
-
-        // Create Objects
-        const Ball_1 = new Ball_1_CLASS();
-        const Camera_1 = new Camera_1_CLASS();
-        const Checker_Time_1 = new Checker_Time_1_CLASS();
-        const InputControler_1 = new InputControler_1_CLASS();
-        const Light_Ambient_1 = new Light_Ambient_1_CLASS();
-        const Light_Directional_1 = new Light_Directional_1_CLASS();
-        const Manager_1 = new Manager_1_CLASS();
-        const PaperCup_1 = new PaperCup_1_CLASS();
-        const Progress_1 = new Progress_1_CLASS();
-
-
-        //// Initialize
-        Manager_1.Ready();
-
-
-        // Debug
         function Log(content) { console.log(content); }
-        window.addEventListener('keydown', (event) => {
-            switch (event.keyCode) {
-                case 65: // Aキー
-                    Log(Scene.children);
-                    break;
-            }
-        });
-        Checker_Time_1.Set_Checking(false);
-        // Camera_1.Set_ForcusTarget(Ball_1);
-
-
-        // Loop
-        Loop();
-        function Loop() {
-            // Object Actions
-            Checker_Time_1.Update();
-            InputControler_1.Update();
-            if (Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
-                Ball_1.Update();
-                Camera_1.Update();
-                Progress_1.Update();
-            }
-
-
-            // Threejs
-            Renderer.render(Scene, Camera_1.Object);
-            requestAnimationFrame(Loop);
-        }
-
-
-        //// Functions
-        // Resize
-        function ResizeScreen() {
-            Camera_1.Object.aspect = window.innerWidth / window.innerHeight;
-            Camera_1.Object.updateProjectionMatrix();
-            Renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        function TouchStart() {
-            if (InputControler_1.Get_Time_Flag_Finishing()) {
-                if (!Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
-                    Manager_1.Start();
-                }
-                else if (Manager_1.Get_Flag_Start() && !Manager_1.Get_Flag_Clear()) {
-                    Ball_1.Shoot();
-                }
-                else if (Manager_1.Get_Flag_Start() && Manager_1.Get_Flag_Clear()) {
-                    Manager_1.Ready();
-                }
-            }
-            InputControler_1.Set_Timer(0.1);
-        }
 
 
     </script>
+
 </head>
 
 <body>
+
     <canvas id="Canvas_1"></canvas>
     <progress id="Progress_1" value="100" max="100"></progress>
+
+
     <style>
         body {
             margin: 0;
@@ -475,6 +535,15 @@
             transform: translateX(-50%) translateY(-100%);
         }
 
+        #UI_Home_1 {
+            position: absolute;
+            top: 20px;
+            font-size: 2vh;
+            font-weight: bold;
+            right: 20px;
+            color: red;
+        }
+
         #UI_Start_1 {
             position: absolute;
             top: 60%;
@@ -482,15 +551,6 @@
             transform: translate(-50%, -50%);
             font-size: 2vh;
             font-weight: bold;
-            color: red;
-        }
-
-        #UI_Home_1 {
-            position: absolute;
-            top: 20px;
-            font-size: 2vh;
-            font-weight: bold;
-            right: 20px;
             color: red;
         }
 
@@ -506,17 +566,11 @@
     </style>
 
 
-    <!-- ▼ Script Load ▼ ----------------------------------------------------------------->
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-    <!------------------------------------------------------------------------------------>
-
     <script type="module">
-        // jQuery-------------------------------------------------------------------------
         $("#UI_Home_1").click(function () {
             window.location.href = '../../English/HTML/index.html';
         });
-        //--------------------------------------------------------------------------------
     </script>
 </body>
 

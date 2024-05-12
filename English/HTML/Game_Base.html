@@ -1,10 +1,15 @@
 <html>
 
 <head>
-    <meta charset="utf-8" />
-    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
-    <script type="module">
 
+    <!-- Setting -->
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta charset="utf-8" />
+
+
+    <script type="module">
 
         // Setup Threejs
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
@@ -16,56 +21,244 @@
         Renderer.setClearColor(new THREE.Color(0xFCA3B7));
         const Scene = new THREE.Scene();
         const Loader_FBX = new FBXLoader();
+        Renderer.domElement.addEventListener('touchstart', function () { TouchStart(); });
+        Renderer.domElement.addEventListener('mousedown', function () { TouchStart(); });
 
 
         // Setting Variable
         let DeltaTime = 1 / 60;
-        let Flag_Clear = false;
         let Gravity = 9.8;
         const CalculationError = 0.001;
         const CalculationError_Time = 0.1;
-        const Resistance = 0.998;
 
 
         // Create Classe
-        class Box_1_CLASS {
+        class Base_Camera_1_CLASS {
+            // Variables
+            #Forcusing_Target;
+            #ForcusTarget;
+            #Object;
+
+
+            // Base
             constructor() {
-                this.Geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-                this.Material = new THREE.MeshNormalMaterial();
-                this.Object = new THREE.Mesh(this.Geometry, this.Material);
-                Scene.add(this.Object);
+                this.#Forcusing_Target = false;
+                this.#ForcusTarget = null;
+                this.#Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 20);
+                this.#Object.position.set(0, 1.5, -1);
+                this.#Object.lookAt(new THREE.Vector3(0, 0, 1));
+            }
+            Update() {
+                if (this.#Forcusing_Target && this.#ForcusTarget.Get_Object()) {
+                    this.#Object.lookAt(this.#ForcusTarget.Get_Object().position);
+                }
+            }
+
+
+            // Get Set
+            Get_Object() { return this.#Object; }
+            Set_ForcusTarget(target) {
+                this.#Forcusing_Target = true;
+                this.#ForcusTarget = target;
+            }
+
+
+            // Funcitons
+            Finish_ForcusTarget() { this.#Forcusing_Target; }
+        }
+        class Base_InputControler_1_CLASS {
+            // Varibales
+            #Time_Flag_Finishing;
+            #Time_Flag_Using;
+            #Time_Timer;
+
+
+            // Base
+            constructor() {
+                this.#Time_Flag_Finishing = true;
+                this.#Time_Flag_Using = false;
+                this.#Time_Timer = 0;
+            }
+            Update() {
+                if (this.#Time_Flag_Using) {
+                    setTimeout(() => {
+                        this.#Time_Flag_Using = false;
+                        this.#Time_Flag_Finishing = true;
+                    }, this.#Time_Timer * 1000);
+                }
+            }
+
+
+            // Get Set
+            Get_Time_Flag_Finishing() { return this.#Time_Flag_Finishing; }
+            Set_Timer(_time) {
+                if (!this.#Time_Flag_Using) {
+                    this.#Time_Timer = _time;
+                    this.#Time_Flag_Using = true;
+                    this.#Time_Flag_Finishing = false;
+                }
+            }
+        }
+        class Base_Light_Ambient_1_CLASS {
+            // Variables
+            #Object;
+
+
+            // Base
+            constructor() {
+                this.#Object = new THREE.AmbientLight(0xffffff, 0.8);
+                Scene.add(this.#Object);
+            }
+        }
+        class Base_Light_Directional_1_CLASS {
+            // Variables
+            #Object;
+
+
+            // Base
+            constructor() {
+                this.#Object = new THREE.DirectionalLight(0xffffff, 0.8);
+                Scene.add(this.#Object);
+            }
+        }
+        class Base_Manager_1_CLASS {
+            // Variables
+            #Flag_Clear;
+            #Flag_Start;
+            #UI_Home_1;
+            #UI_Start_1;
+            #UI_Clear_1;
+
+
+            // Base
+            constructor() {
+                this.#Flag_Clear = false;
+                this.#Flag_Start = false;
+                //// UI
+                // Home
+                this.#UI_Home_1 = document.createElement('div');
+                this.#UI_Home_1.setAttribute("id", "UI_Home_1");
+                this.#UI_Home_1.innerHTML = "HOME";
+                document.body.appendChild(this.#UI_Home_1);
+                // Start
+                this.#UI_Start_1 = document.createElement('div');
+                this.#UI_Start_1.setAttribute("id", "UI_Start_1");
+                this.#UI_Start_1.innerHTML = "";
+                document.body.appendChild(this.#UI_Start_1);
+                // WOOOW
+                this.#UI_Clear_1 = document.createElement('div');
+                this.#UI_Clear_1.setAttribute("id", "UI_Clear_1");
+                this.#UI_Clear_1.innerHTML = "";
+                document.body.appendChild(this.#UI_Clear_1);
+            }
+            Initialize() {
+                this.#Flag_Clear = false;
+                this.#Flag_Start = false;
+                this.#UI_Start_1.innerHTML = "";
+            }
+
+
+            // Get Set
+            Get_Flag_Clear() { return this.#Flag_Clear; }
+            Get_Flag_Start() { return this.#Flag_Start; }
+            Set_Flag_Start(_bool) { this.#Flag_Start = _bool; }
+
+
+            // Functions
+            Ready() {
+                this.#Flag_Clear = false;
+                this.#Flag_Start = false;
+                this.#UI_Start_1.innerHTML = "START";
+                this.#UI_Clear_1.innerHTML = "";
+                Ball_1.Ready();
+                Progress_1.Ready();
+            }
+            Start() {
+                this.#Flag_Start = true;
+                this.#UI_Start_1.innerHTML = "";
+            }
+            Goal() {
+                this.#Flag_Clear = true;
+                this.#UI_Clear_1.innerHTML = "WOOOW!";
+            }
+        }
+        class Debug_Box_1_CLASS {
+            // Variables
+            #Geometry;
+            #Material;
+            #Object;
+
+
+            // Base
+            constructor() {
+                this.#Geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+                this.#Material = new THREE.MeshNormalMaterial();
+                this.#Object = new THREE.Mesh(this.#Geometry, this.#Material);
+                Scene.add(this.#Object);
             }
             Update() {
                 this.AutoRotate();
             }
 
+
+            // Get Set
+            Get_Object() { return this.#Object; }
+
+
+            // Functions
             AutoRotate() {
-                this.Object.rotation.y += 0.01;
-                this.Object.rotation.x += 0.01;
+                this.#Object.rotation.y += 0.01;
+                this.#Object.rotation.x += 0.01;
             }
         }
-        class Camera_1_CLASS {
-            constructor() {
-                this.Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 20);
-                this.Object.position.set(0, 1.5, -1);
-                this.Object.lookAt(new THREE.Vector3(0, 0, 1));
 
-                this.Forcusing_Target = false;
-                this.ForcusTarget = null;
-            }
-            Update() {
-                if (this.Forcusing_Target && this.ForcusTarget.Object) {
-                    this.Object.lookAt(this.ForcusTarget.Object.position);
-                }
-            }
 
-            Set_ForcusTarget(target) {
-                this.Forcusing_Target = true;
-                this.ForcusTarget = target;
-            }
+        // Create #Objects
+        const Base_Camera_1 = new Base_Camera_1_CLASS();
+        const Base_Light_Ambient_1 = new Base_Light_Ambient_1_CLASS();
+        const Base_Light_Directional_1 = new Base_Light_Directional_1_CLASS();
+        const Base_Manager_1 = new Base_Manager_1_CLASS();
+        const Debug_Box_1 = new Debug_Box_1_CLASS();
+
+
+        // Initialize
+        Base_Camera_1.Set_ForcusTarget(Debug_Box_1);
+
+
+        // Loop
+        Loop();
+        function Loop() {
+            // Object Actions
+            Debug_Box_1.Update();
+            Base_Camera_1.Update();
+
+
+            // Threejs
+            Renderer.render(Scene, Base_Camera_1.Get_Object());
+            requestAnimationFrame(Loop);
         }
-        class Checker_Time_1_CLASS {
-            #Checking; #PreviousTime; #FPS;
+
+
+        // Functions
+        function ResizeScreen() {
+            Base_Camera_1.Get_Object().aspect = window.innerWidth / window.innerHeight;
+            Base_Camera_1.Get_Object().updateProjectionMatrix();
+            Renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function TouchStart() {
+
+        }
+
+
+        // Debug
+        class Debug_Checker_Time_1_CLASS {
+            // Variables
+            #Checking;
+            #FPS;
+            #PreviousTime;
+
+
+            // Base
             constructor() {
                 this.#Checking = false;
                 this.#PreviousTime = 0;
@@ -82,38 +275,13 @@
                 }
             }
 
+
+            // Get Set
             Set_Checking(bool) {
                 this.#Checking = bool;
                 this.#PreviousTime = 0;
             }
         }
-        class Light_Ambient_1_CLASS {
-            constructor() {
-                this.Object = new THREE.AmbientLight(0xffffff, 0.8);
-                Scene.add(this.Object);
-            }
-        }
-        class Light_Directional_1_CLASS {
-            constructor() {
-                this.Object = new THREE.DirectionalLight(0xffffff, 0.8);
-                Scene.add(this.Object);
-            }
-        }
-
-
-        // Create Objects
-        const Box_1 = new Box_1_CLASS();
-        const Camera_1 = new Camera_1_CLASS();
-        const Checker_Time_1 = new Checker_Time_1_CLASS();
-        const Light_Ambient_1 = new Light_Ambient_1_CLASS();
-        const Light_Directional_1 = new Light_Directional_1_CLASS();
-
-
-        // Initialize
-        Camera_1.Set_ForcusTarget(Box_1);
-
-
-        // Debug
         function Log(content) { console.log(content); }
         window.addEventListener('keydown', (event) => {
             switch (event.keyCode) {
@@ -122,34 +290,6 @@
                     break;
             }
         });
-        Checker_Time_1.Set_Checking(false);
-        // Camera_1.Set_ForcusTarget(Ball_1);
-
-
-        // Loop
-        Loop();
-        function Loop() {
-            // Object Actions
-            if (!Flag_Clear) {
-                Box_1.Update();
-                Checker_Time_1.Update();
-                Camera_1.Update();
-            }
-
-
-            // Threejs
-            Renderer.render(Scene, Camera_1.Object);
-            requestAnimationFrame(Loop);
-        }
-
-
-        //// Functions
-        // Resize
-        function ResizeScreen() {
-            Camera_1.Object.aspect = window.innerWidth / window.innerHeight;
-            Camera_1.Object.updateProjectionMatrix();
-            Renderer.setSize(window.innerWidth, window.innerHeight);
-        }
 
 
     </script>
@@ -157,11 +297,59 @@
 
 <body>
     <canvas id="Canvas_1"></canvas>
+
+
     <style>
         body {
             margin: 0;
         }
+
+        #Progress_1 {
+            position: absolute;
+            block-size: 2em;
+            inline-size: 20em;
+            left: 50%;
+            top: 90%;
+            transform: translateX(-50%) translateY(-100%);
+        }
+
+        #UI_Home_1 {
+            position: absolute;
+            top: 20px;
+            font-size: 2vh;
+            font-weight: bold;
+            right: 20px;
+            color: red;
+        }
+
+        #UI_Start_1 {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2vh;
+            font-weight: bold;
+            color: red;
+        }
+
+        #UI_Clear_1 {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2vh;
+            font-weight: bold;
+            color: red;
+        }
     </style>
+
+
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script type="module">
+        $("#UI_Home_1").click(function () {
+            window.location.href = '../../English/HTML/index.html';
+        });
+    </script>
 </body>
 
 </html>
