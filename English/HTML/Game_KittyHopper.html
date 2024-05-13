@@ -1,469 +1,591 @@
-<!DOCTYPE html>
-<html lang="ja">
-
-<!-- ▼ Head ▼ ---------------------------------------------------------------------------->
+<html>
 
 <head>
 
-    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
-
     <!-- Setting -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta charset="utf-8" />
+    <link href="../../Asset/CSS/common.css" rel="stylesheet" />
+
+
+    <script type="module">
+
+        // Setup Threejs
+        import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+        import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
+        const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas_1"), antialias: true });
+        Renderer.setPixelRatio(window.devicePixelRatio);
+        Renderer.setSize(window.innerWidth, window.innerHeight);
+        window.addEventListener('resize', ResizeScreen, false);
+        Renderer.setClearColor(new THREE.Color(0xFCA3B7));
+        const Scene = new THREE.Scene();
+        Scene.fog = new THREE.Fog(0xFCA3B7, 0, 10);
+        const Loader_FBX = new FBXLoader();
+        Renderer.domElement.addEventListener('touchstart', function () { TouchStart(); });
+        Renderer.domElement.addEventListener('mousedown', function () { TouchStart(); });
+
+
+        // Setting Variable
+        let DeltaTime = 1 / 60;
+        let Gravity = 9.8;
+        const CalculationError = 0.001;
+        const CalculationError_Time = 0.1;
+        const Resistance = 0.998;
+
+
+        // Create Classe
+        class Base_Camera_1_CLASS {
+            // Variables
+            #Forcusing_Target;
+            #ForcusTarget;
+            #Object;
+            #StartPosition;
+
+
+            // Base
+            constructor() {
+                this.#Forcusing_Target = false;
+                this.#ForcusTarget = null;
+                this.#Object = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 0.1, 50);
+                this.#Object.position.set(-2, 0.5, -1);
+                this.#Object.lookAt(new THREE.Vector3(0, 0, 0));
+                this.#StartPosition = new THREE.Vector3(-2, 0.5, -1);
+            }
+            Initialize() {
+                this.#Forcusing_Target = false;
+                this.#ForcusTarget = null;
+                this.#Object.position.set(-2, 0.5, -1);
+                this.#Object.lookAt(new THREE.Vector3(0, 0, 1));
+                this.#StartPosition = new THREE.Vector3(-2, 0.5, -1);
+            }
+            Update() {
+                if (Cat_1.Get_Object()) {
+                    this.#Object.position.set(-2, 0.5, Cat_1.Get_Object().position.z - 1);
+                    this.#Object.lookAt(new THREE.Vector3(0, 0, Cat_1.Get_Object().position.z + 1));
+                }
+            }
+
+
+            // Get Set
+            Get_Object() { return this.#Object; }
+        }
+        class Base_InputControler_1_CLASS {
+            // Varibales
+            #Time_Count_Frame;
+            #Time_Flag_Finishing;
+            #Time_Flag_Using;
+            #Time_Timer;
+
+
+            // Base
+            constructor() {
+                this.#Time_Count_Frame = 0;
+                this.#Time_Flag_Finishing = true;
+                this.#Time_Flag_Using = false;
+                this.#Time_Timer = 0;
+            }
+            Update() {
+                if (this.#Time_Flag_Using) {
+                    this.#Time_Count_Frame++;
+                    if (this.#Time_Count_Frame * DeltaTime > this.#Time_Timer) {
+                        this.#Time_Flag_Using = false;
+                        this.#Time_Flag_Finishing = true;
+                        this.#Time_Count_Frame = 0;
+                    }
+                }
+            }
+
+
+            // Get Set
+            Get_Time_Flag_Finishing() { return this.#Time_Flag_Finishing; }
+            Set_Timer(_time) {
+                if (!this.#Time_Flag_Using) {
+                    this.#Time_Timer = _time;
+                    this.#Time_Flag_Using = true;
+                    this.#Time_Flag_Finishing = false;
+                }
+            }
+        }
+        class Base_Light_Ambient_1_CLASS {
+            // Variables
+            #Object;
+
+
+            // Base
+            constructor() {
+                this.#Object = new THREE.AmbientLight(0xffffff, 0.8);
+                Scene.add(this.#Object);
+            }
+        }
+        class Base_Light_Directional_1_CLASS {
+            // Variables
+            #Object;
+
+
+            // Base
+            constructor() {
+                this.#Object = new THREE.DirectionalLight(0xffffff, 0.8);
+                Scene.add(this.#Object);
+            }
+        }
+        class Base_Manager_1_CLASS {
+            // Variables
+            #Flag_GameOver;
+            #Flag_Start;
+            #Score;
+            #UI_GameOver_1;
+            #UI_Home_1;
+            #UI_Start_1;
+            #UI_Score_1;
+
+
+            // Base
+            constructor() {
+                this.#Flag_GameOver = false;
+                this.#Flag_Start = false;
+                this.#Score = 0;
+                //// UI
+                // Home
+                this.#UI_Home_1 = document.createElement('div');
+                this.#UI_Home_1.setAttribute("id", "UI_Home_1");
+                this.#UI_Home_1.innerHTML = "HOME";
+                document.body.appendChild(this.#UI_Home_1);
+                // Score
+                this.#UI_Score_1 = document.createElement('div');
+                this.#UI_Score_1.setAttribute("id", "UI_Score_1");
+                this.#UI_Score_1.innerHTML = "SCORE: " + Math.floor(this.#Score);
+                document.body.appendChild(this.#UI_Score_1);
+                // Start
+                this.#UI_Start_1 = document.createElement('div');
+                this.#UI_Start_1.setAttribute("id", "UI_Start_1");
+                this.#UI_Start_1.innerHTML = "";
+                document.body.appendChild(this.#UI_Start_1);
+                // GameOver
+                this.#UI_GameOver_1 = document.createElement('div');
+                this.#UI_GameOver_1.setAttribute("id", "UI_GameOver_1");
+                this.#UI_GameOver_1.innerHTML = "";
+                document.body.appendChild(this.#UI_GameOver_1);
+
+                // Audio
+                var bgm = new Audio();
+                bgm.src = '../../Asset/Audio/lofi_2.wav';
+                bgm.loop = true;
+                bgm.volume = 0.5;
+                // bgm.play();
+            }
+            Update() {
+                // Time to Score
+                this.Add_Score(DeltaTime);
+            }
+
+
+            // Get Set
+            Get_Flag_GameOver() { return this.#Flag_GameOver; }
+            Get_Flag_Start() { return this.#Flag_Start; }
+
+
+            // Functions
+            Add_Score(_point) {
+                this.#Score += _point;
+                this.#UI_Score_1.innerHTML = "Score : " + Math.floor(this.#Score);
+            }
+            Ready() {
+                this.#Flag_GameOver = false;
+                this.#Flag_Start = false;
+                this.#Score = 0;
+                this.#UI_Start_1.innerHTML = "START";
+                this.#UI_GameOver_1.innerHTML = "";
+                this.#UI_Score_1.innerHTML = "Score : " + Math.floor(this.#Score);
+                Cat_1.Initialize();
+                Bar_Generator_1.Initialize();
+                Base_Camera_1.Initialize();
+            }
+            Start() {
+                this.#Flag_Start = true;
+                this.#UI_Start_1.innerHTML = "";
+            }
+            GameOver() {
+                this.#Flag_GameOver = true;
+                this.#UI_GameOver_1.innerHTML = "GAME OVER!";
+            }
+        }
+        class Cat_1_CLASS {
+            // Variables
+            #AnimationControler;
+            #Flag_Jump;
+            #Flag_Point;
+            #Jump_Count;
+            #Jump_Frame;
+            #Jump_SpeedAcceleration;
+            #Jump_Velocity;
+            #Object;
+            #Speed;
+            #Speed_Acceleration;
+            #Speed_Past;
+
+
+            // Base
+            constructor() {
+                this.#Jump_SpeedAcceleration = 1.2;
+                this.#Jump_Velocity = 2.5;
+                this.#Speed_Acceleration = 0;
+                this.Initialize();
+                Loader_FBX.load(
+                    'https://fum0000.github.io/FUM_WebSite/Asset/Model/Cat_1.fbx',
+                    (_object) => {
+                        _object.scale.set(0.01, 0.01, 0.01);
+                        _object.position.set(0, 0, 0);
+
+                        // Animation
+                        this.#AnimationControler = new THREE.AnimationMixer(_object);
+                        const action = this.#AnimationControler.clipAction(_object.animations[0]);
+                        action.play();
+
+                        this.#Object = _object;
+                        Scene.add(_object);
+                    },
+                );
+            }
+            Initialize() {
+                this.#Flag_Jump = false;
+                this.#Flag_Point = false;
+                this.#Jump_Count = 0;
+                this.#Jump_Frame = 0;
+                this.#Speed_Past = 1.2;
+                this.#Speed = this.#Speed_Past;
+                if (this.#Object) this.#Object.position.set(0, 0, 0);
+            }
+            Update() {
+                this.#AnimationControler.update(0.02);
+                this.Move();
+                this.Gravity();
+                this.CheckCollision();
+            }
+
+
+            // Get Set
+            Get_Object() { return this.#Object; }
+
+
+            // Functions
+            Move() { this.#Object.position.z += this.#Speed * DeltaTime; }
+            Gravity() {
+                if (this.#Flag_Jump) {
+                    // Gravity
+                    this.#Jump_Frame++;
+                    const time = this.#Jump_Frame * DeltaTime;
+                    this.#Object.position.y = this.#Jump_Velocity * time - 0.5 * Gravity * time * time;
+
+                    // Landing
+                    if (this.#Object.position.y < 0) {
+                        this.#Object.position.y = 0;
+                        this.#Flag_Jump = false;
+
+                        this.#Speed = this.#Speed_Past;
+                    }
+                }
+            }
+            Jump() {
+                if (this.#Object) {
+                    if (!this.#Flag_Jump) {
+                        this.#Flag_Jump = true;
+                        this.#Jump_Frame = 0;
+
+                        this.#Speed_Past = this.#Speed;
+                        this.#Speed *= this.#Jump_SpeedAcceleration;
+
+                        this.#Jump_Count++;
+
+                        // Score
+                        if (this.#Flag_Point) {
+                            Base_Manager_1.Add_Score(Bar_Generator_1.Get_Point());
+                            this.#Flag_Point = false;
+                        }
+                    }
+                }
+            }
+            CheckCollision() {
+                if (Bar_Generator_1.Get_Bars()) {
+                    for (let i = 0; i < Bar_Generator_1.Get_Bars().length; i++) {
+                        if (this.#Object.position.z > Bar_Generator_1.Get_Bars()[i].position.z - .2 && this.#Object.position.z < Bar_Generator_1.Get_Bars()[i].position.z + .23) {
+                            if (!this.#Flag_Jump) Base_Manager_1.GameOver();
+                            else this.#Flag_Point = true;
+                        }
+                    }
+                }
+            }
+        }
+        class Bar_Generator_1_CLASS {
+            // Variables
+            #Array;
+            #Distance_Generate;
+            #Distance_Start;
+            #Number;
+            #Number_ForTutorial;
+            #Point;
+            #Range_Initial;
+            #Range_Longest
+            #Range_Shortest;
+
+
+            // Base
+            constructor() {
+                this.#Array = [];
+                this.#Distance_Start = 5;
+                this.#Number = 50;
+                this.#Number_ForTutorial = 3;
+                this.#Distance_Generate = this.#Number_ForTutorial * this.#Distance_Start;
+                this.#Point = 10;
+                this.#Range_Initial = 3.0;
+                this.#Range_Shortest = .6;
+                this.#Range_Longest = this.#Range_Shortest + this.#Range_Initial;
+                this.CreateBars();
+            }
+            Initialize() {
+                this.#Distance_Generate = this.#Number_ForTutorial * this.#Distance_Start;
+                this.ResetLocation();
+            }
+            Update() {
+                this.CheckDisappear();
+            }
+
+
+            // Get Set
+            Get_Bars() { return this.#Array; }
+            Get_Point() { return this.#Point; }
+
+
+            // Functions
+            CreateBars() {
+                for (let i = 0; i < this.#Number_ForTutorial; i++) {
+                    const geometry = new THREE.BoxGeometry(1, 1, 1);
+                    const material = new THREE.MeshBasicMaterial({ color: 0xCF0000 });
+                    const cube = new THREE.Mesh(geometry, material);
+                    cube.scale.set(1, 0.1, 0.02);
+                    cube.position.set(0, cube.scale.y * 0.5, (i + 1) * this.#Distance_Start);
+                    Scene.add(cube);
+                    this.#Array.push(cube);
+                }
+                for (let i = this.#Number_ForTutorial; i < this.#Number; i++) {
+                    const geometry = new THREE.BoxGeometry(1, 1, 1);
+                    const material = new THREE.MeshBasicMaterial({ color: 0xCF0000 });
+                    const cube = new THREE.Mesh(geometry, material);
+                    cube.scale.set(1, 0.1, 0.02);
+
+                    cube.position.set(0, cube.scale.y * 0.5, 0);
+
+                    this.#Array.push(cube);
+                    this.Respawn(i);
+
+                    Scene.add(cube);
+                }
+            }
+            ResetLocation() {
+                if (this.#Array) {
+                    for (let i = 0; i < this.#Number_ForTutorial; i++) {
+                        this.#Array[i].position.set(0, this.#Array[i].scale.y * 0.5, (i + 1) * this.#Distance_Start);
+                    }
+                    for (let i = this.#Number_ForTutorial; i < this.#Number; i++) {
+                        this.#Array[i].position.set(0, this.#Array[i].scale.y * 0.5, 0);
+                        this.Respawn(i);
+                    }
+                }
+            }
+            CheckDisappear() {
+                if (this.#Array) {
+                    for (let i = 0; i < this.#Array.length; i++) {
+                        if (this.#Array[i].position.z < Cat_1.Get_Object().position.z - 10) {
+                            this.Respawn(i);
+                        }
+                    }
+                }
+            }
+            Respawn(_index) {
+                if (this.#Array) {
+                    const near = this.#Distance_Generate + this.#Range_Shortest;
+                    const far = this.#Distance_Generate + this.#Range_Longest;
+                    this.#Array[_index].position.z = (Math.random() * (far - near) + near);
+                    this.#Distance_Generate = this.#Array[_index].position.z;
+                }
+            }
+        }
+        class Wall_Generator_1_CLASS {
+            // Base
+            constructor() {
+                for (let i = 0; i < 100; i++) {
+                    const geometry = new THREE.BoxGeometry(1, 1, 1);
+                    const material = new THREE.MeshBasicMaterial({ color: 0xCFD8DC });
+                    const cube = new THREE.Mesh(geometry, material);
+                    cube.scale.set(0.2, 1, 0.5);
+                    cube.position.set(0.5, cube.scale.y * 0.5, i * 5);
+                    Scene.add(cube);
+                }
+            }
+        }
+
+
+        // Create #Objects
+        const Base_Camera_1 = new Base_Camera_1_CLASS();
+        const Base_InputControler_1 = new Base_InputControler_1_CLASS();
+        const Base_Light_Ambient_1 = new Base_Light_Ambient_1_CLASS();
+        const Base_Light_Directional_1 = new Base_Light_Directional_1_CLASS();
+        const Base_Manager_1 = new Base_Manager_1_CLASS();
+        const Cat_1 = new Cat_1_CLASS();
+        const Bar_Generator_1 = new Bar_Generator_1_CLASS();
+        const Wall_Generator_1 = new Wall_Generator_1_CLASS();
+
+
+        // Initialize
+        Base_Manager_1.Ready();
+
+
+        // Loop
+        Loop();
+        function Loop() {
+            // Object Actions
+            Base_InputControler_1.Update();
+            if (Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_GameOver()) {
+                Cat_1.Update();
+                Bar_Generator_1.Update();
+
+                Base_Camera_1.Update();
+                Base_Manager_1.Update();
+            }
+
+
+            // Threejs
+            Renderer.render(Scene, Base_Camera_1.Get_Object());
+            requestAnimationFrame(Loop);
+        }
+
+
+        // Functions
+        function ResizeScreen() {
+            Base_Camera_1.Get_Object().aspect = window.innerWidth / window.innerHeight;
+            Base_Camera_1.Get_Object().updateProjectionMatrix();
+            Renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function TouchStart() {
+            if (Base_InputControler_1.Get_Time_Flag_Finishing()) {
+                if (!Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_GameOver()) {
+                    Base_Manager_1.Start();
+                }
+                else if (Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_GameOver()) {
+                    Cat_1.Jump();
+                }
+                else if (Base_Manager_1.Get_Flag_Start() && Base_Manager_1.Get_Flag_GameOver()) {
+                    Base_Manager_1.Ready();
+                }
+            }
+            Base_InputControler_1.Set_Timer(0.1);
+        }
+
+
+        // Debug
+        class Debug_Checker_Time_1_CLASS {
+            // Variables
+            #Checking;
+            #FPS;
+            #PreviousTime;
+
+
+            // Base
+            constructor() {
+                this.#Checking = false;
+                this.#PreviousTime = 0;
+            }
+            Update() {
+                if (this.#Checking) {
+                    const currentTime = performance.now();
+                    const deltaTime = currentTime - this.#PreviousTime;
+                    this.#PreviousTime = currentTime;
+
+                    this.#FPS = 1000 / deltaTime;
+                    DeltaTime = deltaTime * 0.001;
+                    Log("FPS: " + this.#FPS);
+                }
+            }
+
+
+            // Get Set
+            Set_Checking(bool) {
+                this.#Checking = bool;
+                this.#PreviousTime = 0;
+            }
+        }
+        function Log(content) { console.log(content); }
+        window.addEventListener('keydown', (event) => {
+            switch (event.keyCode) {
+                case 65: // Aキー
+                    Log(Scene.children);
+                    break;
+            }
+        });
+
+    </script>
 
 </head>
-<!---------------------------------------------------------------------------------------->
 
-<!-- ▼ Body ▼ ---------------------------------------------------------------------------->
 
 <body>
 
-    <div id="WebGL-Output"></div>
+    <canvas id="Canvas_1"></canvas>
 
-    <!-- ▼ CSS ▼ ------------------------------------------------------------------------->
+
     <style>
         body {
             margin: 0px;
-            position: relative;
         }
 
-        #ui-gameover {
+        #UI_Home_1 {
             position: absolute;
-            top: 45%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: "#ffffff00";
+            top: 20px;
+            right: 20px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: red;
         }
 
-        #ui-restart {
+        #UI_Score_1 {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: red;
+        }
+
+        #UI_Start_1 {
             position: absolute;
             top: 60%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: "#ffffff00";
+            font-size: 1.4em;
+            font-weight: bold;
+            color: red;
+        }
+
+        #UI_GameOver_1 {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.4em;
+            font-weight: bold;
+            color: red;
         }
     </style>
-    <!------------------------------------------------------------------------------------>
 
-    <!-- ▼ Script Load ▼ ----------------------------------------------------------------->
-    <!-- jQuery -->
+
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-    <!------------------------------------------------------------------------------------>
-
-    <!-- Script Content ------------------------------------------------------------------>
     <script type="module">
-        // Import
-        import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
-        import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
-        import { FBXLoader } from 'https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js';
-
-        //// Variable
-        // System
-        let Camera_Object, Camera_UI, Scene_Object, Scene_UI, Renderer;
-        let Loader, Camera_Controller;
-        let DeltaTime = 1 / 60;
-        let Gravity = .98 * 10;
-        let Game_Play = true;
-        let Can_Retry = false;
-        let Score = 0;
-        let Score_Acceleration = 1 * DeltaTime;
-        // Cat
-        const Cat_Jump_Speed = 2.5;
-        const Cat_Jump_SpeedAcceleration = 1.2;
-        const Cat_Size = 1.0;
-        let Cat = null;
-        let Cat_Speed_Past = 1.2;
-        let Cat_Speed = Cat_Speed_Past;
-        let Cat_SpeedAcceleration = 0;//Cat_Speed * 0.001 * DeltaTime;
-        let Cat_JumpFlag = false;
-        let Cat_JumpTime = 0;
-        let Cat_JumpNumber = 0;
-        // Bar
-        const Bars_Number = 20;
-        const Bars_FirstNumber = 3;
-        const Bars_FirstDistance = 5;
-        const Bars_FirstRange = 3.0;
-        const Bars_ShortestRange = .6;
-        const Bars_FarthestRange = Bars_ShortestRange + Bars_FirstRange;
-        let Bars = [];
-        let Bars_FarthestDistance = Bars_FirstNumber * Bars_FirstDistance;// + (Bars_Number - Bars_FirstNumber) * Bars_FirstRange;
-        let Bars_Point = 10;
-        let Bars_Flag_Point = false;
-        // Bar Danger
-        // UI
-        let UI_Score;
-        let UI_GameOver;
-        let UI_Restart;
-        let UI_Home;
-
-        // Function
-        Initialize();
-        Draw();
-        // Accion
-        document.getElementById("WebGL-Output").addEventListener('touchstart', function () { MainAccion(); });
-        document.getElementById("WebGL-Output").addEventListener('mousedown', function () { MainAccion(); });
-
-        // Update-------------------------------------------------------------------------
-        function Update() {
-            if (Game_Play) {
-                // Base for Camera_Controller
-                // if (Cat) Cat.rotation.y += 0.01;
-                // Camera_Controller.update();
-
-                // Cat
-                if (Cat) {
-                    // Default Move
-                    Cat.position.z += Cat_Speed * DeltaTime;
-                    Camera_Object.position.z += Cat_Speed * DeltaTime;
-                    Camera_Object.lookAt(0, 0, Cat.position.z + 1);
-
-                    if (Cat_JumpFlag) {
-                        // Move
-                        Cat.position.y = Cat_Jump_Speed * Cat_JumpTime - 0.5 * Gravity * Cat_JumpTime * Cat_JumpTime;
-                        Cat_JumpTime += DeltaTime;
-
-                        // Landing
-                        if (Cat.position.y < 0) {
-                            Cat.position.y = 0;
-                            Cat_JumpFlag = false;
-
-                            Cat_Speed = Cat_Speed_Past;
-
-                            if (Bars_Flag_Point) {
-                                Add_Score(Bars_Point);
-                                Bars_Flag_Point = false;
-                            }
-                        }
-                    }
-
-                    // Hit
-                    if (Bars) {
-                        for (let i = 0; i < Bars.length; i++) {
-                            if (Cat.position.z > Bars[i].position.z - .2 && Cat.position.z < Bars[i].position.z + .23) {
-                                if (!Cat_JumpFlag) GameOver();
-                                else Bars_Flag_Point = true;
-                            }
-                        }
-                    }
-
-                    // Bars
-                    if (Bars) {
-                        for (let i = 0; i < Bars.length; i++) {
-                            // Debug for Hit
-                            // console.log(Bars[i].position.z);
-                            // console.log(Cat.position.z)
-
-                            if (Bars[i].position.z < Cat.position.z - 10) {
-                                Update_BarPosition(i);
-                            }
-                        }
-                    }
-                }
-
-                // Acceleration
-                Cat_Speed += Cat_SpeedAcceleration;
-                Add_Score(Score_Acceleration);
-            }
-        }
-        //--------------------------------------------------------------------------------
-
-        // Initialize---------------------------------------------------------------------
-        function Initialize() {
-
-            // Scene Object
-            Scene_Object = new THREE.Scene();
-            // Scene_Object.add(new THREE.AxesHelper(10000));
-            Scene_Object.fog = new THREE.Fog(0xFCA3B7, 0, 10);
-
-            // Camera Object
-            Camera_Object = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 1000);
-            Camera_Object.position.set(-2, 0.5, -1);
-            // Camera Controller
-            // Camera_Controller = new OrbitControls(Camera_Object, document.body);
-            // Camera_Controller.enableDamping = true;
-            // Camera_Controller.dampingFactor = 0.2;
-
-            // Light
-            // const dirLight = new THREE.SpotLight(0xffffff, 1.5);//color,強度
-            // dirLight.position.set(-200, 300, 300);
-            // dirLight.castShadow = true;
-            // Scene_Object.add(dirLight);
-
-            // Renderer
-            Renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-            Renderer.setClearColor(new THREE.Color(0xFCA3B7));
-            Renderer.setSize(window.innerWidth, window.innerHeight);
-            //test Renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            Renderer.shadowMap.enabled = true;
-
-            // FBX Model
-            Loader = new FBXLoader();
-            Loader.load(
-                '../../Asset/Model/Cat_1.fbx',
-                function (object) {
-                    Cat = object;
-
-                    object.scale.set(0.01, 0.01, 0.01);
-                    object.position.set(0, 0, 0);
-                    
-
-                    // Animation
-                    const mixer = new THREE.AnimationMixer(object);
-                    const animation = object.animations[0];
-                    const action = mixer.clipAction(animation);
-                    action.play();
-
-
-                    //オブジェクトとすべての子孫に対してコールバックを実行
-                    object.traverse((child) => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-                    Scene_Object.add(object);
-
-
-                    // Animation
-                    function animate() {
-                        requestAnimationFrame(animate);
-                        mixer.update(0.02); // 0.01は時間の経過を表します
-                        Render();
-                    }
-                    animate();
-                },
-                // (xhr) => { console.log((xhr.loaded / xhr.total) * 100 + '% loaded') },
-                // (error) => { console.log(error) }
-            );
-            // const geometry_test = new THREE.BoxGeometry(1, 1, 1);
-            // const material_test = new THREE.MeshBasicMaterial({ color: 0xCFD8DC });
-            // const cube_test = new THREE.Mesh(geometry_test, material_test);
-            // cube_test.scale.set(0.2, 0.2, .4);
-            // Cat = cube_test;
-            // Scene_Object.add(cube_test);
-
-            // Bar for Check Distance
-            for (let i = 0; i < 100; i++) {
-                const geometry = new THREE.BoxGeometry(1, 1, 1);
-                const material = new THREE.MeshBasicMaterial({ color: 0xCFD8DC });
-                const cube = new THREE.Mesh(geometry, material);
-                cube.scale.set(0.2, 1, 0.5);
-                cube.position.set(0.5, cube.scale.y * 0.5, i * 5);
-                Scene_Object.add(cube);
-            }
-
-            // Bar for Jump
-            for (let i = 0; i < Bars_FirstNumber; i++) {
-                const geometry = new THREE.BoxGeometry(1, 1, 1);
-                const material = new THREE.MeshBasicMaterial({ color: 0xCF0000 });
-                const cube = new THREE.Mesh(geometry, material);
-                cube.scale.set(1, 0.1, 0.02);
-                cube.position.set(0, cube.scale.y * 0.5, (i + 1) * Bars_FirstDistance);
-                Scene_Object.add(cube);
-                Bars.push(cube);
-            }
-            for (let i = Bars_FirstNumber; i < Bars_Number; i++) {
-                const geometry = new THREE.BoxGeometry(1, 1, 1);
-                const material = new THREE.MeshBasicMaterial({ color: 0xCF0000 });
-                const cube = new THREE.Mesh(geometry, material);
-                cube.scale.set(1, 0.1, 0.02);
-
-                cube.position.set(0, cube.scale.y * 0.5, 0);
-
-                Bars.push(cube);
-                Update_BarPosition(i);
-
-                Scene_Object.add(cube);
-            }
-
-            //// UI
-            // Score
-            UI_Score = document.createElement('div');
-            UI_Score.style.position = 'absolute';
-            //UI_Score.style.zIndex = 1;
-            UI_Score.style.width = 100;
-            UI_Score.style.height = 100;
-            UI_Score.style.backgroundColor = "#ffffff00";
-            UI_Score.innerHTML = "<b>" + "Score : " + Math.floor(Score) + "</b>";
-            UI_Score.style.top = 20 + 'px';
-            UI_Score.style.left = 20 + 'px';
-            document.body.appendChild(UI_Score);
-            // GameOver
-            UI_GameOver = document.createElement('div');
-            UI_GameOver.setAttribute("id", "ui-gameover");
-            UI_GameOver.innerHTML = "";
-            document.body.appendChild(UI_GameOver);
-            // Restart
-            UI_Restart = document.createElement('div');
-            UI_Restart.setAttribute("id", "ui-restart");
-            UI_Restart.innerHTML = "";
-            document.body.appendChild(UI_Restart);
-            // Home
-            UI_Home = document.createElement('div');
-            UI_Home.setAttribute("id", "ui-home");
-            UI_Home.style.position = 'absolute';
-            UI_Home.style.width = 100;
-            UI_Home.style.height = 100;
-            UI_Home.style.backgroundColor = "#ffffff00";
-            UI_Home.innerHTML = "<b>" + "Home" + "</b>";
-            UI_Home.style.top = 20 + 'px';
-            UI_Home.style.left = (window.innerWidth - 70) + 'px';
-            document.body.appendChild(UI_Home);
-
-            // BGM
-            var bgm = new Audio();
-            bgm.src = '../../Asset/Audio/lofi_2.wav';
-            bgm.loop = true;
-            bgm.volume = 0.5;
-            bgm.play();
-        }
-        //--------------------------------------------------------------------------------
-
-        // Render-------------------------------------------------------------------------
-        function Render() {
-            Renderer.render(Scene_Object, Camera_Object);
-        }
-        //--------------------------------------------------------------------------------
-
-        // Resize-------------------------------------------------------------------------
-        window.addEventListener('resize', Resize);
-        function Resize() {
-            Camera_Object.aspect = window.innerWidth / window.innerHeight;
-            Camera_Object.updateProjectionMatrix();
-            Renderer.setSize(window.innerWidth, window.innerHeight);
-            Render();
-        }
-        //--------------------------------------------------------------------------------
-
-        // Draw---------------------------------------------------------------------------
-        function Draw() {
-            requestAnimationFrame(Draw);    // 60FPS
-            Update();
-            Render();
-        }
-        //--------------------------------------------------------------------------------
-
-        // Setting------------------------------------------------------------------------
-        Renderer.outputEncoding = THREE.sRGBEncoding;
-        document.getElementById("WebGL-Output").appendChild(Renderer.domElement);
-        function MainAccion() {
-            if (Game_Play) {
-                Cat_Set_Jump();
-            }
-            else {
-                if (Can_Retry) Restart();
-            }
-        }
-        //--------------------------------------------------------------------------------
-
-        // Restart------------------------------------------------------------------------
-        function Restart() {
-            // System
-            Game_Play = true;
-            Can_Retry = false;
-            Score = 0;
-            // Camera
-            if (Camera_Object) {
-                Camera_Object.position.set(-2, 0.5, -1);
-                Camera_Object.lookAt(0, 0, Cat.position.z + 1);
-            }
-            // Cat
-            Cat_Speed_Past = 1.2;
-            Cat_Speed = Cat_Speed_Past;
-            Cat_JumpFlag = false;
-            Cat_JumpTime = 0;
-            Cat_JumpNumber = 0;
-            if (Cat) {
-                Cat.position.set(0, 0, 0);
-            }
-            // Bar for Jump
-            Bars_FarthestDistance = Bars_FirstNumber * Bars_FirstDistance;
-            if (Bars) {
-                for (let i = 0; i < Bars_FirstNumber; i++) {
-                    Bars[i].position.set(0, Bars[i].scale.y * 0.5, (i + 1) * Bars_FirstDistance);
-                }
-                for (let i = Bars_FirstNumber; i < Bars_Number; i++) {
-                    Bars[i].position.set(0, Bars[i].scale.y * 0.5, 0);
-                    Update_BarPosition(i);
-                }
-            }
-            // UI
-            UI_GameOver.innerHTML = "";
-            UI_Restart.innerHTML = "";
-        }
-        //--------------------------------------------------------------------------------
-
-        // Add Score----------------------------------------------------------------------
-        function Add_Score(_point) {
-            Score += _point;
-            UI_Score.innerHTML = "<b>" + "Score : " + Math.floor(Score) + "</b>";
-        }
-        //--------------------------------------------------------------------------------
-
-        // GameOver-----------------------------------------------------------------------
-        function GameOver() {
-            Game_Play = false;
-            UI_GameOver.innerHTML = "<b><font color='red'>GameOver</font></b>";
-            UI_Restart.innerHTML = "<b><font color='red'>Restart</font></b>";
-
-            setTimeout(function () {
-                Can_Retry = true;
-            }, 1000);
-        }
-        //--------------------------------------------------------------------------------
-
-        // Cat----------------------------------------------------------------------------
-        function Cat_Set_Jump() {
-            if (Cat && Cat.position.z > 0.5) {
-                if (!Cat_JumpFlag) {
-                    Cat_JumpFlag = true;
-                    Cat_JumpTime = 0;
-
-                    Cat_Speed_Past = Cat_Speed;
-                    Cat_Speed *= Cat_Jump_SpeedAcceleration;
-
-                    Cat_JumpNumber++;
-                }
-            }
-        }
-        //--------------------------------------------------------------------------------
-
-        // Check New Bar------------------------------------------------------------------
-        // function Check_NewBar(_position_z, _near, _far) {
-        //     if (Bars) {
-        //         for (let i = 0; i < Bars.length; i++) {
-        //             while (Math.abs(_position_z - Bars[i].position.z) < Bars_ShortestRange) {
-        //                 _position_z = Math.random() * (_far - _near) + _near;
-        //                 Check_NewBar(_position_z, _near, _far);
-        //             }
-        //         }
-        //     }
-
-        //     return _position_z;
-        // }
-        //--------------------------------------------------------------------------------
-
-        // Make Bar-----------------------------------------------------------------------
-        function Update_BarPosition(_index) {
-            if (Bars) {
-                const near = Bars_FarthestDistance + Bars_ShortestRange;
-                const far = Bars_FarthestDistance + Bars_FarthestRange;
-                Bars[_index].position.z = (Math.random() * (far - near) + near);
-                Bars_FarthestDistance = Bars[_index].position.z;
-            }
-        }
-        //--------------------------------------------------------------------------------
-
-        // jQuery-------------------------------------------------------------------------
-        $("#ui-home").click(function () {
+        $("#UI_Home_1").click(function () {
             window.location.href = '../../English/HTML/index.html';
         });
-        //--------------------------------------------------------------------------------
-
     </script>
-    <!------------------------------------------------------------------------------------>
 
 </body>
-<!---------------------------------------------------------------------------------------->
 
 </html>
