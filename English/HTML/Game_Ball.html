@@ -4,11 +4,13 @@
 
     <!-- Setting -->
     <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta charset="utf-8" />
     <link href="../../Asset/CSS/common.css" rel="stylesheet" />
 
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
 
     <script type="module">
 
@@ -264,14 +266,20 @@
 
 
             // Functions
-            Determine_ShootingDrection(_left, _top) {
-
-            }
             Shoot() {
                 Base_Manager_1.Set_State("Playing");
                 this.#Flag_Shoot = true;
-                this.#Velocity = Progress_1.Get_Percentage() * 0.01;
+                this.#Velocity = Progress_1.Get_Percentage() * 0.01 * 2.5;
                 this.#Velocity_Past = this.#Velocity;
+
+                const element = document.getElementById('Circle_1');
+                const screen_x = parseInt(element.style.left.replace('px', ''));
+                const screen_y = parseInt(element.style.top.replace('px', ''));
+                let screen_size = new THREE.Vector2();
+                Renderer.getSize(screen_size); 
+                
+                this.#Direction_Move.x = (screen_size.x * 0.5 - screen_x) / screen_size.x;
+                this.#Direction_Move.y = (screen_size.y * 0.5 - screen_y) / screen_size.y;
             }
             Gravity() {
                 // Variables
@@ -326,7 +334,7 @@
                 if (this.#Object.position.z > 2 || this.#Object.position.z < 0) {
                     this.#Direction_Move.z *= -1;
                 }
-                if (this.#Object.position.x > 1 || this.#Object.position.x < -1) {
+                if (this.#Object.position.x > 0.5 || this.#Object.position.x < -0.5) {
                     this.#Direction_Move.x *= -1;
                 }
             }
@@ -508,6 +516,12 @@
             }
         }
 
+        $("#UI_Home_1").click(function () {
+            window.location.href = '../../English/HTML/index.html';
+        });
+        $("#UI_Reset_1").click(function () {
+            Base_Manager_1.Ready();
+        });
 
         // Debug
         class Debug_Checker_Time_1_CLASS {
@@ -552,6 +566,7 @@
 
     <canvas id="Canvas_1"></canvas>
     <div id="Circle_1"></div>
+    <div id="UI_Reset_1" class="mdi mdi-rotate-left"></div>
     <progress id="Progress_1" value="100" max="100"></progress>
 
 
@@ -570,6 +585,15 @@
             opacity: 0.1;
             border-radius: 50%;
             transform: translateX(-50%) translateY(-50%);
+        }
+
+        #UI_Reset_1 {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 2em;
+            font-weight: bold;
+            color: red;
         }
 
         #Progress_1 {
@@ -612,11 +636,7 @@
     </style>
 
 
-    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script type="module">
-        $("#UI_Home_1").click(function () {
-            window.location.href = '../../English/HTML/index.html';
-        });
     </script>
 </body>
 
