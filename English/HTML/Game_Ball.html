@@ -22,8 +22,12 @@
         Renderer.setClearColor(new THREE.Color(0xFCA3B7));
         const Scene = new THREE.Scene();
         const Loader_FBX = new FBXLoader();
-        Renderer.domElement.addEventListener('touchstart', function () { TouchStart(); });
-        Renderer.domElement.addEventListener('mousedown', function () { TouchStart(); });
+        document.addEventListener('touchstart', (_startEvent) => { TouchStart(_startEvent.touches[0].clientX, _startEvent.touches[0].clientY); });
+        document.addEventListener('touchmove', (_moveEvent) => { TouchMove(_moveEvent.touches[0].clientX, _moveEvent.touches[0].clientY); });
+        document.addEventListener('touchend', (_moveEvent) => { TouchEnd(); });
+        document.addEventListener('mousedown', (_startEvent) => { TouchStart(_startEvent.clientX, _startEvent.clientY); });
+        document.addEventListener('mousemove', (_moveEvent) => { TouchMove(_moveEvent.clientX, _moveEvent.clientY); });
+        document.addEventListener('mouseup', (_endEvent) => { TouchEnd(); });
 
 
         // Setting Variable
@@ -126,7 +130,7 @@
         }
         class Base_Manager_1_CLASS {
             // Variables
-            #Flag_Clear;
+            #State;
             #Flag_Start;
             #UI_Home_1;
             #UI_Start_1;
@@ -135,8 +139,7 @@
 
             // Base
             constructor() {
-                this.#Flag_Clear = false;
-                this.#Flag_Start = false;
+                this.State = "Made";
                 //// UI
                 // Home
                 this.#UI_Home_1 = document.createElement('div');
@@ -159,35 +162,38 @@
                 bgm.src = '../../Asset/Audio/lofi_1.wav';
                 bgm.loop = true;
                 bgm.volume = 0.5;
-                bgm.play();
+                // bgm.play();
             }
             Initialize() {
-                this.#Flag_Clear = false;
-                this.#Flag_Start = false;
+                this.#State = "WaitingStart";
                 this.#UI_Start_1.innerHTML = "";
             }
 
 
             // Get Set
-            Get_Flag_Clear() { return this.#Flag_Clear; }
-            Get_Flag_Start() { return this.#Flag_Start; }
+            Get_State() { return this.#State; }
+            Set_State(_state) { this.#State = _state; }
 
 
             // Functions
             Ready() {
-                this.#Flag_Clear = false;
-                this.#Flag_Start = false;
+                this.#State = "WaitingStart"
                 this.#UI_Start_1.innerHTML = "START";
                 this.#UI_Clear_1.innerHTML = "";
                 Ball_1.Initialize();
                 Progress_1.Initialize();
             }
+            Move_ShootingDrection(_left, _top) {
+                const element = document.getElementById('Circle_1');
+                element.style.left = _left;
+                element.style.top = _top;
+            }
             Start() {
-                this.#Flag_Start = true;
+                this.#State = "WaitingShootingDirection"
                 this.#UI_Start_1.innerHTML = "";
             }
             Clear() {
-                this.#Flag_Clear = true;
+                this.#State = "Goal";
                 this.#UI_Clear_1.innerHTML = "WOOOW!";
             }
         }
@@ -258,7 +264,11 @@
 
 
             // Functions
+            Determine_ShootingDrection(_left, _top) {
+
+            }
             Shoot() {
+                Base_Manager_1.Set_State("Playing");
                 this.#Flag_Shoot = true;
                 this.#Velocity = Progress_1.Get_Percentage() * 0.01;
                 this.#Velocity_Past = this.#Velocity;
@@ -445,11 +455,11 @@
         function Loop() {
             // Object Actions
             Base_InputControler_1.Update();
-            if (Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_Clear()) {
+            if (Base_Manager_1.Get_State() == "Playing") {
                 Ball_1.Update();
-                Progress_1.Update();
                 Base_Camera_1.Update();
             }
+            else if (Base_Manager_1.Get_State() == "WaitingShoot") Progress_1.Update();
 
 
             // Threejs
@@ -464,19 +474,38 @@
             Base_Camera_1.Get_Object().updateProjectionMatrix();
             Renderer.setSize(window.innerWidth, window.innerHeight);
         }
-        function TouchStart() {
+        function TouchStart(_x, _y) {
             if (Base_InputControler_1.Get_Time_Flag_Finishing()) {
-                if (!Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_Clear()) {
-                    Base_Manager_1.Start();
-                }
-                else if (Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_Clear()) {
-                    Ball_1.Shoot();
-                }
-                else if (Base_Manager_1.Get_Flag_Start() && Base_Manager_1.Get_Flag_Clear()) {
-                    Base_Manager_1.Ready();
+                switch (Base_Manager_1.Get_State()) {
+                    case "WaitingStart":
+                        Base_Manager_1.Start();
+                        break;
+                    case "WaitingShootingDirection":
+                        Base_Manager_1.Set_State("MovingShootingDirection");
+                        Base_Manager_1.Move_ShootingDrection(_x, _y);
+                        break;
+                    case "WaitingShoot":
+                        Ball_1.Shoot();
+                        break;
+                    case "Goal":
+                        Base_Manager_1.Ready();
+                        break;
+                    default: break;
                 }
             }
             Base_InputControler_1.Set_Timer(0.1);
+        }
+        function TouchMove(_x, _y) {
+            if (Base_Manager_1.Get_State() == "MovingShootingDirection") {
+                const element = document.getElementById('Circle_1');
+                element.style.left = _x;
+                element.style.top = _y;
+            }
+        }
+        function TouchEnd() {
+            if (Base_Manager_1.Get_State() == "MovingShootingDirection") {
+                Base_Manager_1.Set_State("WaitingShoot");
+            }
         }
 
 
@@ -522,6 +551,7 @@
 <body>
 
     <canvas id="Canvas_1"></canvas>
+    <div id="Circle_1"></div>
     <progress id="Progress_1" value="100" max="100"></progress>
 
 
@@ -530,11 +560,23 @@
             margin: 0;
         }
 
+        #Circle_1 {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 3em;
+            height: 3em;
+            background-color: #000000;
+            opacity: 0.1;
+            border-radius: 50%;
+            transform: translateX(-50%) translateY(-50%);
+        }
+
         #Progress_1 {
             position: absolute;
             left: 50%;
             top: 90%;
-            transform: translateX(-50%) translateY(-100%);
+            transform: translateX(-50%) translateY(-50%);
             block-size: 2em;
             inline-size: 20em;
         }
