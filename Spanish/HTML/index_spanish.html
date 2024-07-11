@@ -1,45 +1,60 @@
 <!DOCTYPE html>
 <html>
 
-<!-- ▼ Head ▼ ---------------------------------------------------------------------------->
 
+<!-- ▼ Head ▼ ------------------------------------------------------------------------------------->
 <head>
+
 
     <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
 
-    <!-- Setting -->
+
+    <!-- ▼ Setting ▼ ---------------------------------------------------------------------------------->
     <meta name="version" content="0.0.1">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <!-- ▲ Setting ▲ ---------------------------------------------------------------------------------->
 
+
+    <!-- ▼ Reference ▼ -------------------------------------------------------------------------------->
     <!-- Vue -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
-
     <!-- CSS -->
     <link href="../../Asset/CSS/common.css" rel="stylesheet" />
+    <!-- ▲ Reference ▲ -------------------------------------------------------------------------------->
+
 
 </head>
-<!---------------------------------------------------------------------------------------->
+<!-- ▲ Head ▲ ------------------------------------------------------------------------------------->
 
-<!-- ▼ Body ▼ ---------------------------------------------------------------------------->
 
+<!-- ▼ Body ▼ ------------------------------------------------------------------------------------->
 <body>
 
-    <!-- ▼ App ▼ ------------------------------------------------------------------------->
+
+    <!-- ▼ App ▼ -------------------------------------------------------------------------------------->
     <v-app id="app">
         <template>
 
-            <!-- ▼ Header ▼ ------------------------------------------------------------------>
+
+            <!-- ▼ Background ▼ ------------------------------------------------------------------------------->
+            <canvas id="canvas" style="position: absolute;"></canvas>
+            <!-- ▲ Background ▲ ------------------------------------------------------------------------------->
+
+
+            <!-- ▼ System bar ▼ ------------------------------------------------------------------------------->
             <main-system-bar-spanish :drawer="drawer" @change-drawer="Change_Drawer">Inicio</main-system-bar-spanish>
-            <!-------------------------------------------------------------------------------->
+            <!-- ▲ System bar ▲ ------------------------------------------------------------------------------->
 
-            <!-- ▼ Navigation ▼ -------------------------------------------------------------->
+
+            <!-- ▼ Navigation ▼ ------------------------------------------------------------------------------->
             <main-navigation-spanish :drawer="drawer" @change-drawer="Change_Drawer"></main-navigation-spanish>
-            <!-------------------------------------------------------------------------------->
+            <!-- ▲ Navigation ▲ ------------------------------------------------------------------------------->
 
-            <!-- ▼ Main ▼ -------------------------------------------------------------------->
+
+            <!-- ▼ Main ▼ ------------------------------------------------------------------------------------->
             <v-main id="main" class="blue-grey lighten-4">
                 <v-container id="main-container" class="d-flex flex-column" fluid fill-height>
                     <transition name="fade-page">
@@ -97,23 +112,26 @@
                         </div>
                     </transition>
                     <v-spacer></v-spacer>
+
+
+                    <!-- ▼ Welcome ▼ ---------------------------------------------------------------------------------->
                     <transition name="fade-page">
                         <div class="text-h6 site_tittle" v-show="show_page"><font style="color: hsl(205 100% 65%)">BIENVENIDO</font></div>
                     </transition>
-                    <!-- </v-parallax> -->
+                    <!-- ▲ Welcome ▲ ---------------------------------------------------------------------------------->
+
+
                 </v-container>
             </v-main>
-            <!-------------------------------------------------------------------------------->
+            <!-- ▲ Main ▲ ------------------------------------------------------------------------------------->
 
-            <!-- ▼ Footer ▼ ------------------------------------------------------------------>
-            <!-- <main-footer></main-footer> -->
-            <!-------------------------------------------------------------------------------->
 
         </template>
     </v-app>
-    <!------------------------------------------------------------------------------------>
+    <!-- ▲ App ▲ -------------------------------------------------------------------------------------->
 
-    <!-- ▼ Style ▼ ----------------------------------------------------------------------->
+
+    <!-- ▼ Style ▼ ------------------------------------------------------------------------------------>
     <style>
         /* Back Ground */
         body {
@@ -159,9 +177,10 @@
             100% { transform: scale(1); }
         }
     </style>
-    <!------------------------------------------------------------------------------------>
+    <!-- ▲ Style ▲ ------------------------------------------------------------------------------------>
 
-    <!-- ▼ Script Load ▼ ----------------------------------------------------------------->
+
+    <!-- ▼ Script Reference ▼ ------------------------------------------------------------------------->
     <!-- Main -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
@@ -172,10 +191,59 @@
     <script src="../../Asset/Javascript/main-footer.js"></script>
     <script src="../Javascript/main-system-bar-spanish.js"></script>
     <script src="../Javascript/main-navigation-spanish.js"></script>
-    <!------------------------------------------------------------------------------------>
+    <!-- ▲ Script Reference ▲ ------------------------------------------------------------------------->
 
-    <!-- Script Content ------------------------------------------------------------------>
+    
+    <!-- ▼ Script Content ▼ --------------------------------------------------------------------------->
     <script>
+
+        
+        // Calsses
+        class Ball_Animation_1_CLASS {
+
+            // Bases
+            constructor(_canvas, _ctx, _size, _direction) {
+                this._Canvas = _canvas;
+                this._Context = _ctx;
+                this._Size = _size;
+                this._Position = [_canvas.width / 2, _canvas.height / 2];
+                this._Direction = _direction;
+                this._Color = '#D3E1E6';
+                this._Speed = 100 / Math.pow(this._Size, 1.75);
+            }
+
+            // Functions
+            Animation() {
+                this._Context.beginPath();
+                this._Context.arc(this._Position[0], this._Position[1], this._Size, 0, 2 * Math.PI);
+                this._Context.fillStyle = this._Color;
+                this._Context.fill();
+
+                if (this._Position[1] + this._Direction[1] < 0) {
+                    this._Position[1] = 0;
+                    this._Direction[1] *= -1;
+                }
+                if (this._Position[1] + this._Direction[1] > this._Canvas.height) {
+                    this._Position[1] = this._Canvas.height;
+                    this._Direction[1] *= -1;
+                }
+
+                if (this._Position[0] + this._Direction[0] < 0) {
+                    this._Position[0] = 0;
+                    this._Direction[0] *= -1;
+                }
+                if (this._Position[0] + this._Direction[0] > this._Canvas.width) {
+                    this._Position[0] = this._Canvas.width;
+                    this._Direction[0] *= -1;
+                }
+
+                this._Position[0] += this._Direction[0] * this._Speed;
+                this._Position[1] += this._Direction[1] * this._Speed;
+
+                requestAnimationFrame(this.Animation.bind(this));
+            }
+        }
+
 
         // Variable ----------------------------------------------------------------------
         let vue = new Vue({
@@ -338,12 +406,45 @@
                 });
                 $(".site_tittle").css("transition", "2s");
                 $(".site_tittle").css("animation", "animation_huwahuwa .8s infinite");
+                
+
+                // Background
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d');
+
+                function resizeCanvas() {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                }
+                window.addEventListener('resize', resizeCanvas);
+                resizeCanvas();
+
+                function CleanCanvas() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    requestAnimationFrame(CleanCanvas);
+                }
+                CleanCanvas();
+
+                const balls = {};
+                for (let i = 0; i < 30; i++) {
+                    const size = RandomNumber(5, 20);
+                    let direction_x = RandomNumber(-1, 1);
+                    let direction_y = RandomNumber(-1, 1);
+                    direction_x = direction_x / (Math.abs(direction_x) + Math.abs(direction_y))
+                    direction_y = direction_y / (Math.abs(direction_x) + Math.abs(direction_y))
+                    const ball = new Ball_Animation_1_CLASS(canvas, ctx, size, [direction_x, direction_y]);
+                    ball.Animation();
+                    balls[i] = ball;
+                }
             }
         })
 
     </script>
-    <!------------------------------------------------------------------------------------>
+    <!-- ▲ Script Content ▲ --------------------------------------------------------------------------->
+
+    
 </body>
-<!---------------------------------------------------------------------------------------->
+<!-- ▲ Body ▲ ------------------------------------------------------------------------------------->
+
 
 </html>
