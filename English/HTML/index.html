@@ -37,6 +37,7 @@
     <v-app id="app">
         <template>
 
+            <canvas id="canvas" style="position: absolute;"></canvas>
 
             <!-- ▼ System bar ▼ ------------------------------------------------------------------------------->
             <main-system-bar :drawer="drawer" @change-drawer="Change_Drawer">Home</main-system-bar>
@@ -190,6 +191,7 @@
     <!-- Main -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vector-js@4.1.1/dist/vector.min.js"></script>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <!-- Compornent -->
@@ -202,6 +204,51 @@
     
     <!-- ▼ Script Content ▼ --------------------------------------------------------------------------->
     <script>
+        // Calsses
+        class Ball_Animation_1_CLASS {
+
+            // Bases
+            constructor(_canvas, _ctx, _size, _direction) {
+                this._Canvas = _canvas;
+                this._Context = _ctx;
+                this._Size = _size;
+                this._Position = [_canvas.width / 2, _canvas.height / 2];
+                this._Direction = _direction;
+                this._Color = '#D3E1E6';
+                this._Speed = 100 / Math.pow(this._Size, 1.75);
+            }
+
+            // Functions
+            Animation() {
+                this._Context.beginPath();
+                this._Context.arc(this._Position[0], this._Position[1], this._Size, 0, 2 * Math.PI);
+                this._Context.fillStyle = this._Color;
+                this._Context.fill();
+
+                if (this._Position[1] + this._Direction[1] < 0) {
+                    this._Position[1] = 0;
+                    this._Direction[1] *= -1;
+                }
+                if (this._Position[1] + this._Direction[1] > this._Canvas.height) {
+                    this._Position[1] = this._Canvas.height;
+                    this._Direction[1] *= -1;
+                }
+
+                if (this._Position[0] + this._Direction[0] < 0) {
+                    this._Position[0] = 0;
+                    this._Direction[0] *= -1;
+                }
+                if (this._Position[0] + this._Direction[0] > this._Canvas.width) {
+                    this._Position[0] = this._Canvas.width;
+                    this._Direction[0] *= -1;
+                }
+
+                this._Position[0] += this._Direction[0] * this._Speed;
+                this._Position[1] += this._Direction[1] * this._Speed;
+
+                requestAnimationFrame(this.Animation.bind(this));
+            }
+        }
 
 
         // Variable ----------------------------------------------------------------------
@@ -351,6 +398,7 @@
                 }
             },
             mounted() {
+
                 // Layout
                 $("[class^='item-']").css("position", "absolute");
                 $(".site_tittle").css("position", "absolute");
@@ -364,6 +412,36 @@
                 });
                 $(".site_tittle").css("transition", "2s");
                 $(".site_tittle").css("animation", "animation_huwahuwa .8s infinite");
+
+                
+
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d');
+
+                function resizeCanvas() {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                }
+                window.addEventListener('resize', resizeCanvas);
+                resizeCanvas();
+
+                function CleanCanvas() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    requestAnimationFrame(CleanCanvas);
+                }
+                CleanCanvas();
+
+                const balls = {};
+                for (let i = 0; i < 30; i++) {
+                    const size = RandomNumber(5, 25);
+                    let direction_x = RandomNumber(-1, 1);
+                    let direction_y = RandomNumber(-1, 1);
+                    direction_x = direction_x / (Math.abs(direction_x) + Math.abs(direction_y))
+                    direction_y = direction_y / (Math.abs(direction_x) + Math.abs(direction_y))
+                    const ball = new Ball_Animation_1_CLASS(canvas, ctx, size, [direction_x, direction_y]);
+                    ball.Animation();
+                    balls[i] = ball;
+                }
             }
         })
 

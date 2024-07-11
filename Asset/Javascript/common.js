@@ -1,4 +1,3 @@
-
 let Name_Store = localStorage.getItem("BGM_Name");
 let Name = Name_Store == null ? "clair_de_lune.wav" : Name_Store;
 let Playing = false;
@@ -32,4 +31,8 @@ function Get_PlayingBGM() {
 function Change_BGM_Name(_name) {
     Name = _name;
     localStorage.setItem("BGM_Name", _name);
+}
+
+function RandomNumber(_min, _max) {
+    return Math.random() * (_max - _min + 1) + _min;
 }
