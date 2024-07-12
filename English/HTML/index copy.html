@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/common.css" rel="stylesheet" />
+    <link href="../../Asset/CSS/common_word_japanese.css" rel="stylesheet" />
+    <style>
+        .blog-card {
+            transition: all 0.3s;
+        }
+        .blog-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+        }
+        .custom-date-picker .v-date-picker-table .v-btn {
+            font-size: 16px;
+            height: 32px;
+            width: 32px;
+        }
+        .custom-date-picker .v-date-picker-table .v-btn__content {
+            color: inherit;
+        }
+    </style>
+</head>
+
+<body>
+    <v-app id="app">
+        <template>
+            <main-system-bar :drawer="drawer" @change-drawer="Change_Drawer">Blog</main-system-bar>
+            
+            <main-navigation :drawer="drawer" @change-drawer="Change_Drawer"></main-navigation>
+
+            <v-main>
+                <v-container fluid>
+                    <v-row>
+                        <v-col cols="12" md="4" order="first" order-md="last">
+                            <v-card class="mb-4">
+                                <v-card-title>About Me</v-card-title>
+                                <v-card-text>
+                                    <p>Welcome to my blog! I'm passionate about sharing my thoughts and experiences.</p>
+                                </v-card-text>
+                            </v-card>
+                            <v-card>
+                                <v-date-picker
+                                    v-model="selectedDate"
+                                    @click:date="dateSelected"
+                                    @click:month="monthSelected"
+                                    full-width
+                                    :events="postDates"
+                                    event-color="primary"
+                                    class="custom-date-picker"
+                                ></v-date-picker>
+                                <v-card-text class="text-center py-1">
+                                    <v-icon color="primary" small>mdi-circle</v-icon>
+                                    <span class="ml-1 caption">Dates with posts</span>
+                                </v-card-text>
+                                <v-card-actions>
+                                    <v-btn text color="primary" @click="showAllPosts">Show All Posts</v-btn>
+                                </v-card-actions>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="8" order="last" order-md="first">
+                            <v-card v-if="selectedDate && filteredPosts.length > 0" class="pa-4">
+                                <v-card-title class="text-h5 mb-4">Posts for {{ formattedDate }}</v-card-title>
+                                <v-card v-for="post in filteredPosts" :key="post.id" class="mb-6 blog-card">
+                                    <v-img :src="post.image" height="250px"></v-img>
+                                    <v-card-title class="text-h6 pt-4">{{ post.title }}</v-card-title>
+                                    <v-card-subtitle class="pb-2">{{ post.date }}</v-card-subtitle>
+                                    <v-card-text class="text-body-1 pb-4">{{ post.excerpt }}</v-card-text>
+                                    <v-card-actions class="pb-4">
+                                        <v-btn text color="primary">Read More</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-card>
+                            <v-card v-else-if="selectedDate" class="pa-4">
+                                <v-card-title class="text-h5">No posts for {{ formattedDate }}</v-card-title>
+                            </v-card>
+                            <template v-else>
+                                <v-card v-for="post in blogPosts" :key="post.id" class="mb-6 blog-card">
+                                    <v-img :src="post.image" height="250px"></v-img>
+                                    <v-card-title class="text-h6 pt-4">{{ post.title }}</v-card-title>
+                                    <v-card-subtitle class="pb-2">{{ post.date }}</v-card-subtitle>
+                                    <v-card-text class="text-body-1 pb-4">{{ post.excerpt }}</v-card-text>
+                                    <v-card-actions class="pb-4">
+                                        <v-btn text color="primary">Read More</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </template>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-main>
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/common.js"></script>
+    <script src="../../Asset/Javascript/main-footer.js"></script>
+    <script src="../Javascript/main-system-bar.js"></script>
+    <script src="../Javascript/main-navigation.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify(),
+            data: {
+                drawer: false,
+                selectedDate: null,
+                blogPosts: [
+                    { id: 1, title: 'My First Blog Post', date: '2024-07-12', image: 'https://picsum.photos/id/1018/1000/600', excerpt: 'This is my first blog post. I\'m excited to share my thoughts with you!' },
+                    { id: 2, title: 'Adventures in Coding', date: '2024-08-15', image: 'https://picsum.photos/id/0/1000/600', excerpt: 'Today I learned about Vue.js and created this blog. It\'s been an amazing journey!' },
+                    { id: 3, title: 'The Future of Web Development', date: '2024-09-20', image: 'https://picsum.photos/id/180/1000/600', excerpt: 'What does the future hold for web development? Let\'s explore some trends and predictions.' },
+                    { id: 4, title: 'Responsive Design Techniques', date: '2024-10-05', image: 'https://picsum.photos/id/160/1000/600', excerpt: 'Learn how to create responsive designs that work on all devices.' },
+                    { id: 5, title: 'The Importance of Accessibility', date: '2024-11-18', image: 'https://picsum.photos/id/200/1000/600', excerpt: 'Making your website accessible is not just good practice, it\'s essential.' },
+                    { id: 6, title: 'Year in Review: Web Trends of 2024', date: '2024-12-31', image: 'https://picsum.photos/id/220/1000/600', excerpt: 'Let\'s look back at the biggest web development trends of the past year.' },
+                ]
+            },
+            computed: {
+                filteredPosts() {
+                    if (!this.selectedDate) return [];
+                    const selectedDateObj = new Date(this.selectedDate);
+                    return this.blogPosts.filter(post => {
+                        const postDate = new Date(post.date);
+                        if (this.isMonthView) {
+                            return postDate.getFullYear() === selectedDateObj.getFullYear() &&
+                                   postDate.getMonth() === selectedDateObj.getMonth();
+                        } else {
+                            return postDate.getFullYear() === selectedDateObj.getFullYear() &&
+                                   postDate.getMonth() === selectedDateObj.getMonth() &&
+                                   postDate.getDate() === selectedDateObj.getDate();
+                        }
+                    });
+                },
+                formattedDate() {
+                    if (!this.selectedDate) return '';
+                    const date = new Date(this.selectedDate);
+                    if (this.isMonthView) {
+                        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+                    } else {
+                        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                    }
+                },
+                isMonthView() {
+                    return this.selectedDate && this.selectedDate.length === 7; // YYYY-MM format
+                },
+                postDates() {
+                    return this.blogPosts.map(post => post.date);
+                }
+            },
+            methods: {
+                Change_Drawer(_value) {
+                    this.drawer = _value;
+                },
+                dateSelected(date) {
+                    this.selectedDate = date;
+                },
+                monthSelected(date) {
+                    this.selectedDate = date;
+                },
+                showAllPosts() {
+                    this.selectedDate = null;
+                }
+            }
+        })
+    </script>
+</body>
+</html>
