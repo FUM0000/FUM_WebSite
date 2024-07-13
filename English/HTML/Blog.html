@@ -36,7 +36,7 @@
                                     </v-row>
                                 </v-card-text>
                             </v-card>
-                            <v-card>
+                            <v-card class="mb-4">
                                 <v-date-picker v-model="selectedDate" @click:date="dateSelected"
                                     @update:picker-date="updatePickerDate" full-width :events="postDates" event-color="primary"
                                     class="custom-date-picker"></v-date-picker>
@@ -49,15 +49,40 @@
                                     <v-btn text color="primary" @click="showCurrentMonthPosts">Show Month Posts</v-btn>
                                 </v-card-actions>
                             </v-card>
+                            <v-card>
+                                <v-card-title>Themes</v-card-title>
+                                <v-card-text>
+                                    <v-chip-group v-model="selectedThemes" column multiple>
+                                        <v-chip v-for="theme in themes" :key="theme" :value="theme" filter outlined>
+                                            {{ theme }}
+                                        </v-chip>
+                                    </v-chip-group>
+                                </v-card-text>
+                            </v-card>
                         </v-col>
                         <v-col cols="12" md="8" order="last" order-md="first">
                             <v-card class="pa-4">
-                                <v-card-title class="text-h5 mb-4">{{ pageTitle }}</v-card-title>
+                                <v-card-title class="text-h5 mb-4">
+                                    {{ pageTitle }}
+                                    <v-chip
+                                      v-if="selectedThemes.length > 0"
+                                      class="ml-2"
+                                      small
+                                      color="primary"
+                                    >
+                                      {{ filteredThemesText }}
+                                    </v-chip>
+                                </v-card-title>
                                 <template v-if="filteredPosts.length > 0">
                                     <v-card v-for="post in filteredPosts" :key="post.id" class="mb-6 blog-card">
                                         <v-img :src="post.image" height="250px"></v-img>
                                         <v-card-title class="text-h6 pt-4">{{ post.title }}</v-card-title>
                                         <v-card-subtitle class="pb-2">{{ post.date }}</v-card-subtitle>
+                                        <v-chip-group style="padding-left: 16px;">
+                                            <v-chip v-for="theme in post.themes" :key="theme" small>
+                                                {{ theme }}
+                                            </v-chip>
+                                        </v-chip-group>
                                         <v-card-text class="text-body-1 pb-4">
                                             <transition-group name="fade-slide" mode="out-in">
                                                 <div v-if="expandedPost === post.id" :key="'expanded'" v-html="post.content"></div>
@@ -72,7 +97,7 @@
                                     </v-card>
                                 </template>
                                 <v-card-text v-else class="text-h6">
-                                    No posts available for this period.
+                                    No posts available for this period or themes.
                                 </v-card-text>
                             </v-card>
                         </v-col>
@@ -161,6 +186,10 @@
                 showCurrentMonth: false,
                 pickerDate: new Date(),
                 expandedPost: null,
+                selectedThemes: [],
+                themes: [
+                    'Greeting',
+                ],
                 blogPosts: [
                     { 
                         id: 1, 
@@ -169,34 +198,34 @@
                         image: 'https://picsum.photos/id/1018/1000/600', 
                         excerpt: 'This is my first blog post. I\'m excited to share my thoughts with you!',
                         content: `
-                            <p>This is my first blog post. I'm excited to share my thoughts with you!</p>
-                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                            <p>
+                                　Hello everyone, I'm FUM.<br><br>
+                                　In this blog, I will be sharing various information about the world and Japan.<br><br>
+                                　I will be writing articles from my own perspective, so please come and check them out.<br><br>
+                                　Thank you for your support.
+                            </p>
                             <img src="https://picsum.photos/id/1015/500/300" alt="Beautiful landscape">
-                            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-                        `
+                            <p>This's a just test image lol XD</p>
+                        `,
+                        themes: ['Greeting']
                     },
-                    // 他の記事も同様に追加
                 ]
             },
             computed: {
                 filteredPosts() {
-                    if (this.selectedDate) {
-                        const selectedDateObj = new Date(this.selectedDate);
-                        return this.blogPosts.filter(post => {
-                            const postDate = new Date(post.date);
-                            return postDate.getFullYear() === selectedDateObj.getFullYear() &&
-                                postDate.getMonth() === selectedDateObj.getMonth() &&
-                                postDate.getDate() === selectedDateObj.getDate();
-                        });
-                    } else if (this.showCurrentMonth) {
-                        return this.blogPosts.filter(post => {
-                            const postDate = new Date(post.date);
-                            return postDate.getFullYear() === this.pickerDate.getFullYear() &&
-                                postDate.getMonth() === this.pickerDate.getMonth();
-                        });
-                    } else {
-                        return this.blogPosts;
-                    }
+                    return this.blogPosts.filter(post => {
+                        const dateMatch = this.selectedDate ? 
+                            new Date(post.date).toDateString() === new Date(this.selectedDate).toDateString() :
+                            this.showCurrentMonth ? 
+                                new Date(post.date).getMonth() === this.pickerDate.getMonth() &&
+                                new Date(post.date).getFullYear() === this.pickerDate.getFullYear() :
+                                true;
+                        
+                        const themeMatch = this.selectedThemes.length === 0 || 
+                            this.selectedThemes.some(theme => post.themes.includes(theme));
+                        
+                        return dateMatch && themeMatch;
+                    });
                 },
                 pageTitle() {
                     if (this.selectedDate) {
@@ -214,7 +243,14 @@
                 },
                 postDates() {
                     return this.blogPosts.map(post => post.date);
-                }
+                },
+
+                filteredThemesText() {
+                    const count = this.selectedThemes.length;
+                    if (count === 0) return 'All Themes';
+                    if (count === 1) return '1 Theme Selected';
+                    return `${count} Themes Selected`;
+                },
             },
             methods: {
                 Change_Drawer(_value) {
