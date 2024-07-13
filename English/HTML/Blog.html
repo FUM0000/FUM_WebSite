@@ -59,14 +59,10 @@
                                         <v-card-title class="text-h6 pt-4">{{ post.title }}</v-card-title>
                                         <v-card-subtitle class="pb-2">{{ post.date }}</v-card-subtitle>
                                         <v-card-text class="text-body-1 pb-4">
-                                            <template v-if="expandedPost === post.id">
-                                                <transition name="fade-expand" mode="out-in">
-                                                    <div v-html="post.content"></div>
-                                                </transition>
-                                            </template>
-                                            <template v-else>
-                                                {{ post.excerpt }}
-                                            </template>
+                                            <transition-group name="fade-slide" mode="out-in">
+                                                <div v-if="expandedPost === post.id" :key="'expanded'" v-html="post.content"></div>
+                                                <div v-else :key="'collapsed'">{{ post.excerpt }}</div>
+                                            </transition-group>
                                         </v-card-text>
                                         <v-card-actions class="pb-4">
                                             <v-btn text color="primary" @click="togglePost(post.id)">
@@ -100,6 +96,7 @@
 
         .blog-card {
             transition: all 0.3s;
+            overflow: hidden;
         }
 
         .blog-card:hover {
@@ -125,16 +122,18 @@
             margin-top: -5px;
         }
 
-        .fade-expand-enter-active,
-        .fade-expand-leave-active {
+        .fade-slide-enter-active,
+        .fade-slide-leave-active {
             transition: all 0.5s ease;
             max-height: 1000px;
             opacity: 1;
+            transform: translateY(0);
         }
-        .fade-expand-enter,
-        .fade-expand-leave-to {
+        .fade-slide-enter,
+        .fade-slide-leave-to {
             max-height: 0;
             opacity: 0;
+            transform: translateY(-20px);
         }
 
         .blog-card img {
