@@ -606,10 +606,20 @@ Vue.component('main-navigation-spanish', {
 
 
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
-            <v-list-item href="./AboutMe_spanish.html">
-                <v-list-item-icon><v-icon>mdi-stamper</v-icon></v-list-item-icon>
-                <v-list-item-title>Sobre Mí</v-list-item-title>
-            </v-list-item>
+            <v-list-group :value="false" prepend-icon="mdi-stamper">
+                <template v-slot:activator>
+                    <v-list-item-title>Sobre Mí</v-list-item-title>
+                </template>
+                
+                <v-list-item href="./Profile.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Profile</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Blog.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Blog</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
 
 
