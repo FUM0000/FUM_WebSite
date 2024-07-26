@@ -627,6 +627,10 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Blog</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Brain.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Brain</v-list-item-title>
+                </v-list-item>
             </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
 

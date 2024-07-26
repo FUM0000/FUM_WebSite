@@ -613,11 +613,15 @@ Vue.component('main-navigation-spanish', {
                 
                 <v-list-item href="./Profile.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Profile</v-list-item-title>
+                    <v-list-item-title>Perfil</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Blog.html">
                     <v-list-item-icon />
                     <v-list-item-title>Blog</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Brain.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Cerebro</v-list-item-title>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
