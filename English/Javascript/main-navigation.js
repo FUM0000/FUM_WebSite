@@ -20,19 +20,23 @@ Vue.component('main-navigation', {
             <!-- ▲ Home ▲ ------------------------------------------------------------------------------------->
 
 
-            <!-- ▼ Introduction ▼ ----------------------------------------------------------------------------->
-            <v-list-item href="./Introduction.html">
-                <v-list-item-icon><v-icon>mdi-human-greeting-variant</v-icon></v-list-item-icon>
-                <v-list-item-title>Introduction</v-list-item-title>
-            </v-list-item>
-            <!-- ▲ Introduction ▲ ----------------------------------------------------------------------------->
-
-
             <!-- ▼ Japanese ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-translate-variant">
                 <template v-slot:activator>
                     <v-list-item-title>Japanese</v-list-item-title>
                 </template>
+
+
+                <!-- ▼ Introduction ▼ ----------------------------------------------------------------------------->
+                <v-list-item href="./Introduction.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Introduction</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-human-greeting-variant</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+                <!-- ▲ Introduction ▲ ----------------------------------------------------------------------------->
 
 
                 <!-- ▼ Basic ▼ ------------------------------------------------------------------------------------>
@@ -566,7 +570,7 @@ Vue.component('main-navigation', {
 
 
             <!-- ▼ Japan ▼ ------------------------------------------------------------------------------------>
-            <v-list-group :value="false" prepend-icon="mdi-circle">
+            <v-list-group :value="false" prepend-icon="mdi-home-city-outline">
                 <template v-slot:activator>
                     <v-list-item-title>Japan Life</v-list-item-title>
                 </template>
@@ -622,14 +626,26 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Profile.html">
                     <v-list-item-icon />
                     <v-list-item-title>Profile</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-stamper</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Blog.html">
                     <v-list-item-icon />
                     <v-list-item-title>Blog</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-post-outline</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Brain.html">
                     <v-list-item-icon />
                     <v-list-item-title>Brain</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-brain</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->

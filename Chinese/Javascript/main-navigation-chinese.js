@@ -20,19 +20,23 @@ Vue.component('main-navigation-chinese', {
             <!-- ▲ Home ▲ ------------------------------------------------------------------------------------->
 
 
-            <!-- ▼ Introduction ▼ ----------------------------------------------------------------------------->
-            <v-list-item href="./Introduction_chinese.html">
-                <v-list-item-icon><v-icon>mdi-human-greeting-variant</v-icon></v-list-item-icon>
-                <v-list-item-title>介绍</v-list-item-title>
-            </v-list-item>
-            <!-- ▲ Introduction ▲ ----------------------------------------------------------------------------->
-
-
             <!-- ▼ Japanese ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-translate-variant">
                 <template v-slot:activator>
                     <v-list-item-title>日语</v-list-item-title>
                 </template>
+
+
+                <!-- ▼ Introduction ▼ ----------------------------------------------------------------------------->
+                <v-list-item href="./Introduction_chinese.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>介绍</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-human-greeting-variant</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+                <!-- ▲ Introduction ▲ ----------------------------------------------------------------------------->
 
 
                 <!-- ▼ Basic ▼ ------------------------------------------------------------------------------------>
@@ -553,7 +557,7 @@ Vue.component('main-navigation-chinese', {
 
 
             <!-- ▼ Japan ▼ ------------------------------------------------------------------------------------>
-            <v-list-group :value="false" prepend-icon="mdi-circle">
+            <v-list-group :value="false" prepend-icon="mdi-home-city-outline">
                 <template v-slot:activator>
                     <v-list-item-title>日本生活</v-list-item-title>
                 </template>
@@ -609,14 +613,26 @@ Vue.component('main-navigation-chinese', {
                 <v-list-item href="./Profile.html">
                     <v-list-item-icon />
                     <v-list-item-title>轮廓</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-stamper</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Blog.html">
                     <v-list-item-icon />
                     <v-list-item-title>博客</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-post-outline</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Brain.html">
                     <v-list-item-icon />
                     <v-list-item-title>脑</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-brain</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
