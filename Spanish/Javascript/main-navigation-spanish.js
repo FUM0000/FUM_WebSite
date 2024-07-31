@@ -567,6 +567,10 @@ Vue.component('main-navigation-spanish', {
                     <v-list-item-title>Japan Life</v-list-item-title>
                 </template>
 
+                <v-list-item href="./Japan_Travel.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Viaje</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Japan_Shop_spanish.html">
                     <v-list-item-icon />
                     <v-list-item-title>Tienda</v-list-item-title>

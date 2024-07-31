@@ -562,6 +562,10 @@ Vue.component('main-navigation-chinese', {
                     <v-list-item-title>日本生活</v-list-item-title>
                 </template>
 
+                <v-list-item href="./Japan_Travel.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>旅行</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Japan_Shop_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>商店</v-list-item-title>
