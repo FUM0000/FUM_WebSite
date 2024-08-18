@@ -436,10 +436,34 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    
+
+                    <v-list-item href="./Flower_Rose.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Rose</v-list-item-title>
+                    </v-list-item>
 
                 </v-list-group sub-group>
                 <!-- ▲ Flower ▲ ----------------------------------------------------------------------------------->
+
+
+                <!-- ▼ Herb ▼ ------------------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Herb</v-list-item-title>
+                        
+                        <v-list-item-icon>
+                            <v-icon>mdi-leaf</v-icon>
+                        </v-list-item-icon>
+                    </template>
+
+
+                    <v-list-item href="./Herb_Basil.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Basil</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Herb ▲ ------------------------------------------------------------------------------------->
 
 
                 <!-- ▼ Vegetable ▼ -------------------------------------------------------------------------------->

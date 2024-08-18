@@ -435,8 +435,35 @@ Vue.component('main-navigation-chinese', {
                             <v-icon>mdi-flower</v-icon>
                         </v-list-item-icon>
                     </template>
+
+
+                    <v-list-item href="./Flower_Rose_chinese.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>玫瑰</v-list-item-title>
+                    </v-list-item>
+
                 </v-list-group sub-group>
                 <!-- ▲ Flower ▲ ----------------------------------------------------------------------------------->
+
+
+                <!-- ▼ Herb ▼ ------------------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Herb</v-list-item-title>
+                        
+                        <v-list-item-icon>
+                            <v-icon>mdi-leaf</v-icon>
+                        </v-list-item-icon>
+                    </template>
+
+
+                    <v-list-item href="./Herb_Basil_chinese.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>罗勒</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Herb ▲ ------------------------------------------------------------------------------------->
 
 
                 <!-- ▼ Vegetable ▼ -------------------------------------------------------------------------------->
