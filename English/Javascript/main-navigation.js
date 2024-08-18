@@ -419,6 +419,12 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Plants</v-list-item-title>
                 </template>
 
+                
+                <v-list-item href="./Plant_General.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>General</v-list-item-title>
+                </v-list-item>
+
 
                 <!-- ▼ Flower ▼ ----------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
@@ -430,8 +436,8 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-
                     
+
                 </v-list-group sub-group>
                 <!-- ▲ Flower ▲ ----------------------------------------------------------------------------------->
 
@@ -475,6 +481,10 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Vegetable_Onion.html">
                         <v-list-item-icon />
                         <v-list-item-title>Onion</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Vegetable_Potato.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Potato</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Vegetable_Spinach.html">
                         <v-list-item-icon />

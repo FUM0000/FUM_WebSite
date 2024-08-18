@@ -419,6 +419,12 @@ Vue.component('main-navigation-spanish', {
                     <v-list-item-title>Criar Plantas</v-list-item-title>
                 </template>
 
+                
+                <v-list-item href="./Plant_General_spanish.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>General</v-list-item-title>
+                </v-list-item>
+
 
                 <!-- ▼ Flower ▼ ----------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
@@ -479,6 +485,10 @@ Vue.component('main-navigation-spanish', {
                     <v-list-item href="./Vegetable_MiniTomato_spanish.html">
                         <v-list-item-icon />
                         <v-list-item-title>Mini Tomate</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Vegetable_Potato_spanish.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Patata</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Vegetable ▲ -------------------------------------------------------------------------------->

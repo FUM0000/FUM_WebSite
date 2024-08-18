@@ -419,6 +419,13 @@ Vue.component('main-navigation-chinese', {
                     <v-list-item-title>种植</v-list-item-title>
                 </template>
 
+                
+                <v-list-item href="./Plant_General_chinese.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>一般</v-list-item-title>
+                </v-list-item>
+
+
                 <!-- ▼ Flower ▼ ----------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
@@ -459,17 +466,21 @@ Vue.component('main-navigation-chinese', {
                         <v-list-item-icon />
                         <v-list-item-title>茄子</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_Konegi_chinese.html">
+                    <v-list-item href="./Vegetable_Onion_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>葱</v-list-item-title>
+                        <v-list-item-title>洋葱</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Vegetable_MiniTomato_chinese.html">
                         <v-list-item-icon />
                         <v-list-item-title>小番茄</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_Onion_chinese.html">
+                    <v-list-item href="./Vegetable_Konegi_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>洋葱</v-list-item-title>
+                        <v-list-item-title>葱</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Vegetable_Potato.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>土豆</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Vegetable_Spinach_chinese.html">
                         <v-list-item-icon />
