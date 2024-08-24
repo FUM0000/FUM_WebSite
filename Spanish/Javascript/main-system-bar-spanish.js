@@ -2,7 +2,7 @@ Vue.component('main-system-bar-spanish', {
     template: `
     <v-system-bar color="#CFD8DC80" class="font-weight-black"style="height: 50px;" app>
         <v-row aline="center">
-            <v-col cols="6">
+            <v-col cols="6" align-self="center">
                 <audio id="current_bgm" src="" paused loop></audio>
                 <v-icon id="speaker_1">mdi-volume-variant-off</v-icon>
                 <slot></slot>
