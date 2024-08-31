@@ -6,14 +6,17 @@ Vue.component('main-footer', {
         </v-btn>
         <slot></slot>
         <v-spacer />
-        <v-btn @click="$vuetify.goTo(0)" text x-small>
+        <v-btn @click="scrollToTop" text x-small>
             <v-icon color="red">mdi-chevron-up</v-icon>
         </v-btn>
     </v-footer>
     `,
     methods: {
         scrollToBottom() {
-            window.scrollTo(0, document.body.scrollHeight);
+            this.$vuetify.goTo(document.body.scrollHeight);
+        },
+        scrollToTop() {
+            this.$vuetify.goTo(0);
         }
     }
 })
