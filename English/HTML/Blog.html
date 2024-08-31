@@ -84,29 +84,34 @@
                                       {{ filteredThemesText }}
                                     </v-chip>
                                 </v-card-title>
-                                <template v-if="filteredPosts.length > 0">
-                                    <v-card v-for="post in filteredPosts" :key="post.id" class="mb-6 blog-card">
-                                        <v-img :src="post.image" height="250px"></v-img>
-                                        <v-card-title class="text-h6 pt-4">{{ post.title }}</v-card-title>
-                                        <v-card-subtitle class="pb-2">{{ post.date }}</v-card-subtitle>
-                                        <v-chip-group style="padding-left: 16px;">
-                                            <v-chip v-for="theme in post.themes" :key="theme" small>
-                                                {{ theme }}
-                                            </v-chip>
-                                        </v-chip-group>
-                                        <v-card-text class="text-body-1 pb-4">
-                                            <transition-group name="fade-slide" mode="out-in">
-                                                <div v-if="expandedPost === post.id" :key="'expanded'" v-html="post.content"></div>
-                                                <div v-else :key="'collapsed'">{{ post.excerpt }}</div>
-                                            </transition-group>
-                                        </v-card-text>
-                                        <v-card-actions class="pb-4">
-                                            <v-btn text color="primary" @click="togglePost(post.id)">
-                                                {{ expandedPost === post.id ? 'Close' : 'Read More' }}
-                                            </v-btn>
-                                        </v-card-actions>
+                                <template v-for="post in filteredPosts" :key="post.id">
+                                    <v-card class="mb-6 blog-card">
+                                      <v-img :src="post.image" height="250px"></v-img>
+                                      <v-card-title class="text-h6 pt-4">{{ post.title }}</v-card-title>
+                                      <v-card-subtitle class="pb-2">{{ post.date }}</v-card-subtitle>
+                                      <v-chip-group style="padding-left: 16px; padding-bottom: 16px;">
+                                        <v-chip v-for="theme in post.themes" :key="theme" small>
+                                          {{ theme }}
+                                        </v-chip>
+                                      </v-chip-group>
+                                      <v-card-actions v-if="expandedPost === post.id" class="pt-0 pb-4">
+                                        <v-btn text color="primary" @click="togglePost(post.id)">
+                                          Close
+                                        </v-btn>
+                                      </v-card-actions>
+                                      <v-card-text class="text-body-1 pb-4">
+                                        <transition-group name="fade-slide" mode="out-in">
+                                          <div v-if="expandedPost === post.id" :key="'expanded'" v-html="post.content"></div>
+                                          <div v-else :key="'collapsed'">{{ post.excerpt }}</div>
+                                        </transition-group>
+                                      </v-card-text>
+                                      <v-card-actions class="pt-0">
+                                        <v-btn text color="primary" @click="togglePost(post.id)">
+                                          {{ expandedPost === post.id ? 'Close' : 'Read More' }}
+                                        </v-btn>
+                                      </v-card-actions>
                                     </v-card>
-                                </template>
+                                  </template>
                                 <v-card-text v-else class="text-h6">
                                     No posts available for this period or themes.
                                 </v-card-text>
@@ -177,6 +182,11 @@
             height: auto;
             margin: 10px 0;
         }
+        
+        .blog-content-image {
+            max-width: 384px;
+            max-height: 384px;
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -199,7 +209,10 @@
                 expandedPost: null,
                 selectedThemes: [],
                 themes: [
+                    'Cooking',
+                    'Culture',
                     'Greeting',
+                    'Japan',
                 ],
                 blogPosts: [
                     { 
@@ -210,15 +223,37 @@
                         excerpt: 'This is my first blog post. I\'m excited to share my thoughts with you!',
                         content: `
                             <p>
-                                　Hello everyone, I'm FUM.<br><br>
-                                　In this blog, I will be sharing various information about the world and Japan.<br><br>
-                                　I will be writing articles from my own perspective, so please come and check them out.<br><br>
-                                　Thank you for your support.
+                                　Hello everyone, I'm <b>FUM</b>.<br><br>
+                                　In this blog, I will be sharing <b>various information</b> about the world and Japan.<br><br>
+                                　I will be writing articles from <b>my own perspective</b>, so please come and check them out.<br><br>
+                                　<b>Thank you for your support</b>.
                             </p>
-                            <img src="https://picsum.photos/id/1015/500/300" alt="Beautiful landscape">
-                            <p>This's a just test image lol XD</p>
                         `,
                         themes: ['Greeting']
+                    },
+                    { 
+                        id: 2, 
+                        title: 'Cooking Ramen', 
+                        date: '2024-08-31', 
+                        image: '../../Asset/Image/Blog/20240831_1.jpg', 
+                        excerpt: 'I made ramen soup for the first time. It went well!',
+                        content: `
+                            <p>　The <b>chicken legs</b> and garlic are simmered for a long time while the noodles are made.</p>
+                            <img src="../../Asset/Image/Blog/20240831_3.jpg" class="blog-content-image" alt="Soup">
+                            <p>
+                                　The <b>soup</b> for ramen is prepared separately from the broth and seasoning and combined just before eating.<br>
+                                In this case, I used <b>soy sauce</b> with soaked kelp.
+                            </p>
+                            <img src="../../Asset/Image/Blog/20240831_2.jpg" class="blog-content-image" alt="Noodle">
+                            <p>　The noodles are kneaded with a mixture of <b>chives, garlic and eggs</b>, adjusted with water.</p>
+                            <img src="../../Asset/Image/Blog/20240831_1.jpg" class="blog-content-image" alt="Ramen">
+                            <p>
+                                　The more time and effort it takes, the more original the taste becomes, which makes me very happy.<br>
+                                The seasoning can be anything delicious in your country,<br>
+                                so if you like, please look up the recipe and try to make it.
+                            </p>
+                        `,
+                        themes: ['Cooking', 'Japan', 'Culture']
                     },
                 ]
             },
