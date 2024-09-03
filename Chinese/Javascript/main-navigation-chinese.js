@@ -71,27 +71,27 @@ Vue.component('main-navigation-chinese', {
                     </v-list-item>
                     <v-list-item href="./Basic_GeneralWord_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>一般词汇</v-list-item-title>
+                        <v-list-item-title>单词 - 一般</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Basic_Conversation_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>会话</v-list-item-title>
+                        <v-list-item-title>单词 - 会话</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Basic_Verb_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>动词</v-list-item-title>
+                        <v-list-item-title>单词 - 动词</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Basic_Adjective_i_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>形容词 - i</v-list-item-title>
+                        <v-list-item-title>单词 - 形容词 - i</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Basic_Adjective_na_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>形容词 - na</v-list-item-title>
+                        <v-list-item-title>单词 - 形容词 - na</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Basic_Adverb_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>副词</v-list-item-title>
+                        <v-list-item-title>单词 - 副词</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Basic ▲ ------------------------------------------------------------------------------------>
