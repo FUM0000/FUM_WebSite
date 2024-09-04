@@ -75,7 +75,7 @@ Vue.component('main-navigation-chinese', {
                     </v-list-item>
                     <v-list-item href="./Basic_Conversation_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>单词 - 会话</v-list-item-title>
+                        <v-list-item-title>单词 - 对话</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Basic_Verb_chinese.html">
                         <v-list-item-icon />
