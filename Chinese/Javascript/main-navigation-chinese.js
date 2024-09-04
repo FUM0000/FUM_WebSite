@@ -168,7 +168,7 @@ Vue.component('main-navigation-chinese', {
                     </v-list-item>
                     <v-list-item href="./Hobby_Sf_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>SF</v-list-item-title>
+                        <v-list-item-title>科幻片</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Hobby_Sport_chinese.html">
                         <v-list-item-icon />
