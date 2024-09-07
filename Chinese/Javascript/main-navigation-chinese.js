@@ -160,7 +160,7 @@ Vue.component('main-navigation-chinese', {
                     </v-list-item>
                     <v-list-item href="./Hobby_Outdoor_chinese.html">
                         <v-list-item-icon />
-                        <v-list-item-title>户外活动</v-list-item-title>
+                        <v-list-item-title>户外</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Hobby_Reading_chinese.html">
                         <v-list-item-icon />
@@ -306,7 +306,7 @@ Vue.component('main-navigation-chinese', {
                 <!-- ▼ Outside ▼ ---------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
-                        <v-list-item-title>单词 - 户外</v-list-item-title>
+                        <v-list-item-title>单词 - 外面</v-list-item-title>
                         
                         <v-list-item-icon>
                             <v-icon>mdi-beach</v-icon>
