@@ -23,6 +23,10 @@
 
 <body>
     <div class="scan-line"></div>
+    <div class="cyberpunk-border">
+        <div class="corner corner-bl"></div>
+        <div class="corner corner-br"></div>
+    </div>
     <v-app id="app">
         <template>
             <canvas id="canvas" style="position: absolute;"></canvas>
@@ -33,8 +37,10 @@
                     <transition name="fade-page">
                         <div v-show="show_page">
                             <v-row class="text_flow" style="width: 1920px;">
-                                <font style="color: red">&lt; NOTICIAS &gt;</font>&nbsp;<font style="color: hsl(0 0% 25%)">
-                                    El otoño en Japón es relativamente propenso a los tifones, así que planifica tu viaje con cuidado. Echa un vistazo a las hermosas hojas de otoño.
+                                <font style="color: red">&lt; NOTICIAS &gt;</font>&nbsp;<font
+                                    style="color: hsl(0 0% 25%)">
+                                    El otoño en Japón es relativamente propenso a los tifones, así que planifica tu
+                                    viaje con cuidado. Echa un vistazo a las hermosas hojas de otoño.
                                 </font>
                             </v-row>
                             <v-btn class="item-1" icon small @click="Change_BGM(14);">
@@ -158,6 +164,52 @@
             100% {
                 transform: scale(1);
             }
+        }
+
+        .cyberpunk-border {
+            position: fixed;
+            left: 25px;
+            right: 25px;
+            bottom: 20px;
+            border: 2px solid yellow;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .cyberpunk-border::before,
+        .cyberpunk-border::after {
+            content: '';
+            position: absolute;
+            background-color: yellow;
+        }
+
+        .cyberpunk-border::after {
+            bottom: -10px;
+            left: 20px;
+            right: 20px;
+            height: 2px;
+        }
+
+        .corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid yellow;
+            box-shadow: 0 0 10px yellow;
+        }
+
+        .corner-bl {
+            bottom: -10px;
+            left: -10px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .corner-br {
+            bottom: -10px;
+            right: -10px;
+            border-left: none;
+            border-top: none;
         }
 
         .glitch {
@@ -380,14 +432,24 @@
                 requestAnimationFrame(this.Animation.bind(this));
             }
         }
-        function applyGlitchEffect() {
-            const glitchElements = document.querySelectorAll('.glitch');
+        function createCyberpunkDecoration() {
+            const border = document.querySelector('.cyberpunk-border');
+            for (let i = 0; i < window.innerWidth / 100; i++) {
+                const decoration = document.createElement('div');
+                decoration.style.position = 'absolute';
+                decoration.style.background = 'yellow';
+                decoration.style.boxShadow = '0 0 5px yellow';
 
-            glitchElements.forEach(element => {
-                const text = element.textContent;
-                element.setAttribute('data-text', text);
-            });
+                const size = Math.random() * 5 + 4;
+                decoration.style.width = `${size}px`;
+                decoration.style.height = `${size}px`;
+                decoration.style.left = `${Math.random() * 100}%`;
+                decoration.style.top = Math.random() > 0.5 ? '0' : 'auto';
+                decoration.style.bottom = Math.random() > 0.5 ? '0' : 'auto';
+                border.appendChild(decoration);
+            }
         }
+        window.addEventListener('load', createCyberpunkDecoration);
         let vue = new Vue({
             el: '#app',
             vuetify: new Vuetify(),
@@ -469,7 +531,6 @@
                 $(".glitch").each(function () {
                     $(this).attr('data-text', $(this).text());
                 });
-                applyGlitchEffect();
                 setInterval(() => {
                     const glitchElements = document.querySelectorAll('.glitch');
                     glitchElements.forEach(element => {
