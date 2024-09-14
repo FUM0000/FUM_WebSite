@@ -653,7 +653,7 @@ Vue.component('main-navigation-spanish', {
                     <v-list-item-title>Sobre Mí</v-list-item-title>
                 </template>
                 
-                <v-list-item href="./Profile.html">
+                <v-list-item href="../../English/HTML/Profile.html">
                     <v-list-item-icon />
                     <v-list-item-title>Perfil</v-list-item-title>
                         

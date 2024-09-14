@@ -652,7 +652,7 @@ Vue.component('main-navigation-chinese', {
                     <v-list-item-title>关于我</v-list-item-title>
                 </template>
                 
-                <v-list-item href="./Profile.html">
+                <v-list-item href="../../English/HTML/Profile.html">
                     <v-list-item-icon />
                     <v-list-item-title>轮廓</v-list-item-title>
                         
