@@ -1,36 +1,3 @@
-// Check Version
-const VersionManager = {
-    currentVersion: '1.0.0',
-
-    reloadResources: function() {
-        const links = document.getElementsByTagName('link');
-        for (let i = 0; i < links.length; i++) {
-            if (links[i].rel === 'stylesheet') {
-                links[i].href = this.addVersionToURL(links[i].href);
-            }
-        }
-        const scripts = document.getElementsByTagName('script');
-        for (let i = 0; i < scripts.length; i++) {
-            if (scripts[i].src && !scripts[i].src.includes('Common.js')) {
-                const newScript = document.createElement('script');
-                newScript.src = this.addVersionToURL(scripts[i].src);
-                scripts[i].parentNode.replaceChild(newScript, scripts[i]);
-            }
-        }
-    },
-
-    addVersionToURL: function(url) {
-        const separator = url.indexOf('?') !== -1 ? '&' : '?';
-        return `${url}${separator}v=${this.currentVersion}`;
-    },
-
-    init: function() {
-        window.addEventListener('load', () => {
-            this.reloadResources();
-        });
-    }
-};
-VersionManager.init();
 
 // BGM
 let Name_Store = localStorage.getItem("BGM_Name");
