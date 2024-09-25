@@ -21,5 +21,5 @@ Vue.component('main-system-bar', {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }
-    }
+    },
 })

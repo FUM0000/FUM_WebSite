@@ -1,14 +1,48 @@
+// Check Version
+const VersionManager = {
+    currentVersion: '1.0.0',
+
+    reloadResources: function() {
+        const links = document.getElementsByTagName('link');
+        for (let i = 0; i < links.length; i++) {
+            if (links[i].rel === 'stylesheet') {
+                links[i].href = this.addVersionToURL(links[i].href);
+            }
+        }
+        const scripts = document.getElementsByTagName('script');
+        for (let i = 0; i < scripts.length; i++) {
+            if (scripts[i].src && !scripts[i].src.includes('common.js')) {
+                const newScript = document.createElement('script');
+                newScript.src = this.addVersionToURL(scripts[i].src);
+                scripts[i].parentNode.replaceChild(newScript, scripts[i]);
+            }
+        }
+    },
+
+    addVersionToURL: function(url) {
+        const separator = url.indexOf('?') !== -1 ? '&' : '?';
+        return `${url}${separator}v=${this.currentVersion}`;
+    },
+
+    init: function() {
+        window.addEventListener('load', () => {
+            this.reloadResources();
+        });
+    }
+};
+VersionManager.init();
+
+// BGM
 let Name_Store = localStorage.getItem("BGM_Name");
 let Name = Name_Store == null ? "clair_de_lune.wav" : Name_Store;
 let Playing = false;
-
-$(function() {
+$(function () {
     //// System Bar
     // Audio
     let audio = $("#current_bgm")[0];
     audio.volume = 0.5;
     $("#speaker_1").on("click", function () {
-        if( Playing ) {
+        if (Playing) {
             $(this).removeClass("mdi-volume-source");
             $(this).addClass("mdi-volume-variant-off");
             audio.pause();
@@ -20,27 +54,22 @@ $(function() {
             audio.play();
         }
     });
-    audio.onplaying = function() { Playing = true; };
-    audio.onpause = function() { Playing = false; };
+    audio.onplaying = function () { Playing = true; };
+    audio.onpause = function () { Playing = false; };
 });
-
 function Get_PlayingBGM() {
     return Playing;
 }
-
 function Change_BGM_Name(_name) {
     Name = _name;
     localStorage.setItem("BGM_Name", _name);
 }
-
 function RandomNumber(_min, _max) {
     return Math.random() * (_max - _min + 1) + _min;
 }
 
-
 // Index
 function Resize() {
-
 
     // Variables
     const screen_width = $("#main-container").width();
@@ -59,7 +88,7 @@ function Resize() {
     let bottom = 0;
 
 
-    for(let i = 1; i < 16; i++) {
+    for (let i = 1; i < 16; i++) {
         // Calculate
         item_width = $(".item-" + i).width();
         item_height = $(".item-" + i).height();
@@ -77,13 +106,14 @@ function Resize() {
         radian += Math.PI / 5;
         radius = Math.max(0, (Math.min(screen_narrower * 0.09, 45) - (i - 1)) * radian);
     }
-    
+
     // Welcome
     const welcome_top = bottom + (screen_height - bottom) * 0.5;
     $(".welcome_1").css("left", width_center - $(".welcome_1").width * 0.5);
     $(".welcome_1").css("top", welcome_top);
 }
 
+// Footer
 Vue.component('main-footer', {
     template: `
     <v-footer color="#CFD8DC80" class="font-weight-black" app>
@@ -91,7 +121,7 @@ Vue.component('main-footer', {
             <v-icon color="blue">mdi-chevron-down</v-icon>
         </v-btn>
         <v-spacer />
-        <span class="copyright">\u00A9 2024 FUM / \u00A9 2024 FUM_WebSite</span>
+        <span class="copyright">© 2024 FUM / © 2024 FUM_WebSite</span>
         <v-spacer />
         <v-btn @click="scrollToTop" text x-small>
             <v-icon color="red">mdi-chevron-up</v-icon>
@@ -107,12 +137,11 @@ Vue.component('main-footer', {
         }
     }
 })
-
 Vue.component('main-footer-simple', {
     template: `
     <v-footer color="#CFD8DC80" class="font-weight-black" app>
         <v-spacer />
-        <span class="copyright">\u00A9 2024 FUM / \u00A9 2024 FUM_WebSite</span>
+        <span class="copyright">© 2024 FUM / © 2024 FUM_WebSite</span>
         <v-spacer />
     </v-footer>
     `,

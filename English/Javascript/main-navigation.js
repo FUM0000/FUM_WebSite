@@ -4,7 +4,7 @@ Vue.component('main-navigation', {
 
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
-        <v-btn :ripple="false" style="cursor: default;" class="font-weight-black non-underline" block dark>MENU</v-btn>
+        <v-btn :ripple="false" class="not-selectable font-weight-black non-underline primary" block tile @click.stop="drawer_local = false;">MENU</v-btn>
         <!-- ▲ Title ▲ ------------------------------------------------------------------------------------>
 
         
@@ -701,5 +701,5 @@ Vue.component('main-navigation', {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }
-    }
+    },
 })
