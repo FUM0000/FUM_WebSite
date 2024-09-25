@@ -107,10 +107,10 @@ function Resize() {
         radius = Math.max(0, (Math.min(screen_narrower * 0.09, 45) - (i - 1)) * radian);
     }
 
-    // Welcome
-    const welcome_top = bottom + (screen_height - bottom) * 0.5;
-    $(".welcome_1").css("left", width_center - $(".welcome_1").width * 0.5);
-    $(".welcome_1").css("top", welcome_top);
+    // Text
+    const text_top = bottom + (screen_height - bottom) * 0.5;
+    $("#select-music").css("left", width_center - $("#select-music").width * 0.5);
+    $("#select-music").css("top", text_top);
 }
 
 // Footer
