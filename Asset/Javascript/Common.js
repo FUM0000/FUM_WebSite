@@ -11,7 +11,7 @@ const VersionManager = {
         }
         const scripts = document.getElementsByTagName('script');
         for (let i = 0; i < scripts.length; i++) {
-            if (scripts[i].src && !scripts[i].src.includes('common.js')) {
+            if (scripts[i].src && !scripts[i].src.includes('Common.js')) {
                 const newScript = document.createElement('script');
                 newScript.src = this.addVersionToURL(scripts[i].src);
                 scripts[i].parentNode.replaceChild(newScript, scripts[i]);
