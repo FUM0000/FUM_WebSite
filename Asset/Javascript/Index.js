@@ -93,8 +93,8 @@ window.mixins_index = {
             audio.load();
         },
         Relocate_Index() {
-            const screen_width = $("#app").width();
-            const screen_height = $("#app").height();
+            const screen_width = $("#main").width();
+            const screen_height = $("#main").height();
             const screen_narrower = Math.min(screen_width, screen_height);
             const width_center = screen_width * 0.5;
             const height_center = screen_height * 0.35;

@@ -20,10 +20,10 @@ Vue.component('main-system-bar', {
         </v-row>
     </v-system-bar>
     `,
-    props: ['Drawer'],
+    props: ['drawer'],
     computed: {
         Drawer_Local: {
-            get() { return this.Drawer; },
+            get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }
     },
@@ -754,10 +754,10 @@ Vue.component('main-navigation', {
 
     </v-navigation-drawer>
     `,
-    props: ['Drawer'],
+    props: ['drawer'],
     computed: {
         Drawer_Local: {
-            get() { return this.Drawer; },
+            get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }
     },
