@@ -20,10 +20,10 @@ Vue.component('main-system-bar', {
         </v-row>
     </v-system-bar>
     `,
-    props: ['drawer'],
+    props: ['Drawer'],
     computed: {
         Drawer_Local: {
-            get() { return this.drawer; },
+            get() { return this.Drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }
     },
@@ -754,10 +754,10 @@ Vue.component('main-navigation', {
 
     </v-navigation-drawer>
     `,
-    props: ['drawer'],
+    props: ['Drawer'],
     computed: {
         Drawer_Local: {
-            get() { return this.drawer; },
+            get() { return this.Drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }
     },
@@ -799,7 +799,7 @@ Vue.component('main-footer-simple', {
 
 // Mixins
 window.data_common = {
-    drawer: false,
+    Drawer: false,
     show_page: false,
 };
 window.mixins_common = {
@@ -809,9 +809,9 @@ window.mixins_common = {
         };
     },
     computed: {
-        drawer: {
-            get() { return this.data_common.drawer; },
-            set(_value) { this.data_common.drawer = _value; },
+        Drawer: {
+            get() { return this.data_common.Drawer; },
+            set(_value) { this.data_common.Drawer = _value; },
         },
         show_page: {
             get() { return this.data_common.show_page; },
@@ -819,7 +819,7 @@ window.mixins_common = {
         },
     },
     methods: {
-        Change_Drawer(_value) { this.drawer = _value; },
+        Change_Drawer(_value) { this.Drawer = _value; },
     },
     mounted() {
         $(window).ready(() => { this.show_page = true; });

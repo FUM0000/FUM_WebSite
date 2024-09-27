@@ -39,7 +39,7 @@ class Ball_Animation_1_CLASS {
 
 // Mixins
 window.data_index = {
-    drawer: false,
+    Drawer: false,
     show_page: false,
     List_BGM: [
         "clair_de_lune.wav",
@@ -66,9 +66,9 @@ window.mixins_index = {
         };
     },
     computed: {
-        drawer: {
-            get() { return this.data_index.drawer; },
-            set(_value) { this.data_index.drawer = _value; },
+        Drawer: {
+            get() { return this.data_index.Drawer; },
+            set(_value) { this.data_index.Drawer = _value; },
         },
         show_page: {
             get() { return this.data_index.show_page; },
@@ -79,7 +79,7 @@ window.mixins_index = {
         }
     },
     methods: {
-        Change_Drawer(_value) { this.drawer = _value; },
+        Change_Drawer(_value) { this.Drawer = _value; },
         Change_BGM(_number) {
             let audio = $("#current_bgm")[0];
             audio.pause();
