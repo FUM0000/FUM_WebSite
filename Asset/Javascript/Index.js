@@ -135,7 +135,7 @@ window.mixins_index = {
         $("[class^='item-']").css("position", "absolute");
         $("[class^='item-']").css("transition", "1s");
         $("[class^='item-']").each(function () {
-            $(this).css("animation", "animation_katakata " + (Math.random() * (1.0 - 0.5) + 0.5).toFixed(2) + "s" + " infinite");
+            $(this).css("animation", "Katakata " + (Math.random() * (1.0 - 0.5) + 0.5).toFixed(2) + "s" + " infinite");
         });
         // Balls
         const canvas = document.getElementById('Canvas');
