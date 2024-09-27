@@ -40,7 +40,7 @@ class Ball_Animation_1_CLASS {
 // Mixins
 window.data_index = {
     Drawer: false,
-    show_page: false,
+    Ready_Page: false,
     List_BGM: [
         "clair_de_lune.wav",
         "gymnopedies.wav",
@@ -70,9 +70,9 @@ window.mixins_index = {
             get() { return this.data_index.Drawer; },
             set(_value) { this.data_index.Drawer = _value; },
         },
-        show_page: {
-            get() { return this.data_index.show_page; },
-            set(_value) { this.data_index.show_page = _value; },
+        Ready_Page: {
+            get() { return this.data_index.Ready_Page; },
+            set(_value) { this.data_index.Ready_Page = _value; },
         },
         List_BGM: {
             get() { return this.data_index.List_BGM; },
@@ -129,7 +129,7 @@ window.mixins_index = {
     },
     mounted() {
         // Event
-        $(window).ready(() => { this.show_page = true; });
+        $(window).ready(() => { this.Ready_Page = true; });
         $(window).resize(() => { this.Relocate_Index(); });
         // Katakata
         $("[class^='item-']").css("position", "absolute");
