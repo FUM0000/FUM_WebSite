@@ -79,7 +79,7 @@ window.mixins_index = {
         }
     },
     methods: {
-        Change_Drawer(_value) { this.Drawer = _value; },
+        ChangeDrawer(_value) { this.Drawer = _value; },
         Change_BGM(_number) {
             let audio = $("#current_bgm")[0];
             audio.pause();

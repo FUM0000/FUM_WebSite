@@ -800,7 +800,7 @@ Vue.component('main-footer-simple', {
 // Mixins
 window.data_common = {
     Drawer: false,
-    show_page: false,
+    Ready_Page: false,
 };
 window.mixins_common = {
     data() {
@@ -813,15 +813,15 @@ window.mixins_common = {
             get() { return this.data_common.Drawer; },
             set(_value) { this.data_common.Drawer = _value; },
         },
-        show_page: {
-            get() { return this.data_common.show_page; },
-            set(_value) { this.data_common.show_page = _value; },
+        Ready_Page: {
+            get() { return this.data_common.Ready_Page; },
+            set(_value) { this.data_common.Ready_Page = _value; },
         },
     },
     methods: {
-        Change_Drawer(_value) { this.Drawer = _value; },
+        ChangeDrawer(_value) { this.Drawer = _value; },
     },
     mounted() {
-        $(window).ready(() => { this.show_page = true; });
+        $(window).ready(() => { this.Ready_Page = true; });
     },
 };
