@@ -15,7 +15,6 @@ Vue.component('main-system-bar', {
             </v-col>
             
             <v-col cols="6" class="text-right" @click.stop="drawer_local = !drawer_local">
-                <!-- <v-icon id="arrow_1" color="red" x-small style="font-size: 10px; transform: rotate(90deg);">mdi-navigation</v-icon> -->
                 <v-btn rounded small plain>MENU</v-btn>
             </v-col>
         </v-row>
