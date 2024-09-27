@@ -802,7 +802,7 @@ window.data_common = {
     Drawer: false,
     Ready_Page: false,
 };
-window.mixins_common = {
+window.Mixins_Common = {
     data() {
         return {
             data_common: window.data_common,

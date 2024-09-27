@@ -59,7 +59,7 @@ window.data_index = {
         "piano_1.wav",
     ],
 };
-window.mixins_index = {
+window.Mixins_Index = {
     data() {
         return {
             data_index: window.data_index,
@@ -162,12 +162,12 @@ window.mixins_index = {
             ball.Animation();
             balls[i] = ball;
         }
-        // SelectMusic
-        $("#SelectMusic").each(function () {
+        // Glitch
+        $(".Glitch_Text").each(function () {
             $(this).attr('data-text', $(this).text());
         });
         setInterval(() => {
-            const glitchElements = document.querySelectorAll('#SelectMusic');
+            const glitchElements = document.querySelectorAll('.Glitch_Text');
             glitchElements.forEach(element => {
                 if (Math.random() > 0.9) {
                     element.style.textShadow = `${Math.random() * 5 - 2.5}px 0 #ff00c1, ${Math.random() * 5 - 2.5}px 0 #00fff9`;
