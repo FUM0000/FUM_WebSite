@@ -123,8 +123,8 @@ window.mixins_index = {
             }
         
             const text_top = bottom + (screen_height - bottom) * 0.5;
-            $("#select-music").css("left", width_center - $("#select-music").width * 0.5);
-            $("#select-music").css("top", text_top);
+            $("#SelectMusic").css("left", width_center - $("#SelectMusic").width * 0.5);
+            $("#SelectMusic").css("top", text_top);
         },
     },
     mounted() {
