@@ -8,7 +8,7 @@ Vue.component('main-system-bar-chinese', {
                 <slot></slot>
             </v-col>
             
-            <v-col cols="6" class="text-right" @click.stop="drawer_local = !drawer_local">
+            <v-col cols="6" class="text-right" @click.stop="Drawer_Local = !Drawer_Local">
                 <!-- <v-icon id="arrow_1" color="red" x-small style="font-size: 10px; transform: rotate(90deg);">mdi-navigation</v-icon> -->
                 <v-btn rounded small plain>菜单</v-btn>
             </v-col>
@@ -17,7 +17,7 @@ Vue.component('main-system-bar-chinese', {
     `,
     props: ['drawer'],
     computed: {
-        drawer_local: {
+        Drawer_Local: {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }

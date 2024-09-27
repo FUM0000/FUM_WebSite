@@ -14,7 +14,7 @@ Vue.component('main-system-bar', {
                 <slot></slot>
             </v-col>
             
-            <v-col cols="6" class="text-right" @click.stop="drawer_local = !drawer_local">
+            <v-col cols="6" class="text-right" @click.stop="Drawer_Local = !Drawer_Local">
                 <v-btn rounded small plain>MENU</v-btn>
             </v-col>
         </v-row>
@@ -22,7 +22,7 @@ Vue.component('main-system-bar', {
     `,
     props: ['drawer'],
     computed: {
-        drawer_local: {
+        Drawer_Local: {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }
@@ -59,11 +59,11 @@ function Change_BGM_Name(_name) {
 // NavigationBar
 Vue.component('main-navigation', {
     template: `
-    <v-navigation-drawer class="blue-grey lighten-5" v-model="drawer_local" app right temporary>
+    <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right temporary>
 
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
-        <v-btn :ripple="false" class="not-selectable font-weight-black non-underline primary" block tile @click.stop="drawer_local = false;">MENU</v-btn>
+        <v-btn :ripple="false" class="not-selectable font-weight-black non-underline primary" block tile @click.stop="Drawer_Local = false;">MENU</v-btn>
         <!-- ▲ Title ▲ ------------------------------------------------------------------------------------>
 
         
@@ -756,7 +756,7 @@ Vue.component('main-navigation', {
     `,
     props: ['drawer'],
     computed: {
-        drawer_local: {
+        Drawer_Local: {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }

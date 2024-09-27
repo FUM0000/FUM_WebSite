@@ -1,6 +1,6 @@
 Vue.component('main-navigation-chinese', {
     template: `
-    <v-navigation-drawer class="blue-grey lighten-5" v-model="drawer_local" app right>
+    <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right>
 
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
@@ -688,7 +688,7 @@ Vue.component('main-navigation-chinese', {
     `,
     props: ['drawer'],
     computed: {
-        drawer_local: {
+        Drawer_Local: {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
         }
