@@ -38,7 +38,7 @@ class Ball_Animation_1_CLASS {
 }
 
 // Mixins
-window.data_index = {
+window.Data_Index = {
     Drawer: false,
     Ready_Page: false,
     List_BGM: [
@@ -62,20 +62,20 @@ window.data_index = {
 window.Mixins_Index = {
     data() {
         return {
-            data_index: window.data_index,
+            Data_Index: window.Data_Index,
         };
     },
     computed: {
         Drawer: {
-            get() { return this.data_index.Drawer; },
-            set(_value) { this.data_index.Drawer = _value; },
+            get() { return this.Data_Index.Drawer; },
+            set(_value) { this.Data_Index.Drawer = _value; },
         },
         Ready_Page: {
-            get() { return this.data_index.Ready_Page; },
-            set(_value) { this.data_index.Ready_Page = _value; },
+            get() { return this.Data_Index.Ready_Page; },
+            set(_value) { this.Data_Index.Ready_Page = _value; },
         },
         List_BGM: {
-            get() { return this.data_index.List_BGM; },
+            get() { return this.Data_Index.List_BGM; },
         }
     },
     methods: {
@@ -138,7 +138,7 @@ window.Mixins_Index = {
             $(this).css("animation", "Katakata " + (Math.random() * (1.0 - 0.5) + 0.5).toFixed(2) + "s" + " infinite");
         });
         // Balls
-        const canvas = document.getElementById('Canvas');
+        const canvas = document.getElementById('Balls');
         const ctx = canvas.getContext('2d');
         function resizeCanvas() {
             canvas.width = window.innerWidth;
