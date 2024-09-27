@@ -163,11 +163,11 @@ window.mixins_index = {
             balls[i] = ball;
         }
         // SelectMusic
-        $(".glitch").each(function () {
+        $("#SelectMusic").each(function () {
             $(this).attr('data-text', $(this).text());
         });
         setInterval(() => {
-            const glitchElements = document.querySelectorAll('.glitch');
+            const glitchElements = document.querySelectorAll('#SelectMusic');
             glitchElements.forEach(element => {
                 if (Math.random() > 0.9) {
                     element.style.textShadow = `${Math.random() * 5 - 2.5}px 0 #ff00c1, ${Math.random() * 5 - 2.5}px 0 #00fff9`;
