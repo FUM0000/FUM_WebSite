@@ -138,7 +138,7 @@ window.mixins_index = {
             $(this).css("animation", "animation_katakata " + (Math.random() * (1.0 - 0.5) + 0.5).toFixed(2) + "s" + " infinite");
         });
         // Balls
-        const canvas = document.getElementById('canvas');
+        const canvas = document.getElementById('Canvas');
         const ctx = canvas.getContext('2d');
         function resizeCanvas() {
             canvas.width = window.innerWidth;
