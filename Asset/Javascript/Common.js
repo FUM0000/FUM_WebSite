@@ -771,7 +771,7 @@ Vue.component('main-footer', {
             <v-icon color="blue">mdi-chevron-down</v-icon>
         </v-btn>
         <v-spacer />
-        <span style="font-size: 0.8rem;">© 2024 FUM / © 2024 FUM_WebSite</span>
+        <span style="font-size: 0.8rem;">© 2024 FUM / © 2024 FUM WebSite</span>
         <v-spacer />
         <v-btn @click="scrollToTop" text x-small>
             <v-icon color="red">mdi-chevron-up</v-icon>
@@ -791,7 +791,7 @@ Vue.component('main-footer-simple', {
     template: `
     <v-footer color="#CFD8DC80" class="font-weight-black" app>
         <v-spacer />
-        <span style="font-size: 0.8rem;">© 2024 FUM / © 2024 FUM_WebSite</span>
+        <span style="font-size: 0.8rem;">© 2024 FUM / © 2024 FUM WebSite</span>
         <v-spacer />
     </v-footer>
     `,
