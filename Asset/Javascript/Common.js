@@ -3,7 +3,8 @@
 //// Random
 function RandomNumber_Between(_min, _max) { return Math.random() * (_max - _min + 1) + _min; }
 
-// SystemBar
+// Component
+//// SystemBar
 Vue.component('main-system-bar', {
     template: `
     <v-system-bar color="#CFD8DC80" class="font-weight-black" style="height: 50px;" app>
@@ -56,7 +57,7 @@ function Change_BGM_Name(_name) {
     localStorage.setItem("BGM_Name", _name);
 }
 
-// NavigationBar
+//// NavigationBar
 Vue.component('main-navigation', {
     template: `
     <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right temporary>
@@ -763,7 +764,7 @@ Vue.component('main-navigation', {
     },
 })
 
-// Footer
+//// Footer
 Vue.component('main-footer', {
     template: `
     <v-footer color="#CFD8DC80" class="font-weight-black" app>
@@ -797,25 +798,52 @@ Vue.component('main-footer-simple', {
     `,
 })
 
+//// Carousel
+Vue.component('custom-carousel', {
+    props: {
+        title: String,
+        items: Array,
+        height: Number,
+    },
+    template: `
+        <v-row justify="center">
+            <v-col xs="12" md="6" lg="6">
+                <v-card>
+                    <v-system-bar>{{ title }}</v-system-bar>
+                    <v-carousel delimiter-icon="mdi-album" :show-arrows="false" :height="height">
+                        <v-carousel-item v-for="(item, index) in items" :key="index">
+                            <v-sheet height="100%">
+                                <v-row class="fill-height" align="center" justify="center">
+                                    <v-col cols="10" align="center" v-html="item"><span></span></v-col>
+                                </v-row>
+                            </v-sheet>
+                        </v-carousel-item>
+                    </v-carousel>
+                </v-card>
+            </v-col>
+        </v-row>
+    `
+});
+
 // Mixins
-window.data_common = {
+window.Data_Common = {
     Drawer: false,
     Ready_Page: false,
 };
 window.Mixins_Common = {
     data() {
         return {
-            data_common: window.data_common,
+            Data_Common: window.Data_Common,
         };
     },
     computed: {
         Drawer: {
-            get() { return this.data_common.Drawer; },
-            set(_value) { this.data_common.Drawer = _value; },
+            get() { return this.Data_Common.Drawer; },
+            set(_value) { this.Data_Common.Drawer = _value; },
         },
         Ready_Page: {
-            get() { return this.data_common.Ready_Page; },
-            set(_value) { this.data_common.Ready_Page = _value; },
+            get() { return this.Data_Common.Ready_Page; },
+            set(_value) { this.Data_Common.Ready_Page = _value; },
         },
     },
     methods: {
