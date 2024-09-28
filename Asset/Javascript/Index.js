@@ -69,6 +69,18 @@ window.Mixins_Index = {
         }
     },
     methods: {
+        Change_BGM(_number) {
+            let audio = $("#current_bgm")[0];
+            audio.pause();
+            audio.oncanplaythrough = function () {
+                audio.currentTime = 0;
+                audio.src = "../../Asset/Audio/" + this.List_BGM[_number];
+                Change_BGM_Name(this.List_BGM[_number]);
+                if (Get_PlayingBGM()) audio.play();
+                audio.oncanplaythrough = null;
+            }.bind(this);
+            audio.load();
+        },
         Relocate_Index() {
 
             // Ready

@@ -1,16 +1,16 @@
 
 // Funcion
-//// General
+//// Random
 function RandomNumber_Between(_min, _max) { return Math.random() * (_max - _min + 1) + _min; }
 
 // SystemBar
 Vue.component('main-system-bar', {
     template: `
-    <v-system-bar color="#CFD8DC80" class="font-weight-black"style="height: 50px;" app>
+    <v-system-bar color="#CFD8DC80" class="font-weight-black" style="height: 50px;" app>
         <v-row aline="center">
             <v-col cols="6" align-self="center">
-                <audio id="current_bgm" src="" paused loop></audio>
-                <v-icon id="speaker_1">mdi-volume-variant-off</v-icon>
+                <audio id="BGM" src="" paused loop></audio>
+                <v-icon id="Speaker">mdi-volume-variant-off</v-icon>
                 <slot></slot>
             </v-col>
             
@@ -32,9 +32,9 @@ let Name_Store = localStorage.getItem("BGM_Name");
 let Name = Name_Store == null ? "clair_de_lune.wav" : Name_Store;
 let Playing = false;
 $(function () {
-    let audio = $("#current_bgm")[0];
+    let audio = $("#BGM")[0];
     audio.volume = 0.5;
-    $("#speaker_1").on("click", function () {
+    $("#Speaker").on("click", function () {
         if (Playing) {
             $(this).removeClass("mdi-volume-source");
             $(this).addClass("mdi-volume-variant-off");
@@ -63,7 +63,7 @@ Vue.component('main-navigation', {
 
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
-        <v-btn :ripple="false" class="not-selectable font-weight-black non-underline primary" block tile @click.stop="Drawer_Local = false;">MENU</v-btn>
+        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline primary" block tile @click.stop="Drawer_Local = false;">MENU</v-btn>
         <!-- ▲ Title ▲ ------------------------------------------------------------------------------------>
 
         
