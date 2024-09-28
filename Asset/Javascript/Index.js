@@ -39,8 +39,6 @@ class Ball_Animation_1_CLASS {
 
 // Mixins
 window.Data_Index = {
-    Drawer: false,
-    Ready_Page: false,
     List_BGM: [
         "clair_de_lune.wav",
         "gymnopedies.wav",
@@ -66,35 +64,14 @@ window.Mixins_Index = {
         };
     },
     computed: {
-        Drawer: {
-            get() { return this.Data_Index.Drawer; },
-            set(_value) { this.Data_Index.Drawer = _value; },
-        },
-        Ready_Page: {
-            get() { return this.Data_Index.Ready_Page; },
-            set(_value) { this.Data_Index.Ready_Page = _value; },
-        },
         List_BGM: {
             get() { return this.Data_Index.List_BGM; },
         }
     },
     methods: {
-        ChangeDrawer(_value) { this.Drawer = _value; },
-        Change_BGM(_number) {
-            let audio = $("#current_bgm")[0];
-            audio.pause();
-            audio.oncanplaythrough = function () {
-                audio.currentTime = 0;
-                audio.src = "../../Asset/Audio/" + this.List_BGM[_number];
-                Change_BGM_Name(this.List_BGM[_number]);
-                if (Get_PlayingBGM()) audio.play();
-                audio.oncanplaythrough = null;
-            }.bind(this);
-            audio.load();
-        },
         Relocate_Index() {
-            const screen_width = $("#main").width();
-            const screen_height = $("#main").height();
+            const screen_width = $("#app").width();
+            const screen_height = $("#app").height();
             const screen_narrower = Math.min(screen_width, screen_height);
             const width_center = screen_width * 0.5;
             const height_center = screen_height * 0.35;
@@ -122,14 +99,13 @@ window.Mixins_Index = {
                 radius = Math.max(0, (Math.min(screen_narrower * 0.09, 45) - (i - 1)) * radian);
             }
         
-            const text_top = bottom + (screen_height - bottom) * 0.5;
+            const text_top = bottom + (screen_height - bottom) * 0.4;
             $("#SelectMusic").css("left", width_center - $("#SelectMusic").width * 0.5);
             $("#SelectMusic").css("top", text_top);
         },
     },
     mounted() {
         // Event
-        $(window).ready(() => { this.Ready_Page = true; });
         $(window).resize(() => { this.Relocate_Index(); });
         // Katakata
         $("[class^='item-']").css("position", "absolute");
