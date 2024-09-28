@@ -70,7 +70,7 @@ window.Mixins_Index = {
     },
     methods: {
         Change_BGM(_number) {
-            let audio = $("#current_bgm")[0];
+            let audio = $("#BGM")[0];
             audio.pause();
             audio.oncanplaythrough = function () {
                 audio.currentTime = 0;
