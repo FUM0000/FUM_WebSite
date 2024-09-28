@@ -70,6 +70,8 @@ window.Mixins_Index = {
     },
     methods: {
         Relocate_Index() {
+
+            // Ready
             const screen_width = $("#app").width();
             const screen_height = $("#app").height();
             const screen_narrower = Math.min(screen_width, screen_height);
@@ -85,6 +87,7 @@ window.Mixins_Index = {
             let item_top = 0;
             let bottom = 0;
         
+            // Icons
             for (let i = 1; i < 16; i++) {
                 item_width = $(".item-" + i).width();
                 item_height = $(".item-" + i).height();
@@ -99,20 +102,24 @@ window.Mixins_Index = {
                 radius = Math.max(0, (Math.min(screen_narrower * 0.09, 45) - (i - 1)) * radian);
             }
         
+            // SelectMusic
             const text_top = bottom + (screen_height - bottom) * 0.4;
             $("#SelectMusic").css("left", width_center - $("#SelectMusic").width * 0.5);
             $("#SelectMusic").css("top", text_top);
         },
     },
     mounted() {
+
         // Event
         $(window).resize(() => { this.Relocate_Index(); });
-        // Katakata
+
+        // Icons
         $("[class^='item-']").css("position", "absolute");
         $("[class^='item-']").css("transition", "1s");
         $("[class^='item-']").each(function () {
             $(this).css("animation", "Katakata " + (Math.random() * (1.0 - 0.5) + 0.5).toFixed(2) + "s" + " infinite");
         });
+        
         // Balls
         const canvas = document.getElementById('Balls');
         const ctx = canvas.getContext('2d');
