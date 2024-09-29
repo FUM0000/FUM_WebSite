@@ -809,7 +809,7 @@ Vue.component('custom-carousel', {
         <v-row justify="center">
             <v-col xs="12" md="6" lg="6">
                 <v-card>
-                    <v-system-bar>{{ title }}</v-system-bar>
+                    <v-system-bar class="font-weight-medium" style="background-color: #BFC8CC99;">{{ title }}</v-system-bar>
                     <v-carousel delimiter-icon="mdi-album" :show-arrows="false" :height="height">
                         <v-carousel-item v-for="(item, index) in items" :key="index">
                             <v-sheet height="100%">
