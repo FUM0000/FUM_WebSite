@@ -828,22 +828,22 @@ Vue.component('custom-carousel', {
 //// Card
 Vue.component('card-discription-image', {
     template: `
-      <v-card>
+      <v-card class="pa-2">
         <v-img :src="image" :lazy-src="image">
-          <transition name="Card_Fade">
-            <v-card-text v-if="Show_Recommend" class="pa-5 Card_Recommend">
-              <b>Recommend</b><br><br>
-              {{ recommend }}
-            </v-card-text>
-          </transition>
+            <transition name="Card_Fade">
+                <v-card-text v-if="Show_Recommend" class="pa-5 Card_Recommend">
+                <b>Recommend</b><br><br>
+                {{ recommend }}
+                </v-card-text>
+            </transition>
         </v-img>
   
         <v-card-title class="text-h5 font-weight-medium">
-          {{ title }}
+            {{ title }}
         </v-card-title>
   
         <v-card-text class="Card_Description">
-          {{ description }}
+            {{ description }}
         </v-card-text>
   
         <v-card-actions v-if="recommend">
@@ -854,18 +854,18 @@ Vue.component('card-discription-image', {
       </v-card>
     `,
     props: {
-      image:        { type: String, required: true },
-      title:        { type: String, required: true },
-      description:  { type: String, required: true },
-      recommend:    { type: String, required: false }
+        image:        { type: String, required: true },
+        title:        { type: String, required: true },
+        description:  { type: String, required: true },
+        recommend:    { type: String, required: false }
     },
     data() {
-      return { Show_Recommend: false }
+        return { Show_Recommend: false }
     },
     methods: {
-      Toggle() { this.Show_Recommend = !this.Show_Recommend }
+        Toggle() { this.Show_Recommend = !this.Show_Recommend }
     }
-  })
+})
 
 // Mixins
 window.Data_Common = {
@@ -892,6 +892,10 @@ window.Mixins_Common = {
         ChangeDrawer(_value) { this.Drawer = _value; },
     },
     mounted() {
+        $(window).on('beforeunload', ()=> {
+            $('#app').css('opacity', '0');
+            $(window).scrollTop(0);
+        });
         $(window).ready(() => { this.Ready_Page = true; });
     },
 };
