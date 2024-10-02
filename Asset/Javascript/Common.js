@@ -893,7 +893,7 @@ window.Mixins_Common = {
     },
     mounted() {
         $(window).on('beforeunload', ()=> {
-            $('#app').css('opacity', '0');
+            $('#App').css('opacity', '0');
             $(window).scrollTop(0);
         });
         $(window).ready(() => { this.Ready_Page = true; });

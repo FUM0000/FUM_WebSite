@@ -84,8 +84,8 @@ window.Mixins_Index = {
         Relocate_Index() {
 
             // Ready
-            const screen_width = $("#app").width();
-            const screen_height = $("#app").height();
+            const screen_width = $("#App").width();
+            const screen_height = $("#App").height();
             const screen_narrower = Math.min(screen_width, screen_height);
             const width_center = screen_width * 0.5;
             const height_center = screen_height * 0.35;
