@@ -38,35 +38,27 @@ class Ball_Animation_1_CLASS {
 }
 
 // Mixins
-window.Data_Index = {
-    List_BGM: [
-        "clair_de_lune.wav",
-        "gymnopedies.wav",
-        "an_der_wiege.wav",
-        "lofi_1.wav",
-        "lofi_2.wav",
-        "punk_1.wav",
-        "noise_1.wav",
-        "noise_2.wav",
-        "beat_1.wav",
-        "wave_1.wav",
-        "club_1.wav",
-        "hihat_1.wav",
-        "hihat_2.wav",
-        "beep_1.wav",
-        "piano_1.wav",
-    ],
-};
 window.Mixins_Index = {
     data() {
         return {
-            Data_Index: window.Data_Index,
+            List_BGM: [
+                "clair_de_lune.wav",
+                "gymnopedies.wav",
+                "an_der_wiege.wav",
+                "lofi_1.wav",
+                "lofi_2.wav",
+                "punk_1.wav",
+                "noise_1.wav",
+                "noise_2.wav",
+                "beat_1.wav",
+                "wave_1.wav",
+                "club_1.wav",
+                "hihat_1.wav",
+                "hihat_2.wav",
+                "beep_1.wav",
+                "piano_1.wav",
+            ],
         };
-    },
-    computed: {
-        List_BGM: {
-            get() { return this.Data_Index.List_BGM; },
-        }
     },
     methods: {
         Change_BGM(_number) {

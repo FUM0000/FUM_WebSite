@@ -1,3 +1,6 @@
+
+// Component
+//// General
 Vue.component('card-word-general', {
     template: `
     <v-card class="mx-auto d-flex flex-column">
@@ -37,3 +40,37 @@ Vue.component('card-word-general', {
         }
     }
 })
+
+// Mixins
+window.Mixins_Word = {
+    data() {
+        return {
+            Ready_Page: false,
+            Drawer: false,
+            Switch: false,
+            List: [],
+        };
+    },
+    methods: {
+        ChangeDrawer(_value) { this.Drawer = _value; },
+        CreateList(_japanese, _reading, _english) {
+            let list = [];
+            for (let i = 0; i < _japanese.length; i++) {
+                list.push({
+                    id: i,
+                    japanese: _japanese[i],
+                    reading: _reading[i],
+                    english: _english[i]
+                });
+            }
+            this.List = list;
+        },
+    },
+    mounted() {
+        $(window).ready(() => { this.Ready_Page = true; });
+        $(window).on('beforeunload', () => {
+            $('#App').css('opacity', '0');
+            $(window).scrollTop(0);
+        });
+    },
+};

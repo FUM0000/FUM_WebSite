@@ -868,34 +868,21 @@ Vue.component('card-discription-image', {
 })
 
 // Mixins
-window.Data_Common = {
-    Drawer: false,
-    Ready_Page: false,
-};
 window.Mixins_Common = {
     data() {
         return {
-            Data_Common: window.Data_Common,
+            Ready_Page: false,
+            Drawer: false,
         };
-    },
-    computed: {
-        Drawer: {
-            get() { return this.Data_Common.Drawer; },
-            set(_value) { this.Data_Common.Drawer = _value; },
-        },
-        Ready_Page: {
-            get() { return this.Data_Common.Ready_Page; },
-            set(_value) { this.Data_Common.Ready_Page = _value; },
-        },
     },
     methods: {
         ChangeDrawer(_value) { this.Drawer = _value; },
     },
     mounted() {
+        $(window).ready(() => { this.Ready_Page = true; });
         $(window).on('beforeunload', ()=> {
             $('#App').css('opacity', '0');
             $(window).scrollTop(0);
         });
-        $(window).ready(() => { this.Ready_Page = true; });
     },
 };
