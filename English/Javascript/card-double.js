@@ -30,9 +30,9 @@ Vue.component('card-word-general', {
             show: false,
         }
     },
-    props: ['all_show'],
+    props: ['showall'],
     watch: {
-        all_show: function (_new, _old) {
+        showall: function (_new, _old) {
             this.show = _new;
         }
     }
