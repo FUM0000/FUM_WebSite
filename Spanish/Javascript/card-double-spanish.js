@@ -1,4 +1,4 @@
-Vue.component('card-double', {
+Vue.component('card-word-general', {
     template: `
     <v-card class="mx-auto d-flex flex-column">
         <v-card-title class="pb-1 justify-center">

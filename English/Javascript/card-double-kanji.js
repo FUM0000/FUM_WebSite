@@ -1,4 +1,4 @@
-Vue.component('card-double-kanji', {
+Vue.component('card-word-kanji', {
     template: `
     <v-card class="mx-auto d-flex flex-column">
         <v-spacer />
