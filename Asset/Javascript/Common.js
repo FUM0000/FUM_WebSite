@@ -666,7 +666,7 @@ Vue.component('main-navigation', {
             <!-- ▼ Japan ▼ ------------------------------------------------------------------------------------>
             <v-list-group :value="false" prepend-icon="mdi-home-city-outline">
                 <template v-slot:activator>
-                    <v-list-item-title>Japan Life</v-list-item-title>
+                    <v-list-item-title>Life in Japan</v-list-item-title>
                 </template>
 
                 <v-list-item href="./Japan_Travel.html">
@@ -695,24 +695,6 @@ Vue.component('main-navigation', {
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Japan ▲ ------------------------------------------------------------------------------------>
-
-
-            <!-- ▼ Language ▼ --------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-hand-heart-outline">
-                <template v-slot:activator>
-                    <v-list-item-title>Language</v-list-item-title>
-                </template>
-                
-                <v-list-item href="../../Spanish/HTML/index_spanish.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Español</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="../../Chinese/HTML/index_chinese.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>中文</v-list-item-title>
-                </v-list-item>
-            </v-list-group>
-            <!-- ▲ Language ▲ --------------------------------------------------------------------------------->
 
 
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
@@ -747,6 +729,24 @@ Vue.component('main-navigation', {
                 </v-list-item>
             </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
+
+
+            <!-- ▼ Language ▼ --------------------------------------------------------------------------------->
+            <v-list-group :value="false" prepend-icon="mdi-hand-heart-outline">
+                <template v-slot:activator>
+                    <v-list-item-title>Language</v-list-item-title>
+                </template>
+                
+                <v-list-item href="../../Spanish/HTML/index_spanish.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Español</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="../../Chinese/HTML/index_chinese.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>中文</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
+            <!-- ▲ Language ▲ --------------------------------------------------------------------------------->
 
 
         </v-list>
@@ -800,17 +800,12 @@ Vue.component('main-footer-simple', {
 
 //// Carousel
 Vue.component('custom-carousel', {
-    props: {
-        title: String,
-        items: Array,
-        height: Number,
-    },
     template: `
         <v-row justify="center">
             <v-col xs="12" md="6" lg="6">
                 <v-card>
                     <v-system-bar class="font-weight-medium" style="background-color: #BFC8CC99;">{{ title }}</v-system-bar>
-                    <v-carousel delimiter-icon="mdi-album" :show-arrows="false" :height="height">
+                    <v-carousel delimiter-icon="mdi-album" :show-arrows="false" :height="height" v-model="internalpagenumber">
                         <v-carousel-item v-for="(item, index) in items" :key="index">
                             <v-sheet height="100%">
                                 <v-row class="fill-height" align="center" justify="center">
@@ -822,7 +817,26 @@ Vue.component('custom-carousel', {
                 </v-card>
             </v-col>
         </v-row>
-    `
+    `,
+    props: {
+        title: { type: String, required: true },
+        items: { type: Array, required: true },
+        height: { type: Number, required: true },
+        outpagenumber: { type: Number, default: 0 },
+    },
+    data() {
+        return { internalpagenumber: this.outpagenumber !== null ? this.outpagenumber : 0 };
+    },
+    watch: {
+        outpagenumber(_value) {
+            if (_value !== null) {
+                this.internalpagenumber = _value;
+            }
+        },
+        internalpagenumber(_value) {
+            this.$emit('update:outpagenumber', _value);
+        }
+    }
 });
 
 //// Card
@@ -854,10 +868,10 @@ Vue.component('card-discription-image', {
       </v-card>
     `,
     props: {
-        image:        { type: String, required: true },
-        title:        { type: String, required: true },
-        description:  { type: String, required: true },
-        recommend:    { type: String, required: false }
+        image: { type: String, required: true },
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        recommend: { type: String, required: false }
     },
     data() {
         return { Show_Recommend: false }
@@ -880,7 +894,7 @@ window.Mixins_Common = {
     },
     mounted() {
         $(window).ready(() => { this.Ready_Page = true; });
-        $(window).on('beforeunload', ()=> {
+        $(window).on('beforeunload', () => {
             $('#App').css('opacity', '0');
             $(window).scrollTop(0);
         });

@@ -37,13 +37,30 @@
 
             <v-main id="Main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
+                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5"
+                        style="display: flex; align-content: center;">
 
-                        <custom-carousel title="Greeting" :items="Greeting" :height="512">
-                        </custom-carousel>
-                        <custom-carousel title="About Japanese Language" :items="Japanese" :height="512">
-                        </custom-carousel>
-                        
+                        <v-row justify="center">
+                            <v-col xs="12" md="6" lg="6">
+                                <v-card class="mt-4">
+                                    <v-system-bar class="font-weight-medium" style="background-color: #BFC8CC99;">Select
+                                        Theme</v-system-bar>
+                                    <v-card-text>
+                                        <v-chip-group v-model="SelectedTheme" mandatory active-class="primary--text">
+                                            <v-chip v-for="theme in Themes" :key="theme" :value="theme"
+                                                @click="ResetNumber">
+                                                {{ theme }}
+                                            </v-chip>
+                                        </v-chip-group>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+
+                        <custom-carousel v-if="SelectedTheme" :title="SelectedTheme"
+                            :items="Get_ThemeContent(SelectedTheme)" :height="512" :outpagenumber="PageNumber"
+                            @update:outpagenumber="PageNumber = $event" />
+
                     </v-container>
                 </transition>
             </v-main>
@@ -66,35 +83,59 @@
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Common],
             data: {
-                Greeting: [
-                    `
-                        Hello!<br>Welcome to "FUM Website"!
-                    `,
-                    `
-                        This Website is created to pack everything about my idea.<br><br>
-                        I'm aware of the following things.<br><br>
-                        <p style="display: inline-block; text-align: left;">
-                            1. Simple and Easy to understand<br>
-                            2. Fun<br>
-                            3. Relax<br>
-                        </p>
-                    `,
+                SelectedTheme: null,
+                PageNumber: 0,
+                Themes: [
+                    'Greeting',
+                    'Japanese Language',
+                    'Plants',
+                    'Game',
+                    'Cooking',
+                    'Music',
+                    'Life in Japan',
+                    'About me'
                 ],
-                Japanese: [
-                    `
-                        You may be able to improve your Japanese ability under my simple idea in this site.
-                    `,
-                    `
-                        First, I recommend grasping the key points about the brain mechanism.<br>
-                        The learning method that takes into account that mechanism will surely help you achieve your goals.<br><br>
-                        <button class="Button_LikeVue" onclick="location.href='./Basic_Memory.html'">Check Memory Mechanism</button>
-                    `,
-                    `
-                        Second, let's recap what we should know before learning Japanese!<br><br>
-                        <button class="Button_LikeVue" onclick="location.href='./Basic_LearningPoints.html'">Check Learning Points</button>
-                    `,
-                ],
+                ThemeContents: {
+                    'Greeting': [
+                        `
+                            Hello!<br>Welcome to "FUM Website"!
+                        `,
+                        `
+                            This Website is created to pack everything about my idea.<br><br>
+                            I'm aware of the following things.<br><br>
+                            <p style="display: inline-block; text-align: left;">
+                                1. Simple and Easy to understand<br>
+                                2. Fun<br>
+                                3. Relax<br>
+                            </p>
+                        `,
+                    ],
+                    'Japanese Language': [
+                        `
+                            You may be able to improve your Japanese ability under my simple idea in this site.
+                        `,
+                        `
+                            First, I recommend grasping the key points about the brain mechanism.<br>
+                            The learning method that takes into account that mechanism will surely help you achieve your goals.<br><br>
+                            <button class="Button_LikeVue" onclick="location.href='./Basic_Memory.html'">Check Memory Mechanism</button>
+                        `,
+                        `
+                            Second, let's recap what we should know before learning Japanese!<br><br>
+                            <button class="Button_LikeVue" onclick="location.href='./Basic_LearningPoints.html'">Check Learning Points</button>
+                        `,
+                    ],
+                    'Plants': [],
+                    'Game': [],
+                    'Cooking': [],
+                    'Music': [],
+                    'Life in Japan': [],
+                    'About me': []
+                },
             },
+            methods: {
+                Get_ThemeContent(_theme) { return this.ThemeContents[_theme] },
+                ResetNumber() { this.PageNumber = 0; },
+            }
         })
 
     </script>

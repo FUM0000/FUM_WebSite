@@ -598,7 +598,7 @@ Vue.component('main-navigation-spanish', {
             <!-- ▼ Japan ▼ ------------------------------------------------------------------------------------>
             <v-list-group :value="false" prepend-icon="mdi-home-city-outline">
                 <template v-slot:activator>
-                    <v-list-item-title>Japan Life</v-list-item-title>
+                    <v-list-item-title>Life in Japan</v-list-item-title>
                 </template>
 
                 <v-list-item href="./Japan_Travel.html">
