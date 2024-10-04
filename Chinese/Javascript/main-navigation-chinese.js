@@ -588,7 +588,7 @@ Vue.component('main-navigation-chinese', {
                 </v-list-item>
                 <v-list-item href="./Youtube_Music_Ua_chinese.html">
                     <v-list-item-icon />
-                    <v-list-item-title>UA</v-list-item-title>
+                    <v-list-item-title>Other</v-list-item-title>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>

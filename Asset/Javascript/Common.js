@@ -662,9 +662,9 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Show-Go</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Music_Ua.html">
+                <v-list-item href="./Youtube_Music_Other.html">
                     <v-list-item-icon />
-                    <v-list-item-title>UA</v-list-item-title>
+                    <v-list-item-title>Other</v-list-item-title>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
@@ -744,14 +744,14 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Language</v-list-item-title>
                 </template>
                 
-                <v-list-item href="../../Spanish/HTML/index_spanish.html">
+                <!--<v-list-item href="../../Spanish/HTML/index_spanish.html">
                     <v-list-item-icon />
                     <v-list-item-title>Español</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="../../Chinese/HTML/index_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>中文</v-list-item-title>
-                </v-list-item>
+                </v-list-item>-->
             </v-list-group>
             <!-- ▲ Language ▲ --------------------------------------------------------------------------------->
 
