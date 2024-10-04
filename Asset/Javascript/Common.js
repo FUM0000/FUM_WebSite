@@ -1,5 +1,12 @@
 
 // Funcion
+//// Scroll
+function ScrollToBottom() {
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+    });
+}
 //// Random
 function RandomNumber_Between(_min, _max) { return Math.random() * (_max - _min + 1) + _min; }
 
@@ -809,7 +816,7 @@ Vue.component('custom-carousel', {
                         <v-carousel-item v-for="(item, index) in items" :key="index">
                             <v-sheet height="100%">
                                 <v-row class="fill-height" align="center" justify="center">
-                                    <v-col cols="10" align="center" v-html="item"><span></span></v-col>
+                                    <v-col cols="10" align="center" v-html="item"></v-col>
                                 </v-row>
                             </v-sheet>
                         </v-carousel-item>
