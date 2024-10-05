@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="author" content="F U M">
-    <!-- Google tag (gtag.js) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -13,8 +17,11 @@
       gtag('config', 'G-B89KY0993B');
     </script>
 
-    <!-- Setting -->
     <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+        rel="stylesheet">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
@@ -22,6 +29,7 @@
     <meta charset="utf-8" />
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
+    <title>Kitty Hopper</title>
 
     <script type="module">
 
@@ -156,8 +164,10 @@
 
             // Base
             constructor() {
+                // Flag
                 this.#Flag_GameOver = false;
                 this.#Flag_Start = false;
+                // Score
                 this.#Score = 0;
                 //// UI
                 // Home
@@ -187,16 +197,29 @@
                 bgm.loop = true;
                 bgm.volume = 0.5;
                 bgm.play();
+
+                // Control
+                this._Time_for_Ready = 1;
+                this._Timer_Ready = this._Time_for_Ready;
             }
-            Update() {
-                // Time to Score
+            Update_Play() {
                 this.Add_Score(DeltaTime);
+            }
+            Update_System() {
+                if(this.#Flag_Start && this.#Flag_GameOver) {
+                    this._Timer_Ready -= DeltaTime;
+                    if(this._Timer_Ready < 0) {
+                        this._Timer_Ready = 0; 
+                    }
+                    console.log(this._Timer_Ready);
+                }
             }
 
 
             // Get Set
             Get_Flag_GameOver() { return this.#Flag_GameOver; }
             Get_Flag_Start() { return this.#Flag_Start; }
+            Get_Flag_Touchble() { return this._Timer_Ready == 0 ? true : false; }
 
 
             // Functions
@@ -222,6 +245,7 @@
             GameOver() {
                 this.#Flag_GameOver = true;
                 this.#UI_GameOver_1.innerHTML = "GAME OVER!";
+                this._Timer_Ready = this._Time_for_Ready;
             }
         }
         class Cat_1_CLASS {
@@ -459,12 +483,13 @@
         function Loop() {
             // Object Actions
             Base_InputControler_1.Update();
+            Base_Manager_1.Update_System();
             if (Base_Manager_1.Get_Flag_Start() && !Base_Manager_1.Get_Flag_GameOver()) {
                 Cat_1.Update();
                 Bar_Generator_1.Update();
 
                 Base_Camera_1.Update();
-                Base_Manager_1.Update();
+                Base_Manager_1.Update_Play();
             }
 
 
@@ -489,7 +514,8 @@
                     Cat_1.Jump();
                 }
                 else if (Base_Manager_1.Get_Flag_Start() && Base_Manager_1.Get_Flag_GameOver()) {
-                    Base_Manager_1.Ready();
+                    console.log(Base_Manager_1.Get_Flag_Touchble());
+                    if(Base_Manager_1.Get_Flag_Touchble()) Base_Manager_1.Ready();
                 }
             }
             Base_InputControler_1.Set_Timer(0.1);

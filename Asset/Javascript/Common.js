@@ -900,10 +900,40 @@ window.Mixins_Common = {
         ChangeDrawer(_value) { this.Drawer = _value; },
     },
     mounted() {
-        $(window).ready(() => { this.Ready_Page = true; });
+        // Event
+        $(window).ready(() => {
+            this.Ready_Page = true;
+        });
         $(window).on('beforeunload', () => {
             $('#App').css('opacity', '0');
             $(window).scrollTop(0);
         });
+    },
+};
+window.Mixins_Youtube = {
+    data() {
+        return {
+            Ready_Page: false,
+            Drawer: false,
+        };
+    },
+    methods: {
+        ChangeDrawer(_value) { this.Drawer = _value; },
+    },
+    mounted() {
+        // Event
+        $(window).ready(() => {
+            this.Ready_Page = true;
+        });
+        $(window).on('beforeunload', () => {
+            $('#App').css('opacity', '0');
+            $(window).scrollTop(0);
+        });
+        $(window).resize(() => {
+            $(".Youtube").width($(".Youtube_Col").width());
+        });
+    },
+    updated() {
+        $(".Youtube").width($(".Youtube_Col").width());
     },
 };
