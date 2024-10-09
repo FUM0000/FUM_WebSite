@@ -91,7 +91,6 @@
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas_1"), antialias: true });
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
-        window.addEventListener('resize', Resize_Screen, false);
         Renderer.setClearColor(new THREE.Color(0xFCA3B7));
         const Scene = new THREE.Scene();
         Scene.fog = new THREE.Fog(0xFCA3B7, 0, 10);
@@ -103,121 +102,44 @@
         //     window.location.href = '../../English/HTML/index.html';
         // });
 
-        class FC_Manager {
-
-            _List_GameObject = [];
-            Add_to_ObjectList(_object) {
-                if (_object instanceof FC_GameObject) this._List_GameObject.push(_object);
-                else console.error("_object is not FC_GameObject's instance in Add_to_ObjectList()");
-            }
-
-            _TIME_FOR_READY = 1;
-
-            _State          = "Waiting_Start";
-            _Score          = 0;
-            _Timer_Ready    = 0;
-            _BGM            = new FC_Audio('../../Asset/Audio/lofi_2.wav');
-            _UI_NEKO        = new FC_TextPlane("ねこ", new THREE.Vector2(512, 512));
-
-            get State           () { return this._State; }
-
-            constructor() {
-                // this._UI_Home_1 = document.createElement('div');
-                // this._UI_Home_1.setAttribute("id", "UI_Home_1");
-                // this._UI_Home_1.innerHTML = "HOME";
-                // document.body.appendChild(this._UI_Home_1);
-                // this._UI_Score_1 = document.createElement('div');
-                // this._UI_Score_1.setAttribute("id", "UI_Score_1");
-                // this._UI_Score_1.innerHTML = "SCORE: " + Math.floor(this._Score);
-                // document.body.appendChild(this._UI_Score_1);
-                // this._UI_Start_1 = document.createElement('div');
-                // this._UI_Start_1.setAttribute("id", "UI_Start_1");
-                // this._UI_Start_1.innerHTML = "";
-                // document.body.appendChild(this._UI_Start_1);
-                // this._UI_GameOver_1 = document.createElement('div');
-                // this._UI_GameOver_1.setAttribute("id", "UI_GameOver_1");
-                // this._UI_GameOver_1.innerHTML = "";
-                // document.body.appendChild(this._UI_GameOver_1);
-            }
-
-            Initialize() {
-                this._State         = "Waiting_Start";
-                this._Score         = 0;
-                this._Timer_Ready   = 0;
-
-                Cat.Initialize();
-                Generator_Bar.Initialize();
-                Camera.Initialize();
-
-                // this._UI_Start_1.innerHTML = "START";
-                // this._UI_GameOver_1.innerHTML = "";
-                // this._UI_Score_1.innerHTML = "Score : " + Math.floor(this._Score);
-            }
-            Update() {
-                // for (const object of this._List_GameObject) {
-                //     object.Update();
-                // }
-
-                Manager.Update_System();
-                if (this._State == "Playing") {
-                    Manager.Update_Playing();
-                }
-
-                Renderer.render(Scene, Camera.Object);
-                requestAnimationFrame(this.Update.bind(this));
-            }
-            Update_System() {
-                
-                Timer_Input.Update();
-
-                if (this._State == "Gameover") {
-                    this._Timer_Ready += Environment.TIME_DELTA;
-                    if (this._Timer_Ready > this._TIME_FOR_READY) {
-                        this._Timer_Ready = this._TIME_FOR_READY;
-                        this._State = "Waiting_Restart";
-                    }
-                }
-
-                // UI
-                // this._UI_NEKO.Set_Position(Cat.Position + (new THREE.Vector3(0, 1, 0)));
-                this._UI_NEKO.LookAt(Camera.Position);
-            }
-            Update_Playing() {
-                Cat.Update();
-                Generator_Bar.Update();
-                Camera.Update();
-                
-                this.Add_Score(Environment.TIME_DELTA);
-            }
-
-            Start() {
-                this._State = "Playing";
-                // this._UI_Start_1.innerHTML = "";
-            }
-            GameOver() {
-                this._State = "Gameover";
-                // this._UI_GameOver_1.innerHTML = "GAME OVER!";
-            }
-
-            Add_Score(_point) {
-                this._Score += _point;
-                // this._UI_Score_1.innerHTML = "Score : " + Math.floor(this._Score);
-            }
-        }
-
         class FC_GameObject {
             Initialize  () {}
             Update      () {}
         }
+        class FC_Animation extends FC_GameObject {
+
+            _Flag_Animation = true;
+            _Flag_Move      = false;
+
+            constructor() { super(); }
+
+            Update() {
+                if ( this._Flag_Animation ) {
+                    if ( this._Flag_Move ) {
+                        this.Add_Position(this._Move_Direction.clone().multiplyScalar(this._Move_Speed * FC_Environment.TIME_DELTA));
+                    }
+                }
+            }
+
+            Animation_Start () { this._Flag_Animation = true; }
+            Animation_Stop  () { this._Flag_Animation = false; }
+            Animation_Move  (_vector3, _speed) {
+                this._Flag_Move         = true;
+                this._Move_Direction    = _vector3;
+                this._Move_Speed        = _speed;
+            }
+
+            Add_Position(_vector3) {
+                throw new Error("Add_Position(_vector3) must be.");
+            }
+        }
         class FC_Environment extends FC_GameObject {
 
-            _FPS        = 60;
-            _TIME_DELTA = 1 / this._FPS;
+            static FPS         = 60;
+            static TIME_DELTA  = 1 / this.FPS;
 
             _Gravity    = 9.8;
 
-            get FPS         () { return this._FPS; }
-            get TIME_DELTA  () { return this._TIME_DELTA; }
             get Gravity     () { return this._Gravity; }
             
             set Gravity (_value) { this._Gravity = _value; }
@@ -228,42 +150,57 @@
                 this._Gravity    = 9.8;
             }
         }
-        let Environment = new FC_Environment();
-
         class FC_Camera extends FC_GameObject {
 
-            _FOV                = 100;
-            _OFFSET_LOOKAT      = new THREE.Vector3(0, 0, 1);
+            _FOV                    = 100;
+            _OFFSET_LOOKAT_DEFAULT  = new THREE.Vector3(0, 0, 1);
+            _OFFSET_TARGET_DEFAULT  = new THREE.Vector3(-2, 0.5, -1);
 
             _Object             = new THREE.PerspectiveCamera(this._FOV, window.innerWidth / window.innerHeight, 0.1, 50);
-            _Flag_Forcus        = false;
+            _Flag_Target        = false;
             _Target             = null;
             _Position_Offset    = new THREE.Vector3(-2, 0.5, -1);
 
             get Object          () { return this._Object; }
             get Position        () { return this._Object.position; }
-            get Flag_Forcus     () { return this._Flag_Forcus; }
-            get Target          () { return this._Target; }
             get Position_Offset () { return this._Position_Offset; }
+            get Position_LookAt () { return this._Position_LookAt; }
+            get Flag_Target     () { return this._Flag_Target; }
+            get Target          () { return this._Target; }
 
             constructor() { super(); }
             
             set Position(_vector3) { this._Object.position.copy(_vector3); }
-            set LookAt  (_vector3) { this._Object.lookAt(_vector3); }
-
-            Initialize() {
-                this._Flag_Forcus       = true;
-                this._Target            = null;
-                this._Position_Offset   = new THREE.Vector3(-2, 0.5, -1);
-                this.Position           = this._Position_Offset;
-                this.LookAt             = this._OFFSET_LOOKAT;
+            set LookAt  (_vector3) {
+                this._Position_LookAt = _vector3;
+                this._Object.lookAt(this._Position_LookAt);
+            }
+            set Target  (_target) {
+                if (_target == null) {
+                    this._Flag_Target = false;
+                }
+                else {
+                    this._Flag_Target = true;
+                }
+                this._Target = _target;
             }
 
+            Initialize() {
+                this.Position   = this._OFFSET_TARGET_DEFAULT;
+                this.LookAt     = this._OFFSET_LOOKAT_DEFAULT;
+                this.Target     = null;
+            }
             Update() {
-                if ( this._Flag_Forcus ) {
-                    this.Position   = new THREE.Vector3(0, 0, Cat.Position.z).add(this._Position_Offset);
-                    this.LookAt     = new THREE.Vector3(0, 0, Cat.Position.z).add(this._OFFSET_LOOKAT);
+                if ( this._Flag_Target ) {
+                    this.Position   = new THREE.Vector3(0, 0, this._Target.Position.z).add(this._OFFSET_TARGET_DEFAULT);
+                    this.LookAt     = new THREE.Vector3(0, 0, this._Target.Position.z).add(this._OFFSET_LOOKAT_DEFAULT);
                 }
+            }
+
+            Resize_Screen() {
+                Camera.Object.aspect = window.innerWidth / window.innerHeight;
+                Camera.Object.updateProjectionMatrix();
+                Renderer.setSize(window.innerWidth, window.innerHeight);
             }
         }
         class FC_Light_Ambient extends FC_GameObject {
@@ -319,14 +256,13 @@
             }
             Update() {
                 if ( this._Flag_Starting ) {
-                    this._Timer += Environment.TIME_DELTA;
+                    this._Timer += FC_Environment.TIME_DELTA;
                     if (this._Timer > this._Time) {
                         this._Flag_Starting = false;
                         this._Flag_Finished = true;
                         this._Timer         = 0;
                     }
                 }
-                console.log(this._Timer);
             }
 
             Start   () { this._Flag_Starting = true; }
@@ -362,50 +298,92 @@
                 this.Play();
             }
         }
-        
-        class FC_TextPlane extends FC_GameObject {
-
-            _Is_Billboard = false;
+        class FC_TextPlane extends FC_Animation {
 
             get Position() { return this._Mesh.position; }
+            get Rotation() { return this._Mesh.rotation;}
 
+            set Text(_text) {
+                this._Text = _text;
+                this._Material.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Texture);
+                this._Material.needsUpdate = true;
+            }
+            set Color(_color) {
+                this._Color = _color;
+                this._Material.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Texture);
+                this._Material.needsUpdate = true;
+            }
             set Position(_vector3) { this._Mesh.position.set(_vector3.x, _vector3.y, _vector3.z); }
+            set Rotation(_vector3) { this._Mesh.rotation.set(_vector3.x, _vector3.y, _vector3.z); }
+            set Scale   (_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
 
-            constructor(_text, _vector2, _isbillboard = false) {
+            constructor(_text, _color, _vector2_texture, _vector2_geometry = new THREE.Vector2(1, 1), _isbillboard = false) {
                 super();
-                this._Geometry = new THREE.PlaneGeometry(_vector2.x, _vector2.y);
-                this._Material = new THREE.MeshBasicMaterial({
-                    map: this.#_CreateTextTexture(_text, new THREE.Vector2(_vector2.x, _vector2.y)),
-                    side: THREE.DoubleSide,
-                    transparent: true,
-                    opacity: 1.0,
-                });
-                this._Mesh = new THREE.Mesh(this._Geometry, this._Material);
+                this._Text_Default  = this._Text    = _text;
+                this._Color_Default = this._Color   = _color;
+                this._Size_Texture  = _vector2_texture;
+                this._Geometry      = new THREE.PlaneGeometry(_vector2_geometry.x, _vector2_geometry.y);
+                this._Material      = new THREE.MeshBasicMaterial({
+                                        map: this.#_CreateTextTexture(_text, _color, new THREE.Vector2(_vector2_texture.x, _vector2_texture.y)),
+                                        side: THREE.DoubleSide,
+                                        transparent: true,
+                                        opacity: 1.0,
+                                    });
+                this._Mesh          = new THREE.Mesh(this._Geometry, this._Material);
                 Scene.add(this._Mesh);
 
                 this._Is_Billboard = _isbillboard;
             }
             destructor() { Scene.remove(this._Mesh); }
 
+            Initialize() {
+                this.Position   = new THREE.Vector3(0, 0, 0);
+                this.Rotation   = new THREE.Vector3(0, 0, 0);
+                this.Text       = this._Text_Default;
+                this.Color      = this._Color_Default;
+            }
             Update() {
+                super.Update();
                 if ( this._Is_Billboard ) {
                     LookAt(Camera.Position);
                 }
             }
 
+            Show() {
+                this._Material.map = this.#_CreateTextTexture(this._Text, Alpha_Change(this._Color, "FF"), this._Size_Texture);
+                this._Material.needsUpdate = true;
+            }
+            Hide() {
+                this._Material.map = this.#_CreateTextTexture(this._Text, Alpha_Change(this._Color, "00"), this._Size_Texture);
+                this._Material.needsUpdate = true;
+            }
+            Add_Position(_vector3) {
+                const new_position = this.Position;
+                new_position.x += _vector3.x;
+                new_position.y += _vector3.y;
+                new_position.z += _vector3.z;
+                this.Position = new_position;
+            }
+            Add_Rotation(_vector3) {
+                const new_rotation = this.Rotation;
+                new_rotation.x += _vector3.x;
+                new_rotation.y += _vector3.y;
+                new_rotation.z += _vector3.z;
+                this.Rotation = new_rotation;
+            }
             LookAt(_vector3) { this._Mesh.lookAt(_vector3); }
 
-            #_CreateTextTexture(_text ,_vector2) {
+            #_CreateTextTexture(_text , _color, _vector2_texture) {
                 const canvas    = document.createElement('canvas');
                 const context   = canvas.getContext('2d');
 
-                canvas.width    = _vector2.x;
-                canvas.height   = _vector2.y;
+                canvas.width    = _vector2_texture.x;
+                canvas.height   = _vector2_texture.y;
 
                 context.fillStyle = '#ffffff00';
                 context.fillRect(0, 0, canvas.width, canvas.height);
 
-                context.fillStyle       = '#000000';
+                context.fillStyle       = _color;
                 context.font            = '48px Arial';
                 context.textAlign       = 'center';
                 context.textBaseline    = 'middle';
@@ -414,7 +392,122 @@
                 return new THREE.CanvasTexture(canvas);
             }
         }
-        
+        class FC_Manager {
+
+            _List_GameObject = [];
+            Add_to_ObjectList(_object) {
+                if (_object instanceof FC_GameObject) this._List_GameObject.push(_object);
+                else console.error("_object is not FC_GameObject's instance in Add_to_ObjectList()");
+            }
+
+            _TIME_FOR_READY = 1;
+
+            _State          = "Waiting_Start";
+            _Score          = 0;
+            _BGM            = new FC_Audio('../../Asset/Audio/lofi_2.wav');
+
+            _Timer_Waiting  = new FC_Timer(1);
+            _Timer_Ready    = 0;
+
+            _UI_Score       = new FC_TextPlane("Score : 0", "#000000", new THREE.Vector2(512, 256), new THREE.Vector2(2, 1));
+            _UI_Start       = new FC_TextPlane("START", "#CF0000", new THREE.Vector2(256, 256));
+            _UI_Gameover    = new FC_TextPlane("GAMEOVER", "#CF000000", new THREE.Vector2(512, 256), new THREE.Vector2(2, 1));
+            _UI_Tap         = new FC_TextPlane("TAP", "#CF000000", new THREE.Vector2(256, 256));
+
+            get State           () { return this._State; }
+
+            Initialize() {
+                this._State         = "Waiting";
+                this._Score         = 0;
+
+                this._Timer_Waiting.Restart();
+                this._Timer_Ready   = 0;
+
+                Cat.Initialize();
+                Generator_Bar.Initialize();
+                Camera.Initialize();
+
+                Camera.Target = Cat;
+                Timer_Input.Start();
+
+                this._UI_Score.Initialize();
+                this._UI_Score.Position = new THREE.Vector3(0, 1, 0);
+                this._UI_Score.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(-90), 0));
+                this._UI_Start.Initialize();
+                this._UI_Start.Position = new THREE.Vector3(-1, 0.5, 1);
+                this._UI_Start.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(180), 0));
+                this._UI_Gameover.Initialize();
+                this._UI_Gameover.Position = new THREE.Vector3(0, 0, 0);
+                this._UI_Gameover.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(180), 0));
+                this._UI_Tap.Initialize();
+                this._UI_Tap.Position = new THREE.Vector3(-1, -0.25, 1);
+                this._UI_Tap.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(180),  Degrees_to_Radians(180)));
+            }
+            Update() {
+                if ( Cat._Flag_Loaded ) {
+                    // for (const object of this._List_GameObject) {
+                    //     object.Update();
+                    // }
+
+                    switch( this._State ) {
+                        case "Waiting":
+                            this._Timer_Waiting.Update();
+                            if (this._Timer_Waiting.Flag_Finished) {
+                                this._State = "Waiting_Start";
+                                this._UI_Tap.Show();
+                            }
+                            break;
+                        case "Playing": Manager.Update_Playing(); break;
+                    }
+                    Manager.Update_System();
+
+                }
+                Renderer.render(Scene, Camera.Object);
+                requestAnimationFrame(this.Update.bind(this));
+            }
+            Update_System() {
+                
+                Timer_Input.Update();
+
+                if (this._State == "Gameover") {
+                    this._Timer_Ready += FC_Environment.TIME_DELTA;
+                    if (this._Timer_Ready > this._TIME_FOR_READY) {
+                        this._State = "Waiting_Restart";
+                        this._UI_Tap.Position = new THREE.Vector3(-1, -0.25, Camera.Position_LookAt.z);
+                    }
+                }
+
+                this._UI_Score.Position = new THREE.Vector3(0, 1, Cat.Position.z);
+            }
+            Update_Playing() {
+
+                Cat.Update();
+                Generator_Bar.Update();
+                Camera.Update();
+
+                this._UI_Start.Update();
+                this._UI_Tap.Update();
+                
+                this.Add_Score(FC_Environment.TIME_DELTA);
+            }
+
+            Start() {
+                this._State = "Playing";
+                this._UI_Start.Animation_Move(new THREE.Vector3(0, 1, 0), 1);
+                this._UI_Tap.Animation_Move(new THREE.Vector3(0, -1, 0), 1);
+            }
+            GameOver() {
+                this._State = "Gameover";
+                this._UI_Gameover.Position = new THREE.Vector3(-1, 0.5, Camera.Position_LookAt.z);
+                this._UI_Gameover.Show();
+            }
+
+            Add_Score(_point) {
+                this._Score += _point;
+                this._UI_Score.Text = "Score : " +  Math.floor(this._Score);
+            }
+        }
+
         class C_Cat extends FC_GameObject {
             
             _Flag_Loaded        = false;
@@ -477,7 +570,7 @@
             }
             Update() {
                 this._Speed *= this._Speed_Acceleration;
-                this.Move(new THREE.Vector3(0, 0, this._Speed * Environment.TIME_DELTA));
+                this.Move(new THREE.Vector3(0, 0, this._Speed * FC_Environment.TIME_DELTA));
                 this.Gravity();
                 
                 this._AnimationControler.update(0.02);
@@ -488,7 +581,7 @@
             }
             Gravity() {
                 if ( this._Flag_Jumping ) {
-                    this._Jump_Timer += Environment.TIME_DELTA;
+                    this._Jump_Timer += FC_Environment.TIME_DELTA;
                     this.Position = new THREE.Vector3(this.Position.x, this._Jump_Velocity * this._Jump_Timer - 0.5 * Environment.Gravity * this._Jump_Timer * this._Jump_Timer, this.Position.z);
 
                     if (this.Position.y < 0) {
@@ -513,7 +606,6 @@
                 }
             }
         }
-
         class C_Generator_Bar extends FC_GameObject {
 
             _DISTANCE_START     = 10;
@@ -583,7 +675,7 @@
                     if (this._List[i].position.z < Cat.Position.z - 10) {
                         this.#Place(i);
                     }
-                    if (Cat.Position.z > this._List[i].position.z - 0.2 && Cat.Position.z < this._List[i].position.z + 0.23) {
+                    if (Cat.Position.z > this._List[i].position.z - 0.2 && Cat.Position.z < this._List[i].position.z + 0.24) {
                         if ( !Cat.Flag_Jumping ) Manager.GameOver();
                         else {
                             if ( !Cat.Flag_Pointed ) {
@@ -609,17 +701,16 @@
                 }
             }
         }
-
-        const Manager             = new FC_Manager();
-
-        const Camera              = new FC_Camera();
-        const Light_Ambient       = new FC_Light_Ambient();
-        const Light_Directional   = new FC_Light_Directional();
-        const Timer_Input         = new FC_Timer(0.1);
-        Timer_Input.Start();
+        
+        const Environment       = new FC_Environment();
+        const Camera            = new FC_Camera();
+        const Light_Ambient     = new FC_Light_Ambient();
+        const Light_Directional = new FC_Light_Directional();
+        const Timer_Input       = new FC_Timer(0.1);
+        const Manager           = new FC_Manager();
+        window.addEventListener('resize', Camera.Resize_Screen, false);
 
         const Cat                 = new C_Cat();
-
         const Generator_Bar       = new C_Generator_Bar();
         const Generator_Wall      = new C_Generator_Wall();
 
@@ -627,57 +718,15 @@
         Manager.Update();
 
         function TouchStart() {
-            if (Timer_Input.Flag_Finished) {
+            if ( Timer_Input.Flag_Finished ) {
                 switch(Manager.State) {
-                    case "Waiting_Start"    : if ( Cat.Flag_Loaded ) Manager.Start();    break;
-                    case "Playing"          : Cat.Jump();                                   break;
-                    case "Waiting_Restart"  : Manager.Initialize();                         break;
+                    case "Waiting_Start"    : if ( Cat.Flag_Loaded ) Manager.Start();   break;
+                    case "Playing"          : Cat.Jump();                               break;
+                    case "Waiting_Restart"  : Manager.Initialize();                     break;
                 }
                 Timer_Input.Restart();
             }
         }
-
-        function Resize_Screen() {
-            Camera.Object.aspect = window.innerWidth / window.innerHeight;
-            Camera.Object.updateProjectionMatrix();
-            Renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        class Debug_Checker_Time_CLASS {
-            
-            _Checking;
-            _FPS;
-            _PreviousTime;
-
-            constructor() {
-                this._Checking = false;
-                this._PreviousTime = 0;
-            }
-            Update() {
-                if (this._Checking) {
-                    const currentTime = performance.now();
-                    const deltaTime = currentTime - this._PreviousTime;
-                    this._PreviousTime = currentTime;
-
-                    this._FPS = 1000 / deltaTime;
-                    Environment.TIME_DELTA = deltaTime * 0.001;
-                    console.log("FPS: " + this._FPS);
-                }
-            }
-
-            Set_Checking(bool) {
-                this._Checking = bool;
-                this._PreviousTime = 0;
-            }
-        }
-        window.addEventListener('keydown', (event) => {
-            switch (event.keyCode) {
-                case 65: // Aキー
-                    console.log(Scene.children);
-                    break;
-            }
-        });
-
     </script>
 
 </body>
