@@ -94,7 +94,7 @@
             constructor() { super(Scene, Renderer); }
 
             Initialize() {
-                super();
+                super.Initialize();
 
                 this._Score_High    = 0;
                 this._Score         = 0;
@@ -127,7 +127,8 @@
                 this._UI_Tap.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180),  Degrees_to_Radians(180));
             }
             Update() {
-                if ( Cat._Flag_Loaded ) {
+                if ( Cat._Flag_Loaded ) this._Flag_Loaded = true;
+                if ( this._Flag_Loaded ) {
 
                     switch( this._State ) {
                         case "Waiting":
@@ -146,7 +147,7 @@
                 requestAnimationFrame(this.Update.bind(this));
             }
             Update_System() {
-                Timer_Input.Update();
+                this._Timer_Input.Update();
 
                 if (this._State == "Gameover") {
                     this._Timer_Ready += FC_Environment.TIME_DELTA;
@@ -172,12 +173,12 @@
             }
 
             Start() {
-                super();
+                super.Start();
                 this._UI_Start.Animation_Move(new THREE.Vector3(0, 1, 1), 1);
                 this._UI_Tap.Animation_Move(new THREE.Vector3(0, -1, 1), 1);
             }
             GameOver() {
-                super();
+                super.GameOver();
                 this._UI_Gameover.Position = new THREE.Vector3(-0.8, 0.5, Camera.Position_LookAt.z);
                 this._UI_Gameover.Show();
                 this._Score > this._Score_High ? this._Score_High = this._Score : null;
@@ -389,19 +390,18 @@
         const Camera            = new FC_Camera(Renderer);
         const Light_Ambient     = new FC_Light_Ambient(Scene);
         const Light_Directional = new FC_Light_Directional(Scene);
-        const Timer_Input       = new FC_Timer(0.1);
         window.addEventListener('resize', Camera.Resize_Screen, false);
         
         const Manager           = new C_Manager();
         const Cat               = new C_Cat();
         const Generator_Bar     = new C_Generator_Bar();
-        const C_Generator_Wall  = new C_Generator_Wall();
+        const Generator_Wall    = new C_Generator_Wall();
 
         Manager.Initialize();
         Manager.Update();
 
         function TouchStart(event) {
-            if ( Timer_Input.Flag_Finished ) {
+            if ( Manager.Timer_Input.Flag_Finished ) {
 
                 let screen_x, screen_y;
                 switch( event.type ) {
@@ -432,7 +432,7 @@
                     case "Playing"          : Cat.Jump();                               break;
                     case "Waiting_Restart"  : Manager.Initialize();                     break;
                 }
-                Timer_Input.Restart();
+                Manager.Timer_Input.Restart();
             }
         }
     </script>

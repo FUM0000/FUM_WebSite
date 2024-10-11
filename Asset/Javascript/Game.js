@@ -329,10 +329,9 @@ class FC_Manager {
     _Timer_Input    = new FC_Timer(0.1);
     _Timer_Ready    = 0;
 
-    get State   () { return this._State; }
-    get BGM     () { return this._BGM; }
-
-    set Flag_Loaded(_bool) { this._Flag_Loaded = _bool; }
+    get State       () { return this._State; }
+    get Timer_Input () { return this._Timer; }
+    get BGM         () { return this._BGM; }
 
     constructor(_scene, _renderer) {
         this._Scene     = _scene;
