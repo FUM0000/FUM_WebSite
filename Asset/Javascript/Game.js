@@ -105,8 +105,8 @@ class FC_Camera extends FC_GameObject {
     }
 
     Resize_Screen() {
-        this.Object.aspect = window.innerWidth / window.innerHeight;
-        this.Object.updateProjectionMatrix();
+        this._Object.aspect = window.innerWidth / window.innerHeight;
+        this._Object.updateProjectionMatrix();
         this._Renderer.setSize(window.innerWidth, window.innerHeight);
     }
 }
