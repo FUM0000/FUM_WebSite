@@ -98,10 +98,6 @@
         if (Mobile_or_Desktop())    document.addEventListener('touchstart'  , function () { TouchStart(event); });
         else                        document.addEventListener('mousedown'   , function () { TouchStart(event); });
 
-        // $("#UI_Home_1").click(function () {
-        //     window.location.href = '../../English/HTML/index.html';
-        // });
-
         class FC_GameObject {
             Initialize  () {}
             Update      () {}
@@ -341,10 +337,10 @@
             }
             destructor() { Scene.remove(this._Mesh); }
 
-            Initialize() {
+            Initialize(_bool_keep_text = false) {
                 this.Position   = new THREE.Vector3(0, 0, 0);
                 this.Rotation   = new THREE.Vector3(0, 0, 0);
-                this.Text       = this._Text_Default;
+                if ( !_bool_keep_text ) this.Text = this._Text_Default;
                 this.Color      = this._Color_Default;
             }
             Update() {
@@ -407,12 +403,6 @@
         }
         class FC_Manager {
 
-            _List_GameObject = [];
-            Add_to_ObjectList(_object) {
-                if (_object instanceof FC_GameObject) this._List_GameObject.push(_object);
-                else console.error("_object is not FC_GameObject's instance in Add_to_ObjectList()");
-            }
-
             _TIME_FOR_READY = 1;
             _UI_MULTIPLY    = 0.2;
 
@@ -425,6 +415,7 @@
 
             _UI_Home        = new FC_TextPlane("HOME", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_MULTIPLY));
             _UI_Music       = new FC_TextPlane("MUSIC", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_MULTIPLY));
+            _UI_Score_High  = new FC_TextPlane("HighScore : 0", "#000000", new THREE.Vector2(10, 1).multiplyScalar(this._UI_MULTIPLY * 0.4));
             _UI_Score       = new FC_TextPlane("Score : 0", "#000000", new THREE.Vector2(10, 1).multiplyScalar(this._UI_MULTIPLY));
             _UI_Start       = new FC_TextPlane("START", "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(this._UI_MULTIPLY));
             _UI_Gameover    = new FC_TextPlane("GAMEOVER", "#CF000000", new THREE.Vector2(8, 1).multiplyScalar(this._UI_MULTIPLY));
@@ -436,7 +427,9 @@
             get BGM     () { return this._BGM; }
 
             Initialize() {
+
                 this._State         = "Waiting";
+                this._Score_High    = 0;
                 this._Score         = 0;
 
                 this._Timer_Waiting.Restart();
@@ -451,28 +444,28 @@
 
                 this._UI_Home.Initialize();
                 this._UI_Home.Position = new THREE.Vector3(0, 0, -100);
-                this._UI_Home.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(180), 0));
+                this._UI_Home.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
                 this._UI_Music.Initialize();
                 this._UI_Music.Position = new THREE.Vector3(0, 0, -100);
-                this._UI_Music.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(180), 0));
+                this._UI_Music.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
+                this._UI_Score_High.Initialize(true);
+                this._UI_Score_High.Position = new THREE.Vector3(0, 1.2, 0.2);
+                this._UI_Score_High.Rotation = new THREE.Vector3(0, Degrees_to_Radians(-90), 0);
                 this._UI_Score.Initialize();
                 this._UI_Score.Position = new THREE.Vector3(0, 1, 0.2);
-                this._UI_Score.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(-90), 0));
+                this._UI_Score.Rotation = new THREE.Vector3(0, Degrees_to_Radians(-90), 0);
                 this._UI_Start.Initialize();
                 this._UI_Start.Position = new THREE.Vector3(-0.8, 0.5, 1);
-                this._UI_Start.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(180), 0));
+                this._UI_Start.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
                 this._UI_Gameover.Initialize();
                 this._UI_Gameover.Position = new THREE.Vector3(0, 0, 0);
-                this._UI_Gameover.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(180), 0));
+                this._UI_Gameover.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Position = new THREE.Vector3(-0.8, -0.25, 1);
-                this._UI_Tap.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(180),  Degrees_to_Radians(180)));
+                this._UI_Tap.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180),  Degrees_to_Radians(180));
             }
             Update() {
                 if ( Cat._Flag_Loaded ) {
-                    // for (const object of this._List_GameObject) {
-                    //     object.Update();
-                    // }
 
                     switch( this._State ) {
                         case "Waiting":
@@ -527,6 +520,9 @@
                 this._State = "Gameover";
                 this._UI_Gameover.Position = new THREE.Vector3(-0.8, 0.5, Camera.Position_LookAt.z);
                 this._UI_Gameover.Show();
+                this._Score > this._Score_High ? this._Score_High = this._Score : null;
+                this._UI_Score_High.Text = "HighScore : " + Math.floor(this._Score_High);
+                
             }
 
             Add_Score(_point) {
