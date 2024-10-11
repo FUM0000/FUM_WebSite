@@ -330,7 +330,7 @@ class FC_Manager {
     _Timer_Ready    = 0;
 
     get State       () { return this._State; }
-    get Timer_Input () { return this._Timer; }
+    get Timer_Input () { return this._Timer_Input; }
     get BGM         () { return this._BGM; }
 
     constructor(_scene, _renderer) {
