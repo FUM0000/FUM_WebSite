@@ -81,13 +81,14 @@
     </style>
 
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-    <script src="../../Asset/Javascript/Game.js"></script>
+    <!-- <script src="../../Asset/Javascript/Game.js"></script> -->
 
     <script type="module">
 
         // Setup Threejs
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
         import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
+        import { FC_GameObject } from "./Game.js";
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas_1"), antialias: true });
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
@@ -164,7 +165,10 @@
             get Flag_Target     () { return this._Flag_Target; }
             get Target          () { return this._Target; }
 
-            constructor() { super(); }
+            constructor(_renderer) {
+                super();
+                this._Renderer = _renderer
+            }
             
             set Position(_vector3) { this._Object.position.copy(_vector3); }
             set LookAt  (_vector3) {
@@ -172,12 +176,8 @@
                 this._Object.lookAt(this._Position_LookAt);
             }
             set Target  (_target) {
-                if (_target == null) {
-                    this._Flag_Target = false;
-                }
-                else {
-                    this._Flag_Target = true;
-                }
+                if (_target == null)    this._Flag_Target = false;
+                else                    this._Flag_Target = true; 
                 this._Target = _target;
             }
 
@@ -194,9 +194,9 @@
             }
 
             Resize_Screen() {
-                Camera.Object.aspect = window.innerWidth / window.innerHeight;
-                Camera.Object.updateProjectionMatrix();
-                Renderer.setSize(window.innerWidth, window.innerHeight);
+                this.Object.aspect = window.innerWidth / window.innerHeight;
+                this.Object.updateProjectionMatrix();
+                this._Renderer.setSize(window.innerWidth, window.innerHeight);
             }
         }
         class FC_Light_Ambient extends FC_GameObject {
@@ -205,11 +205,12 @@
             
             set Color(_color) { this._Object.color.set(_color); }
 
-            constructor () {
+            constructor (_scene) {
                 super();
-                Scene.add(this._Object);
+                this._Scene = _scene;
+                this._Scene.add(this._Object);
             }
-            destructor  () { Scene.remove(this._Object); }
+            destructor  () { this._Scene.remove(this._Object); }
         }
         class FC_Light_Directional extends FC_GameObject {
 
@@ -217,11 +218,12 @@
             
             set Color(_color) { this._Object.color.set(_color); }
 
-            constructor () {
+            constructor (_scene) {
                 super();
-                Scene.add(this._Object);
+                this._Scene = _scene;
+                this._Scene.add(this._Object);
             }
-            destructor  () { Scene.remove(this._Object); }
+            destructor  () { this._Scene.remove(this._Object); }
         }
         class FC_Timer extends FC_GameObject {
 
@@ -726,9 +728,9 @@
         }
         
         const Environment       = new FC_Environment();
-        const Camera            = new FC_Camera();
-        const Light_Ambient     = new FC_Light_Ambient();
-        const Light_Directional = new FC_Light_Directional();
+        const Camera            = new FC_Camera(Renderer);
+        const Light_Ambient     = new FC_Light_Ambient(Scene);
+        const Light_Directional = new FC_Light_Directional(Scene);
         const Timer_Input       = new FC_Timer(0.1);
         const Manager           = new FC_Manager();
         window.addEventListener('resize', Camera.Resize_Screen, false);
