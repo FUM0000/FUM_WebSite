@@ -15,4 +15,4 @@ class FC_GameObject {
     Update      () {}
 }
 
-export { FC_GameObject }
+export { Mobile_or_Desktop, RandomNumber_Between, Degrees_to_Radians, Alpha_Change, FC_GameObject }
