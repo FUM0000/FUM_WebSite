@@ -229,9 +229,10 @@ class FC_TextPlane extends FC_Animation {
     set Rotation(_vector3) { this._Mesh.rotation.set(_vector3.x, _vector3.y, _vector3.z); }
     set Scale   (_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
 
-    constructor(_camera, _text, _color, _vector2_geometry, _isbillboard = false) {
+    constructor(_scene, _camera, _text, _color, _vector2_geometry, _isbillboard = false) {
         super();
-        this._Camera = _camera;
+        this._Scene         = _scene;
+        this._Camera        = _camera;
         this._Text_Default  = this._Text    = _text;
         this._Color_Default = this._Color   = _color;
         this._Size_Geometry = _vector2_geometry;
@@ -245,7 +246,7 @@ class FC_TextPlane extends FC_Animation {
                                 depthWrite: false,
                             });
         this._Mesh          = new THREE.Mesh(this._Geometry, this._Material);
-        Scene.add(this._Mesh);
+        this._Scene.add(this._Mesh);
 
         this._Is_Billboard = _isbillboard;
     }
