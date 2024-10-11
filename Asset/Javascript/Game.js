@@ -317,6 +317,74 @@ class FC_TextPlane extends FC_Animation {
     }
 }
 
+class FC_Manager {
+
+    _TIME_FOR_READY     = 1;
+    _UI_SIZE_MULTIPLY   = 0.2;
+
+    _Flag_Loaded    = false;
+    _State          = "Waiting_Start";
+    _BGM            = new FC_Audio('../../Asset/Audio/lofi_2.wav');
+    _Timer_Waiting  = new FC_Timer(1);
+    _Timer_Input    = new FC_Timer(0.1);
+    _Timer_Ready    = 0;
+
+    get State   () { return this._State; }
+    get BGM     () { return this._BGM; }
+
+    set Flag_Loaded(_bool) { this._Flag_Loaded = _bool; }
+
+    constructor(_scene, _renderer) {
+        this._Scene     = _scene;
+        this._Renderer  = _renderer;
+    }
+
+    Initialize() {
+        this._State         = "Waiting";
+        this._Timer_Waiting.Restart();
+        this._Timer_Input.Start();
+        this._Timer_Ready   = 0;
+    }
+    Update() {
+        if ( this._Flag_Loaded ) {
+
+            switch( this._State ) {
+                case "Waiting":
+                    this._Timer_Waiting.Update();
+                    if ( this._Timer_Waiting.Flag_Finished ) {
+                        this._State = "Waiting_Start";
+                    }
+                    break;
+                case "Playing": this.Update_Playing(); break;
+            }
+            this.Update_System();
+
+        }
+        Renderer.render(Scene, Camera.Object);
+        requestAnimationFrame(this.Update.bind(this));
+    }
+    Update_System() {
+        
+        this._Timer_Input.Update();
+
+        if (this._State == "Gameover") {
+            this._Timer_Ready += FC_Environment.TIME_DELTA;
+            if (this._Timer_Ready > this._TIME_FOR_READY) {
+                this._State = "Waiting_Restart";
+            }
+        }
+    }
+    Update_Playing() {
+        
+    }
+
+    Start() {
+        this._State = "Playing";
+    }
+    GameOver() {
+        this._State = "Gameover";
+    }
+}
 
 export {
     Mobile_or_Desktop,
@@ -332,4 +400,5 @@ export {
     FC_Timer,
     FC_Audio,
     FC_TextPlane,
+    FC_Manager,
 }
