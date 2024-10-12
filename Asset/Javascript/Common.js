@@ -757,7 +757,7 @@ Vue.component('main-navigation', {
                     <v-list-item-title>About Me</v-list-item-title>
                 </template>
                 
-                <v-list-item href="./Profile.html">
+                <v-list-item href="./AboutMe_Profile.html">
                     <v-list-item-icon />
                     <v-list-item-title>Profile</v-list-item-title>
                         
@@ -773,9 +773,9 @@ Vue.component('main-navigation', {
                         <v-icon>mdi-post-outline</v-icon>
                     </v-list-item-icon>
                 </v-list-item>
-                <v-list-item href="./Brain.html">
+                <v-list-item href="./AboutMe_Brain.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Brain</v-list-item-title>
+                    <v-list-item-title>Brain Archive</v-list-item-title>
                         
                     <v-list-item-icon>
                         <v-icon>mdi-brain</v-icon>
