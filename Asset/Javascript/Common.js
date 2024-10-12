@@ -479,7 +479,6 @@ Vue.component('main-navigation', {
                 </v-list-item>
                 <!-- ▲ Recommend ▲ -------------------------------------------------------------------------------->
 
-
             </v-list-group>
             <!-- ▲ Japanese ▲ --------------------------------------------------------------------------------->
 
@@ -490,29 +489,47 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Cooking</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Youtube_Cooking_Simple.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Simple</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Normal.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Normal</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Intricate.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Intricate</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Chinese.html">
+                <!-- ▼ Complexity ▼ --------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Complexity</v-list-item-title>
+                    </template>
+
+                    <v-list-item href="./Cooking_Simple.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Simple</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Cooking_Normal.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Normal</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Cooking_Complex.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Complex</v-list-item-title>
+                    </v-list-item>
+                </v-list-group sub-group>
+                <!-- ▲ Complexity ▲ --------------------------------------------------------------------------->
+                
+                <!-- ▼ Noodle ▼ ------------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Noodle</v-list-item-title>
+                    </template>
+
+                    <v-list-item href="./Cooking_Pasta.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Pasta</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Cooking_Ramen.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Ramen</v-list-item-title>
+                    </v-list-item>
+                </v-list-group sub-group>
+                <!-- ▲ Noodle ▲ ------------------------------------------------------------------------------->
+
+                <v-list-item href="./Cooking_Chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>Chinese</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Pasta.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Pasta</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Ramen.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Ramen</v-list-item-title>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Cooking ▲ ---------------------------------------------------------------------------------->
@@ -524,15 +541,15 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Music</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Youtube_Music_UtadaHikaru.html">
+                <v-list-item href="./Music_UtadaHikaru.html">
                     <v-list-item-icon />
                     <v-list-item-title>Utada Hikaru</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Music_Showgo.html">
+                <v-list-item href="./Music_Showgo.html">
                     <v-list-item-icon />
                     <v-list-item-title>Show-Go</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Youtube_Music_Other.html">
+                <v-list-item href="./Music_Other.html">
                     <v-list-item-icon />
                     <v-list-item-title>Other</v-list-item-title>
                 </v-list-item>
@@ -546,12 +563,10 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Plants</v-list-item-title>
                 </template>
 
-                
                 <v-list-item href="./Plant_General.html">
                     <v-list-item-icon />
                     <v-list-item-title>General</v-list-item-title>
                 </v-list-item>
-
 
                 <!-- ▼ Flower ▼ ----------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
@@ -563,7 +578,6 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-
                     <v-list-item href="./Flower_Rose.html">
                         <v-list-item-icon />
                         <v-list-item-title>Rose</v-list-item-title>
@@ -571,7 +585,6 @@ Vue.component('main-navigation', {
 
                 </v-list-group sub-group>
                 <!-- ▲ Flower ▲ ----------------------------------------------------------------------------------->
-
 
                 <!-- ▼ Herb ▼ ------------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
@@ -592,7 +605,6 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Herb ▲ ------------------------------------------------------------------------------------->
 
-
                 <!-- ▼ Vegetable ▼ -------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
@@ -602,7 +614,6 @@ Vue.component('main-navigation', {
                             <v-icon>mdi-carrot</v-icon>
                         </v-list-item-icon>
                     </template>
-
 
                     <v-list-item href="./Vegetable_Database.html">
                         <v-list-item-icon />
@@ -644,7 +655,6 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Vegetable ▲ -------------------------------------------------------------------------------->
 
-                
             </v-list-group>
             <!-- ▲ Plant ▲ ------------------------------------------------------------------------------------>
 
