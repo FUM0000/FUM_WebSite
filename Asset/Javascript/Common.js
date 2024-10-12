@@ -249,16 +249,20 @@ Vue.component('main-navigation', {
                 <!-- ▲ Hobby ▲ ------------------------------------------------------------------------------------>
 
 
-                <!-- ▼ Japalish ▼ --------------------------------------------------------------------------------->
+                <!-- ▼ JAPALISH ▼ --------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
-                        <v-list-item-title>Word - Japalish</v-list-item-title>
+                        <v-list-item-title>Word - JAPALISH</v-list-item-title>
                         
                         <v-list-item-icon>
                             <v-icon>mdi-syllabary-katakana</v-icon>
                         </v-list-item-icon>
                     </template>
 
+                    <v-list-item href="./Japalish_Explanation.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Explanation</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Japalish_Level_1.html">
                         <v-list-item-icon />
                         <v-list-item-title>Level 1</v-list-item-title>
@@ -272,7 +276,7 @@ Vue.component('main-navigation', {
                         <v-list-item-title>Level 3</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
-                <!-- ▲ Japalish ▲ --------------------------------------------------------------------------------->
+                <!-- ▲ JAPALISH ▲ --------------------------------------------------------------------------------->
 
 
                 <!-- ▼ Life ▼ ------------------------------------------------------------------------------------->
@@ -478,6 +482,62 @@ Vue.component('main-navigation', {
 
             </v-list-group>
             <!-- ▲ Japanese ▲ --------------------------------------------------------------------------------->
+
+
+            <!-- ▼ Cooking ▼ ---------------------------------------------------------------------------------->
+            <v-list-group :value="false" prepend-icon="mdi-chef-hat">
+                <template v-slot:activator>
+                    <v-list-item-title>Cooking</v-list-item-title>
+                </template>
+
+                <v-list-item href="./Youtube_Cooking_Simple.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Simple</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Youtube_Cooking_Normal.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Normal</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Youtube_Cooking_Intricate.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Intricate</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Youtube_Cooking_Chinese.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Chinese</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Youtube_Cooking_Pasta.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Pasta</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Youtube_Cooking_Ramen.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Ramen</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
+            <!-- ▲ Cooking ▲ ---------------------------------------------------------------------------------->
+
+
+            <!-- ▼ Music ▼ ------------------------------------------------------------------------------------>
+            <v-list-group :value="false" prepend-icon="mdi-music">
+                <template v-slot:activator>
+                    <v-list-item-title>Music</v-list-item-title>
+                </template>
+
+                <v-list-item href="./Youtube_Music_UtadaHikaru.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Utada Hikaru</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Youtube_Music_Showgo.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Show-Go</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Youtube_Music_Other.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Other</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
+            <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
             
 
             <!-- ▼ Plant ▼ ------------------------------------------------------------------------------------>
@@ -614,91 +674,78 @@ Vue.component('main-navigation', {
             <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->
 
 
-            <!-- ▼ Cooking ▼ ---------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-chef-hat">
-                <template v-slot:activator>
-                    <v-list-item-title>Cooking</v-list-item-title>
-                </template>
-
-                <v-list-item href="./Youtube_Cooking_Simple.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Simple</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Normal.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Normal</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Intricate.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Intricate</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Chinese.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Chinese</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Pasta.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Pasta</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Cooking_Ramen.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Ramen</v-list-item-title>
-                </v-list-item>
-            </v-list-group>
-            <!-- ▲ Cooking ▲ ---------------------------------------------------------------------------------->
-
-
-            <!-- ▼ Music ▼ ------------------------------------------------------------------------------------>
-            <v-list-group :value="false" prepend-icon="mdi-music">
-                <template v-slot:activator>
-                    <v-list-item-title>Music</v-list-item-title>
-                </template>
-
-                <v-list-item href="./Youtube_Music_UtadaHikaru.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Utada Hikaru</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Music_Showgo.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Show-Go</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Youtube_Music_Other.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Other</v-list-item-title>
-                </v-list-item>
-            </v-list-group>
-            <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
-
-
             <!-- ▼ Japan ▼ ------------------------------------------------------------------------------------>
             <v-list-group :value="false" prepend-icon="mdi-home-city-outline">
                 <template v-slot:activator>
                     <v-list-item-title>Life in Japan</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Japan_Travel.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Travel</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Japan_Shop.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Shop</v-list-item-title>
-                </v-list-item>
+                
+                <!-- ▼ Shop ▼ --------------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Shop</v-list-item-title>
+                        
+                        <v-list-item-icon>
+                            <v-icon>mdi-store</v-icon>
+                        </v-list-item-icon>
+                    </template>
+
+
+                    <v-list-item href="./Japan_Shop_List.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>List</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Japan_Shop_Daiso.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>DAISO</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Shop ▲ --------------------------------------------------------------------------------->
+
+                <!-- ▼ Traffic ▼ ------------------------------------------------------------------------------>
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Traffic</v-list-item-title>
+                        
+                        <v-list-item-icon>
+                            <v-icon>mdi-plane-train</v-icon>
+                        </v-list-item-icon>
+                    </template>
+
+
+                    <v-list-item href="./Japan_Travel.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Travel</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Traffic ▲ ------------------------------------------------------------------------------>
+
                 <v-list-item href="./Japan_AsianCuisine.html">
                     <v-list-item-icon />
                     <v-list-item-title>Asian Cuisine</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-wall-sconce-round-variant</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Japan_Food.html">
                     <v-list-item-icon />
                     <v-list-item-title>Food</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-noodles</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Japan_Snack.html">
                     <v-list-item-icon />
                     <v-list-item-title>Snack</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Japan_Daiso.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>DAISO</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-french-fries</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Japan ▲ ------------------------------------------------------------------------------------>
@@ -718,7 +765,7 @@ Vue.component('main-navigation', {
                         <v-icon>mdi-stamper</v-icon>
                     </v-list-item-icon>
                 </v-list-item>
-                <v-list-item href="./Blog.html">
+                <v-list-item href="./AboutMe_Blog.html">
                     <v-list-item-icon />
                     <v-list-item-title>Blog</v-list-item-title>
                         
