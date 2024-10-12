@@ -904,7 +904,7 @@ Vue.component('custom-carousel', {
 });
 
 //// Card
-Vue.component('card-discription-image', {
+Vue.component('card-explanation-image', {
     template: `
       <v-card class="pa-2">
         <v-img :src="image" :lazy-src="image">
@@ -943,6 +943,29 @@ Vue.component('card-discription-image', {
     methods: {
         Toggle() { this.Show_Recommend = !this.Show_Recommend }
     }
+});
+Vue.component('card-explanation-image-link', {
+    template: `
+      <v-card class="pa-2">
+        <a :href="link" target="_blank" rel="noopener noreferrer">
+          <v-img :src="image" :lazy-src="image"></v-img>
+        </a>
+  
+        <v-card-title class="text-h5 font-weight-medium">
+          {{ title }}
+        </v-card-title>
+  
+        <v-card-text class="Card_Description">
+          {{ description }}
+        </v-card-text>
+      </v-card>
+    `,
+    props: {
+        image: { type: String, required: true },
+        link: { type: String, required: true },
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+    },
 })
 
 // Mixins
