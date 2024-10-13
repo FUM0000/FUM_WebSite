@@ -902,6 +902,45 @@ Vue.component('custom-carousel', {
         }
     }
 });
+Vue.component('custom-carousel-left', {
+    template: `
+        <v-row justify="center">
+            <v-col xs="12" md="6" lg="6">
+                <v-card>
+                    <v-system-bar class="font-weight-medium" style="background-color: #BFC8CC99;">{{ title }}</v-system-bar>
+                    <v-carousel delimiter-icon="mdi-album" :show-arrows="false" :height="height" v-model="internalpagenumber">
+                        <v-carousel-item v-for="(item, index) in items" :key="index">
+                            <v-sheet height="100%">
+                                <v-row class="fill-height" align="center" justify="center">
+                                    <v-col cols="10" align="center" v-html="item" class="text-left"></v-col>
+                                </v-row>
+                            </v-sheet>
+                        </v-carousel-item>
+                    </v-carousel>
+                </v-card>
+            </v-col>
+        </v-row>
+    `,
+    props: {
+        title: { type: String, required: true },
+        items: { type: Array, required: true },
+        height: { type: Number, required: true },
+        outpagenumber: { type: Number, default: 0 },
+    },
+    data() {
+        return { internalpagenumber: this.outpagenumber !== null ? this.outpagenumber : 0 };
+    },
+    watch: {
+        outpagenumber(_value) {
+            if (_value !== null) {
+                this.internalpagenumber = _value;
+            }
+        },
+        internalpagenumber(_value) {
+            this.$emit('update:outpagenumber', _value);
+        }
+    }
+});
 
 //// Card
 Vue.component('card-explanation-image', {
