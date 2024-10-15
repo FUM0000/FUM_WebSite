@@ -384,7 +384,7 @@ class FC_Manager {
         this._State = "Gameover";
     }
     Fade(_out_or_in) {
-        const overlay = document.getElementById('Fade');
+        const overlay = document.getElementById('Fade_Game');
         overlay.style.opacity = _out_or_in ? '0' : '1';
     }
 }
