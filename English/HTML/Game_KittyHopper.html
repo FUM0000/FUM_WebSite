@@ -34,7 +34,8 @@
 
 <body>
 
-    <canvas id="Canvas_1"></canvas>
+    <div id="Fade"></div>
+    <canvas id="Canvas"></canvas>
 
     <style>
         body {
@@ -67,28 +68,28 @@
             FC_Manager,
         } from "https://fum0000.github.io/FUM_WebSite/Asset/Javascript/Game.js";
         const Scene = new THREE.Scene();
-        const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas_1"), antialias: true });
+        const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas"), antialias: true });
         Scene.fog = new THREE.Fog(0xFCA3B7, 0, 10);
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0xFCA3B7));
         const Loader_FBX = new FBXLoader();
-        if (Mobile_or_Desktop())    document.addEventListener('touchstart'  , function () { TouchStart(event); });
-        else                        document.addEventListener('mousedown'   , function () { TouchStart(event); });
+        if (Mobile_or_Desktop()) document.addEventListener('touchstart', function () { TouchStart(event); });
+        else document.addEventListener('mousedown', function () { TouchStart(event); });
 
         class C_Manager extends FC_Manager {
 
-            _Score          = 0;
+            _Score = 0;
 
-            _UI_Home        = new FC_TextPlane(Scene, Camera, "HOME", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Music       = new FC_TextPlane(Scene, Camera, "MUSIC", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Score_High  = new FC_TextPlane(Scene, Camera, "HighScore : 0", "#000000", new THREE.Vector2(10, 1).multiplyScalar(this._UI_SIZE_MULTIPLY * 0.4));
-            _UI_Score       = new FC_TextPlane(Scene, Camera, "Score : 0", "#000000", new THREE.Vector2(10, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Start       = new FC_TextPlane(Scene, Camera, "START", "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Gameover    = new FC_TextPlane(Scene, Camera, "GAMEOVER", "#CF000000", new THREE.Vector2(8, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Tap         = new FC_TextPlane(Scene, Camera, "TAP", "#CF000000", new THREE.Vector2(3, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
+            _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
+            _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
+            _UI_Score_High = new FC_TextPlane(Scene, Camera, "HighScore : 0", "#000000", new THREE.Vector2(10, 1).multiplyScalar(this._UI_SIZE_MULTIPLY * 0.4));
+            _UI_Score = new FC_TextPlane(Scene, Camera, "Score : 0", "#000000", new THREE.Vector2(10, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
+            _UI_Start = new FC_TextPlane(Scene, Camera, "START", "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
+            _UI_Gameover = new FC_TextPlane(Scene, Camera, "GAMEOVER", "#CF000000", new THREE.Vector2(8, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
+            _UI_Tap = new FC_TextPlane(Scene, Camera, "TAP", "#CF000000", new THREE.Vector2(3, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
 
-            get UI_Home () { return this._UI_Home; }
+            get UI_Home() { return this._UI_Home; }
             get UI_Music() { return this._UI_Music; }
 
             constructor() { super(Scene, Renderer); }
@@ -96,8 +97,8 @@
             Initialize() {
                 super.Initialize();
 
-                this._Score_High    = 0;
-                this._Score         = 0;
+                this._Score_High = 0;
+                this._Score = 0;
 
                 Cat.Initialize();
                 Generator_Bar.Initialize();
@@ -124,13 +125,16 @@
                 this._UI_Gameover.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Position = new THREE.Vector3(-0.8, -0.25, 1);
-                this._UI_Tap.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180),  Degrees_to_Radians(180));
+                this._UI_Tap.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), Degrees_to_Radians(180));
             }
             Update() {
-                if ( Cat._Flag_Loaded ) this._Flag_Loaded = true;
-                if ( this._Flag_Loaded ) {
+                if (Cat._Flag_Loaded && !this._Flag_Loaded) {
+                    this._Flag_Loaded = true;
+                    this.Fade(true);
+                }
+                if (this._Flag_Loaded) {
 
-                    switch( this._State ) {
+                    switch (this._State) {
                         case "Waiting":
                             this._Timer_Waiting.Update();
                             if (this._Timer_Waiting.Flag_Finished) {
@@ -168,7 +172,7 @@
 
                 this._UI_Start.Update();
                 this._UI_Tap.Update();
-                
+
                 this.Add_Score(FC_Environment.TIME_DELTA);
             }
 
@@ -183,35 +187,35 @@
                 this._UI_Gameover.Show();
                 this._Score > this._Score_High ? this._Score_High = this._Score : null;
                 this._UI_Score_High.Text = "HighScore : " + Math.floor(this._Score_High);
-                
+
             }
 
             Add_Score(_point) {
                 this._Score += _point;
-                this._UI_Score.Text = "Score : " +  Math.floor(this._Score);
+                this._UI_Score.Text = "Score : " + Math.floor(this._Score);
             }
         }
 
         class C_Cat extends FC_GameObject {
-            
-            _Flag_Loaded        = false;
-            _Flag_Jumping       = false;
-            _Flag_Pointed       = false;
-            _Jump_Count         = 0;
-            _Jump_Timer         = 0;
-            _Speed_Past         = 1.2;
-            _Speed              = this._Speed_Past;
+
+            _Flag_Loaded = false;
+            _Flag_Jumping = false;
+            _Flag_Pointed = false;
+            _Jump_Count = 0;
+            _Jump_Timer = 0;
+            _Speed_Past = 1.2;
+            _Speed = this._Speed_Past;
             _Speed_Acceleration = 1;
-            _Jump_Acceleration  = 1.2;
-            _Jump_Velocity      = 2.5;
-            
-            get Flag_Loaded () { return this._Flag_Loaded; }
+            _Jump_Acceleration = 1.2;
+            _Jump_Velocity = 2.5;
+
+            get Flag_Loaded() { return this._Flag_Loaded; }
             get Flag_Jumping() { return this._Flag_Jumping; }
             get Flag_Pointed() { return this._Flag_Pointed; }
-            get Position    () { return this._Object.position; }
+            get Position() { return this._Object.position; }
 
-            set Flag_Pointed(_bool)     { this._Flag_Pointed = _bool; }
-            set Position    (_vector3)  { this._Object ? this._Object.position.set(_vector3.x, _vector3.y, _vector3.z) : null; }
+            set Flag_Pointed(_bool) { this._Flag_Pointed = _bool; }
+            set Position(_vector3) { this._Object ? this._Object.position.set(_vector3.x, _vector3.y, _vector3.z) : null; }
 
             constructor() {
                 super();
@@ -235,18 +239,18 @@
             destructor() { Scene.remove(this._Object); }
 
             Initialize() {
-                this._Flag_Jumping          = false;
-                this._Jump_Count            = 0;
-                this._Jump_Timer            = 0;
-                this._Speed_Past            = 1.2;
-                this._Speed                 = this._Speed_Past;
-                this._Speed_Acceleration    = 1;
-                this._Jump_Acceleration     = 1.2;
-                this._Jump_Velocity         = 2.5;
-                this.Position               = new THREE.Vector3(0, 0, 0);
+                this._Flag_Jumping = false;
+                this._Jump_Count = 0;
+                this._Jump_Timer = 0;
+                this._Speed_Past = 1.2;
+                this._Speed = this._Speed_Past;
+                this._Speed_Acceleration = 1;
+                this._Jump_Acceleration = 1.2;
+                this._Jump_Velocity = 2.5;
+                this.Position = new THREE.Vector3(0, 0, 0);
 
-                if ( this._Flag_Loaded ) {
-                    const action = this._AnimationControler.clipAction( this._Object.animations[0]);
+                if (this._Flag_Loaded) {
+                    const action = this._AnimationControler.clipAction(this._Object.animations[0]);
                     action.stop();
                     action.reset();
                     action.play();
@@ -256,7 +260,7 @@
                 this._Speed *= this._Speed_Acceleration;
                 this.Move(new THREE.Vector3(0, 0, this._Speed * FC_Environment.TIME_DELTA));
                 this.Gravity();
-                
+
                 this._AnimationControler.update(0.02);
             }
 
@@ -264,27 +268,27 @@
                 this._Object.position.add(_vector3);
             }
             Gravity() {
-                if ( this._Flag_Jumping ) {
+                if (this._Flag_Jumping) {
                     this._Jump_Timer += FC_Environment.TIME_DELTA;
                     this.Position = new THREE.Vector3(this.Position.x, this._Jump_Velocity * this._Jump_Timer - 0.5 * Environment.Gravity * this._Jump_Timer * this._Jump_Timer, this.Position.z);
 
                     if (this.Position.y < 0) {
-                        this.Position       = new THREE.Vector3(this.Position.x, 0, this.Position.z);
-                        this._Flag_Jumping  = false;
-                        this._Flag_Pointed  = false;
-                        this._Speed         = this._Speed_Past;
+                        this.Position = new THREE.Vector3(this.Position.x, 0, this.Position.z);
+                        this._Flag_Jumping = false;
+                        this._Flag_Pointed = false;
+                        this._Speed = this._Speed_Past;
                     }
                 }
             }
             Animation_Play(_index) {
                 this._AnimationControler.clipAction(this._Object.animations[_index]).play();
             }
-            
+
             Jump() {
-                if ( !this._Flag_Jumping ) {
-                    this._Flag_Jumping  = true;
+                if (!this._Flag_Jumping) {
+                    this._Flag_Jumping = true;
                     this._Jump_Count++;
-                    this._Jump_Timer    = 0;
+                    this._Jump_Timer = 0;
                     this._Speed_Past = this._Speed;
                     this._Speed *= this._Jump_Acceleration;
                 }
@@ -292,16 +296,16 @@
         }
         class C_Generator_Bar extends FC_GameObject {
 
-            _DISTANCE_START     = 10;
-            _NUMBER             = 20;
-            _NUMBER_TUTORIAL    = 3;
+            _DISTANCE_START = 10;
+            _NUMBER = 20;
+            _NUMBER_TUTORIAL = 3;
 
-            _List               = [];
-            _Distance_Generate  = this._DISTANCE_START;
-            _Range_Shortest     = 0.6;
-            _Range_Longest      = this._Range_Shortest + 3.0;
-            _Point              = 10;
-            _Color              = 0xCF0000;
+            _List = [];
+            _Distance_Generate = this._DISTANCE_START;
+            _Range_Shortest = 0.6;
+            _Range_Longest = this._Range_Shortest + 3.0;
+            _Point = 10;
+            _Color = 0xCF0000;
 
             constructor() {
                 super();
@@ -360,9 +364,9 @@
                         this.#Place(i);
                     }
                     if (Cat.Position.z > this._List[i].position.z - 0.2 && Cat.Position.z < this._List[i].position.z + 0.24) {
-                        if ( !Cat.Flag_Jumping ) Manager.GameOver();
+                        if (!Cat.Flag_Jumping) Manager.GameOver();
                         else {
-                            if ( !Cat.Flag_Pointed ) {
+                            if (!Cat.Flag_Pointed) {
                                 Manager.Add_Score(this._Point);
                                 Cat.Flag_Pointed = true;
                             }
@@ -385,26 +389,26 @@
                 }
             }
         }
-        
-        const Environment       = new FC_Environment();
-        const Camera            = new FC_Camera(Renderer);
-        const Light_Ambient     = new FC_Light_Ambient(Scene);
+
+        const Environment = new FC_Environment();
+        const Camera = new FC_Camera(Renderer);
+        const Light_Ambient = new FC_Light_Ambient(Scene);
         const Light_Directional = new FC_Light_Directional(Scene);
         window.addEventListener('resize', Camera.Resize_Screen, false);
-        
-        const Manager           = new C_Manager();
-        const Cat               = new C_Cat();
-        const Generator_Bar     = new C_Generator_Bar();
-        const Generator_Wall    = new C_Generator_Wall();
+
+        const Manager = new C_Manager();
+        const Cat = new C_Cat();
+        const Generator_Bar = new C_Generator_Bar();
+        const Generator_Wall = new C_Generator_Wall();
 
         Manager.Initialize();
         Manager.Update();
 
         function TouchStart(event) {
-            if ( Manager.Timer_Input.Flag_Finished ) {
+            if (Manager.Timer_Input.Flag_Finished) {
 
                 let screen_x, screen_y;
-                switch( event.type ) {
+                switch (event.type) {
                     case "touchstart":
                         screen_x = event.touches[0].clientX;
                         screen_y = event.touches[0].clientY;
@@ -414,7 +418,7 @@
                         screen_y = event.clientY;
                         break;
                 }
-                
+
                 const screen_position = new THREE.Vector2(
                     (screen_x / window.innerWidth) * 2 - 1,
                     -(screen_y / window.innerHeight) * 2 + 1
@@ -427,10 +431,15 @@
                 const ui_music = raycaster.intersectObject(Manager.UI_Music.Mesh);
                 if (ui_music.length > 0) { Manager.BGM.Flag_Playing ? Manager.BGM.Stop() : Manager.BGM.Play(); return; }
 
-                switch(Manager.State) {
-                    case "Waiting_Start"    : if ( Cat.Flag_Loaded ) Manager.Start();   break;
-                    case "Playing"          : Cat.Jump();                               break;
-                    case "Waiting_Restart"  : Manager.Initialize();                     break;
+                switch (Manager.State) {
+                    case "Waiting_Start": if (Cat.Flag_Loaded) Manager.Start(); break;
+                    case "Playing": Cat.Jump(); break;
+                    case "Waiting_Restart":
+                        Manager.Fade(false);
+                        setTimeout(() => {
+                            Manager.Initialize();
+                        }, 1000);
+                        break;
                 }
                 Manager.Timer_Input.Restart();
             }

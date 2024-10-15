@@ -383,6 +383,10 @@ class FC_Manager {
     GameOver() {
         this._State = "Gameover";
     }
+    Fade(_out_or_in) {
+        const overlay = document.getElementById('Fade');
+        overlay.style.opacity = _out_or_in ? '0' : '1';
+    }
 }
 
 export {
