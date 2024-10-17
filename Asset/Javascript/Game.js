@@ -33,6 +33,8 @@ class FC_JoystickController {
     }
 
     onStart(event) {
+        if (this.isActive) return;
+
         const { clientX, clientY } = event.touches ? event.touches[0] : event;
         const rect = this.domElement.getBoundingClientRect();
         const x = clientX - rect.left;
@@ -60,10 +62,9 @@ class FC_JoystickController {
     }
 
     getInput() {
-        return {
-            x: this.moveX / 100,
-            y: -this.moveY / 100,
-        };
+        const vector_input = new THREE.Vector2(this.moveX, -this.moveY);
+        if (vector_input.length() > 0) vector_input.normalize();
+        return vector_input;
     }
 }
 class FC_GameObject {
@@ -170,6 +171,39 @@ class FC_Camera extends FC_GameObject {
         this._Object.aspect = window.innerWidth / window.innerHeight;
         this._Object.updateProjectionMatrix();
         this._Renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+}
+class FC_Camera_Controller extends FC_Camera {
+
+    _Forward = new THREE.Vector3(0, 0, 1);
+    _Yaw = 0;
+    _Pitch = 0;
+
+    get Forward() { return this._Forward; }
+
+    constructor(_renderer, _offset_lookat_default = new THREE.Vector3(0, 0, 1), _offset_target_default = new THREE.Vector3(0, 0, -1)) {
+        super(_renderer, _offset_lookat_default, _offset_target_default);
+    }
+
+    Update(_input_look = new THREE.Vector2(0, 0), _sensivility) {
+        if (this._Flag_Target) {
+            this.Position = this._Target.Position;
+            this.Rotate_Forward(_input_look, _sensivility);
+            this.LookAt = this.Position.clone().add(this._Forward);
+        }
+    }
+
+    Rotate_Forward(_input_look, _sensivility) {
+        const deltaX = -_input_look.x * _sensivility;
+        const deltaY = -_input_look.y * _sensivility;
+
+        this._Yaw += deltaX;
+        this._Pitch = Math.max(-Math.PI / 2 + Math.PI / 18, Math.min(Math.PI / 2 - Math.PI / 18, this._Pitch + deltaY));
+
+        const quaternion = new THREE.Quaternion();
+        quaternion.setFromEuler(new THREE.Euler(this._Pitch, this._Yaw, 0, 'YXZ'));
+
+        this._Forward.copy(new THREE.Vector3(0, 0, 1)).applyQuaternion(quaternion).normalize();
     }
 }
 class FC_Light_Ambient extends FC_GameObject {
@@ -379,6 +413,47 @@ class FC_TextPlane extends FC_Animation {
         return new THREE.CanvasTexture(canvas);
     }
 }
+class FC_Player_Controller extends FC_GameObject {
+
+    _Speed_Past = 0.55;
+    _Speed = this._Speed_Past;
+
+    get Position() { return this._Object.position; }
+    get Forward() { return this._Forward; }
+
+    set Position(_vector3) { this._Object ? this._Object.position.set(_vector3.x, _vector3.y, _vector3.z) : null; }
+
+    constructor(_scene) {
+        super();
+        this._Scene = _scene;
+        this._Object = new THREE.Object3D();
+        this._Scene.add(this._Object);
+        this.Initialize();
+    }
+    destructor() { this._Scene.remove(this._Object); }
+
+    Initialize() {
+        this._Speed_Past = 1.2;
+        this._Speed = this._Speed_Past;
+        this.Position = new THREE.Vector3(0, 1.74 - 0.08, 0);
+    }
+    Update(_input_move = new THREE.Vector2(0, 0), _forward_camera = new THREE.Vector3(0, 0, 0)) {
+        const forward = _forward_camera.clone();
+        forward.y = 0;
+        forward.normalize();
+
+        const right = new THREE.Vector3();
+        right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+        const moveDirection = new THREE.Vector3(
+            forward.x * _input_move.y + right.x * _input_move.x,
+            0,
+            forward.z * _input_move.y + right.z * _input_move.x
+        );
+
+        this.Position = this.Position.clone().add(moveDirection.multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
+    }
+}
 
 class FC_Manager {
 
@@ -473,10 +548,12 @@ export {
     FC_Environment,
     FC_Animation,
     FC_Camera,
+    FC_Camera_Controller,
     FC_Light_Ambient,
     FC_Light_Directional,
     FC_Timer,
     FC_Audio,
     FC_TextPlane,
+    FC_Player_Controller,
     FC_Manager,
 }

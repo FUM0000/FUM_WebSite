@@ -791,6 +791,15 @@ Vue.component('main-navigation', {
                         <v-icon>mdi-brain</v-icon>
                     </v-list-item-icon>
                 </v-list-item>
+
+                <v-list-item href="./AboutMe_Gallery.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Gallery</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-image</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
             </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
 
