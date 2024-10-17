@@ -62,34 +62,39 @@ class FC_Camera extends FC_GameObject {
 
     _FOV                    = 100;
     _OFFSET_LOOKAT_DEFAULT  = new THREE.Vector3(0, 0, 1);
-    _OFFSET_TARGET_DEFAULT  = new THREE.Vector3(-2, 0.5, -1);
+    _OFFSET_TARGET_DEFAULT  = new THREE.Vector3(0, 0, -1);
 
-    _Object             = new THREE.PerspectiveCamera(this._FOV, window.innerWidth / window.innerHeight, 0.1, 50);
-    _Flag_Target        = false;
-    _Target             = null;
-    _Position_Offset    = new THREE.Vector3(-2, 0.5, -1);
+    _Object                 = new THREE.PerspectiveCamera(this._FOV, window.innerWidth / window.innerHeight, 0.1, 50);
+    _Position_LookAt        = new THREE.Vector3(0, 0, 0);
+    _Flag_Target            = false;
+    _Target                 = null;
 
     get Object          () { return this._Object; }
     get Position        () { return this._Object.position; }
-    get Position_Offset () { return this._Position_Offset; }
     get Position_LookAt () { return this._Position_LookAt; }
     get Flag_Target     () { return this._Flag_Target; }
     get Target          () { return this._Target; }
-
-    constructor(_renderer) {
-        super();
-        this._Renderer = _renderer
-    }
     
-    set Position(_vector3) { this._Object.position.copy(_vector3); }
-    set LookAt  (_vector3) {
+    set Position                (_vector3) { this._Object.position.copy(_vector3); }
+    set LookAt                  (_vector3) {
         this._Position_LookAt = _vector3;
         this._Object.lookAt(this._Position_LookAt);
     }
     set Target  (_target) {
-        if (_target == null)    this._Flag_Target = false;
-        else                    this._Flag_Target = true; 
-        this._Target = _target;
+        if (_target == null) {
+            this._Flag_Target = false;
+        }
+        else {
+            this._Flag_Target = true; 
+            this._Target = _target;
+        }
+    }
+
+    constructor(_renderer, _offset_lookat_default = new THREE.Vector3(0, 0, 1), _offset_target_default = new THREE.Vector3(0, 0, -1)) {
+        super();
+        this._Renderer = _renderer;
+        this._OFFSET_LOOKAT_DEFAULT = _offset_lookat_default;
+        this._OFFSET_TARGET_DEFAULT = _offset_target_default;
     }
 
     Initialize() {
@@ -324,7 +329,7 @@ class FC_Manager {
 
     _Flag_Loaded    = false;
     _State          = "Waiting_Start";
-    _BGM            = new FC_Audio('../../Asset/Audio/lofi_2.wav');
+    _BGM            = null;
     _Timer_Waiting  = new FC_Timer(1);
     _Timer_Input    = new FC_Timer(0.1);
     _Timer_Ready    = 0;
@@ -332,6 +337,8 @@ class FC_Manager {
     get State       () { return this._State; }
     get Timer_Input () { return this._Timer_Input; }
     get BGM         () { return this._BGM; }
+
+    set BGM(_url) { this._BGM = new FC_Audio(_url); }
 
     constructor(_scene, _renderer) {
         this._Scene     = _scene;
@@ -345,6 +352,11 @@ class FC_Manager {
         this._Timer_Ready   = 0;
     }
     Update() {
+
+        if ( !this._Flag_Loaded ) {
+            this._Flag_Loaded = true;
+            this.Fade(true);
+        }
         if ( this._Flag_Loaded ) {
 
             switch( this._State ) {
