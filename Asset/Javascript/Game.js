@@ -10,48 +10,104 @@ function Alpha_Change(_color, _alpha) {
     return null;
 }
 
+class FC_JoystickController {
+    constructor(domElement, side) {
+        this.domElement = domElement;
+        this.side = side;
+        this.isActive = false;
+        this.startX = 0;
+        this.startY = 0;
+        this.moveX = 0;
+        this.moveY = 0;
+
+        this.onStart = this.onStart.bind(this);
+        this.onMove = this.onMove.bind(this);
+        this.onEnd = this.onEnd.bind(this);
+
+        this.domElement.addEventListener('mousedown', this.onStart);
+        this.domElement.addEventListener('touchstart', this.onStart);
+        this.domElement.addEventListener('mousemove', this.onMove);
+        this.domElement.addEventListener('touchmove', this.onMove);
+        this.domElement.addEventListener('mouseup', this.onEnd);
+        this.domElement.addEventListener('touchend', this.onEnd);
+    }
+
+    onStart(event) {
+        const { clientX, clientY } = event.touches ? event.touches[0] : event;
+        const rect = this.domElement.getBoundingClientRect();
+        const x = clientX - rect.left;
+
+        if ((this.side === 'left' && x < rect.width / 2) ||
+            (this.side === 'right' && x >= rect.width / 2)) {
+            this.isActive = true;
+            this.startX = clientX;
+            this.startY = clientY;
+        }
+    }
+
+    onMove(event) {
+        if (!this.isActive) return;
+
+        const { clientX, clientY } = event.touches ? event.touches[0] : event;
+        this.moveX = clientX - this.startX;
+        this.moveY = clientY - this.startY;
+    }
+
+    onEnd() {
+        this.isActive = false;
+        this.moveX = 0;
+        this.moveY = 0;
+    }
+
+    getInput() {
+        return {
+            x: this.moveX / 100,
+            y: -this.moveY / 100,
+        };
+    }
+}
 class FC_GameObject {
-    Initialize  () {}
-    Update      () {}
+    Initialize() { }
+    Update() { }
 }
 class FC_Environment extends FC_GameObject {
 
-    static FPS         = 60;
-    static TIME_DELTA  = 1 / this.FPS;
+    static FPS = 60;
+    static TIME_DELTA = 1 / this.FPS;
 
-    _Gravity    = 9.8;
+    _Gravity = 9.8;
 
-    get Gravity     () { return this._Gravity; }
-    
-    set Gravity (_value) { this._Gravity = _value; }
+    get Gravity() { return this._Gravity; }
+
+    set Gravity(_value) { this._Gravity = _value; }
 
     constructor() { super(); }
 
     Initialize() {
-        this._Gravity    = 9.8;
+        this._Gravity = 9.8;
     }
 }
 class FC_Animation extends FC_GameObject {
 
     _Flag_Animation = true;
-    _Flag_Move      = false;
+    _Flag_Move = false;
 
     constructor() { super(); }
 
     Update() {
-        if ( this._Flag_Animation ) {
-            if ( this._Flag_Move ) {
+        if (this._Flag_Animation) {
+            if (this._Flag_Move) {
                 this.Add_Position(this._Move_Direction.clone().multiplyScalar(this._Move_Speed * FC_Environment.TIME_DELTA));
             }
         }
     }
 
-    Animation_Start () { this._Flag_Animation = true; }
-    Animation_Stop  () { this._Flag_Animation = false; }
-    Animation_Move  (_vector3, _speed) {
-        this._Flag_Move         = true;
-        this._Move_Direction    = _vector3;
-        this._Move_Speed        = _speed;
+    Animation_Start() { this._Flag_Animation = true; }
+    Animation_Stop() { this._Flag_Animation = false; }
+    Animation_Move(_vector3, _speed) {
+        this._Flag_Move = true;
+        this._Move_Direction = _vector3;
+        this._Move_Speed = _speed;
     }
 
     Add_Position(_vector3) {
@@ -60,32 +116,32 @@ class FC_Animation extends FC_GameObject {
 }
 class FC_Camera extends FC_GameObject {
 
-    _FOV                    = 100;
-    _OFFSET_LOOKAT_DEFAULT  = new THREE.Vector3(0, 0, 1);
-    _OFFSET_TARGET_DEFAULT  = new THREE.Vector3(0, 0, -1);
+    _FOV = 100;
+    _OFFSET_LOOKAT_DEFAULT = new THREE.Vector3(0, 0, 1);
+    _OFFSET_TARGET_DEFAULT = new THREE.Vector3(0, 0, -1);
 
-    _Object                 = new THREE.PerspectiveCamera(this._FOV, window.innerWidth / window.innerHeight, 0.1, 50);
-    _Position_LookAt        = new THREE.Vector3(0, 0, 0);
-    _Flag_Target            = false;
-    _Target                 = null;
+    _Object = new THREE.PerspectiveCamera(this._FOV, window.innerWidth / window.innerHeight, 0.1, 50);
+    _Position_LookAt = new THREE.Vector3(0, 0, 0);
+    _Flag_Target = false;
+    _Target = null;
 
-    get Object          () { return this._Object; }
-    get Position        () { return this._Object.position; }
-    get Position_LookAt () { return this._Position_LookAt; }
-    get Flag_Target     () { return this._Flag_Target; }
-    get Target          () { return this._Target; }
-    
-    set Position                (_vector3) { this._Object.position.copy(_vector3); }
-    set LookAt                  (_vector3) {
+    get Object() { return this._Object; }
+    get Position() { return this._Object.position; }
+    get Position_LookAt() { return this._Position_LookAt; }
+    get Flag_Target() { return this._Flag_Target; }
+    get Target() { return this._Target; }
+
+    set Position(_vector3) { this._Object.position.copy(_vector3); }
+    set LookAt(_vector3) {
         this._Position_LookAt = _vector3;
         this._Object.lookAt(this._Position_LookAt);
     }
-    set Target  (_target) {
+    set Target(_target) {
         if (_target == null) {
             this._Flag_Target = false;
         }
         else {
-            this._Flag_Target = true; 
+            this._Flag_Target = true;
             this._Target = _target;
         }
     }
@@ -99,14 +155,14 @@ class FC_Camera extends FC_GameObject {
     }
 
     Initialize() {
-        this.Position   = this._OFFSET_TARGET_DEFAULT;
-        this.LookAt     = this._OFFSET_LOOKAT_DEFAULT;
-        this.Target     = null;
+        this.Position = this._OFFSET_TARGET_DEFAULT;
+        this.LookAt = this._OFFSET_LOOKAT_DEFAULT;
+        this.Target = null;
     }
     Update() {
-        if ( this._Flag_Target ) {
-            this.Position   = new THREE.Vector3(0, 0, this._Target.Position.z).add(this._OFFSET_TARGET_DEFAULT);
-            this.LookAt     = new THREE.Vector3(0, 0, this._Target.Position.z).add(this._OFFSET_LOOKAT_DEFAULT);
+        if (this._Flag_Target) {
+            this.Position = new THREE.Vector3(0, 0, this._Target.Position.z).add(this._OFFSET_TARGET_DEFAULT);
+            this.LookAt = new THREE.Vector3(0, 0, this._Target.Position.z).add(this._OFFSET_LOOKAT_DEFAULT);
         }
     }
 
@@ -119,40 +175,40 @@ class FC_Camera extends FC_GameObject {
 class FC_Light_Ambient extends FC_GameObject {
 
     _Object = new THREE.AmbientLight(0xffffff, 0.8);
-    
+
     set Color(_color) { this._Object.color.set(_color); }
 
-    constructor (_scene) {
+    constructor(_scene) {
         super();
         this._Scene = _scene;
         this._Scene.add(this._Object);
     }
-    destructor  () { this._Scene.remove(this._Object); }
+    destructor() { this._Scene.remove(this._Object); }
 }
 class FC_Light_Directional extends FC_GameObject {
 
     _Object = new THREE.DirectionalLight(0xffffff, 0.8);
-    
+
     set Color(_color) { this._Object.color.set(_color); }
 
-    constructor (_scene) {
+    constructor(_scene) {
         super();
         this._Scene = _scene;
         this._Scene.add(this._Object);
     }
-    destructor  () { this._Scene.remove(this._Object); }
+    destructor() { this._Scene.remove(this._Object); }
 }
 class FC_Timer extends FC_GameObject {
 
-    _Flag_Starting  = false;
-    _Flag_Finished  = false;
-    _Time           = 0;
-    _Timer          = 0;
+    _Flag_Starting = false;
+    _Flag_Finished = false;
+    _Time = 0;
+    _Timer = 0;
 
     get Flag_Finished() { return this._Flag_Finished; }
 
     set Time(_second) {
-        if ( !this._Flag_Starting ) {
+        if (!this._Flag_Starting) {
             this.Initialize();
             this._Time = _second;
         }
@@ -166,36 +222,36 @@ class FC_Timer extends FC_GameObject {
     Initialize() {
         this._Flag_Starting = false;
         this._Flag_Finished = false;
-        this._Time          = 0;
-        this._Timer         = 0;
+        this._Time = 0;
+        this._Timer = 0;
     }
     Update() {
-        if ( this._Flag_Starting ) {
+        if (this._Flag_Starting) {
             this._Timer += FC_Environment.TIME_DELTA;
             if (this._Timer > this._Time) {
                 this._Flag_Starting = false;
                 this._Flag_Finished = true;
-                this._Timer         = 0;
+                this._Timer = 0;
             }
         }
     }
 
-    Start   () { this._Flag_Starting = true; }
-    Stop    () { this._Flag_Starting = false;}
-    Restart () {
+    Start() { this._Flag_Starting = true; }
+    Stop() { this._Flag_Starting = false; }
+    Restart() {
         this._Flag_Finished = false;
         this._Timer = 0;
         this.Start();
     }
 }
 class FC_Audio extends FC_GameObject {
-    
+
     _Audio = new Audio();
 
     get Flag_Playing() { return !this._Audio.paused; }
 
-    set Source(_url)    { this._Audio.src = _url; }
-    set Volume(_rate)   { this._Audio.volume = _rate; }
+    set Source(_url) { this._Audio.src = _url; }
+    set Volume(_rate) { this._Audio.volume = _rate; }
 
     constructor(_src, _loop = true, _volume = 0.5) {
         super();
@@ -218,9 +274,9 @@ class FC_Audio extends FC_GameObject {
 }
 class FC_TextPlane extends FC_Animation {
 
-    get Mesh    () { return this._Mesh; }
+    get Mesh() { return this._Mesh; }
     get Position() { return this._Mesh.position; }
-    get Rotation() { return this._Mesh.rotation;}
+    get Rotation() { return this._Mesh.rotation; }
 
     set Text(_text) {
         this._Text = _text;
@@ -234,25 +290,25 @@ class FC_TextPlane extends FC_Animation {
     }
     set Position(_vector3) { this._Mesh.position.set(_vector3.x, _vector3.y, _vector3.z); }
     set Rotation(_vector3) { this._Mesh.rotation.set(_vector3.x, _vector3.y, _vector3.z); }
-    set Scale   (_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
+    set Scale(_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
 
     constructor(_scene, _camera, _text, _color, _vector2_geometry, _isbillboard = false) {
         super();
-        this._Scene         = _scene;
-        this._Camera        = _camera;
-        this._Text_Default  = this._Text    = _text;
-        this._Color_Default = this._Color   = _color;
+        this._Scene = _scene;
+        this._Camera = _camera;
+        this._Text_Default = this._Text = _text;
+        this._Color_Default = this._Color = _color;
         this._Size_Geometry = _vector2_geometry;
-        this._Geometry      = new THREE.PlaneGeometry(_vector2_geometry.x, _vector2_geometry.y);
-        this._Material      = new THREE.MeshBasicMaterial({
-                                map: this.#_CreateTextTexture(_text, _color, _vector2_geometry),
-                                side: THREE.DoubleSide,
-                                transparent: true,
-                                opacity: 1.0,
-                                depthTest: false,
-                                depthWrite: false,
-                            });
-        this._Mesh          = new THREE.Mesh(this._Geometry, this._Material);
+        this._Geometry = new THREE.PlaneGeometry(_vector2_geometry.x, _vector2_geometry.y);
+        this._Material = new THREE.MeshBasicMaterial({
+            map: this.#_CreateTextTexture(_text, _color, _vector2_geometry),
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 1.0,
+            depthTest: false,
+            depthWrite: false,
+        });
+        this._Mesh = new THREE.Mesh(this._Geometry, this._Material);
         this._Scene.add(this._Mesh);
 
         this._Is_Billboard = _isbillboard;
@@ -260,14 +316,14 @@ class FC_TextPlane extends FC_Animation {
     destructor() { Scene.remove(this._Mesh); }
 
     Initialize(_bool_keep_text = false) {
-        this.Position   = new THREE.Vector3(0, 0, 0);
-        this.Rotation   = new THREE.Vector3(0, 0, 0);
-        if ( !_bool_keep_text ) this.Text = this._Text_Default;
-        this.Color      = this._Color_Default;
+        this.Position = new THREE.Vector3(0, 0, 0);
+        this.Rotation = new THREE.Vector3(0, 0, 0);
+        if (!_bool_keep_text) this.Text = this._Text_Default;
+        this.Color = this._Color_Default;
     }
     Update() {
         super.Update();
-        if ( this._Is_Billboard ) {
+        if (this._Is_Billboard) {
             LookAt(this._Camera.Position);
         }
     }
@@ -302,22 +358,22 @@ class FC_TextPlane extends FC_Animation {
         this.Position = raycaster.ray.direction.clone().multiplyScalar(_distance).add(this._Camera.Position);
     }
 
-    #_CreateTextTexture(_text , _color, _vector2_geometry) {
-        const canvas    = document.createElement('canvas');
-        const context   = canvas.getContext('2d');
-        
+    #_CreateTextTexture(_text, _color, _vector2_geometry) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
         const resolution = 512;
-        canvas.width    = _vector2_geometry.x * resolution;
-        canvas.height   = _vector2_geometry.y * resolution;
+        canvas.width = _vector2_geometry.x * resolution;
+        canvas.height = _vector2_geometry.y * resolution;
 
         context.fillStyle = '#ffffff00';
         context.fillRect(0, 0, canvas.width, canvas.height);
 
         const font_size = Math.min(canvas.width, canvas.height);
-        context.fillStyle       = _color;
-        context.font            = `${font_size}px Arial`;
-        context.textAlign       = 'center';
-        context.textBaseline    = 'middle';
+        context.fillStyle = _color;
+        context.font = `${font_size}px Arial`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
         context.fillText(_text, canvas.width / 2, canvas.height / 2);
 
         return new THREE.CanvasTexture(canvas);
@@ -326,48 +382,48 @@ class FC_TextPlane extends FC_Animation {
 
 class FC_Manager {
 
-    _TIME_FOR_READY     = 1;
-    _UI_SIZE_MULTIPLY   = 0.2;
+    _TIME_FOR_READY = 1;
+    _UI_SIZE_MULTIPLY = 0.2;
 
-    _Flag_Loaded    = false;
-    _State          = "Waiting_Start";
-    _BGM            = null;
-    _Timer_Waiting  = new FC_Timer(1);
-    _Timer_Input    = new FC_Timer(0.1);
-    _Timer_Ready    = 0;
+    _Flag_Loaded = false;
+    _State = "Waiting_Start";
+    _BGM = null;
+    _Timer_Waiting = new FC_Timer(1);
+    _Timer_Input = new FC_Timer(0.1);
+    _Timer_Ready = 0;
 
-    get State       () { return this._State; }
-    get Timer_Input () { return this._Timer_Input; }
-    get BGM         () { return this._BGM; }
+    get State() { return this._State; }
+    get Timer_Input() { return this._Timer_Input; }
+    get BGM() { return this._BGM; }
 
     set BGM(_url) {
-        if ( !this._BGM ) this._BGM = new FC_Audio(_url);
+        if (!this._BGM) this._BGM = new FC_Audio(_url);
         else this._BGM.Source = _url;
     }
 
     constructor(_scene, _renderer) {
-        this._Scene     = _scene;
-        this._Renderer  = _renderer;
+        this._Scene = _scene;
+        this._Renderer = _renderer;
     }
 
     Initialize() {
-        this._State         = "Waiting";
+        this._State = "Waiting";
         this._Timer_Waiting.Restart();
         this._Timer_Input.Start();
-        this._Timer_Ready   = 0;
+        this._Timer_Ready = 0;
     }
     Update() {
 
-        if ( !this._Flag_Loaded ) {
+        if (!this._Flag_Loaded) {
             this._Flag_Loaded = true;
             this.Fade(true);
         }
-        if ( this._Flag_Loaded ) {
+        if (this._Flag_Loaded) {
 
-            switch( this._State ) {
+            switch (this._State) {
                 case "Waiting":
                     this._Timer_Waiting.Update();
-                    if ( this._Timer_Waiting.Flag_Finished ) {
+                    if (this._Timer_Waiting.Flag_Finished) {
                         this._State = "Waiting_Start";
                     }
                     break;
@@ -380,7 +436,7 @@ class FC_Manager {
         requestAnimationFrame(this.Update.bind(this));
     }
     Update_System() {
-        
+
         this._Timer_Input.Update();
 
         if (this._State == "Gameover") {
@@ -391,7 +447,7 @@ class FC_Manager {
         }
     }
     Update_Playing() {
-        
+
     }
 
     Start() {
@@ -406,11 +462,13 @@ class FC_Manager {
     }
 }
 
+
 export {
     Mobile_or_Desktop,
     RandomNumber_Between,
     Degrees_to_Radians,
     Alpha_Change,
+    FC_JoystickController,
     FC_GameObject,
     FC_Environment,
     FC_Animation,
