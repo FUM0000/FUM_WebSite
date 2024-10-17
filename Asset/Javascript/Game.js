@@ -95,6 +95,7 @@ class FC_Camera extends FC_GameObject {
         this._Renderer = _renderer;
         this._OFFSET_LOOKAT_DEFAULT = _offset_lookat_default;
         this._OFFSET_TARGET_DEFAULT = _offset_target_default;
+        this.Resize_Screen = this.Resize_Screen.bind(this);
     }
 
     Initialize() {
@@ -110,8 +111,8 @@ class FC_Camera extends FC_GameObject {
     }
 
     Resize_Screen() {
-        // this._Object.aspect = window.innerWidth / window.innerHeight;
-        // this._Object.updateProjectionMatrix();
+        this._Object.aspect = window.innerWidth / window.innerHeight;
+        this._Object.updateProjectionMatrix();
         this._Renderer.setSize(window.innerWidth, window.innerHeight);
     }
 }
