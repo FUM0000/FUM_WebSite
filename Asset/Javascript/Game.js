@@ -388,7 +388,6 @@ class FC_TextPlane extends FC_Animation {
     Place_on_Screen(_vector2_screen, _distance) {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(_vector2_screen, this._Camera.Object);
-        const target_position = new THREE.Vector3();
         this.Position = raycaster.ray.direction.clone().multiplyScalar(_distance).add(this._Camera.Position);
     }
 
@@ -411,6 +410,81 @@ class FC_TextPlane extends FC_Animation {
         context.fillText(_text, canvas.width / 2, canvas.height / 2);
 
         return new THREE.CanvasTexture(canvas);
+    }
+}
+class FC_ImagePlane extends FC_Animation {
+
+    get Mesh() { return this._Mesh; }
+    get Position() { return this._Mesh.position; }
+    get Rotation() { return this._Mesh.rotation; }
+
+    set Image(_url) {
+        this._Image = _url;
+        this._Material.map = this.#_CreateImageTexture(this._Image, this._Size_Geometry);
+        this._Material.needsUpdate = true;
+    }
+    set Position(_vector3) { this._Mesh.position.set(_vector3.x, _vector3.y, _vector3.z); }
+    set Rotation(_vector3) { this._Mesh.rotation.set(_vector3.x, _vector3.y, _vector3.z); }
+    set Scale(_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
+
+    constructor(_scene, _camera, _url, _vector2_geometry, _isbillboard = false) {
+        super();
+        this._Scene = _scene;
+        this._Camera = _camera;
+        this._Image_Default = this._Image = _url;
+        this._Size_Geometry = _vector2_geometry;
+        this._Geometry = new THREE.PlaneGeometry(_vector2_geometry.x, _vector2_geometry.y);
+        this._Material = new THREE.MeshBasicMaterial({
+            map: this.#_CreateImageTexture(_url, _vector2_geometry),
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 1.0,
+            depthTest: false,
+            depthWrite: false,
+        });
+        this._Mesh = new THREE.Mesh(this._Geometry, this._Material);
+        this._Scene.add(this._Mesh);
+
+        this._Is_Billboard = _isbillboard;
+    }
+    destructor() { Scene.remove(this._Mesh); }
+
+    Initialize() {
+        this.Position = new THREE.Vector3(0, 0, 0);
+        this.Rotation = new THREE.Vector3(0, 0, 0);
+        this.Image = this._Image_Default;
+    }
+    Update() {
+        super.Update();
+        if (this._Is_Billboard) {
+            LookAt(this._Camera.Position);
+        }
+    }
+
+    Add_Position(_vector3) {
+        const new_position = this.Position;
+        new_position.x += _vector3.x;
+        new_position.y += _vector3.y;
+        new_position.z += _vector3.z;
+        this.Position = new_position;
+    }
+    Add_Rotation(_vector3) {
+        const new_rotation = this.Rotation;
+        new_rotation.x += _vector3.x;
+        new_rotation.y += _vector3.y;
+        new_rotation.z += _vector3.z;
+        this.Rotation = new_rotation;
+    }
+    LookAt(_vector3) { this._Mesh.lookAt(_vector3); }
+    Place_on_Screen(_vector2_screen, _distance) {
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(_vector2_screen, this._Camera.Object);
+        this.Position = raycaster.ray.direction.clone().multiplyScalar(_distance).add(this._Camera.Position);
+    }
+
+    #_CreateImageTexture(_url) {
+        const loader = new THREE.TextureLoader();
+        return loader.load(_url);
     }
 }
 class FC_Player_Controller extends FC_GameObject {
@@ -554,6 +628,7 @@ export {
     FC_Timer,
     FC_Audio,
     FC_TextPlane,
+    FC_ImagePlane,
     FC_Player_Controller,
     FC_Manager,
 }
