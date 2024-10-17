@@ -194,7 +194,8 @@ class FC_Audio extends FC_GameObject {
 
     get Flag_Playing() { return !this._Audio.paused; }
 
-    set Volume(_rate) { this._Audio.volume = _rate; }
+    set Source(_url)    { this._Audio.src = _url; }
+    set Volume(_rate)   { this._Audio.volume = _rate; }
 
     constructor(_src, _loop = true, _volume = 0.5) {
         super();
@@ -339,7 +340,10 @@ class FC_Manager {
     get Timer_Input () { return this._Timer_Input; }
     get BGM         () { return this._BGM; }
 
-    set BGM(_url) { this._BGM = new FC_Audio(_url); }
+    set BGM(_url) {
+        if ( !this._BGM ) this._BGM = new FC_Audio(_url);
+        else this._BGM.Source = _url;
+    }
 
     constructor(_scene, _renderer) {
         this._Scene     = _scene;
