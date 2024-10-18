@@ -73,6 +73,7 @@
             Degrees_to_Radians,
             Alpha_Change,
             FC_JoystickController,
+            FC_Input_Keyboard,
             FC_GameObject,
             FC_Environment,
             FC_Animation,
@@ -89,7 +90,7 @@
         } from "../../Asset/Javascript/Game.js";
         const Scene = new THREE.Scene();
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas"), antialias: true });
-        Scene.fog = new THREE.Fog(0xFCA3B7, 0, 10);
+        Scene.fog = new THREE.Fog(0xFCA3B7, 0, 5);
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0xFCA3B7));
@@ -101,7 +102,8 @@
 
             _JOYSTICK_LEFT = new FC_JoystickController(document.getElementById("Joystick_Left"));
             _JOYSTICK_RIGHT = new FC_JoystickController(document.getElementById("Joystick_Right"));
-            _SENSIVILITY = 0.005;
+            _SENSIVILITY = 0.01;
+            _Input_Keyboard = new FC_Input_Keyboard();
 
             _Input_Look = new THREE.Vector2(0, 0);
             _Input_Move = new THREE.Vector2(0, 0);
@@ -109,16 +111,23 @@
             _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
             _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
 
-            // _Text_Controller = new FC_TextPlane(Scene, Camera, "CONTROLLER", "#CF0000", new THREE.Vector2(10, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
+            _Text_Controller = new FC_TextPlane(Scene, Camera, "CONTROLLER", "#CF0000", new THREE.Vector2(10, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
             _Text_Controller_Left_1 = new FC_TextPlane(Scene, Camera, "LEFT", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
             _Text_Controller_Left_2 = new FC_TextPlane(Scene, Camera, "Move", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
             _Text_Controller_Right_1 = new FC_TextPlane(Scene, Camera, "RIGHT", "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
             _Text_Controller_Right_2 = new FC_TextPlane(Scene, Camera, "Look", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            
-            _Text_Debug_Left = new FC_TextPlane(Scene, Camera, "Left", "#CF0000", new THREE.Vector2(20, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _Text_Debug_Right = new FC_TextPlane(Scene, Camera, "Right", "#CF0000", new THREE.Vector2(20, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
 
             // _Image_Icon = new FC_ImagePlane(Scene, Camera, "../../Asset/Image/Icon_1_1.jpg", new THREE.Vector2(1, 1));
+
+            _FolderStructure = {
+                "AI": ["1.png", "2.png", "3.png"],
+                "CG": ["1.png", "2.png", "3.png", "4.png"],
+                "Handmade": ["1.png", "2.png", "3.png", "4.png"]
+            };
+            _Category_Distance_FromCenter = 10;
+            _Image_Radius_FromCategory = 3;
+            _CategoryTexts = [];
+            _Images = [];
 
             get UI_Home() { return this._UI_Home; }
             get UI_Music() { return this._UI_Music; }
@@ -139,9 +148,9 @@
                 this._UI_Music.Position = new THREE.Vector3(0, 0, -100);
                 this._UI_Music.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
 
-                // this._Text_Controller.Initialize();
-                // this._Text_Controller.Position = new THREE.Vector3(0, 2, 2);
-                // this._Text_Controller.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
+                this._Text_Controller.Initialize();
+                this._Text_Controller.Position = new THREE.Vector3(0, 2, 2);
+                this._Text_Controller.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
                 this._Text_Controller_Left_1.Initialize();
                 this._Text_Controller_Left_1.Position = new THREE.Vector3(0.5, 1, 2);
                 this._Text_Controller_Left_1.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
@@ -155,17 +164,37 @@
                 this._Text_Controller_Right_2.Position = new THREE.Vector3(-0.5, 0.6, 2);
                 this._Text_Controller_Right_2.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
 
-                
-                this._Text_Debug_Left.Initialize();
-                this._Text_Debug_Left.Position = new THREE.Vector3(2, -1, 2);
-                this._Text_Debug_Left.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
-                this._Text_Debug_Right.Initialize();
-                this._Text_Debug_Right.Position = new THREE.Vector3(-2, -1, 2);
-                this._Text_Debug_Right.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
-
                 // this._Image_Icon.Initialize();
                 // this._Image_Icon.Position = new THREE.Vector3(0, 1.5, 2);
                 // this._Image_Icon.Rotation = new THREE.Vector3(0, Degrees_to_Radians(180), 0);
+
+                const category_keys = Object.keys(this._FolderStructure);
+                const angle_each_category = (2 * Math.PI) / category_keys.length;
+
+                category_keys.forEach((_category, _index) => {
+                    const angle_from_center = _index * angle_each_category;
+                    const category_x = Math.cos(angle_from_center) * this._Category_Distance_FromCenter;
+                    const category_z = Math.sin(angle_from_center) * this._Category_Distance_FromCenter;
+                    const category_text = new FC_TextPlane(Scene, Camera, _category, "#CF0000", new THREE.Vector2(8, 1).multiplyScalar(this._UI_SIZE_MULTIPLY * 5));
+                    category_text.Initialize();
+                    category_text.Fog = false;
+                    category_text.Position = new THREE.Vector3(category_x, 5, category_z);
+                    this._CategoryTexts.push(category_text);
+
+                    const number = 10;
+                    this._FolderStructure[_category].forEach((_image, index) => {
+                        const angle_each_image = (2 * Math.PI) / number;
+                        const angle = (index * angle_each_image);
+
+                        const image_x = category_x + Math.cos(angle) * this._Image_Radius_FromCategory;
+                        const image_z = category_z + Math.sin(angle) * this._Image_Radius_FromCategory;
+
+                        const image = new FC_ImagePlane(Scene, Camera, `../../Asset/Image/Gallery/${_category}/${_image}`, new THREE.Vector2(1, 1));
+                        image.Position = new THREE.Vector3(image_x, 1.74 - 0.06, image_z);
+                        image.LookAt(new THREE.Vector3(category_x, 1.74 - 0.06, category_z));
+                        this._Images.push(image);
+                    });
+                });
             }
             Update() {
 
@@ -178,8 +207,6 @@
 
                     this._Input_Look = this._JOYSTICK_RIGHT.getInput();
                     this._Input_Move = this._JOYSTICK_LEFT.getInput();
-                    this._Text_Debug_Right.Text = Shousuu_Kirisute(this._Input_Look.x, 3) + ", " + Shousuu_Kirisute(this._Input_Look.y, 3);
-                    this._Text_Debug_Left.Text = Shousuu_Kirisute(this._Input_Move.x, 3) + ", " + Shousuu_Kirisute(this._Input_Move.y, 3);
 
                     switch (this._State) {
                         case "Playing": Manager.Update_Playing(); break;
@@ -197,8 +224,18 @@
                 // this._UI_Music.Place_on_Screen(new THREE.Vector2(0.6, 0.7), 4);
             }
             Update_Playing() {
+                this._Input_Keyboard.Update();
+                if (this._Input_Move.length() == 0) {
+                    this._Input_Move = this._Input_Keyboard.Input_Move;
+                }
+                if (this._Input_Look.length() == 0) {
+                    this._Input_Look = this._Input_Keyboard.Input_Look;
+                }
                 Player.Update(this._Input_Move, Camera.Forward);
                 Camera.Update(this._Input_Look, this._SENSIVILITY);
+
+                const length = Camera.Position.length();
+                Scene.fog = new THREE.Fog(0xFCA3B7, 0, Math.max(5, length));
             }
         }
 

@@ -117,6 +117,68 @@ class FC_JoystickController {
         return vector_input;
     }
 }
+class FC_Input_Keyboard {
+
+    _Keys = {};
+    _Input_Move = new THREE.Vector2(0, 0);
+    _Input_Look = new THREE.Vector2(0, 0);
+
+    get Input_Move() { return this._Input_Move; }
+    get Input_Look() { return this._Input_Look; }
+
+    constructor() {
+        document.addEventListener('keydown', (event) => this.#KeyDown(event));
+        document.addEventListener('keyup', (event) => this.#KeyUp(event));
+    }
+
+    Update() {
+        this._Input_Move.set(0, 0);
+        this._Input_Look.set(0, 0);
+
+        if (this.#IsPressed('w')) {
+            this._Input_Move.y += 1;
+        }
+        if (this.#IsPressed('s')) {
+            this._Input_Move.y -= 1;
+        }
+        if (this.#IsPressed('a')) {
+            this._Input_Move.x -= 1;
+        }
+        if (this.#IsPressed('d')) {
+            this._Input_Move.x += 1;
+        }
+
+        if (this.#IsPressed('ArrowUp')) {
+            this._Input_Look.y += 1;
+        }
+        if (this.#IsPressed('ArrowDown')) {
+            this._Input_Look.y -= 1;
+        }
+        if (this.#IsPressed('ArrowLeft')) {
+            this._Input_Look.x -= 1;
+        }
+        if (this.#IsPressed('ArrowRight')) {
+            this._Input_Look.x += 1;
+        }
+
+        if (this._Input_Move.length() > 1) {
+            this._Input_Move.normalize();
+        }
+        if (this._Input_Look.length() > 1) {
+            this._Input_Look.normalize();
+        }
+    }
+
+    #KeyDown(event) {
+        this._Keys[event.key] = true;
+    }
+    #KeyUp(event) {
+        this._Keys[event.key] = false;
+    }
+    #IsPressed(key) {
+        return this._Keys[key] === true;
+    }
+}
 
 class FC_GameObject {
     Initialize() { }
@@ -359,22 +421,36 @@ class FC_Audio extends FC_GameObject {
 }
 class FC_TextPlane extends FC_Animation {
 
-    get Mesh() { return this._Mesh; }
-    get Position() { return this._Mesh.position; }
-    get Rotation() { return this._Mesh.rotation; }
+    get Mesh() { return this._Mesh_Front; }
+    get Position() { return this._Mesh_Front.position; }
+    get Rotation() { return this._Mesh_Front.rotation; }
 
     set Text(_text) {
         this._Text = _text;
-        this._Material.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Geometry);
-        this._Material.needsUpdate = true;
+        this._Material_Front.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Geometry);
+        this._Material_Front.needsUpdate = true;
+        this._Material_Back.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Geometry, true);
+        this._Material_Back.needsUpdate = true;
     }
     set Color(_color) {
         this._Color = _color;
-        this._Material.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Geometry);
-        this._Material.needsUpdate = true;
+        this._Material_Front.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Geometry);
+        this._Material_Front.needsUpdate = true;
+        this._Material_Back.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Geometry, true);
+        this._Material_Back.needsUpdate = true;
     }
-    set Position(_vector3) { this._Mesh.position.set(_vector3.x, _vector3.y, _vector3.z); }
-    set Rotation(_vector3) { this._Mesh.rotation.set(_vector3.x, _vector3.y, _vector3.z); }
+    set Fog(_bool) {
+        this._Material_Front.fog = _bool;
+        this._Material_Back.fog = _bool;
+    }
+    set Position(_vector3) {
+        this._Mesh_Front.position.set(_vector3.x, _vector3.y, _vector3.z);
+        this._Mesh_Back.position.set(_vector3.x, _vector3.y, _vector3.z);
+    }
+    set Rotation(_vector3) {
+        this._Mesh_Front.rotation.set(_vector3.x, _vector3.y, _vector3.z);
+        this._Mesh_Back.rotation.set(_vector3.x, _vector3.y, _vector3.z);
+    }
     set Scale(_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
 
     constructor(_scene, _camera, _text, _color, _vector2_geometry, _isbillboard = false) {
@@ -385,20 +461,33 @@ class FC_TextPlane extends FC_Animation {
         this._Color_Default = this._Color = _color;
         this._Size_Geometry = _vector2_geometry;
         this._Geometry = new THREE.PlaneGeometry(_vector2_geometry.x, _vector2_geometry.y);
-        this._Material = new THREE.MeshBasicMaterial({
+        this._Material_Front = new THREE.MeshBasicMaterial({
             map: this.#_CreateTextTexture(_text, _color, _vector2_geometry),
-            side: THREE.DoubleSide,
+            side: THREE.FrontSide,
             transparent: true,
             opacity: 1.0,
             depthTest: false,
             depthWrite: false,
         });
-        this._Mesh = new THREE.Mesh(this._Geometry, this._Material);
-        this._Scene.add(this._Mesh);
+        this._Mesh_Front = new THREE.Mesh(this._Geometry, this._Material_Front);
+        this._Scene.add(this._Mesh_Front);
+        this._Material_Back = new THREE.MeshBasicMaterial({
+            map: this.#_CreateTextTexture(_text, _color, _vector2_geometry, true),
+            side: THREE.BackSide,
+            transparent: true,
+            opacity: 1.0,
+            depthTest: false,
+            depthWrite: false,
+        });
+        this._Mesh_Back = new THREE.Mesh(this._Geometry, this._Material_Back);
+        this._Scene.add(this._Mesh_Back);
 
         this._Is_Billboard = _isbillboard;
     }
-    destructor() { Scene.remove(this._Mesh); }
+    destructor() {
+        Scene.remove(this._Mesh_Front);
+        Scene.remove(this._Mesh_Back);
+    }
 
     Initialize(_bool_keep_text = false) {
         this.Position = new THREE.Vector3(0, 0, 0);
@@ -414,12 +503,16 @@ class FC_TextPlane extends FC_Animation {
     }
 
     Show() {
-        this._Material.map = this.#_CreateTextTexture(this._Text, Alpha_Change(this._Color, "FF"), this._Size_Geometry);
-        this._Material.needsUpdate = true;
+        this._Material_Front.map = this.#_CreateTextTexture(this._Text, Alpha_Change(this._Color, "FF"), this._Size_Geometry);
+        this._Material_Front.needsUpdate = true;
+        this._Material_Back.map = this.#_CreateTextTexture(this._Text, Alpha_Change(this._Color, "FF"), this._Size_Geometry, true);
+        this._Material_Back.needsUpdate = true;
     }
     Hide() {
-        this._Material.map = this.#_CreateTextTexture(this._Text, Alpha_Change(this._Color, "00"), this._Size_Geometry);
-        this._Material.needsUpdate = true;
+        this._Material_Front.map = this.#_CreateTextTexture(this._Text, Alpha_Change(this._Color, "00"), this._Size_Geometry);
+        this._Material_Front.needsUpdate = true;
+        this._Material_Back.map = this.#_CreateTextTexture(this._Text, Alpha_Change(this._Color, "00"), this._Size_Geometry, true);
+        this._Material_Back.needsUpdate = true;
     }
     Add_Position(_vector3) {
         const new_position = this.Position;
@@ -435,14 +528,17 @@ class FC_TextPlane extends FC_Animation {
         new_rotation.z += _vector3.z;
         this.Rotation = new_rotation;
     }
-    LookAt(_vector3) { this._Mesh.lookAt(_vector3); }
+    LookAt(_vector3) {
+        this._Mesh_Front.lookAt(_vector3);
+        this._Mesh_Back.lookAt(_vector3);
+    }
     Place_on_Screen(_vector2_screen, _distance) {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(_vector2_screen, this._Camera.Object);
         this.Position = raycaster.ray.direction.clone().multiplyScalar(_distance).add(this._Camera.Position);
     }
 
-    #_CreateTextTexture(_text, _color, _vector2_geometry) {
+    #_CreateTextTexture(_text, _color, _vector2_geometry, _flip = false) {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
 
@@ -458,25 +554,45 @@ class FC_TextPlane extends FC_Animation {
         context.font = `${font_size}px Arial`;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.fillText(_text, canvas.width / 2, canvas.height / 2);
+        if (_flip) {
+            context.scale(-1, 1);
+            context.fillText(_text, -canvas.width / 2, canvas.height / 2);
+        } else {
+            context.fillText(_text, canvas.width / 2, canvas.height / 2);
+        }
 
         return new THREE.CanvasTexture(canvas);
     }
 }
 class FC_ImagePlane extends FC_Animation {
 
-    get Mesh() { return this._Mesh; }
-    get Position() { return this._Mesh.position; }
-    get Rotation() { return this._Mesh.rotation; }
+    get Mesh() { return this._Mesh_Front; }
+    get Position() { return this._Mesh_Front.position; }
+    get Rotation() { return this._Mesh_Front.rotation; }
 
     set Image(_url) {
         this._Image = _url;
-        this._Material.map = this.#_CreateImageTexture(this._Image, this._Size_Geometry);
-        this._Material.needsUpdate = true;
+        this._Material_Front.map = this.#_CreateImageTexture(this._Image);
+        this._Material_Front.needsUpdate = true;
+        this._Material_Back.map = this.#_CreateImageTexture(this._Image, true);
+        this._Material_Back.needsUpdate = true;
     }
-    set Position(_vector3) { this._Mesh.position.set(_vector3.x, _vector3.y, _vector3.z); }
-    set Rotation(_vector3) { this._Mesh.rotation.set(_vector3.x, _vector3.y, _vector3.z); }
-    set Scale(_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
+    set Position(_vector3) {
+        this._Mesh_Front.position.set(_vector3.x, _vector3.y, _vector3.z);
+        this._Mesh_Back.position.set(_vector3.x, _vector3.y, _vector3.z);
+    }
+    set Rotation(_vector3) {
+        this._Mesh_Front.rotation.set(_vector3.x, _vector3.y, _vector3.z);
+        this._Mesh_Back.rotation.set(_vector3.x, _vector3.y, _vector3.z);
+    }
+    set Scale(_vector2) { 
+        this._Mesh_Front.scale.set(_vector2.x, _vector2.y, 1);
+        this._Mesh_Back.scale.set(_vector2.x, _vector2.y, 1);
+    }
+    set Fog(_bool) {
+        this._Material_Front.fog = _bool;
+        this._Material_Back.fog = _bool;
+    }
 
     constructor(_scene, _camera, _url, _vector2_geometry, _isbillboard = false) {
         super();
@@ -485,20 +601,30 @@ class FC_ImagePlane extends FC_Animation {
         this._Image_Default = this._Image = _url;
         this._Size_Geometry = _vector2_geometry;
         this._Geometry = new THREE.PlaneGeometry(_vector2_geometry.x, _vector2_geometry.y);
-        this._Material = new THREE.MeshBasicMaterial({
-            map: this.#_CreateImageTexture(_url, _vector2_geometry),
-            side: THREE.DoubleSide,
+        this._Material_Front = new THREE.MeshBasicMaterial({
+            map: this.#_CreateImageTexture(_url),
+            side: THREE.FrontSide,
             transparent: true,
             opacity: 1.0,
-            depthTest: false,
-            depthWrite: false,
         });
-        this._Mesh = new THREE.Mesh(this._Geometry, this._Material);
-        this._Scene.add(this._Mesh);
+        this._Mesh_Front = new THREE.Mesh(this._Geometry, this._Material_Front);
+        this._Scene.add(this._Mesh_Front);
+
+        this._Material_Back = new THREE.MeshBasicMaterial({
+            map: this.#_CreateImageTexture(_url, true),
+            side: THREE.BackSide,
+            transparent: true,
+            opacity: 1.0,
+        });
+        this._Mesh_Back = new THREE.Mesh(this._Geometry, this._Material_Back);
+        this._Scene.add(this._Mesh_Back);
 
         this._Is_Billboard = _isbillboard;
     }
-    destructor() { Scene.remove(this._Mesh); }
+    destructor() { 
+        this._Scene.remove(this._Mesh_Front);
+        this._Scene.remove(this._Mesh_Back);
+    }
 
     Initialize() {
         this.Position = new THREE.Vector3(0, 0, 0);
@@ -508,15 +634,21 @@ class FC_ImagePlane extends FC_Animation {
     Update() {
         super.Update();
         if (this._Is_Billboard) {
-            LookAt(this._Camera.Position);
+            this.LookAt(this._Camera.Position);
         }
     }
 
+    Show() {
+        this._Material_Front.opacity = 1.0;
+        this._Material_Back.opacity = 1.0;
+    }
+    Hide() {
+        this._Material_Front.opacity = 0.0;
+        this._Material_Back.opacity = 0.0;
+    }
     Add_Position(_vector3) {
         const new_position = this.Position;
-        new_position.x += _vector3.x;
-        new_position.y += _vector3.y;
-        new_position.z += _vector3.z;
+        new_position.add(_vector3);
         this.Position = new_position;
     }
     Add_Rotation(_vector3) {
@@ -526,16 +658,24 @@ class FC_ImagePlane extends FC_Animation {
         new_rotation.z += _vector3.z;
         this.Rotation = new_rotation;
     }
-    LookAt(_vector3) { this._Mesh.lookAt(_vector3); }
+    LookAt(_vector3) {
+        this._Mesh_Front.lookAt(_vector3);
+        this._Mesh_Back.lookAt(_vector3);
+    }
     Place_on_Screen(_vector2_screen, _distance) {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(_vector2_screen, this._Camera.Object);
         this.Position = raycaster.ray.direction.clone().multiplyScalar(_distance).add(this._Camera.Position);
     }
 
-    #_CreateImageTexture(_url) {
+    #_CreateImageTexture(_url, _flip = false) {
         const loader = new THREE.TextureLoader();
-        return loader.load(_url);
+        const texture = loader.load(_url);
+        if (_flip) {
+            texture.repeat.x = -1;
+            texture.offset.x = 1;
+        }
+        return texture;
     }
 }
 class FC_Player_Controller extends FC_GameObject {
@@ -670,6 +810,7 @@ export {
     Degrees_to_Radians,
     Alpha_Change,
     FC_JoystickController,
+    FC_Input_Keyboard,
     FC_GameObject,
     FC_Environment,
     FC_Animation,
