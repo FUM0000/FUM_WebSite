@@ -56,9 +56,11 @@ class FC_JoystickController {
     }
 
     onEnd() {
-        this.isActive = false;
-        this.moveX = 0;
-        this.moveY = 0;
+        if (this.isActive) {
+            this.isActive = false;
+            this.moveX = 0;
+            this.moveY = 0;
+        }
     }
 
     getInput() {
