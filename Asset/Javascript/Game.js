@@ -3,10 +3,9 @@ import * as THREE from "https://unpkg.com/three@0.126.1/build/three.module.js";
 
 function Mobile_or_Desktop() { return /Mobi|Android/i.test(navigator.userAgent); }
 function RandomNumber_Between(_min, _max) { return Math.random() * (_max - _min + 1) + _min; }
-function Shousuu_Kirisute(_number, _keta) {
-    return Math.floor(_number * Math.pow(10, _keta)) / Math.pow(10, _keta);
-}
+function Shousuu_Kirisute(_number, _keta) { return Math.floor(_number * Math.pow(10, _keta)) / Math.pow(10, _keta); }
 function Degrees_to_Radians(_degrees) { return _degrees * (Math.PI / 180); }
+function Radians_to_Degrees(_radians) { return _radians * (180 / Math.PI); }
 function Alpha_Change(_color, _alpha) {
     if (_color.length === 7) { return _color + _alpha; }
     if (_color.length === 9) { return _color.slice(0, 7) + _alpha; }
@@ -113,7 +112,7 @@ class FC_JoystickController {
 
     getInput() {
         const vector_input = new THREE.Vector2(this.moveX, -this.moveY);
-        if (vector_input.length() > 0) vector_input.normalize();
+        // if (vector_input.length() > 0) vector_input.normalize();
         return vector_input;
     }
 }
@@ -149,23 +148,23 @@ class FC_Input_Keyboard {
         }
 
         if (this.#IsPressed('ArrowUp')) {
-            this._Input_Look.y += 1;
+            this._Input_Look.y += 100;
         }
         if (this.#IsPressed('ArrowDown')) {
-            this._Input_Look.y -= 1;
+            this._Input_Look.y -= 100;
         }
         if (this.#IsPressed('ArrowLeft')) {
-            this._Input_Look.x -= 1;
+            this._Input_Look.x -= 100;
         }
         if (this.#IsPressed('ArrowRight')) {
-            this._Input_Look.x += 1;
+            this._Input_Look.x += 100;
         }
 
         if (this._Input_Move.length() > 1) {
             this._Input_Move.normalize();
         }
         if (this._Input_Look.length() > 1) {
-            this._Input_Look.normalize();
+            // this._Input_Look.normalize();
         }
     }
 
@@ -421,6 +420,9 @@ class FC_Audio extends FC_GameObject {
 }
 class FC_TextPlane extends FC_Animation {
 
+    _Rotating = false;
+    _Rotation_Speed = 36;
+
     get Mesh() { return this._Mesh_Front; }
     get Position() { return this._Mesh_Front.position; }
     get Rotation() { return this._Mesh_Front.rotation; }
@@ -500,6 +502,9 @@ class FC_TextPlane extends FC_Animation {
         if (this._Is_Billboard) {
             LookAt(this._Camera.Position);
         }
+        if (this._Rotating) {
+            this.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(this._Rotation_Speed) * FC_Environment.TIME_DELTA, 0));
+        }
     }
 
     Show() {
@@ -536,6 +541,9 @@ class FC_TextPlane extends FC_Animation {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(_vector2_screen, this._Camera.Object);
         this.Position = raycaster.ray.direction.clone().multiplyScalar(_distance).add(this._Camera.Position);
+    }
+    Rotating(_bool) {
+        this._Rotating = _bool; console.log("Rotating");
     }
 
     #_CreateTextTexture(_text, _color, _vector2_geometry, _flip = false) {
@@ -585,7 +593,7 @@ class FC_ImagePlane extends FC_Animation {
         this._Mesh_Front.rotation.set(_vector3.x, _vector3.y, _vector3.z);
         this._Mesh_Back.rotation.set(_vector3.x, _vector3.y, _vector3.z);
     }
-    set Scale(_vector2) { 
+    set Scale(_vector2) {
         this._Mesh_Front.scale.set(_vector2.x, _vector2.y, 1);
         this._Mesh_Back.scale.set(_vector2.x, _vector2.y, 1);
     }
@@ -621,7 +629,7 @@ class FC_ImagePlane extends FC_Animation {
 
         this._Is_Billboard = _isbillboard;
     }
-    destructor() { 
+    destructor() {
         this._Scene.remove(this._Mesh_Front);
         this._Scene.remove(this._Mesh_Back);
     }
@@ -680,7 +688,7 @@ class FC_ImagePlane extends FC_Animation {
 }
 class FC_Player_Controller extends FC_GameObject {
 
-    _Speed_Past = 0.55;
+    _Speed_Past = 1.1;
     _Speed = this._Speed_Past;
 
     get Position() { return this._Object.position; }
@@ -808,6 +816,7 @@ export {
     RandomNumber_Between,
     Shousuu_Kirisute,
     Degrees_to_Radians,
+    Radians_to_Degrees,
     Alpha_Change,
     FC_JoystickController,
     FC_Input_Keyboard,
