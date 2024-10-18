@@ -21,6 +21,7 @@ class FC_JoystickController {
         this.startY = 0;
         this.moveX = 0;
         this.moveY = 0;
+        this.touchId = null;
 
         this.onStart = this.onStart.bind(this);
         this.onMove = this.onMove.bind(this);
@@ -32,6 +33,7 @@ class FC_JoystickController {
         this.domElement.addEventListener('touchmove', this.onMove);
         this.domElement.addEventListener('mouseup', this.onEnd);
         this.domElement.addEventListener('touchend', this.onEnd);
+        this.domElement.addEventListener('touchcancel', this.onEnd);
         this.domElement.addEventListener('mouseleave', this.onEnd);
     }
 
@@ -39,28 +41,74 @@ class FC_JoystickController {
         event.preventDefault();
         if (this.isActive) return;
 
-        const { clientX, clientY } = event.touches ? event.touches[0] : event;
-        this.isActive = true;
-        this.startX = clientX;
-        this.startY = clientY;
+        if (event.type === 'touchstart') {
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                const touch = event.changedTouches[i];
+                if (this.isTouchInElement(touch)) {
+                    this.touchId = touch.identifier;
+                    this.startX = touch.clientX;
+                    this.startY = touch.clientY;
+                    this.isActive = true;
+                    break;
+                }
+            }
+        } else {
+            this.startX = event.clientX;
+            this.startY = event.clientY;
+            this.isActive = true;
+        }
     }
 
     onMove(event) {
         event.preventDefault();
         if (!this.isActive) return;
 
-        const { clientX, clientY } = event.touches ? event.touches[0] : event;
-        this.moveX = clientX - this.startX;
-        this.moveY = clientY - this.startY;
+        if (event.type === 'touchmove') {
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                const touch = event.changedTouches[i];
+                if (touch.identifier === this.touchId) {
+                    this.moveX = touch.clientX - this.startX;
+                    this.moveY = touch.clientY - this.startY;
+                    break;
+                }
+            }
+        } else {
+            this.moveX = event.clientX - this.startX;
+            this.moveY = event.clientY - this.startY;
+        }
     }
 
     onEnd(event) {
         event.preventDefault();
-        if (this.isActive) {
-            this.isActive = false;
-            this.moveX = 0;
-            this.moveY = 0;
+        if (!this.isActive) return;
+
+        if (event.type === 'touchend' || event.type === 'touchcancel') {
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                if (event.changedTouches[i].identifier === this.touchId) {
+                    this.reset();
+                    break;
+                }
+            }
+        } else {
+            this.reset();
         }
+    }
+
+    reset() {
+        this.isActive = false;
+        this.moveX = 0;
+        this.moveY = 0;
+        this.touchId = null;
+    }
+
+    isTouchInElement(touch) {
+        const rect = this.domElement.getBoundingClientRect();
+        return (
+            touch.clientX >= rect.left &&
+            touch.clientX <= rect.right &&
+            touch.clientY >= rect.top &&
+            touch.clientY <= rect.bottom
+        );
     }
 
     getInput() {
