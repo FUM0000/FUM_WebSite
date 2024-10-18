@@ -26,10 +26,10 @@ class FC_JoystickController {
 
         this.domElement.addEventListener('mousedown', this.onStart);
         this.domElement.addEventListener('touchstart', this.onStart);
-        this.domElement.addEventListener('mousemove', this.onMove);
-        this.domElement.addEventListener('touchmove', this.onMove);
-        this.domElement.addEventListener('mouseup', this.onEnd);
-        this.domElement.addEventListener('touchend', this.onEnd);
+        document.addEventListener('mousemove', this.onMove);
+        document.addEventListener('touchmove', this.onMove);
+        document.addEventListener('mouseup', this.onEnd);
+        document.addEventListener('touchend', this.onEnd);
     }
 
     onStart(event) {
@@ -39,12 +39,12 @@ class FC_JoystickController {
         const rect = this.domElement.getBoundingClientRect();
         const x = clientX - rect.left;
 
-        // if ((this.side === 'left' && x < rect.width / 2) ||
-        //     (this.side === 'right' && x >= rect.width / 2)) {
-        this.isActive = true;
-        this.startX = clientX;
-        this.startY = clientY;
-        // }
+        if ((this.side === 'left' && x < rect.width / 2) ||
+            (this.side === 'right' && x >= rect.width / 2)) {
+            this.isActive = true;
+            this.startX = clientX;
+            this.startY = clientY;
+        }
     }
 
     onMove(event) {
@@ -69,6 +69,7 @@ class FC_JoystickController {
         return vector_input;
     }
 }
+
 class FC_GameObject {
     Initialize() { }
     Update() { }
