@@ -39,12 +39,12 @@ class FC_JoystickController {
         const rect = this.domElement.getBoundingClientRect();
         const x = clientX - rect.left;
 
-        if ((this.side === 'left' && x < rect.width / 2) ||
-            (this.side === 'right' && x >= rect.width / 2)) {
-            this.isActive = true;
-            this.startX = clientX;
-            this.startY = clientY;
-        }
+        // if ((this.side === 'left' && x < rect.width / 2) ||
+        //     (this.side === 'right' && x >= rect.width / 2)) {
+        this.isActive = true;
+        this.startX = clientX;
+        this.startY = clientY;
+        // }
     }
 
     onMove(event) {
