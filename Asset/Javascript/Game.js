@@ -11,9 +11,8 @@ function Alpha_Change(_color, _alpha) {
 }
 
 class FC_JoystickController {
-    constructor(domElement, side) {
+    constructor(domElement) {
         this.domElement = domElement;
-        this.side = side;
         this.isActive = false;
         this.startX = 0;
         this.startY = 0;
@@ -26,28 +25,25 @@ class FC_JoystickController {
 
         this.domElement.addEventListener('mousedown', this.onStart);
         this.domElement.addEventListener('touchstart', this.onStart);
-        document.addEventListener('mousemove', this.onMove);
-        document.addEventListener('touchmove', this.onMove);
-        document.addEventListener('mouseup', this.onEnd);
-        document.addEventListener('touchend', this.onEnd);
+        this.domElement.addEventListener('mousemove', this.onMove);
+        this.domElement.addEventListener('touchmove', this.onMove);
+        this.domElement.addEventListener('mouseup', this.onEnd);
+        this.domElement.addEventListener('touchend', this.onEnd);
+        this.domElement.addEventListener('mouseleave', this.onEnd);
     }
 
     onStart(event) {
+        event.preventDefault();
         if (this.isActive) return;
 
         const { clientX, clientY } = event.touches ? event.touches[0] : event;
-        const rect = this.domElement.getBoundingClientRect();
-        const x = clientX - rect.left;
-
-        if ((this.side === 'left' && x < rect.width / 2) ||
-            (this.side === 'right' && x >= rect.width / 2)) {
-            this.isActive = true;
-            this.startX = clientX;
-            this.startY = clientY;
-        }
+        this.isActive = true;
+        this.startX = clientX;
+        this.startY = clientY;
     }
 
     onMove(event) {
+        event.preventDefault();
         if (!this.isActive) return;
 
         const { clientX, clientY } = event.touches ? event.touches[0] : event;
@@ -55,7 +51,8 @@ class FC_JoystickController {
         this.moveY = clientY - this.startY;
     }
 
-    onEnd() {
+    onEnd(event) {
+        event.preventDefault();
         if (this.isActive) {
             this.isActive = false;
             this.moveX = 0;
