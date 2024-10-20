@@ -612,7 +612,7 @@ class FC_ImagePlane extends FC_Animation {
         this._Size_Geometry = _vector2_geometry;
         this._Geometry = new THREE.PlaneGeometry(_vector2_geometry.x, _vector2_geometry.y);
         this._Material_Front = new THREE.MeshBasicMaterial({
-            map: this.#_CreateImageTexture(_url),
+            map: null,
             side: THREE.FrontSide,
             transparent: true,
             opacity: 1.0,
@@ -621,7 +621,7 @@ class FC_ImagePlane extends FC_Animation {
         this._Scene.add(this._Mesh_Front);
 
         this._Material_Back = new THREE.MeshBasicMaterial({
-            map: this.#_CreateImageTexture(_url, true),
+            map: null,
             side: THREE.BackSide,
             transparent: true,
             opacity: 1.0,
@@ -630,6 +630,8 @@ class FC_ImagePlane extends FC_Animation {
         this._Scene.add(this._Mesh_Back);
 
         this._Is_Billboard = _isbillboard;
+        this._TextureLoaded = false;
+        this._LoadDistance = 3;
     }
     destructor() {
         this._Scene.remove(this._Mesh_Front);
@@ -646,6 +648,7 @@ class FC_ImagePlane extends FC_Animation {
         if (this._Is_Billboard) {
             this.LookAt(this._Camera.Position);
         }
+        this.#ManageTextureLoading();
     }
 
     Show() {
@@ -686,6 +689,31 @@ class FC_ImagePlane extends FC_Animation {
             texture.offset.x = 1;
         }
         return texture;
+    }
+    #ManageTextureLoading() {
+        const distanceToCamera = this.Position.distanceTo(this._Camera.Position);
+        
+        if (distanceToCamera <= this._LoadDistance && !this._TextureLoaded) {
+            this.#LoadTexture();
+        } else if (distanceToCamera > this._LoadDistance && this._TextureLoaded) {
+            this.#UnloadTexture();
+        }
+    }
+    #LoadTexture() {
+        this._Material_Front.map = this.#_CreateImageTexture(this._Image);
+        this._Material_Back.map = this.#_CreateImageTexture(this._Image, true);
+        this._Material_Front.needsUpdate = true;
+        this._Material_Back.needsUpdate = true;
+        this._TextureLoaded = true;
+    }
+    #UnloadTexture() {
+        this._Material_Front.map.dispose();
+        this._Material_Back.map.dispose();
+        this._Material_Front.map = null;
+        this._Material_Back.map = null;
+        this._Material_Front.needsUpdate = true;
+        this._Material_Back.needsUpdate = true;
+        this._TextureLoaded = false;
     }
 }
 class FC_Player_Controller extends FC_GameObject {
