@@ -233,7 +233,7 @@ class FC_Camera extends FC_GameObject {
     _OFFSET_LOOKAT_DEFAULT = new THREE.Vector3(0, 0, 1);
     _OFFSET_TARGET_DEFAULT = new THREE.Vector3(0, 0, -1);
 
-    _Object = new THREE.PerspectiveCamera(this._FOV, window.innerWidth / window.innerHeight, 0.1, 50);
+    _Object = new THREE.PerspectiveCamera(this._FOV, window.innerWidth / window.innerHeight, 0.01, 50);
     _Position_LookAt = new THREE.Vector3(0, 0, 0);
     _Flag_Target = false;
     _Target = null;
@@ -582,10 +582,12 @@ class FC_ImagePlane extends FC_Animation {
 
     set Image(_url) {
         this._Image = _url;
-        this._Material_Front.map = this.#_CreateImageTexture(this._Image);
-        this._Material_Front.needsUpdate = true;
-        this._Material_Back.map = this.#_CreateImageTexture(this._Image, true);
-        this._Material_Back.needsUpdate = true;
+        if (this._TextureLoaded) {
+            this._Material_Front.map = this.#_CreateImageTexture(this._Image);
+            this._Material_Front.needsUpdate = true;
+            this._Material_Back.map = this.#_CreateImageTexture(this._Image, true);
+            this._Material_Back.needsUpdate = true;
+        }
     }
     set Position(_vector3) {
         this._Mesh_Front.position.set(_vector3.x, _vector3.y, _vector3.z);
@@ -615,7 +617,7 @@ class FC_ImagePlane extends FC_Animation {
             map: null,
             side: THREE.FrontSide,
             transparent: true,
-            opacity: 1.0,
+            opacity: 0.0,
         });
         this._Mesh_Front = new THREE.Mesh(this._Geometry, this._Material_Front);
         this._Scene.add(this._Mesh_Front);
@@ -624,7 +626,7 @@ class FC_ImagePlane extends FC_Animation {
             map: null,
             side: THREE.BackSide,
             transparent: true,
-            opacity: 1.0,
+            opacity: 0.0,
         });
         this._Mesh_Back = new THREE.Mesh(this._Geometry, this._Material_Back);
         this._Scene.add(this._Mesh_Back);
@@ -632,6 +634,9 @@ class FC_ImagePlane extends FC_Animation {
         this._Is_Billboard = _isbillboard;
         this._TextureLoaded = false;
         this._LoadDistance = 3;
+        this._OpacityTarget = 0.0;
+        this._OpacityAnimationDuration = 1.0;
+        this._OpacityAnimationStartTime = 0;
     }
     destructor() {
         this._Scene.remove(this._Mesh_Front);
@@ -649,15 +654,16 @@ class FC_ImagePlane extends FC_Animation {
             this.LookAt(this._Camera.Position);
         }
         this.#ManageTextureLoading();
+        this.#UpdateOpacityAnimation();
     }
 
     Show() {
-        this._Material_Front.opacity = 1.0;
-        this._Material_Back.opacity = 1.0;
+        this._OpacityTarget = 1.0;
+        this._OpacityAnimationStartTime = 0;
     }
     Hide() {
-        this._Material_Front.opacity = 0.0;
-        this._Material_Back.opacity = 0.0;
+        this._OpacityTarget = 0.0;
+        this._OpacityAnimationStartTime = 0;
     }
     Add_Position(_vector3) {
         const new_position = this.Position;
@@ -692,7 +698,7 @@ class FC_ImagePlane extends FC_Animation {
     }
     #ManageTextureLoading() {
         const distanceToCamera = this.Position.distanceTo(this._Camera.Position);
-        
+
         if (distanceToCamera <= this._LoadDistance && !this._TextureLoaded) {
             this.#LoadTexture();
         } else if (distanceToCamera > this._LoadDistance && this._TextureLoaded) {
@@ -705,15 +711,35 @@ class FC_ImagePlane extends FC_Animation {
         this._Material_Front.needsUpdate = true;
         this._Material_Back.needsUpdate = true;
         this._TextureLoaded = true;
+        this.Show();
     }
     #UnloadTexture() {
-        this._Material_Front.map.dispose();
-        this._Material_Back.map.dispose();
-        this._Material_Front.map = null;
-        this._Material_Back.map = null;
-        this._Material_Front.needsUpdate = true;
-        this._Material_Back.needsUpdate = true;
-        this._TextureLoaded = false;
+        this.Hide();
+        setTimeout(() => {
+            if (!this._TextureLoaded) {
+                this._Material_Front.map.dispose();
+                this._Material_Back.map.dispose();
+                this._Material_Front.map = null;
+                this._Material_Back.map = null;
+                this._Material_Front.needsUpdate = true;
+                this._Material_Back.needsUpdate = true;
+            }
+        }, this._OpacityAnimationDuration * 100);
+    }
+    #UpdateOpacityAnimation() {
+        this._OpacityAnimationStartTime += FC_Environment.TIME_DELTA;
+        const t = Math.min(this._OpacityAnimationStartTime / this._OpacityAnimationDuration, 1);
+        const currentOpacity = THREE.MathUtils.lerp(
+            this._Material_Front.opacity,
+            this._OpacityTarget,
+            t
+        );
+        this._Material_Front.opacity = currentOpacity;
+        this._Material_Back.opacity = currentOpacity;
+
+        if (t >= 1) {
+            this._TextureLoaded = (this._OpacityTarget > 0);
+        }
     }
 }
 class FC_Player_Controller extends FC_GameObject {

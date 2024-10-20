@@ -110,25 +110,49 @@
                 this.elevatorSpeed = elevatorSpeed;
                 this.currentFloor = 0;
                 this.isMoving = false;
+                this.createElevatorPillar();
                 this.createElevator();
             }
 
-            createElevator() {
-                const boxSize = new THREE.Vector3(2, 3, 2);
-                const geometry = new THREE.BoxGeometry(boxSize.x, boxSize.y, boxSize.z);
+            createElevatorPillar() {
+                const radius = 1;
+                const height = 50;
+                const radialSegments = 32;
+
+                const geometry = new THREE.CylinderGeometry(radius, radius, height, radialSegments);
                 const material = new THREE.MeshBasicMaterial({
-                    color: 0x888888, transparent: true, opacity: 0.25,
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.1,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                    fog: false
+                });
+                this.pillar = new THREE.Mesh(geometry, material);
+                this.scene.add(this.pillar);
+            }
+            createElevator() {
+                const radius = 1;
+                const height = 3;
+                const radialSegments = 32;
+
+                const geometry = new THREE.CylinderGeometry(radius, radius, height, radialSegments);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.25,
                     depthWrite: false
                 });
                 this.mesh = new THREE.Mesh(geometry, material);
                 this.scene.add(this.mesh);
-                this.mesh.position.set(0, 1.5, 0);
+                this.mesh.position.set(0, height / 2, 0);
+
                 this.createButton();
             }
 
             createButton() {
                 const buttonGeometry = new THREE.SphereGeometry(0.25, 32, 32);
-                const buttonMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.25 });
+                const buttonMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.25, });
                 this.button = new THREE.Mesh(buttonGeometry, buttonMaterial);
                 this.button.position.set(0, 0, 0);
                 this.mesh.add(this.button);
@@ -172,14 +196,12 @@
             checkPlayerInElevator(player) {
                 const playerPosition = player.Position;
                 const elevatorPosition = this.mesh.position;
-                const boxSize = new THREE.Vector3(2, 3, 2);
 
-                return (
-                    playerPosition.x > elevatorPosition.x - boxSize.x / 2 &&
-                    playerPosition.x < elevatorPosition.x + boxSize.x / 2 &&
-                    playerPosition.z > elevatorPosition.z - boxSize.z / 2 &&
-                    playerPosition.z < elevatorPosition.z + boxSize.z / 2
-                );
+                const distanceSquaredXZ =
+                    Math.pow(playerPosition.x - elevatorPosition.x, 2) +
+                    Math.pow(playerPosition.z - elevatorPosition.z, 2);
+
+                return distanceSquaredXZ <= 1;
             }
 
             checkButtonPressed(raycaster) {
@@ -279,7 +301,7 @@
                     main_category_text.Position = new THREE.Vector3(0, category_y + 4, 0);
                     this._Category_Texts.push(main_category_text);
 
-                    switch(main_category) {
+                    switch (main_category) {
                         case "Art":
                             this.displayArtCategory(this._FolderStructure[main_category], category_y);
                             break;
@@ -377,6 +399,20 @@
                         this._Images.push(image_obj);
                     });
                 });
+
+                const material = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 0.1, fog: false });
+                const geometry = new THREE.BufferGeometry();
+                const points = [];
+                const segments = 64;
+                for (let i = 0; i <= segments; i++) {
+                    const theta = (i / segments) * Math.PI * 2;
+                    const x = Math.cos(theta) * 1;
+                    const z = Math.sin(theta) * 1;
+                    points.push(new THREE.Vector3(x, category_y, z));
+                }
+                geometry.setFromPoints(points);
+                const circle = new THREE.Line(geometry, material);
+                Scene.add(circle);
             }
             displayOtherCategory(images, category_y, category_name, _range) {
                 const placedPositions = [];
@@ -408,6 +444,20 @@
 
                     this._Images.push(image_obj);
                 });
+
+                const material = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 0.1, fog: false });
+                const geometry = new THREE.BufferGeometry();
+                const points = [];
+                const segments = 64;
+                for (let i = 0; i <= segments; i++) {
+                    const theta = (i / segments) * Math.PI * 2;
+                    const x = Math.cos(theta) * _range;
+                    const z = Math.sin(theta) * _range;
+                    points.push(new THREE.Vector3(x, category_y, z));
+                }
+                geometry.setFromPoints(points);
+                const circle = new THREE.Line(geometry, material);
+                Scene.add(circle);
             }
 
         }
