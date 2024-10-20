@@ -456,7 +456,7 @@ class FC_TextPlane extends FC_Animation {
     }
     set Scale(_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
 
-    constructor(_scene, _camera, _text, _color, _vector2_geometry, _isbillboard = false) {
+    constructor(_scene, _camera, _text, _color, _vector2_geometry, _isbillboard = false, _depth_enable = false) {
         super();
         this._Scene = _scene;
         this._Camera = _camera;
@@ -464,13 +464,14 @@ class FC_TextPlane extends FC_Animation {
         this._Color_Default = this._Color = _color;
         this._Size_Geometry = _vector2_geometry;
         this._Geometry = new THREE.PlaneGeometry(_vector2_geometry.x, _vector2_geometry.y);
+
         this._Material_Front = new THREE.MeshBasicMaterial({
             map: this.#_CreateTextTexture(_text, _color, _vector2_geometry),
             side: THREE.FrontSide,
             transparent: true,
             opacity: 1.0,
-            depthTest: false,
-            depthWrite: false,
+            depthTest: _depth_enable,
+            depthWrite: _depth_enable,
         });
         this._Mesh_Front = new THREE.Mesh(this._Geometry, this._Material_Front);
         this._Scene.add(this._Mesh_Front);
@@ -479,8 +480,8 @@ class FC_TextPlane extends FC_Animation {
             side: THREE.BackSide,
             transparent: true,
             opacity: 1.0,
-            depthTest: false,
-            depthWrite: false,
+            depthTest: _depth_enable,
+            depthWrite: _depth_enable,
         });
         this._Mesh_Back = new THREE.Mesh(this._Geometry, this._Material_Back);
         this._Scene.add(this._Mesh_Back);
@@ -691,20 +692,21 @@ class FC_Player_Controller extends FC_GameObject {
 
     _Speed_Past = 1.1;
     _Speed = this._Speed_Past;
-    _controlEnabled = true;
+    _Control_Enable = true;
 
     Disable_Control() {
-        this._controlEnabled = false;
+        this._Control_Enable = false;
     }
 
     Enable_Control() {
-        this._controlEnabled = true;
+        this._Control_Enable = true;
     }
 
     get Position() { return this._Object.position; }
     get Forward() { return this._Forward; }
 
     set Position(_vector3) { this._Object ? this._Object.position.set(_vector3.x, _vector3.y, _vector3.z) : null; }
+    set Control_Enable(_bool) { this._Control_Enable = _bool; }
 
     constructor(_scene) {
         super();
@@ -721,7 +723,7 @@ class FC_Player_Controller extends FC_GameObject {
         this.Position = new THREE.Vector3(0, 1.74 - 0.08, 0);
     }
     Update(_input_move = new THREE.Vector2(0, 0), _forward_camera = new THREE.Vector3(0, 0, 0)) {
-        if (!this._controlEnabled) return;
+        if (!this._Control_Enable) return;
 
         const forward = _forward_camera.clone();
         forward.y = 0;
