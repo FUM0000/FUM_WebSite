@@ -134,29 +134,29 @@ class FC_Input_Keyboard {
         this._Input_Move.set(0, 0);
         this._Input_Look.set(0, 0);
 
-        if (this.#IsPressed('w')) {
+        if (this.IsPressed('w')) {
             this._Input_Move.y += 1;
         }
-        if (this.#IsPressed('s')) {
+        if (this.IsPressed('s')) {
             this._Input_Move.y -= 1;
         }
-        if (this.#IsPressed('a')) {
+        if (this.IsPressed('a')) {
             this._Input_Move.x -= 1;
         }
-        if (this.#IsPressed('d')) {
+        if (this.IsPressed('d')) {
             this._Input_Move.x += 1;
         }
 
-        if (this.#IsPressed('ArrowUp')) {
+        if (this.IsPressed('ArrowUp')) {
             this._Input_Look.y += 100;
         }
-        if (this.#IsPressed('ArrowDown')) {
+        if (this.IsPressed('ArrowDown')) {
             this._Input_Look.y -= 100;
         }
-        if (this.#IsPressed('ArrowLeft')) {
+        if (this.IsPressed('ArrowLeft')) {
             this._Input_Look.x -= 100;
         }
-        if (this.#IsPressed('ArrowRight')) {
+        if (this.IsPressed('ArrowRight')) {
             this._Input_Look.x += 100;
         }
 
@@ -174,7 +174,7 @@ class FC_Input_Keyboard {
     #KeyUp(event) {
         this._Keys[event.key] = false;
     }
-    #IsPressed(key) {
+    IsPressed(key) {
         return this._Keys[key] === true;
     }
 }
@@ -423,7 +423,8 @@ class FC_TextPlane extends FC_Animation {
     _Rotating = false;
     _Rotation_Speed = 36;
 
-    get Mesh() { return this._Mesh_Front; }
+    get Mesh_Front() { return this._Mesh_Front; }
+    get Mesh_Back() { return this._Mesh_Back; }
     get Position() { return this._Mesh_Front.position; }
     get Rotation() { return this._Mesh_Front.rotation; }
 
@@ -543,7 +544,7 @@ class FC_TextPlane extends FC_Animation {
         this.Position = raycaster.ray.direction.clone().multiplyScalar(_distance).add(this._Camera.Position);
     }
     Rotating(_bool) {
-        this._Rotating = _bool; console.log("Rotating");
+        this._Rotating = _bool;
     }
 
     #_CreateTextTexture(_text, _color, _vector2_geometry, _flip = false) {
@@ -690,6 +691,15 @@ class FC_Player_Controller extends FC_GameObject {
 
     _Speed_Past = 1.1;
     _Speed = this._Speed_Past;
+    _controlEnabled = true;
+
+    Disable_Control() {
+        this._controlEnabled = false;
+    }
+
+    Enable_Control() {
+        this._controlEnabled = true;
+    }
 
     get Position() { return this._Object.position; }
     get Forward() { return this._Forward; }
@@ -711,6 +721,8 @@ class FC_Player_Controller extends FC_GameObject {
         this.Position = new THREE.Vector3(0, 1.74 - 0.08, 0);
     }
     Update(_input_move = new THREE.Vector2(0, 0), _forward_camera = new THREE.Vector3(0, 0, 0)) {
+        if (!this._controlEnabled) return;
+
         const forward = _forward_camera.clone();
         forward.y = 0;
         forward.normalize();
