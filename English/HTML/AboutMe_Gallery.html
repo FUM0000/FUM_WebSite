@@ -116,7 +116,7 @@
 
             createElevatorPillar() {
                 const radius = 1;
-                const height = 50;
+                const height = 100;
                 const radialSegments = 32;
 
                 const geometry = new THREE.CylinderGeometry(radius, radius, height, radialSegments);
@@ -288,34 +288,82 @@
                 const main_categories = Object.keys(this._FolderStructure);
                 const angle_each_main_category = (2 * Math.PI) / main_categories.length;
 
-                main_categories.forEach((main_category, main_index) => {
-                    const angle_from_center = main_index * angle_each_main_category;
-                    const category_x = Math.cos(angle_from_center) * this._Category_Distance_FromCenter;
-                    const category_z = Math.sin(angle_from_center) * this._Category_Distance_FromCenter;
-                    const category_y = main_index * 5;
+                Loader_FBX.load('../../Asset/Model/Frame_1.fbx', (object) => {
+                    object.traverse((child) => {
+                        if (child.isMesh) {
+                            const material = new THREE.MeshStandardMaterial({
+                                color: 0x3D2B1F,
+                                roughness: 0.8,
+                                metalness: 0.2
+                            });
+                            child.material = material;
+                            this.frame_1_geometry = child.geometry;
+                            this.frame_1_material = material;
+                        }
+                    });
 
-                    const main_category_text = new FC_TextPlane(Scene, Camera, main_category, "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(this._UI_SIZE_MULTIPLY * 2));
-                    main_category_text.Initialize();
-                    main_category_text.Rotating(true);
-                    main_category_text.Fog = false;
-                    main_category_text.Position = new THREE.Vector3(0, category_y + 4, 0);
-                    this._Category_Texts.push(main_category_text);
+                    // const newMesh = new THREE.Mesh(this.frame_1_geometry, this.frame_1_material);
+                    // newMesh.scale.set(100, 100, 100);
+                    // const newGroup = new THREE.Group();
+                    // newGroup.add(newMesh);
+                    // Scene.add(newGroup);
 
-                    switch (main_category) {
-                        case "Art":
-                            this.displayArtCategory(this._FolderStructure[main_category], category_y);
-                            break;
-                        case "Cat":
-                            this.displayOtherCategory(this._FolderStructure[main_category], category_y, main_category, 5);
-                            break;
-                        case "Scenery":
-                            this.displayOtherCategory(this._FolderStructure[main_category], category_y, main_category, 10);
-                            break;
+                    main_categories.forEach((main_category, main_index) => {
+                        const angle_from_center = main_index * angle_each_main_category;
+                        const category_x = Math.cos(angle_from_center) * this._Category_Distance_FromCenter;
+                        const category_z = Math.sin(angle_from_center) * this._Category_Distance_FromCenter;
+                        const category_y = main_index * 5;
+
+                        const main_category_text = new FC_TextPlane(Scene, Camera, main_category, "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(this._UI_SIZE_MULTIPLY * 2));
+                        main_category_text.Initialize();
+                        main_category_text.Rotating(true);
+                        main_category_text.Fog = false;
+                        main_category_text.Position = new THREE.Vector3(0, category_y + 4, 0);
+                        this._Category_Texts.push(main_category_text);
+
+                        switch (main_category) {
+                            case "Art":
+                                this.displayArtCategory(this._FolderStructure[main_category], category_y);
+                                break;
+                            case "Cat":
+                                this.displayOtherCategory(this._FolderStructure[main_category], category_y, main_category, 5);
+                                break;
+                            case "Scenery":
+                                this.displayOtherCategory(this._FolderStructure[main_category], category_y, main_category, 10);
+                                break;
+                        }
+                    });
+
+                    if (this.frame_1_geometry && this.frame_1_material) {
+                        const instanceCount = this._Images.length;
+                        this.instancedMesh = new THREE.InstancedMesh(this.frame_1_geometry, this.frame_1_material, instanceCount);
+
+                        const matrix = new THREE.Matrix4();
+                        const position = new THREE.Vector3();
+                        const quaternion = new THREE.Quaternion();
+                        const scale = new THREE.Vector3(1, 1, 1); // Adjust scale as needed
+
+                        for (let i = 0; i < instanceCount; i++) {
+                            position.copy(this._Images[i].Position);
+                            quaternion.setFromEuler(this._Images[i].Rotation);
+                            const localRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+
+                            // Apply the local rotation after the original rotation
+                            quaternion.multiply(localRotation);
+                            matrix.compose(position, quaternion, scale);
+                            this.instancedMesh.setMatrixAt(i, matrix);
+                        }
+
+                        this.instancedMesh.instanceMatrix.needsUpdate = true;
+                        Scene.add(this.instancedMesh);
                     }
-                });
 
-                this._Elevator = new C_Elevator(Scene, 3, 5, 1);
-                this._raycaster = new THREE.Raycaster();
+
+                    this._Elevator = new C_Elevator(Scene, 3, 5, 1);
+                    this._raycaster = new THREE.Raycaster();
+
+                    this.Loaded = true;
+                });
             }
             Update() {
 
@@ -325,15 +373,15 @@
                     this._State = "Playing";
                 }
                 if (this._Flag_Loaded) {
+                    if (this.Loaded) {
+                        this._Input_Move = this._JOYSTICK_LEFT.getInput();
+                        this._Input_Look = this._JOYSTICK_RIGHT.getInput();
 
-                    this._Input_Move = this._JOYSTICK_LEFT.getInput();
-                    this._Input_Look = this._JOYSTICK_RIGHT.getInput();
-
-                    switch (this._State) {
-                        case "Playing": Manager.Update_Playing(); break;
+                        switch (this._State) {
+                            case "Playing": Manager.Update_Playing(); break;
+                        }
+                        Manager.Update_System();
                     }
-                    Manager.Update_System();
-
                 }
                 Renderer.render(Scene, Camera.Object);
                 requestAnimationFrame(this.Update.bind(this));
