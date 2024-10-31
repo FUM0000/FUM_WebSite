@@ -238,6 +238,16 @@ class FC_Camera extends FC_GameObject {
     _Flag_Target = false;
     _Target = null;
 
+    _Fixed_Position = [false, false, false];
+    Fixed_Position(_axis) {
+        switch (_axis) {
+            case "x": this._Fixed_Position[0] = true; break;
+            case "y": this._Fixed_Position[1] = true; break;
+            case "z": this._Fixed_Position[2] = true; break;
+            default: console.error("Not allowed : " + _axis);
+        }
+    }
+
     get Object() { return this._Object; }
     get Position() { return this._Object.position; }
     get Position_LookAt() { return this._Position_LookAt; }
@@ -274,8 +284,16 @@ class FC_Camera extends FC_GameObject {
     }
     Update() {
         if (this._Flag_Target) {
-            this.Position = new THREE.Vector3(0, 0, this._Target.Position.z).add(this._OFFSET_TARGET_DEFAULT);
-            this.LookAt = new THREE.Vector3(0, 0, this._Target.Position.z).add(this._OFFSET_LOOKAT_DEFAULT);
+            this.Position = new THREE.Vector3(
+                this._Fixed_Position[0] ? this.Position.x : this._Target.Position.x + this._OFFSET_TARGET_DEFAULT.x,
+                this._Fixed_Position[1] ? this.Position.y : this._Target.Position.y + this._OFFSET_TARGET_DEFAULT.y,
+                this._Fixed_Position[2] ? this.Position.z : this._Target.Position.z + this._OFFSET_TARGET_DEFAULT.z
+            );
+            this.LookAt = new THREE.Vector3(
+                this._Fixed_Position[0] ? this._Position_LookAt.x : this._Target.Position.x + this._OFFSET_LOOKAT_DEFAULT.x,
+                this._Fixed_Position[1] ? this._Position_LookAt.y : this._Target.Position.y + this._OFFSET_LOOKAT_DEFAULT.y,
+                this._Fixed_Position[2] ? this._Position_LookAt.z : this._Target.Position.z + this._OFFSET_LOOKAT_DEFAULT.z
+            );
         }
     }
 

@@ -93,6 +93,7 @@
                 Generator_Bar.Initialize();
                 Camera.Initialize();
                 Camera.Target = Cat;
+                Camera.Fixed_Position("y");
 
                 this._UI_Home.Initialize();
                 this._UI_Home.Position = new THREE.Vector3(0, 0, -100);
@@ -122,7 +123,9 @@
                     Scene.fog = new THREE.Fog(0xFCA3B7, 0, 0);
                     this._UI_Tap.Fog = false;
                     this._UI_Tap.Show();
-                    this._UI_Tap.Position = new THREE.Vector3(0, 0, 0);
+                    const direction = new THREE.Vector3();
+                    Camera.Object.getWorldDirection(direction);
+                    this._UI_Tap.Position = Camera.Position.clone().add(direction.multiplyScalar(2));
                     this._UI_Tap.LookAt(Camera.Position);
                 }
             }
@@ -398,7 +401,7 @@
         }
 
         const Environment = new FC_Environment();
-        const Camera = new FC_Camera(Renderer, undefined, new THREE.Vector3(-2, 0.5, -1));
+        const Camera = new FC_Camera(Renderer, new THREE.Vector3(0, 0, 1), new THREE.Vector3(-2, 0.5, -1));
         const Light_Ambient = new FC_Light_Ambient(Scene);
         const Light_Directional = new FC_Light_Directional(Scene);
         window.addEventListener('resize', Camera.Resize_Screen, false);

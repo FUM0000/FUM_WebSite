@@ -36,8 +36,20 @@
 
 <body>
 
+    <div id="Joystick" class="Joystick_Area"></div>
     <div id="Fade_Game"></div>
     <canvas id="Canvas"></canvas>
+
+    <style>
+        .Joystick_Area {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            touch-action: none;
+        }
+    </style>
 
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
 
@@ -71,7 +83,7 @@
         } from "../../Asset/Javascript/Game.js";
         const Scene = new THREE.Scene();
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas"), antialias: true });
-        Scene.fog = new THREE.Fog(0x222222, 0, 10);
+        Scene.fog = new THREE.Fog(0x222222, 0, 50);
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0x222222));
@@ -80,6 +92,10 @@
         else document.addEventListener('mousedown', function () { TouchStart(event); });
 
         class C_Manager extends FC_Manager {
+
+            _JOYSTICK = new FC_JoystickController(document.getElementById("Joystick"));
+            _SENSIVILITY = 0.0001;
+            _Input_Keyboard = new FC_Input_Keyboard();
 
             _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
             _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
@@ -97,17 +113,18 @@
 
                 Player.Initialize();
                 Camera.Initialize();
+                Camera.Target = Player;
 
                 this._UI_Home.Initialize();
                 this._UI_Music.Initialize();
 
                 this._UI_Start.Initialize();
-                this._UI_Start.Position = new THREE.Vector3(0, 0.5, 0);
+                this._UI_Start.Position = new THREE.Vector3(0, 0.5, -8);
                 this._UI_Gameover.Initialize();
-                this._UI_Gameover.Position = new THREE.Vector3(0, 0, 0);
+                this._UI_Gameover.Position = new THREE.Vector3(0, 0, -8);
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Fog = true;
-                this._UI_Tap.Position = new THREE.Vector3(0, -0.25, 0);
+                this._UI_Tap.Position = new THREE.Vector3(0, -0.25, -8);
                 this._UI_Tap.Rotation = new THREE.Vector3(0, 0, Degrees_to_Radians(180));
 
                 if (this._State == "Before_Loaded") {
@@ -116,7 +133,9 @@
                     Scene.fog = new THREE.Fog(0x222222, 0, 0);
                     this._UI_Tap.Fog = false;
                     this._UI_Tap.Show();
-                    this._UI_Tap.Position = new THREE.Vector3(0, 0, 0);
+                    const direction = new THREE.Vector3();
+                    Camera.Object.getWorldDirection(direction);
+                    this._UI_Tap.Position = Camera.Position.clone().add(direction.multiplyScalar(2));
                     this._UI_Tap.LookAt(Camera.Position);
                 }
             }
@@ -127,6 +146,7 @@
                     super.Fade(true);
                 }
                 if (this._State != "Before_Loaded") {
+                    this._Input_Move = this._JOYSTICK.getInput();
 
                     switch (this._State) {
                         case "Waiting":
@@ -170,7 +190,11 @@
                 this._UI_Music.Rotation_Quaternion = cameraQuaternion;
             }
             Update_Playing() {
-                Player.Update();
+                if (this._Input_Move.length() == 0) {
+                    this._Input_Move = this._Input_Keyboard.Input_Move;
+                }
+                if (this._Input_Move.length() > 0) this._Input_Move.normalize();
+                Player.Update(this._Input_Move);
                 Camera.Update();
 
                 this._UI_Start.Update();
@@ -192,7 +216,7 @@
             Set_Tap() {
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Fog = true;
-                this._UI_Tap.Position = new THREE.Vector3(0, -0.25, 0);
+                this._UI_Tap.Position = new THREE.Vector3(0, -0.25, -8);
                 this._UI_Tap.Rotation = new THREE.Vector3(0, 0, Degrees_to_Radians(180));
             }
         }
@@ -201,13 +225,9 @@
 
             _Flag_Loaded = false;
             _Flag_Pointed = false;
-            _Jump_Count = 0;
-            _Jump_Timer = 0;
             _Speed_Past = 1.2;
             _Speed = this._Speed_Past;
             _Speed_Acceleration = 1;
-            _Jump_Acceleration = 1.2;
-            _Jump_Velocity = 2.5;
 
             get Flag_Loaded() { return this._Flag_Loaded; }
             get Flag_Pointed() { return this._Flag_Pointed; }
@@ -223,6 +243,7 @@
                 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 const trianglePrism = new THREE.Mesh(geometry, material);
                 trianglePrism.rotation.x = Degrees_to_Radians(90);
+                trianglePrism.rotation.y = Degrees_to_Radians(180);
                 this._Object = trianglePrism;
                 Scene.add(this._Object);
                 this._Flag_Loaded = true;
@@ -230,17 +251,17 @@
             destructor() { Scene.remove(this._Object); }
 
             Initialize() {
-                this._Jump_Count = 0;
-                this._Jump_Timer = 0;
                 this._Speed_Past = 1.2;
                 this._Speed = this._Speed_Past;
                 this._Speed_Acceleration = 1;
-                this._Jump_Acceleration = 1.2;
-                this._Jump_Velocity = 2.5;
                 this.Position = new THREE.Vector3(0, 0, 0);
             }
-            Update() {
-                this._Object.rotation.y += 0.1;
+            Update(_input) {
+                if (_input && _input.length() != 0) {
+                    const direction = new THREE.Vector3(-_input.x, _input.y, 0).normalize();
+                    this.Move(direction.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
+                    this._Object.rotation.y = Math.atan2(direction.y, direction.x) + Math.PI / 2;
+                }
             }
 
             Move(_vector3) {
@@ -249,7 +270,7 @@
         }
 
         const Environment = new FC_Environment();
-        const Camera = new FC_Camera(Renderer, undefined, new THREE.Vector3(0, 0, -2));
+        const Camera = new FC_Camera(Renderer, undefined, new THREE.Vector3(0, 0, -10));
         const Light_Ambient = new FC_Light_Ambient(Scene);
         const Light_Directional = new FC_Light_Directional(Scene);
         window.addEventListener('resize', Camera.Resize_Screen, false);
@@ -289,12 +310,12 @@
 
                 switch (Manager.State) {
                     case "Loaded":
-                        Scene.fog = new THREE.Fog(0x222222, 0, 10);
+                        Scene.fog = new THREE.Fog(0x222222, 0, 50);
                         Manager.Set_Tap();
                         Manager.Change_State("Waiting");
                         break;
                     case "Waiting_Start": Manager.Start(); break;
-                    case "Playing": Player.Jump(); break;
+                    case "Playing": break;
                     case "Waiting_Restart":
                         Manager.Fade(false);
                         setTimeout(() => {
