@@ -28,12 +28,12 @@ class FC_JoystickController {
 
         this.domElement.addEventListener('mousedown', this.onStart);
         this.domElement.addEventListener('touchstart', this.onStart);
-        this.domElement.addEventListener('mousemove', this.onMove);
-        this.domElement.addEventListener('touchmove', this.onMove);
-        this.domElement.addEventListener('mouseup', this.onEnd);
+        document.addEventListener('mousemove', this.onMove);
+        document.addEventListener('touchmove', this.onMove);
+        document.addEventListener('mouseup', this.onEnd);
         this.domElement.addEventListener('touchend', this.onEnd);
         this.domElement.addEventListener('touchcancel', this.onEnd);
-        this.domElement.addEventListener('mouseleave', this.onEnd);
+        // this.domElement.addEventListener('mouseleave', this.onEnd);
     }
 
     onStart(event) {
