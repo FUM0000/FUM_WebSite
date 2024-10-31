@@ -259,7 +259,7 @@ class FC_Camera extends FC_GameObject {
         }
     }
 
-    constructor(_renderer, _offset_lookat_default = new THREE.Vector3(0, 0, 1), _offset_target_default = new THREE.Vector3(0, 0, -1)) {
+    constructor(_renderer, _offset_lookat_default = new THREE.Vector3(0, 0, 0), _offset_target_default = new THREE.Vector3(0, 0, 0)) {
         super();
         this._Renderer = _renderer;
         this._OFFSET_LOOKAT_DEFAULT = _offset_lookat_default;
@@ -454,9 +454,13 @@ class FC_TextPlane extends FC_Animation {
         this._Mesh_Front.rotation.set(_vector3.x, _vector3.y, _vector3.z);
         this._Mesh_Back.rotation.set(_vector3.x, _vector3.y, _vector3.z);
     }
+    set Rotation_Quaternion(_quaternion) {
+        this._Mesh_Front.setRotationFromQuaternion(_quaternion);
+        this._Mesh_Back.setRotationFromQuaternion(_quaternion);
+    }
     set Scale(_vector2) { this._Geometry.scale.set(_vector2.x, _vector2.y, 1); }
 
-    constructor(_scene, _camera, _text, _color, _vector2_geometry, _isbillboard = false, _depth_enable = false) {
+    constructor(_scene, _camera, _text, _color, _vector2_geometry, _isbillboard = false, _depth_enable = false, _order = null) {
         super();
         this._Scene = _scene;
         this._Camera = _camera;
@@ -474,6 +478,7 @@ class FC_TextPlane extends FC_Animation {
             depthWrite: _depth_enable,
         });
         this._Mesh_Front = new THREE.Mesh(this._Geometry, this._Material_Front);
+        if (_order) this._Mesh_Front.renderOrder = _order;
         this._Scene.add(this._Mesh_Front);
         this._Material_Back = new THREE.MeshBasicMaterial({
             map: this.#_CreateTextTexture(_text, _color, _vector2_geometry, true),
@@ -801,8 +806,7 @@ class FC_Manager {
     _TIME_FOR_READY = 1;
     _UI_SIZE_MULTIPLY = 0.2;
 
-    _Flag_Loaded = false;
-    _State = "Waiting_Start";
+    _State = "Before_Loaded";
     _BGM = null;
     _Timer_Waiting = new FC_Timer(1);
     _Timer_Input = new FC_Timer(0.1);
@@ -816,6 +820,7 @@ class FC_Manager {
         if (!this._BGM) this._BGM = new FC_Audio(_url);
         else this._BGM.Source = _url;
     }
+    set State(_state) { this._State = _state; }
 
     constructor(_scene, _renderer) {
         this._Scene = _scene;
@@ -823,18 +828,17 @@ class FC_Manager {
     }
 
     Initialize() {
-        this._State = "Waiting";
         this._Timer_Waiting.Restart();
         this._Timer_Input.Start();
         this._Timer_Ready = 0;
     }
     Update() {
 
-        if (!this._Flag_Loaded) {
-            this._Flag_Loaded = true;
+        if (this._State == "Before_Loaded") {
+            this._State = "Loaded";
             this.Fade(true);
         }
-        if (this._Flag_Loaded) {
+        if (this._State != "Before_Loaded") {
 
             switch (this._State) {
                 case "Waiting":
@@ -866,6 +870,9 @@ class FC_Manager {
 
     }
 
+    Change_State(_state) {
+        this._State = _state;
+    }
     Start() {
         this._State = "Playing";
     }
