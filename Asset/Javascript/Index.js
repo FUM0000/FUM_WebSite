@@ -125,30 +125,30 @@ window.Mixins_Index = {
         });
         
         // Balls
-        const canvas = document.getElementById('Balls');
-        const ctx = canvas.getContext('2d');
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        function CleanCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            requestAnimationFrame(CleanCanvas);
-        }
-        CleanCanvas();
-        const balls = {};
-        for (let i = 0; i < 60; i++) {
-            const size = RandomNumber_Between(5, 20);
-            let direction_x = RandomNumber_Between(-1, 1);
-            let direction_y = RandomNumber_Between(-1, 1);
-            direction_x = direction_x / (Math.abs(direction_x) + Math.abs(direction_y))
-            direction_y = direction_y / (Math.abs(direction_x) + Math.abs(direction_y))
-            const ball = new Ball_Animation_1_CLASS(canvas, ctx, size, [direction_x, direction_y]);
-            ball.Animation();
-            balls[i] = ball;
-        }
+        // const canvas = document.getElementById('Balls');
+        // const ctx = canvas.getContext('2d');
+        // function resizeCanvas() {
+        //     canvas.width = window.innerWidth;
+        //     canvas.height = window.innerHeight;
+        // }
+        // window.addEventListener('resize', resizeCanvas);
+        // resizeCanvas();
+        // function CleanCanvas() {
+        //     ctx.clearRect(0, 0, canvas.width, canvas.height);
+        //     requestAnimationFrame(CleanCanvas);
+        // }
+        // CleanCanvas();
+        // const balls = {};
+        // for (let i = 0; i < 60; i++) {
+        //     const size = RandomNumber_Between(5, 20);
+        //     let direction_x = RandomNumber_Between(-1, 1);
+        //     let direction_y = RandomNumber_Between(-1, 1);
+        //     direction_x = direction_x / (Math.abs(direction_x) + Math.abs(direction_y))
+        //     direction_y = direction_y / (Math.abs(direction_x) + Math.abs(direction_y))
+        //     const ball = new Ball_Animation_1_CLASS(canvas, ctx, size, [direction_x, direction_y]);
+        //     ball.Animation();
+        //     balls[i] = ball;
+        // }
         // Glitch
         $(".Glitch_Text").each(function () {
             $(this).attr('data-text', $(this).text());
