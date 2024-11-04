@@ -4,7 +4,6 @@ import * as THREE from "https://unpkg.com/three@0.126.1/build/three.module.js";
 function Mobile_or_Desktop() { return /Mobi|Android/i.test(navigator.userAgent); }
 function RandomNumber_Between(_min, _max) { return Math.random() * (_max - _min + 1) + _min; }
 function Shousuu_Kirisute(_number, _keta) { return Math.floor(_number * Math.pow(10, _keta)) / Math.pow(10, _keta); }
-function Degrees_to_Radians(_degrees) { return _degrees * (Math.PI / 180); }
 function Radians_to_Degrees(_radians) { return _radians * (180 / Math.PI); }
 function Alpha_Change(_color, _alpha) {
     if (_color.length === 7) { return _color + _alpha; }
@@ -180,6 +179,16 @@ class FC_Input_Keyboard {
 }
 
 class FC_GameObject {
+
+    _Object = null;
+
+    get Position() { return this._Object.position; }
+    set Position(_vector3) { this._Object ? this._Object.position.set(_vector3.x, _vector3.y, _vector3.z) : null; }
+    get Rotation() { return this._Object.rotation; }
+    set Rotation(_vector3) { this._Object ? this._Object.rotation.set(_vector3.x, _vector3.y, _vector3.z) : null; }
+    get Scale() { return this._Object.position; }
+    set Scale(_vector3) { this._Object ? this._Object.scale.set(_vector3.x, _vector3.y, _vector3.z) : null; }
+
     Initialize() { }
     Update() { }
 }
@@ -528,7 +537,7 @@ class FC_TextPlane extends FC_Animation {
             LookAt(this._Camera.Position);
         }
         if (this._Rotating) {
-            this.Add_Rotation(new THREE.Vector3(0, Degrees_to_Radians(this._Rotation_Speed) * FC_Environment.TIME_DELTA, 0));
+            this.Add_Rotation(new THREE.Vector3(0, THREE.MathUtils.degToRad(this._Rotation_Speed) * FC_Environment.TIME_DELTA, 0));
         }
     }
 
@@ -565,6 +574,7 @@ class FC_TextPlane extends FC_Animation {
     Place_on_Screen(_vector2_screen, _distance) {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(_vector2_screen, this._Camera.Object);
+        
         this.Position = raycaster.ray.direction.clone().multiplyScalar(_distance).add(this._Camera.Position);
     }
     Rotating(_bool) {
@@ -822,7 +832,7 @@ class FC_Player_Controller extends FC_GameObject {
 class FC_Manager {
 
     _TIME_FOR_READY = 1;
-    _UI_SIZE_MULTIPLY = 0.2;
+    static UI_SIZE_MULTIPLY = 0.2;
 
     _State = "Before_Loaded";
     _BGM = null;
@@ -908,7 +918,6 @@ export {
     Mobile_or_Desktop,
     RandomNumber_Between,
     Shousuu_Kirisute,
-    Degrees_to_Radians,
     Radians_to_Degrees,
     Alpha_Change,
     FC_JoystickController,

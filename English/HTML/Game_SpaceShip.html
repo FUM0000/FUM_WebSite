@@ -62,7 +62,6 @@
             Mobile_or_Desktop,
             RandomNumber_Between,
             Shousuu_Kirisute,
-            Degrees_to_Radians,
             Radians_to_Degrees,
             Alpha_Change,
             FC_JoystickController,
@@ -97,16 +96,23 @@
             _SENSIVILITY = 0.0001;
             _Input_Keyboard = new FC_Input_Keyboard();
 
-            _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Start = new FC_TextPlane(Scene, Camera, "START", "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Gameover = new FC_TextPlane(Scene, Camera, "GAMEOVER", "#CF000000", new THREE.Vector2(8, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
-            _UI_Tap = new FC_TextPlane(Scene, Camera, "TAP", "#CF000000", new THREE.Vector2(3, 1).multiplyScalar(this._UI_SIZE_MULTIPLY));
+            _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            _UI_Start = new FC_TextPlane(Scene, Camera, "START", "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            _UI_Gameover = new FC_TextPlane(Scene, Camera, "GAMEOVER", "#CF000000", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            _UI_Tap = new FC_TextPlane(Scene, Camera, "TAP", "#CF000000", new THREE.Vector2(3, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+
+
+            _energyAreaManager = new C_EnergyAreaManager();
+            _energyMeter = new C_EnergyMeter(Scene, Camera);
+
 
             get UI_Home() { return this._UI_Home; }
             get UI_Music() { return this._UI_Music; }
 
-            constructor() { super(Scene, Renderer); }
+            constructor() {
+                super(Scene, Renderer);
+            }
 
             Initialize() {
                 super.Initialize();
@@ -116,7 +122,9 @@
                 Camera.Target = Player;
 
                 this._UI_Home.Initialize();
+                this._UI_Home.Fog = false;
                 this._UI_Music.Initialize();
+                this._UI_Music.Fog = false;
 
                 this._UI_Start.Initialize();
                 this._UI_Start.Position = new THREE.Vector3(0, 0.5, -8);
@@ -125,7 +133,9 @@
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Fog = true;
                 this._UI_Tap.Position = new THREE.Vector3(0, -0.25, -8);
-                this._UI_Tap.Rotation = new THREE.Vector3(0, 0, Degrees_to_Radians(180));
+                this._UI_Tap.Rotation = new THREE.Vector3(0, 0, THREE.MathUtils.degToRad(180));
+
+                this._energyMeter.Initialize();
 
                 if (this._State == "Before_Loaded") {
                     this.BGM = '../../Asset/Audio/wave_1.wav';
@@ -141,7 +151,7 @@
             }
             Update() {
 
-                if (this._State == "Before_Loaded" && Player.Flag_Loaded) {
+                if (this._State == "Before_Loaded") {
                     this._State = "Loaded"
                     super.Fade(true);
                 }
@@ -171,7 +181,7 @@
                     this._Timer_Ready += FC_Environment.TIME_DELTA;
                     if (this._Timer_Ready > this._TIME_FOR_READY) {
                         this._State = "Waiting_Restart";
-                        this._UI_Tap.Position = new THREE.Vector3(-0.8, -0.25, Camera.Position_LookAt.z);
+                        this._UI_Tap.Position = new THREE.Vector3(Camera.Position_LookAt.x, Camera.Position_LookAt.y - 0.25, -8);
                     }
                 }
 
@@ -199,6 +209,19 @@
 
                 this._UI_Start.Update();
                 this._UI_Tap.Update();
+
+
+                // エネルギーエリアマネージャーの更新
+                this._energyAreaManager.Update();
+
+                // プレイヤーがいずれかのエリア内にいる場合、エネルギーを回復
+                if (this._energyAreaManager.Check(Player.Position)) {
+                    Player.CollectEnergy();
+                }
+
+
+                // エネルギーメーターの更新
+                this._energyMeter.Update(Player.CarbonEnergy);
             }
 
             Start() {
@@ -208,66 +231,208 @@
             }
             GameOver() {
                 super.GameOver();
-                this._UI_Gameover.Position = new THREE.Vector3(-0.8, 0.5, Camera.Position_LookAt.z);
+                this._UI_Gameover.Position = new THREE.Vector3(Camera.Position_LookAt.x, Camera.Position_LookAt.y + 0.5, -8);
                 this._UI_Gameover.Show();
-
             }
 
             Set_Tap() {
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Fog = true;
                 this._UI_Tap.Position = new THREE.Vector3(0, -0.25, -8);
-                this._UI_Tap.Rotation = new THREE.Vector3(0, 0, Degrees_to_Radians(180));
+                this._UI_Tap.Rotation = new THREE.Vector3(0, 0, THREE.MathUtils.degToRad(180));
             }
         }
 
         class C_Player extends FC_GameObject {
 
-            _Flag_Loaded = false;
-            _Flag_Pointed = false;
-            _Speed_Past = 1.2;
-            _Speed = this._Speed_Past;
-            _Speed_Acceleration = 1;
-
-            get Flag_Loaded() { return this._Flag_Loaded; }
-            get Flag_Pointed() { return this._Flag_Pointed; }
-            get Position() { return this._Object.position; }
-
-            set Flag_Pointed(_bool) { this._Flag_Pointed = _bool; }
-            set Position(_vector3) { this._Object ? this._Object.position.set(_vector3.x, _vector3.y, _vector3.z) : null; }
+            _Speed_Past;
+            _Speed;
+            _Speed_Acceleration;
 
             constructor() {
                 super();
-                this.Initialize();
                 const geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 3);
                 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-                const trianglePrism = new THREE.Mesh(geometry, material);
-                trianglePrism.rotation.x = Degrees_to_Radians(90);
-                trianglePrism.rotation.y = Degrees_to_Radians(180);
-                this._Object = trianglePrism;
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.scale.x = 0.5;
+                this._Object = mesh;
                 Scene.add(this._Object);
-                this._Flag_Loaded = true;
+                
+                this.Initialize();
             }
-            destructor() { Scene.remove(this._Object); }
 
             Initialize() {
                 this._Speed_Past = 1.2;
                 this._Speed = this._Speed_Past;
                 this._Speed_Acceleration = 1;
+
                 this.Position = new THREE.Vector3(0, 0, 0);
+                this.Rotation = new THREE.Vector3(Math.PI / 2, Math.PI, 0);
+
+                this._carbonEnergy = 100;
+                this._maxCarbonEnergy = 100;
+                this._energyDecreaseRate = 5;
             }
             Update(_input) {
                 if (_input && _input.length() != 0) {
                     const direction = new THREE.Vector3(-_input.x, _input.y, 0).normalize();
                     this.Move(direction.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
                     this._Object.rotation.y = Math.atan2(direction.y, direction.x) + Math.PI / 2;
+
+                    // エネルギーを徐々に減少
+                    this._carbonEnergy = Math.max(0, this._carbonEnergy - this._energyDecreaseRate * FC_Environment.TIME_DELTA);
+
+                    // エネルギーが0になったらゲームオーバー
+                    if (this._carbonEnergy <= 0) {
+                        Manager.GameOver();
+                    }
                 }
             }
 
             Move(_vector3) {
                 this._Object.position.add(_vector3);
             }
+
+
+            get CarbonEnergy() { return this._carbonEnergy; }
+
+            CollectEnergy() {
+                const recoveryRate = this._maxCarbonEnergy * 0.5;
+                this._carbonEnergy = Math.min(this._maxCarbonEnergy, this._carbonEnergy + recoveryRate * FC_Environment.TIME_DELTA);
+            }
         }
+
+        class C_EnergyAreaManager {
+
+            static NUMBER_RING = 5;
+            static NUMBER_PER_RING = 5;
+            static RADIUS = 15;
+
+            _Array = [];
+
+            constructor() {
+                this.Generate();
+            }
+
+            Generate() {
+                for (let r = 1; r <= C_EnergyAreaManager.NUMBER_RING; r++) {
+                    const currentRadius = C_EnergyAreaManager.RADIUS * r;
+                    let angle = Math.random() * Math.PI * 2;
+                    for (let i = 0; i < C_EnergyAreaManager.NUMBER_PER_RING; i++) {
+                        angle = angle + THREE.MathUtils.degToRad(360 / C_EnergyAreaManager.NUMBER_PER_RING);
+                        const x = Math.cos(angle) * currentRadius;
+                        const y = Math.sin(angle) * currentRadius;
+                        this.Create(new THREE.Vector3(x, y, 0));
+                    }
+                }
+            }
+
+            Create(position) {
+                const area = new C_EnergyArea(position);
+                this._Array.push(area);
+            }
+
+            Update() {
+                this._Array.forEach(area => area.Update());
+            }
+
+            Check(_position) {
+                for (const area of this._Array) {
+                    if (area.Check(_position)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        
+        class C_EnergyArea extends FC_GameObject {
+
+            static RADIUS = 2;
+            static SPEED_ROTATION = Math.PI / 6;
+
+            _Object_Back = null;
+            _Object_Wire = null;
+
+            constructor(_position) {
+                super();
+                const geometry_back = new THREE.CylinderGeometry(C_EnergyArea.RADIUS, C_EnergyArea.RADIUS, 0.1, 32);
+                const material_back = new THREE.MeshBasicMaterial({
+                    color: 0x00ff88,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                this._Object_Back = new THREE.Mesh(geometry_back, material_back);
+                this._Object_Back.position.copy(_position);
+                this._Object_Back.rotation.set(THREE.MathUtils.degToRad(90), 0, 0);
+                Scene.add(this._Object_Back);
+
+                const geometry_wire = new THREE.CylinderGeometry(C_EnergyArea.RADIUS, C_EnergyArea.RADIUS, 0.1, 32);
+                const material_wire = new THREE.MeshBasicMaterial({
+                    color: 0x00ff88,
+                    wireframe: true
+                });
+                this._Object_Wire = new THREE.Mesh(geometry_wire, material_wire);
+                this._Object_Wire.position.copy(this._Object_Back.position);
+                this._Object_Wire.rotation.copy(this._Object_Back.rotation);
+                Scene.add(this._Object_Wire);
+            }
+
+            get Position() {
+                return this._Object_Back.position;
+            }
+
+            Update() {
+                this._Object_Wire.rotation.y += C_EnergyArea.SPEED_ROTATION * FC_Environment.TIME_DELTA;
+            }
+
+            Check(_position) {
+                const distance = new THREE.Vector2(
+                    _position.x - this._Object_Wire.position.x,
+                    _position.y - this._Object_Wire.position.y
+                ).length();
+                return distance < C_EnergyArea.RADIUS;
+            }
+        }
+
+        class C_EnergyMeter extends FC_GameObject {
+
+            _Camera = null;
+
+            constructor(_scene, _camera) {
+                super();
+                this._textPlane = new FC_TextPlane(
+                    _scene,
+                    _camera,
+                    "ENERGY: 100%",
+                    "#00FF88",
+                    new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY)
+                );
+                this._Camera = _camera;
+            }
+
+            Initialize() {
+                this._textPlane.Initialize();
+            }
+
+            Update(_energy) {
+                const percentage = Math.round((_energy / 100) * 100);
+                this._textPlane.Text = `ENERGY: ${percentage}%`;
+
+                this._textPlane.Place_on_Screen(new THREE.Vector2(-0.5, 0.7), 4);
+                const quaternion = new THREE.Quaternion();
+                this._Camera.Object.getWorldQuaternion(quaternion);
+                const quaternion_y = new THREE.Quaternion();
+                const quaternion_x = new THREE.Quaternion();
+                quaternion_y.setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(30));
+                quaternion_x.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(30));
+                quaternion.multiply(quaternion_y);
+                quaternion.multiply(quaternion_x);
+                this._textPlane.Rotation_Quaternion = quaternion;
+            }
+        }
+
+
 
         const Environment = new FC_Environment();
         const Camera = new FC_Camera(Renderer, undefined, new THREE.Vector3(0, 0, -10));
