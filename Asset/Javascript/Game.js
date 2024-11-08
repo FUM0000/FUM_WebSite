@@ -11,7 +11,7 @@ function Alpha_Change(_color, _alpha) {
     return null;
 }
 
-class FC_JoystickController {
+class FC_Input_Joystick {
     constructor(domElement) {
         this.domElement = domElement;
         this.isActive = false;
@@ -450,6 +450,9 @@ class FC_TextPlane extends FC_Animation {
     _Rotating = false;
     _Rotation_Speed = 36;
 
+    _Color = null;
+    _Background = null;
+
     get Mesh_Front() { return this._Mesh_Front; }
     get Mesh_Back() { return this._Mesh_Back; }
     get Position() { return this._Mesh_Front.position; }
@@ -468,6 +471,12 @@ class FC_TextPlane extends FC_Animation {
         this._Material_Front.needsUpdate = true;
         this._Material_Back.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Geometry, true);
         this._Material_Back.needsUpdate = true;
+    }
+    set Background(_color) {
+        this._Background = _color;
+        this._Material_Front.map = this.#_CreateTextTexture(this._Text, this._Color, this._Size_Geometry, false, this._Background);
+        this._Material_Front.transparent = false;
+        this._Material_Front.needsUpdate = true;
     }
     set Fog(_bool) {
         this._Material_Front.fog = _bool;
@@ -581,7 +590,7 @@ class FC_TextPlane extends FC_Animation {
         this._Rotating = _bool;
     }
 
-    #_CreateTextTexture(_text, _color, _vector2_geometry, _flip = false) {
+    #_CreateTextTexture(_text, _color, _vector2_geometry, _flip = false, _background = '#ffffff00') {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
 
@@ -589,7 +598,7 @@ class FC_TextPlane extends FC_Animation {
         canvas.width = _vector2_geometry.x * resolution;
         canvas.height = _vector2_geometry.y * resolution;
 
-        context.fillStyle = '#ffffff00';
+        context.fillStyle = _background;
         context.fillRect(0, 0, canvas.width, canvas.height);
 
         const font_size = Math.min(canvas.width, canvas.height);
@@ -920,7 +929,7 @@ export {
     Shousuu_Kirisute,
     Radians_to_Degrees,
     Alpha_Change,
-    FC_JoystickController,
+    FC_Input_Joystick,
     FC_Input_Keyboard,
     FC_GameObject,
     FC_Environment,

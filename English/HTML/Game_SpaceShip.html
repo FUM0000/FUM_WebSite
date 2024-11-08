@@ -55,7 +55,6 @@
 
     <script type="module">
 
-        // Setup Threejs
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
         import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
         import {
@@ -64,7 +63,7 @@
             Shousuu_Kirisute,
             Radians_to_Degrees,
             Alpha_Change,
-            FC_JoystickController,
+            FC_Input_Joystick,
             FC_Input_Keyboard,
             FC_GameObject,
             FC_Environment,
@@ -80,39 +79,67 @@
             FC_Player_Controller,
             FC_Manager,
         } from "../../Asset/Javascript/Game.js";
+
         const Scene = new THREE.Scene();
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas"), antialias: true });
+        const Loader_FBX = new FBXLoader();
+
         Scene.fog = new THREE.Fog(0x222222, 0, 50);
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0x222222));
-        const Loader_FBX = new FBXLoader();
         if (Mobile_or_Desktop()) document.addEventListener('touchstart', function () { TouchStart(event); });
         else document.addEventListener('mousedown', function () { TouchStart(event); });
 
         class C_Manager extends FC_Manager {
 
-            _JOYSTICK = new FC_JoystickController(document.getElementById("Joystick"));
-            _SENSIVILITY = 0.0001;
-            _Input_Keyboard = new FC_Input_Keyboard();
+            _Joystick = new FC_Input_Joystick(document.getElementById("Joystick"));
+            _Keyboard = new FC_Input_Keyboard();
 
             _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
             _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            get UI_Home() { return this._UI_Home; }
+            get UI_Music() { return this._UI_Music; }
+
             _UI_Start = new FC_TextPlane(Scene, Camera, "START", "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
             _UI_Gameover = new FC_TextPlane(Scene, Camera, "GAMEOVER", "#CF000000", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
             _UI_Tap = new FC_TextPlane(Scene, Camera, "TAP", "#CF000000", new THREE.Vector2(3, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
 
+            _UI_Energy = new FC_TextPlane(Scene, Camera, "ENERGY: 100%", "#00FF88", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            _UI_Boost = new FC_TextPlane(Scene, Camera, "BOOST", "#0000CF", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            get UI_Boost() { return this._UI_Boost; }
 
-            _energyAreaManager = new C_EnergyAreaManager();
-            _energyMeter = new C_EnergyMeter(Scene, Camera);
+            _Manager_EnergyArea = new C_Manager_EnergyArea();
 
-
-            get UI_Home() { return this._UI_Home; }
-            get UI_Music() { return this._UI_Music; }
 
             constructor() {
                 super(Scene, Renderer);
+
+                this.BGM = '../../Asset/Audio/wave_1.wav';
+                this.BGM.Volume = 0.2;
+                Scene.fog = new THREE.Fog(0x222222, 0, 0);
+
+                this._UI_Home.Initialize();
+                this._UI_Home.Fog = false;
+                this._UI_Music.Initialize();
+                this._UI_Music.Fog = false;
+
+                this._UI_Start.Initialize();
+                this._UI_Gameover.Initialize();
+                this._UI_Tap.Initialize();
+                this._UI_Tap.Fog = false;
+                this._UI_Tap.Show();
+                const direction = new THREE.Vector3();
+                Camera.Object.getWorldDirection(direction);
+                this._UI_Tap.Position = Camera.Position.clone().add(direction.multiplyScalar(2));
+                this._UI_Tap.LookAt(Camera.Position);
+
+                this._UI_Energy.Initialize();
+                this._UI_Energy.Fog = false;
+                this._UI_Boost.Initialize();
+                this._UI_Boost.Fog = false;
             }
+
 
             Initialize() {
                 super.Initialize();
@@ -121,33 +148,12 @@
                 Camera.Initialize();
                 Camera.Target = Player;
 
-                this._UI_Home.Initialize();
-                this._UI_Home.Fog = false;
-                this._UI_Music.Initialize();
-                this._UI_Music.Fog = false;
-
-                this._UI_Start.Initialize();
                 this._UI_Start.Position = new THREE.Vector3(0, 0.5, -8);
-                this._UI_Gameover.Initialize();
+                this._UI_Gameover.Hide();
                 this._UI_Gameover.Position = new THREE.Vector3(0, 0, -8);
-                this._UI_Tap.Initialize();
-                this._UI_Tap.Fog = true;
+
                 this._UI_Tap.Position = new THREE.Vector3(0, -0.25, -8);
-                this._UI_Tap.Rotation = new THREE.Vector3(0, 0, THREE.MathUtils.degToRad(180));
-
-                this._energyMeter.Initialize();
-
-                if (this._State == "Before_Loaded") {
-                    this.BGM = '../../Asset/Audio/wave_1.wav';
-                    this.BGM.Volume = 0.2;
-                    Scene.fog = new THREE.Fog(0x222222, 0, 0);
-                    this._UI_Tap.Fog = false;
-                    this._UI_Tap.Show();
-                    const direction = new THREE.Vector3();
-                    Camera.Object.getWorldDirection(direction);
-                    this._UI_Tap.Position = Camera.Position.clone().add(direction.multiplyScalar(2));
-                    this._UI_Tap.LookAt(Camera.Position);
-                }
+                if (this._State != "Before_Loaded") this._UI_Tap.Rotation = new THREE.Vector3(0, 0, THREE.MathUtils.degToRad(180));
             }
             Update() {
 
@@ -155,8 +161,8 @@
                     this._State = "Loaded"
                     super.Fade(true);
                 }
-                if (this._State != "Before_Loaded") {
-                    this._Input_Move = this._JOYSTICK.getInput();
+                else {
+                    this._Input_Move = this._Joystick.getInput();
 
                     switch (this._State) {
                         case "Waiting":
@@ -166,15 +172,31 @@
                                 this._UI_Tap.Show();
                             }
                             break;
-                        case "Playing": Manager.Update_Playing(); break;
+                        case "Playing": Manager.#Update_Playing(); break;
                     }
-                    Manager.Update_System();
-
+                    Manager.#Update_System();
                 }
+
                 Renderer.render(Scene, Camera.Object);
                 requestAnimationFrame(this.Update.bind(this));
             }
-            Update_System() {
+
+
+            Start() {
+                super.Start();
+
+                this._UI_Start.Animation_Move(new THREE.Vector3(0, 1, 0), 1);
+                this._UI_Tap.Animation_Move(new THREE.Vector3(0, -1, 0), 1);
+            }
+            GameOver() {
+                super.GameOver();
+
+                this._UI_Gameover.Position = new THREE.Vector3(Camera.Position_LookAt.x, Camera.Position_LookAt.y + 0.5, -8);
+                this._UI_Gameover.Show();
+            }
+
+
+            #Update_System() {
                 this._Timer_Input.Update();
 
                 if (this._State == "Gameover") {
@@ -185,124 +207,190 @@
                     }
                 }
 
-                const cameraQuaternion = new THREE.Quaternion();
-                Camera.Object.getWorldQuaternion(cameraQuaternion);
-                const tiltQuaternion_y = new THREE.Quaternion();
-                const tiltQuaternion_x = new THREE.Quaternion();
-                tiltQuaternion_y.setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(-30));
-                tiltQuaternion_x.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(30));
-                cameraQuaternion.multiply(tiltQuaternion_y);
-                cameraQuaternion.multiply(tiltQuaternion_x);
+                const quaternion_camera = new THREE.Quaternion();
+                Camera.Object.getWorldQuaternion(quaternion_camera);
 
+                const quaternion_1 = quaternion_camera.clone();
+                const quaternion_tilt_y_1 = new THREE.Quaternion();
+                const quaternion_tilt_x_1 = new THREE.Quaternion();
+                quaternion_tilt_y_1.setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(-30));
+                quaternion_tilt_x_1.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(30));
+                quaternion_1.multiply(quaternion_tilt_y_1);
+                quaternion_1.multiply(quaternion_tilt_x_1);
                 this._UI_Home.Place_on_Screen(new THREE.Vector2(0.6, 0.8), 4);
-                this._UI_Home.Rotation_Quaternion = cameraQuaternion;
+                this._UI_Home.Rotation_Quaternion = quaternion_1;
                 this._UI_Music.Place_on_Screen(new THREE.Vector2(0.6, 0.7), 4);
-                this._UI_Music.Rotation_Quaternion = cameraQuaternion;
+                this._UI_Music.Rotation_Quaternion = quaternion_1;
+
+                const quaternion_2 = quaternion_camera.clone();
+                const quaternion_tilt_y_2 = new THREE.Quaternion();
+                const quaternion_tilt_x_2 = new THREE.Quaternion();
+                quaternion_tilt_y_2.setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(30));
+                quaternion_tilt_x_2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(30));
+                quaternion_2.multiply(quaternion_tilt_y_2);
+                quaternion_2.multiply(quaternion_tilt_x_2);
+                this._UI_Energy.Place_on_Screen(new THREE.Vector2(-0.5, 0.7), 4);
+                this._UI_Energy.Rotation_Quaternion = quaternion_2;
+                const percentage = Math.round((Player.Energy_Carbon / 100) * 100);
+                this._UI_Energy.Text = `ENERGY: ${percentage.toString().padStart(3, '0')}%`;
+                if (percentage >= 50) this._UI_Energy.Color = "#00FF88";
+                else if (percentage >= 10) this._UI_Energy.Color = "#CFCF00";
+                else this._UI_Energy.Color = "#CF0000";
+
+                const quaternion_3 = quaternion_camera.clone();
+                const quaternion_tilt_y_3 = new THREE.Quaternion();
+                const quaternion_tilt_x_3 = new THREE.Quaternion();
+                quaternion_tilt_y_3.setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(30));
+                quaternion_tilt_x_3.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(-30));
+                quaternion_3.multiply(quaternion_tilt_y_3);
+                quaternion_3.multiply(quaternion_tilt_x_3);
+                this._UI_Boost.Place_on_Screen(new THREE.Vector2(-0.6, -0.5), 4);
+                this._UI_Boost.Rotation_Quaternion = quaternion_3;
             }
-            Update_Playing() {
-                if (this._Input_Move.length() == 0) {
-                    this._Input_Move = this._Input_Keyboard.Input_Move;
-                }
-                if (this._Input_Move.length() > 0) this._Input_Move.normalize();
+            #Update_Playing() {
+                if (this._Input_Move.length() == 0) this._Input_Move = this._Keyboard.Input_Move;
+                else this._Input_Move.normalize();
+
                 Player.Update(this._Input_Move);
                 Camera.Update();
 
                 this._UI_Start.Update();
                 this._UI_Tap.Update();
 
-
-                // エネルギーエリアマネージャーの更新
-                this._energyAreaManager.Update();
-
-                // プレイヤーがいずれかのエリア内にいる場合、エネルギーを回復
-                if (this._energyAreaManager.Check(Player.Position)) {
-                    Player.CollectEnergy();
-                }
-
-
-                // エネルギーメーターの更新
-                this._energyMeter.Update(Player.CarbonEnergy);
-            }
-
-            Start() {
-                super.Start();
-                this._UI_Start.Animation_Move(new THREE.Vector3(0, 1, 0), 1);
-                this._UI_Tap.Animation_Move(new THREE.Vector3(0, -1, 0), 1);
-            }
-            GameOver() {
-                super.GameOver();
-                this._UI_Gameover.Position = new THREE.Vector3(Camera.Position_LookAt.x, Camera.Position_LookAt.y + 0.5, -8);
-                this._UI_Gameover.Show();
-            }
-
-            Set_Tap() {
-                this._UI_Tap.Initialize();
-                this._UI_Tap.Fog = true;
-                this._UI_Tap.Position = new THREE.Vector3(0, -0.25, -8);
-                this._UI_Tap.Rotation = new THREE.Vector3(0, 0, THREE.MathUtils.degToRad(180));
+                this._Manager_EnergyArea.Update();
+                if (this._Manager_EnergyArea.Check(Player.Position)) Player.Collect_Carbon();
             }
         }
 
         class C_Player extends FC_GameObject {
 
-            _Speed_Past;
+            _Flag_Boost;
+            get Flag_Boost() { return this._Flag_Boost; }
+            set Flag_Boost(_bool) {
+                this._Flag_Boost = _bool;
+                if (this._Flag_Boost) Manager.UI_Boost.Color = "#0088FF";
+                else Manager.UI_Boost.Color = "#0000CF";
+            }
+
             _Speed;
-            _Speed_Acceleration;
+            _Speed_Past;
+            _Speed_Collect;
+
+            _Energy_Carbon;
+            _Energy_Carbon_Max;
+            _Energy_Carbon_Rate_Decrease;
+            get Energy_Carbon() { return this._Energy_Carbon; }
+
+            playerMovementEffect = new PlayerMovementEffect();
 
             constructor() {
                 super();
+
                 const geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 3);
                 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 const mesh = new THREE.Mesh(geometry, material);
                 mesh.scale.x = 0.5;
                 this._Object = mesh;
                 Scene.add(this._Object);
-                
+
                 this.Initialize();
             }
 
+
             Initialize() {
-                this._Speed_Past = 1.2;
-                this._Speed = this._Speed_Past;
-                this._Speed_Acceleration = 1;
+                this._Flag_Boost = false;
+
+                this._Speed = 1.2;
+                this._Speed_Past = this._Speed;
+                this._Speed_Collect = 0.5;
+
+                this._Energy_Carbon = 100;
+                this._Energy_Carbon_Max = 100;
+                this._Energy_Carbon_Rate_Decrease = 5;
+                this._Energy_Carbon_Rate_Efficiency = 2;
 
                 this.Position = new THREE.Vector3(0, 0, 0);
                 this.Rotation = new THREE.Vector3(Math.PI / 2, Math.PI, 0);
-
-                this._carbonEnergy = 100;
-                this._maxCarbonEnergy = 100;
-                this._energyDecreaseRate = 5;
             }
             Update(_input) {
                 if (_input && _input.length() != 0) {
                     const direction = new THREE.Vector3(-_input.x, _input.y, 0).normalize();
-                    this.Move(direction.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
+                    this.Move(direction.clone());
                     this._Object.rotation.y = Math.atan2(direction.y, direction.x) + Math.PI / 2;
-
-                    // エネルギーを徐々に減少
-                    this._carbonEnergy = Math.max(0, this._carbonEnergy - this._energyDecreaseRate * FC_Environment.TIME_DELTA);
-
-                    // エネルギーが0になったらゲームオーバー
-                    if (this._carbonEnergy <= 0) {
-                        Manager.GameOver();
-                    }
                 }
-            }
-
-            Move(_vector3) {
-                this._Object.position.add(_vector3);
+                this.playerMovementEffect.update();
             }
 
 
-            get CarbonEnergy() { return this._carbonEnergy; }
+            Move(_direction) {
+                this._Energy_Carbon -= this._Energy_Carbon_Rate_Decrease * FC_Environment.TIME_DELTA;
+                this._Object.position.add(_direction.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
 
-            CollectEnergy() {
-                const recoveryRate = this._maxCarbonEnergy * 0.5;
-                this._carbonEnergy = Math.min(this._maxCarbonEnergy, this._carbonEnergy + recoveryRate * FC_Environment.TIME_DELTA);
+                if (this._Flag_Boost) {
+                    this._Energy_Carbon -= this._Energy_Carbon_Rate_Decrease * this._Energy_Carbon_Rate_Efficiency * FC_Environment.TIME_DELTA;
+                    this._Object.position.add(_direction.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
+                }
+                this._Energy_Carbon = Math.max(0, this._Energy_Carbon);
+                if (this._Energy_Carbon <= 0) Manager.GameOver();
+            }
+            Collect_Carbon() {
+                const rate = this._Energy_Carbon_Max * this._Speed_Collect;
+                this._Energy_Carbon += rate * FC_Environment.TIME_DELTA;
+                this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon);
+            }
+        }
+        class PlayerMovementEffect {
+            constructor() {
+                this.particleSystem = this.createParticleSystem();
+            }
+
+            createParticleSystem() {
+                const particleGeometry = new THREE.BufferGeometry();
+                const particleCount = 1000;
+                const particlePositions = new Float32Array(particleCount * 3);
+
+                for (let i = 0; i < particleCount; i++) {
+                    particlePositions[i * 3] = 0;
+                    particlePositions[i * 3 + 1] = 0;
+                    particlePositions[i * 3 + 2] = 0;
+                }
+
+                particleGeometry.setAttribute(
+                    'position',
+                    new THREE.BufferAttribute(particlePositions, 3)
+                );
+
+                const particleMaterial = new THREE.PointsMaterial({
+                    color: 0x00ff00,
+                    size: 0.1,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                
+                const mesh = new THREE.Points(particleGeometry, particleMaterial)
+                Scene.add(mesh);
+
+                return mesh;
+            }
+
+            update() {
+                const particles = this.particleSystem.geometry.attributes.position.array;
+                for (let i = 0; i < particles.length; i += 3) {
+                    particles[i] = Player.Position.x;
+                    particles[i + 1] = Player.Position.y;
+                    particles[i + 2] = Player.Position.z;
+                }
+                this.particleSystem.geometry.attributes.position.needsUpdate = true;
+
+                this.particleSystem.material.opacity = Math.max(
+                    this.particleSystem.material.opacity - FC_Environment.TIME_DELTA * 0.5,
+                    0
+                );
+                this.particleSystem.material.needsUpdate = true;
             }
         }
 
-        class C_EnergyAreaManager {
+        class C_Manager_EnergyArea {
 
             static NUMBER_RING = 5;
             static NUMBER_PER_RING = 5;
@@ -315,11 +403,11 @@
             }
 
             Generate() {
-                for (let r = 1; r <= C_EnergyAreaManager.NUMBER_RING; r++) {
-                    const currentRadius = C_EnergyAreaManager.RADIUS * r;
+                for (let r = 1; r <= C_Manager_EnergyArea.NUMBER_RING; r++) {
+                    const currentRadius = C_Manager_EnergyArea.RADIUS * r;
                     let angle = Math.random() * Math.PI * 2;
-                    for (let i = 0; i < C_EnergyAreaManager.NUMBER_PER_RING; i++) {
-                        angle = angle + THREE.MathUtils.degToRad(360 / C_EnergyAreaManager.NUMBER_PER_RING);
+                    for (let i = 0; i < C_Manager_EnergyArea.NUMBER_PER_RING; i++) {
+                        angle = angle + THREE.MathUtils.degToRad(360 / C_Manager_EnergyArea.NUMBER_PER_RING);
                         const x = Math.cos(angle) * currentRadius;
                         const y = Math.sin(angle) * currentRadius;
                         this.Create(new THREE.Vector3(x, y, 0));
@@ -345,7 +433,7 @@
                 return false;
             }
         }
-        
+
         class C_EnergyArea extends FC_GameObject {
 
             static RADIUS = 2;
@@ -395,44 +483,6 @@
             }
         }
 
-        class C_EnergyMeter extends FC_GameObject {
-
-            _Camera = null;
-
-            constructor(_scene, _camera) {
-                super();
-                this._textPlane = new FC_TextPlane(
-                    _scene,
-                    _camera,
-                    "ENERGY: 100%",
-                    "#00FF88",
-                    new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY)
-                );
-                this._Camera = _camera;
-            }
-
-            Initialize() {
-                this._textPlane.Initialize();
-            }
-
-            Update(_energy) {
-                const percentage = Math.round((_energy / 100) * 100);
-                this._textPlane.Text = `ENERGY: ${percentage}%`;
-
-                this._textPlane.Place_on_Screen(new THREE.Vector2(-0.5, 0.7), 4);
-                const quaternion = new THREE.Quaternion();
-                this._Camera.Object.getWorldQuaternion(quaternion);
-                const quaternion_y = new THREE.Quaternion();
-                const quaternion_x = new THREE.Quaternion();
-                quaternion_y.setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(30));
-                quaternion_x.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(30));
-                quaternion.multiply(quaternion_y);
-                quaternion.multiply(quaternion_x);
-                this._textPlane.Rotation_Quaternion = quaternion;
-            }
-        }
-
-
 
         const Environment = new FC_Environment();
         const Camera = new FC_Camera(Renderer, undefined, new THREE.Vector3(0, 0, -10));
@@ -473,10 +523,13 @@
                 const ui_music = raycaster.intersectObject(Manager.UI_Music.Mesh_Front);
                 if (ui_music.length > 0) { Manager.BGM.Flag_Playing ? Manager.BGM.Stop() : Manager.BGM.Play(); return; }
 
+                const ui_boost = raycaster.intersectObject(Manager.UI_Boost.Mesh_Front);
+                if (ui_boost.length > 0) { Player.Flag_Boost = !Player.Flag_Boost; return; }
+
                 switch (Manager.State) {
                     case "Loaded":
                         Scene.fog = new THREE.Fog(0x222222, 0, 50);
-                        Manager.Set_Tap();
+                        Manager.Initialize();
                         Manager.Change_State("Waiting");
                         break;
                     case "Waiting_Start": Manager.Start(); break;
