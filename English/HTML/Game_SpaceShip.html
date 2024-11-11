@@ -120,24 +120,17 @@
                 Scene.fog = new THREE.Fog(0x222222, 0, 0);
 
                 this._UI_Home.Initialize();
-                this._UI_Home.Fog = false;
                 this._UI_Music.Initialize();
-                this._UI_Music.Fog = false;
 
                 this._UI_Start.Initialize();
                 this._UI_Gameover.Initialize();
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Fog = false;
                 this._UI_Tap.Show();
-                const direction = new THREE.Vector3();
-                Camera.Object.getWorldDirection(direction);
-                this._UI_Tap.Position = Camera.Position.clone().add(direction.multiplyScalar(2));
                 this._UI_Tap.LookAt(Camera.Position);
 
                 this._UI_Energy.Initialize();
-                this._UI_Energy.Fog = false;
                 this._UI_Boost.Initialize();
-                this._UI_Boost.Fog = false;
             }
 
 
@@ -152,8 +145,12 @@
                 this._UI_Gameover.Hide();
                 this._UI_Gameover.Position = new THREE.Vector3(0, 0, -8);
 
-                this._UI_Tap.Position = new THREE.Vector3(0, -0.25, -8);
-                if (this._State != "Before_Loaded") this._UI_Tap.Rotation = new THREE.Vector3(0, 0, THREE.MathUtils.degToRad(180));
+                this._UI_Tap.Position = new THREE.Vector3(0, -0.5, -8);
+                this._UI_Tap.Rotation = new THREE.Vector3(0, 0, THREE.MathUtils.degToRad(180));
+                if (this._State == "Before_Loaded") {
+                    this._UI_Tap.Position = new THREE.Vector3(0, 0, -8);
+                    this._UI_Tap.Rotation = new THREE.Vector3(0, 0, 0);
+                }
             }
             Update() {
 
@@ -281,7 +278,7 @@
             _Energy_Carbon_Rate_Decrease;
             get Energy_Carbon() { return this._Energy_Carbon; }
 
-            playerMovementEffect = new PlayerMovementEffect();
+            _Particle_Move;
 
             constructor() {
                 super();
@@ -293,12 +290,14 @@
                 this._Object = mesh;
                 Scene.add(this._Object);
 
+                this._Particle_Move = new C_Particle_Move()
+
                 this.Initialize();
             }
 
 
             Initialize() {
-                this._Flag_Boost = false;
+                this.Flag_Boost = false;
 
                 this._Speed = 1.2;
                 this._Speed_Past = this._Speed;
@@ -318,7 +317,7 @@
                     this.Move(direction.clone());
                     this._Object.rotation.y = Math.atan2(direction.y, direction.x) + Math.PI / 2;
                 }
-                this.playerMovementEffect.update();
+                this._Particle_Move.update();
             }
 
 
@@ -339,54 +338,149 @@
                 this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon);
             }
         }
-        class PlayerMovementEffect {
+
+        class C_Particle_Move {
+
+            _Array_Particle;
+            _Number;
+            _Size;
+            _Position_Past;
+            _Lifespan;
+            _Emission;
+            _Speed;
+            _ParticleSystem;
+
             constructor() {
-                this.particleSystem = this.createParticleSystem();
+                const canvas = document.createElement('canvas');
+                canvas.width = 16;
+                canvas.height = 16;
+                const context = canvas.getContext('2d');
+                context.beginPath();
+                context.arc(8, 8, 7, 0, Math.PI * 2);
+                context.fillStyle = 'white';
+                context.fill();
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+
+                this._Array_Particle = [];
+                this._Number = 200;
+                this._Size = 20;
+                this._Position_Past = new THREE.Vector3();
+                this._Lifespan = 2;
+                this._Emission = 0.75;
+                this._Speed = 0.1;
+                this._ParticleSystem = this.Create_ParticleSystem(texture);
+
+                Scene.add(this._ParticleSystem);
             }
 
-            createParticleSystem() {
-                const particleGeometry = new THREE.BufferGeometry();
-                const particleCount = 1000;
-                const particlePositions = new Float32Array(particleCount * 3);
+            Create_ParticleSystem(_texture) {
+                const positions = new Float32Array(this._Number * 3);
+                const colors = new Float32Array(this._Number * 3);
+                const sizes = new Float32Array(this._Number);
 
-                for (let i = 0; i < particleCount; i++) {
-                    particlePositions[i * 3] = 0;
-                    particlePositions[i * 3 + 1] = 0;
-                    particlePositions[i * 3 + 2] = 0;
+                for (let i = 0; i < this._Number; i++) {
+                    sizes[i] = this._Size;
                 }
 
-                particleGeometry.setAttribute(
-                    'position',
-                    new THREE.BufferAttribute(particlePositions, 3)
-                );
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-                const particleMaterial = new THREE.PointsMaterial({
-                    color: 0x00ff00,
-                    size: 0.1,
-                    transparent: true,
-                    opacity: 0.5
+                const material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        U_Texture: { value: _texture },
+                    },
+                    vertexShader: `
+                        varying vec3 VF_Color;
+                        attribute float size;
+                        attribute vec3 color;
+
+                        void main() {
+                            VF_Color            = color;
+                            vec4 position_view  = modelViewMatrix * vec4(position, 1.0);
+                            gl_PointSize        = size;
+                            gl_Position         = projectionMatrix * position_view;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform sampler2D U_Texture;
+                        varying vec3 VF_Color;
+
+                        void main() {
+                            gl_FragColor = vec4(VF_Color, 1.0) * texture2D(U_Texture, gl_PointCoord);
+                        }
+                    `,
+                    blending: THREE.AdditiveBlending,
+                    depthTest: false,
+                    transparent: true
                 });
-                
-                const mesh = new THREE.Points(particleGeometry, particleMaterial)
-                Scene.add(mesh);
 
-                return mesh;
+                return new THREE.Points(geometry, material);
             }
 
             update() {
-                const particles = this.particleSystem.geometry.attributes.position.array;
-                for (let i = 0; i < particles.length; i += 3) {
-                    particles[i] = Player.Position.x;
-                    particles[i + 1] = Player.Position.y;
-                    particles[i + 2] = Player.Position.z;
-                }
-                this.particleSystem.geometry.attributes.position.needsUpdate = true;
+                console.log(Player.Position.length());
 
-                this.particleSystem.material.opacity = Math.max(
-                    this.particleSystem.material.opacity - FC_Environment.TIME_DELTA * 0.5,
-                    0
-                );
-                this.particleSystem.material.needsUpdate = true;
+                if (!this._Position_Past.equals(Player.Position) && this._Array_Particle.length < this._Number) {
+                    const direction = this._Position_Past.clone().sub(Player.Position).normalize();
+
+                    // const angle = (Math.random() - 0.5) * Math.PI / 6;
+                    // const direction_x = direction.clone().x * Math.cos(angle) - direction.clone().y * Math.sin(angle);
+                    // const direction_y = direction.clone().x * Math.sin(angle) + direction.clone().y * Math.cos(angle);
+                    // const velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
+
+                    this._Array_Particle.push({
+                        position: Player.Position.clone(),
+                        velocity: new THREE.Vector3(),
+                        size: (Math.random() - 0.5) * this._Size + this._Size * 0.5,
+                        life: this._Lifespan,
+                        color: new THREE.Color(0x00ff88)
+                    });
+                    this._Position_Past.copy(Player.Position);
+                }
+
+                const positions = this._ParticleSystem.geometry.attributes.position.array;
+                const colors = this._ParticleSystem.geometry.attributes.color.array;
+                const sizes = this._ParticleSystem.geometry.attributes.size.array;
+
+                let index_particle = 0;
+                for (let i = this._Array_Particle.length - 1; i >= 0; i--) {
+                    const particle = this._Array_Particle[i];
+                    particle.life -= FC_Environment.TIME_DELTA;
+
+                    if (particle.life <= 0) {
+                        this._Array_Particle.splice(i, 1);
+                        continue;
+                    }
+
+                    particle.position.add(particle.velocity);
+                    const ratio_lifespan = particle.life / this._Lifespan;
+
+                    const index = index_particle * 3;
+                    positions[index] = particle.position.x;
+                    positions[index + 1] = particle.position.y;
+                    positions[index + 2] = particle.position.z;
+                    colors[index] = particle.color.r * ratio_lifespan;
+                    colors[index + 1] = particle.color.g * ratio_lifespan;
+                    colors[index + 2] = particle.color.b * ratio_lifespan;
+                    sizes[index_particle] = particle.size * ratio_lifespan;
+
+                    index_particle++;
+                }
+
+                for (let i = index_particle * 3; i < positions.length; i++) {
+                    positions[i] = 0;
+                    colors[i] = 0;
+                }
+                for (let i = index_particle; i < sizes.length; i++) {
+                    sizes[i] = 0;
+                }
+
+                this._ParticleSystem.geometry.attributes.position.needsUpdate = true;
+                this._ParticleSystem.geometry.attributes.color.needsUpdate = true;
+                this._ParticleSystem.geometry.attributes.size.needsUpdate = true;
             }
         }
 
