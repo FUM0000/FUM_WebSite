@@ -317,7 +317,7 @@
                     this.Move(direction.clone());
                     this._Object.rotation.y = Math.atan2(direction.y, direction.x) + Math.PI / 2;
                 }
-                this._Particle_Move.update();
+                this._Particle_Move.Update();
             }
 
 
@@ -393,12 +393,12 @@
                         U_Texture: { value: _texture },
                     },
                     vertexShader: `
-                        varying vec3 VF_Color;
+                        varying vec3 V_Color;
                         attribute float size;
                         attribute vec3 color;
 
                         void main() {
-                            VF_Color            = color;
+                            V_Color             = color;
                             vec4 position_view  = modelViewMatrix * vec4(position, 1.0);
                             gl_PointSize        = size;
                             gl_Position         = projectionMatrix * position_view;
@@ -406,10 +406,10 @@
                     `,
                     fragmentShader: `
                         uniform sampler2D U_Texture;
-                        varying vec3 VF_Color;
+                        varying vec3 V_Color;
 
                         void main() {
-                            gl_FragColor = vec4(VF_Color, 1.0) * texture2D(U_Texture, gl_PointCoord);
+                            gl_FragColor = vec4(V_Color, 1.0) * texture2D(U_Texture, gl_PointCoord);
                         }
                     `,
                     blending: THREE.AdditiveBlending,
@@ -420,9 +420,7 @@
                 return new THREE.Points(geometry, material);
             }
 
-            update() {
-                console.log(Player.Position.length());
-
+            Update() {
                 if (!this._Position_Past.equals(Player.Position) && this._Array_Particle.length < this._Number) {
                     const direction = this._Position_Past.clone().sub(Player.Position).normalize();
 
