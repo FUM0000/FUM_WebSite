@@ -111,6 +111,8 @@
 
             _Manager_EnergyArea = new C_Manager_EnergyArea();
 
+            _Particle_Move;
+
 
             constructor() {
                 super(Scene, Renderer);
@@ -131,6 +133,8 @@
 
                 this._UI_Energy.Initialize();
                 this._UI_Boost.Initialize();
+
+                this._Particle_Move = new C_Particle_Move();
             }
 
 
@@ -151,6 +155,8 @@
                     this._UI_Tap.Position = new THREE.Vector3(0, 0, -8);
                     this._UI_Tap.Rotation = new THREE.Vector3(0, 0, 0);
                 }
+                
+                this._Particle_Move.Initialize();
             }
             Update() {
 
@@ -256,6 +262,8 @@
 
                 this._Manager_EnergyArea.Update();
                 if (this._Manager_EnergyArea.Check(Player.Position)) Player.Collect_Carbon();
+
+                this._Particle_Move.Update();
             }
         }
 
@@ -278,7 +286,8 @@
             _Energy_Carbon_Rate_Decrease;
             get Energy_Carbon() { return this._Energy_Carbon; }
 
-            _Particle_Move;
+            _Object;
+            get Object() { return this._Object; }
 
             constructor() {
                 super();
@@ -289,8 +298,6 @@
                 mesh.scale.x = 0.5;
                 this._Object = mesh;
                 Scene.add(this._Object);
-
-                this._Particle_Move = new C_Particle_Move()
 
                 this.Initialize();
             }
@@ -317,7 +324,6 @@
                     this.Move(direction.clone());
                     this._Object.rotation.y = Math.atan2(direction.y, direction.x) + Math.PI / 2;
                 }
-                this._Particle_Move.Update();
             }
 
 
@@ -340,7 +346,6 @@
         }
 
         class C_Particle_Move {
-
             _Array_Particle;
             _Number;
             _Size;
@@ -349,6 +354,7 @@
             _Emission;
             _Speed;
             _ParticleSystem;
+            _Container;
 
             constructor() {
                 const canvas = document.createElement('canvas');
@@ -362,6 +368,9 @@
                 const texture = new THREE.CanvasTexture(canvas);
                 texture.needsUpdate = true;
 
+                this._Container = new THREE.Object3D();
+                Scene.add(this._Container);
+
                 this._Array_Particle = [];
                 this._Number = 200;
                 this._Size = 20;
@@ -371,7 +380,30 @@
                 this._Speed = 0.1;
                 this._ParticleSystem = this.Create_ParticleSystem(texture);
 
-                Scene.add(this._ParticleSystem);
+                this._Container.add(this._ParticleSystem);
+            }
+
+            Initialize() {
+                this._Array_Particle = [];
+                this._Position_Past = new THREE.Vector3();
+
+                const positions = this._ParticleSystem.geometry.attributes.position.array;
+                const colors = this._ParticleSystem.geometry.attributes.color.array;
+                const sizes = this._ParticleSystem.geometry.attributes.size.array;
+
+                for (let i = 0; i < positions.length; i++) {
+                    positions[i] = 0;
+                    colors[i] = 0;
+                }
+                for (let i = 0; i < sizes.length; i++) {
+                    sizes[i] = this._Size;
+                }
+
+                this._ParticleSystem.geometry.attributes.position.needsUpdate = true;
+                this._ParticleSystem.geometry.attributes.color.needsUpdate = true;
+                this._ParticleSystem.geometry.attributes.size.needsUpdate = true;
+
+                this._Container.position.set(0, 0, 0);
             }
 
             Create_ParticleSystem(_texture) {
@@ -398,10 +430,10 @@
                         attribute vec3 color;
 
                         void main() {
-                            V_Color             = color;
-                            vec4 position_view  = modelViewMatrix * vec4(position, 1.0);
-                            gl_PointSize        = size;
-                            gl_Position         = projectionMatrix * position_view;
+                            V_Color = color;
+                            vec4 position_view = modelViewMatrix * vec4(position, 1.0);
+                            gl_PointSize = size;
+                            gl_Position = projectionMatrix * position_view;
                         }
                     `,
                     fragmentShader: `
@@ -421,17 +453,23 @@
             }
 
             Update() {
+                const cameraPosition = Camera.Position.clone();
+                cameraPosition.z = 0;
+                this._Container.position.copy(cameraPosition);
+
                 if (!this._Position_Past.equals(Player.Position) && this._Array_Particle.length < this._Number) {
                     const direction = this._Position_Past.clone().sub(Player.Position).normalize();
 
-                    // const angle = (Math.random() - 0.5) * Math.PI / 6;
-                    // const direction_x = direction.clone().x * Math.cos(angle) - direction.clone().y * Math.sin(angle);
-                    // const direction_y = direction.clone().x * Math.sin(angle) + direction.clone().y * Math.cos(angle);
-                    // const velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
+                    const angle = (Math.random() - 0.5) * Math.PI / 6;
+                    const direction_x = direction.clone().x * Math.cos(angle) - direction.clone().y * Math.sin(angle);
+                    const direction_y = direction.clone().x * Math.sin(angle) + direction.clone().y * Math.cos(angle);
+                    const velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
+
+                    const particlePosition = Player.Position.clone().sub(this._Container.position);
 
                     this._Array_Particle.push({
-                        position: Player.Position.clone(),
-                        velocity: new THREE.Vector3(),
+                        position: particlePosition,
+                        velocity: velocity,
                         size: (Math.random() - 0.5) * this._Size + this._Size * 0.5,
                         life: this._Lifespan,
                         color: new THREE.Color(0x00ff88)
