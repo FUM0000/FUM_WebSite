@@ -1,0 +1,178 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>QR Code</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+
+  <v-app id="App">
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">QR Code</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col cols="12" md="8">
+                <v-card class="mb-6">
+                  <v-card-title>
+                    <v-icon large left>mdi-qrcode-plus</v-icon>
+                    Generate QR Code
+                  </v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="qrText" label="Enter URL" outlined @keyup.enter="generateQR"></v-text-field>
+                    <v-btn color="primary" large block @click="generateQR" :disabled="!qrText">
+                      <v-icon left>mdi-qrcode</v-icon>
+                      Generate
+                    </v-btn>
+                    <div id="qrcode" class="d-flex justify-center mt-4"></div>
+                  </v-card-text>
+                </v-card>
+
+                <v-card>
+                  <v-card-title>
+                    <v-icon large left>mdi-qrcode-scan</v-icon>
+                    Read QR Code
+                  </v-card-title>
+                  <v-card-text>
+                    <div id="reader" style="width: 100%"></div>
+                    <v-btn block outlined @click="$refs.fileInput.click()">
+                      <v-icon left>mdi-folder-open</v-icon>
+                      Open
+                    </v-btn>
+                    <input ref="fileInput" type="file" accept="image/*" style="display: none" @change="onFileChange">
+                    <v-alert v-if="scanResult" :color="scanError ? 'error' : 'success'" outlined class="mt-4">
+                      <strong>{{ scanError ? 'Error:' : 'Scan Result:' }}</strong>
+                      <template v-if="!scanError">
+                        <div class="text-decoration-underline">
+                          <a :href="scanResult" target="_blank" style="word-break: break-all;">{{ scanResult }}</a>
+                        </div>
+                      </template>
+                      <template v-else>
+                        {{ scanResult }}
+                      </template>
+                    </v-alert>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        qrText: '',
+        scanResult: '',
+        scanError: false,
+        qrcode: null,
+        html5QrcodeScanner: null
+      },
+      methods: {
+        generateQR() {
+          if (this.qrText) {
+            if (this.qrcode) {
+              document.getElementById('qrcode').innerHTML = '';
+            }
+            this.qrcode = new QRCode(document.getElementById('qrcode'), {
+              text: this.qrText,
+              width: 256,
+              height: 256,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+          }
+        },
+        async onFileChange(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          try {
+            if (this.html5QrcodeScanner) {
+              await this.html5QrcodeScanner.clear();
+            }
+
+            const html5QrcodeScanner = new Html5Qrcode("reader");
+            this.html5QrcodeScanner = html5QrcodeScanner;
+
+            const imageFile = await this.getImageFileData(file);
+
+            const result = await html5QrcodeScanner.scanFile(imageFile, true);
+            this.scanResult = result;
+            this.scanError = false;
+          } catch (error) {
+            console.error("Error scanning file:", error);
+            this.scanResult = "An error has occurred. Please try another image.";
+            this.scanError = true;
+          }
+        },
+        getImageFileData(file) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const imageFile = new File([e.target.result], file.name, { type: file.type });
+              resolve(imageFile);
+            };
+            reader.onerror = (e) => reject(e);
+            reader.readAsArrayBuffer(file);
+          });
+        }
+      },
+      beforeDestroy() {
+        if (this.html5QrcodeScanner) {
+          this.html5QrcodeScanner.clear();
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

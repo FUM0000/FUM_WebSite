@@ -87,6 +87,20 @@ Vue.component('main-navigation', {
             <!-- ▲ Home ▲ ------------------------------------------------------------------------------------->
 
 
+            <!-- ▼ Music ▼ ------------------------------------------------------------------------------------>
+            <v-list-group :value="false" prepend-icon="mdi-hammer-wrench">
+                <template v-slot:activator>
+                    <v-list-item-title>Function</v-list-item-title>
+                </template>
+
+                <v-list-item href="./Function_QRCode.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>QR Code</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
+            <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
+
+
             <!-- ▼ Japanese ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-translate-variant">
                 <template v-slot:activator>
@@ -805,20 +819,20 @@ Vue.component('main-navigation', {
 
 
             <!-- ▼ Language ▼ --------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-hand-heart-outline">
+            <!--<v-list-group :value="false" prepend-icon="mdi-hand-heart-outline">
                 <template v-slot:activator>
                     <v-list-item-title>Language</v-list-item-title>
                 </template>
                 
-                <!--<v-list-item href="../../Spanish/HTML/index_spanish.html">
+                <v-list-item href="../../Spanish/HTML/index_spanish.html">
                     <v-list-item-icon />
                     <v-list-item-title>Español</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="../../Chinese/HTML/index_chinese.html">
                     <v-list-item-icon />
                     <v-list-item-title>中文</v-list-item-title>
-                </v-list-item>-->
-            </v-list-group>
+                </v-list-item>
+            </v-list-group>-->
             <!-- ▲ Language ▲ --------------------------------------------------------------------------------->
 
 
