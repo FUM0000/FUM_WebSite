@@ -178,20 +178,48 @@ class FC_Input_Keyboard {
     }
 }
 
-class FC_GameObject {
+class FC_GameObject extends THREE.Object3D {
 
-    _Object = null;
+    _Object;
+    get Object() { return this._Object.clone(); }
 
+    get Children() { return this._Object.children; }
     get Position() { return this._Object.position; }
     set Position(_vector3) { this._Object ? this._Object.position.set(_vector3.x, _vector3.y, _vector3.z) : null; }
     get Rotation() { return this._Object.rotation; }
     set Rotation(_vector3) { this._Object ? this._Object.rotation.set(_vector3.x, _vector3.y, _vector3.z) : null; }
     get Scale() { return this._Object.position; }
     set Scale(_vector3) { this._Object ? this._Object.scale.set(_vector3.x, _vector3.y, _vector3.z) : null; }
+    get Matrix() { return this._Object.matrix; }
+    set Matrix(_matrix) { this._Object ? this._Object.matrix.copy(_matrix) : null; }
+    Add_to_Children(_child) { this.add(_child); }
 
     Initialize() { }
     Update() { }
 }
+class FC_Item extends FC_GameObject {
+
+    static Count = 0;
+
+    _ID;
+    _Flag_Show;
+
+    constructor() {
+        super();
+
+        this.constructor.Count++;
+        this.ID = this.constructor.Count;
+        this._Flag_Show = false;
+    }
+
+    Activate() {
+        this._Flag_Show = true;
+    }
+    PickedUp() {
+        this._Flag_Show = false;
+    }
+}
+
 class FC_Environment extends FC_GameObject {
 
     static FPS = 60;
@@ -932,6 +960,7 @@ export {
     FC_Input_Joystick,
     FC_Input_Keyboard,
     FC_GameObject,
+    FC_Item,
     FC_Environment,
     FC_Animation,
     FC_Camera,

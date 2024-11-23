@@ -66,6 +66,7 @@
             FC_Input_Joystick,
             FC_Input_Keyboard,
             FC_GameObject,
+            FC_Item,
             FC_Environment,
             FC_Animation,
             FC_Camera,
@@ -84,7 +85,6 @@
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas"), antialias: true });
         const Loader_FBX = new FBXLoader();
 
-        Scene.fog = new THREE.Fog(0x222222, 0, 50);
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0x222222));
@@ -144,6 +144,8 @@
                 Player.Initialize();
                 Camera.Initialize();
                 Camera.Target = Player;
+                Camera.Object.far = 1000;
+                Camera.Object.updateProjectionMatrix();
 
                 this._UI_Start.Position = new THREE.Vector3(0, 0.5, -8);
                 this._UI_Gameover.Hide();
@@ -151,12 +153,18 @@
 
                 this._UI_Tap.Position = new THREE.Vector3(0, -0.5, -8);
                 this._UI_Tap.Rotation = new THREE.Vector3(0, 0, THREE.MathUtils.degToRad(180));
-                if (this._State == "Before_Loaded") {
-                    this._UI_Tap.Position = new THREE.Vector3(0, 0, -8);
-                    this._UI_Tap.Rotation = new THREE.Vector3(0, 0, 0);
-                }
-                
+
                 this._Particle_Move.Initialize();
+
+                switch (this._State) {
+                    case "Before_Loaded":
+                        this._UI_Tap.Position = new THREE.Vector3(0, 0, -8);
+                        this._UI_Tap.Rotation = new THREE.Vector3(0, 0, 0);
+                        break;
+                    case "Loaded":
+                        this._Particle_Background = new C_Background();
+                        break;
+                }
             }
             Update() {
 
@@ -346,6 +354,7 @@
         }
 
         class C_Particle_Move {
+
             _Array_Particle;
             _Number;
             _Size;
@@ -379,7 +388,6 @@
                 this._Emission = 0.75;
                 this._Speed = 0.1;
                 this._ParticleSystem = this.Create_ParticleSystem(texture);
-
                 this._Container.add(this._ParticleSystem);
             }
 
@@ -411,9 +419,7 @@
                 const colors = new Float32Array(this._Number * 3);
                 const sizes = new Float32Array(this._Number);
 
-                for (let i = 0; i < this._Number; i++) {
-                    sizes[i] = this._Size;
-                }
+                for (let i = 0; i < this._Number; i++) { sizes[i] = this._Size; }
 
                 const geometry = new THREE.BufferGeometry();
                 geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -463,7 +469,8 @@
                     const angle = (Math.random() - 0.5) * Math.PI / 6;
                     const direction_x = direction.clone().x * Math.cos(angle) - direction.clone().y * Math.sin(angle);
                     const direction_y = direction.clone().x * Math.sin(angle) + direction.clone().y * Math.cos(angle);
-                    const velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
+                    let velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
+                    if (!Player.Flag_Boost) velocity = direction.clone().normalize().multiplyScalar(0.05);
 
                     const particlePosition = Player.Position.clone().sub(this._Container.position);
 
@@ -517,6 +524,133 @@
                 this._ParticleSystem.geometry.attributes.position.needsUpdate = true;
                 this._ParticleSystem.geometry.attributes.color.needsUpdate = true;
                 this._ParticleSystem.geometry.attributes.size.needsUpdate = true;
+            }
+        }
+
+        class C_Background {
+
+            _Distance_Area;
+            _Object;
+
+            constructor() {
+                this._Distance_Area = 1000;
+                this._Object = this.CreateNearStars();
+                Scene.add(this._Object);
+            }
+
+            CreateNearStars() {
+                const object = new THREE.Object3D();
+
+                const distribution = [
+                    { size: 8, count: 100, range: { min: 50, max: 60 } },
+                    { size: 6, count: 250, range: { min: 60, max: 70 } },
+                    { size: 5, count: 500, range: { min: 70, max: 80 } },
+                    { size: 4, count: 1000, range: { min: 80, max: 90 } },
+                    { size: 3, count: 1000, range: { min: 50, max: 100 } }
+                ];
+
+                const starColors = {
+                    white: { r: 1.0, g: 1.0, b: 1.0 },
+                    blue: { r: 0.5, g: 0.6, b: 1.0 },
+                    orange: { r: 1.0, g: 0.7, b: 0.7 },
+                    yellow: { r: 1.0, g: 1.0, b: 0.7 }
+                };
+
+                for (const { size, count, range } of distribution) {
+                    const geometry = new THREE.BufferGeometry();
+                    const positions = new Float32Array(count * 3);
+                    const colors = new Float32Array(count * 3);
+                    const sizes = new Float32Array(count);
+
+                    for (let i = 0; i < count; i++) {
+                        const x = (Math.random() - 0.5) * this._Distance_Area;
+                        const y = (Math.random() - 0.5) * this._Distance_Area;
+                        const z = Math.random() * (range.max - range.min) + range.min;
+
+                        positions[i * 3] = x;
+                        positions[i * 3 + 1] = y;
+                        positions[i * 3 + 2] = z;
+
+                        let selectedColor;
+                        if (size === 8 || size === 6) {
+                            const random = Math.random();
+                            if (random < 0.4) {
+                                selectedColor = starColors.white;
+                            } else if (random < 0.6) {
+                                selectedColor = starColors.blue;
+                            } else if (random < 0.8) {
+                                selectedColor = starColors.orange;
+                            } else {
+                                selectedColor = starColors.yellow;
+                            }
+                        } else {
+                            selectedColor = starColors.white;
+                        }
+                        colors[i * 3] = selectedColor.r;
+                        colors[i * 3 + 1] = selectedColor.g;
+                        colors[i * 3 + 2] = selectedColor.b;
+
+                        sizes[i] = size;
+                    }
+
+                    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+                    const material = new THREE.ShaderMaterial({
+                        uniforms: {
+                            U_Texture: { value: new THREE.CanvasTexture(this.CreateStarTexture()) }
+                        },
+                        vertexShader: this.GetNearStarsVertexShader(),
+                        fragmentShader: this.GetNearStarsFragmentShader(),
+                        blending: THREE.AdditiveBlending,
+                        depthTest: false,
+                        transparent: true
+                    });
+
+                    const points = new THREE.Points(geometry, material);
+                    object.add(points);
+                }
+
+                return object;
+            }
+
+            CreateStarTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 8;
+                canvas.height = 8;
+                const context = canvas.getContext('2d');
+                context.beginPath();
+                context.arc(4, 4, 2, 0, Math.PI * 2);
+                context.fillStyle = '#ffffff';
+                context.fill();
+                return canvas;
+            }
+
+            GetNearStarsVertexShader() {
+                return `
+                    varying vec3 V_Color;
+                    attribute float size;
+                    attribute vec3 color;
+
+                    void main() {
+                        V_Color = color;
+                        vec4 position_view = modelViewMatrix * vec4(position, 1.0);
+                        gl_PointSize = size;
+                        gl_Position = projectionMatrix * position_view;
+                    }
+                `;
+            }
+
+            GetNearStarsFragmentShader() {
+                return `
+                    uniform sampler2D U_Texture;
+                    varying vec3 V_Color;
+
+                    void main() {
+                        gl_FragColor = vec4(V_Color, 1.0) * texture2D(U_Texture, gl_PointCoord);
+                    }
+                `;
             }
         }
 
@@ -613,6 +747,29 @@
             }
         }
 
+        class C_Item_EnergyShip extends FC_Item {
+
+            constructor() {
+                super();
+
+                const geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 3);
+                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.scale.x = 0.5;
+                this._Object = mesh;
+            }
+
+            Initialize() {
+
+            }
+            Update() {
+                this.#Collision();
+            }
+
+            #Collision() {
+
+            }
+        }
 
         const Environment = new FC_Environment();
         const Camera = new FC_Camera(Renderer, undefined, new THREE.Vector3(0, 0, -10));
@@ -658,7 +815,7 @@
 
                 switch (Manager.State) {
                     case "Loaded":
-                        Scene.fog = new THREE.Fog(0x222222, 0, 50);
+                        Scene.fog = null;
                         Manager.Initialize();
                         Manager.Change_State("Waiting");
                         break;
