@@ -87,18 +87,22 @@ Vue.component('main-navigation', {
             <!-- ▲ Home ▲ ------------------------------------------------------------------------------------->
 
 
-            <!-- ▼ Music ▼ ------------------------------------------------------------------------------------>
+            <!-- ▼ Function ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-hammer-wrench">
                 <template v-slot:activator>
                     <v-list-item-title>Function</v-list-item-title>
                 </template>
 
+                <v-list-item href="./Function_Converter.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Converter</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Function_QRCode.html">
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
                 </v-list-item>
             </v-list-group>
-            <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
+            <!-- ▲ Function ▲ --------------------------------------------------------------------------------->
 
 
             <!-- ▼ Japanese ▼ --------------------------------------------------------------------------------->

@@ -1,0 +1,415 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Converter</title>
+
+  <style>
+    .v-card {
+      margin-bottom: 16px;
+    }
+
+    .unit-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .unit-block {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .value-display,
+    .time-display {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      font-size: 24px;
+      margin-top: 6px;
+      /* Changed from 10px to 6px */
+      border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+      padding-bottom: 6px;
+      min-height: 43px;
+      /* Add this to match v-text-field height */
+    }
+
+    .time-display {
+      justify-content: center;
+      /* Center time display */
+    }
+
+    .value-number {
+      margin-right: 8px;
+      flex-grow: 1;
+      text-align: center;
+    }
+
+    .unit-symbol {
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .time-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .time-block {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    [v-cloak] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Converter</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="3" md="3" lg="3">
+                <v-select v-model="selectedCategory" :items="categories" label="Category"></v-select>
+              </v-col>
+            </v-row>
+
+            <v-row justify="center">
+              <!-- Distance Converter -->
+              <v-col xs="12" md="6" lg="6" v-if="selectedCategory === 'distance'">
+                <v-card>
+                  <v-card-title>Distance</v-card-title>
+                  <v-card-text>
+                    <div class="unit-container">
+                      <div class="unit-block">
+                        <v-select v-model="fromDistanceUnit" :items="distanceUnits" label="From"
+                          @change="convert"></v-select>
+                        <v-text-field v-model="inputValue" type="number" :label="`${fromDistanceUnit}`"
+                          @input="convert"></v-text-field>
+                      </div>
+                      <div class="unit-block">
+                        <v-select v-model="toDistanceUnit" :items="distanceUnits" label="To"
+                          @change="convert"></v-select>
+                        <div class="value-display">
+                          <span class="value-number">{{outputValue}}</span>
+                          <span class="unit-symbol">{{getUnitSymbol(toDistanceUnit)}}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+
+              <!-- Weight Converter -->
+              <v-col xs="12" md="6" lg="6" v-if="selectedCategory === 'weight'">
+                <v-card>
+                  <v-card-title>Weight</v-card-title>
+                  <v-card-text>
+                    <div class="unit-container">
+                      <div class="unit-block">
+                        <v-select v-model="fromWeightUnit" :items="weightUnits" label="From"
+                          @change="convert"></v-select>
+                        <v-text-field v-model="inputValue" type="number" :label="`${fromWeightUnit}`"
+                          @input="convert"></v-text-field>
+                      </div>
+                      <div class="unit-block">
+                        <v-select v-model="toWeightUnit" :items="weightUnits" label="To"
+                          @change="convert"></v-select>
+                        <div class="value-display">
+                          <span class="value-number">{{outputValue}}</span>
+                          <span class="unit-symbol">{{getUnitSymbol(toWeightUnit)}}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+
+              <!-- Temperature Converter -->
+              <v-col xs="12" md="6" lg="6" v-if="selectedCategory === 'temperature'">
+                <v-card>
+                  <v-card-title>Temperature</v-card-title>
+                  <v-card-text>
+                    <div class="unit-container">
+                      <div class="unit-block">
+                        <v-select v-model="fromTempUnit" :items="tempUnits" label="From"
+                          @change="convert"></v-select>
+                        <v-text-field v-model="inputValue" type="number" :label="`${fromTempUnit}`"
+                          @input="convert"></v-text-field>
+                      </div>
+                      <div class="unit-block">
+                        <v-select v-model="toTempUnit" :items="tempUnits" label="To" @change="convert"></v-select>
+                        <div class="value-display">
+                          <span class="value-number">{{outputValue}}</span>
+                          <span class="unit-symbol">{{getUnitSymbol(toTempUnit)}}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+
+              <!-- Time Zone Converter -->
+              <v-col xs="12" md="6" lg="6" v-if="selectedCategory === 'time'">
+                <v-card>
+                  <v-card-title>Time Zone</v-card-title>
+                  <v-card-text>
+                    <div class="time-container">
+                      <div class="time-block">
+                        <v-autocomplete v-model="fromTimezone" :items="timezones" label="From"
+                          :filter="customFilter" @change="calculateTime"></v-autocomplete>
+                        <v-text-field v-model="timeInput" type="time" label="Time" @input="calculateTime"
+                          class="time-input"></v-text-field>
+                      </div>
+                      <div class="time-block">
+                        <v-autocomplete v-model="toTimezone" :items="timezones" label="To"
+                          :filter="customFilter" @change="calculateTime"></v-autocomplete>
+                        <div class="time-display">{{timeOutput}}</div>
+                      </div>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer-simple></main-footer-simple>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        selectedCategory: 'distance',
+        categories: [
+          { text: 'Distance', value: 'distance' },
+          { text: 'Weight', value: 'weight' },
+          { text: 'Temperature', value: 'temperature' },
+          { text: 'Time Zone', value: 'time' }
+        ],
+        fromDistanceUnit: 'Kilometer(km)',
+        toDistanceUnit: 'Mile(miles)',
+        fromWeightUnit: 'Kilogram(kg)',
+        toWeightUnit: 'Pound(lb)',
+        fromTempUnit: 'Celsius(°C)',
+        toTempUnit: 'Fahrenheit(°F)',
+        inputValue: '',
+        outputValue: '',
+        distanceUnits: [
+          'Kilometer(km)',
+          'Meter(m)',
+          'Centimeter(cm)',
+          'Millimeter(mm)',
+          'Mile(miles)',
+          'Yard(yards)',
+          'Foot(feet)',
+          'Inch(inches)'
+        ],
+        weightUnits: [
+          'Kilogram(kg)',
+          'Gram(g)',
+          'Milligram(mg)',
+          'Pound(lb)',
+          'Ounce(oz)',
+          'Ton(t)'
+        ],
+        tempUnits: [
+          'Celsius(°C)',
+          'Fahrenheit(°F)',
+          'Kelvin(K)'
+        ],
+        fromTimezone: 'Asia/Tokyo',
+        toTimezone: 'America/New_York',
+        timeInput: '', // Changed to empty string initially
+        timeOutput: '',
+        timezones: [
+          { text: 'Tokyo (Japan)', value: 'Asia/Tokyo' },
+          { text: 'UTC (England)', value: 'UTC' },
+          { text: 'New York (USA)', value: 'America/New_York' },
+          { text: 'Los Angeles (USA)', value: 'America/Los_Angeles' },
+          { text: 'Chicago (USA)', value: 'America/Chicago' },
+          { text: 'Houston (USA)', value: 'America/Chicago' },
+          { text: 'Toronto (Canada)', value: 'America/Toronto' },
+          { text: 'Vancouver (Canada)', value: 'America/Vancouver' },
+          { text: 'Mexico City (Mexico)', value: 'America/Mexico_City' },
+          { text: 'London (UK)', value: 'Europe/London' },
+          { text: 'Paris (France)', value: 'Europe/Paris' },
+          { text: 'Berlin (Germany)', value: 'Europe/Berlin' },
+          { text: 'Rome (Italy)', value: 'Europe/Rome' },
+          { text: 'Madrid (Spain)', value: 'Europe/Madrid' },
+          { text: 'Amsterdam (Netherlands)', value: 'Europe/Amsterdam' },
+          { text: 'Moscow (Russia)', value: 'Europe/Moscow' },
+          { text: 'Dubai (UAE)', value: 'Asia/Dubai' },
+          { text: 'Mumbai (India)', value: 'Asia/Kolkata' },
+          { text: 'New Delhi (India)', value: 'Asia/Kolkata' },
+          { text: 'Bangkok (Thailand)', value: 'Asia/Bangkok' },
+          { text: 'Singapore', value: 'Asia/Singapore' },
+          { text: 'Jakarta (Indonesia)', value: 'Asia/Jakarta' },
+          { text: 'Beijing (China)', value: 'Asia/Shanghai' },
+          { text: 'Shanghai (China)', value: 'Asia/Shanghai' },
+          { text: 'Hong Kong', value: 'Asia/Hong_Kong' },
+          { text: 'Seoul (South Korea)', value: 'Asia/Seoul' },
+          { text: 'Sydney (Australia)', value: 'Australia/Sydney' },
+          { text: 'Melbourne (Australia)', value: 'Australia/Melbourne' },
+          { text: 'Brisbane (Australia)', value: 'Australia/Brisbane' },
+          { text: 'Perth (Australia)', value: 'Australia/Perth' },
+          { text: 'Auckland (New Zealand)', value: 'Pacific/Auckland' },
+          { text: 'Wellington (New Zealand)', value: 'Pacific/Auckland' },
+          { text: 'Honolulu (USA)', value: 'Pacific/Honolulu' },
+          { text: 'São Paulo (Brazil)', value: 'America/Sao_Paulo' },
+          { text: 'Rio de Janeiro (Brazil)', value: 'America/Sao_Paulo' },
+          { text: 'Buenos Aires (Argentina)', value: 'America/Argentina/Buenos_Aires' },
+          { text: 'Santiago (Chile)', value: 'America/Santiago' },
+          { text: 'Lima (Peru)', value: 'America/Lima' },
+          { text: 'Cairo (Egypt)', value: 'Africa/Cairo' },
+          { text: 'Johannesburg (South Africa)', value: 'Africa/Johannesburg' },
+          { text: 'Istanbul (Turkey)', value: 'Europe/Istanbul' },
+          { text: 'Tel Aviv (Israel)', value: 'Asia/Tel_Aviv' },
+        ]
+      },
+      mounted() {
+        // Calculate initial time when component is mounted
+        this.calculateTime();
+      },
+      watch: {
+        selectedCategory(newCategory) {
+          this.inputValue = '';
+          this.outputValue = '';
+          this.timeOutput = '';
+
+          // Set current time when Time Zone is selected
+          if (newCategory === 'time') {
+            const now = new Date();
+            this.timeInput = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            this.calculateTime(); // Calculate initial time conversion
+          } else {
+            this.timeInput = '';
+          }
+        }
+      },
+      methods: {
+        customFilter(item, queryText) {
+          const text = item.text.toLowerCase()
+          const searchText = queryText.toLowerCase()
+          return text.indexOf(searchText) > -1
+        },
+        getUnitSymbol(unitString) {
+          const match = unitString.match(/\((.*?)\)/)
+          return match ? match[1] : unitString
+        },
+        convert() {
+          if (!this.inputValue) {
+            this.outputValue = ''
+            return
+          }
+
+          const value = parseFloat(this.inputValue)
+          const conversionRates = {
+            'Kilometer(km)': 1000,
+            'Meter(m)': 1,
+            'Centimeter(cm)': 0.01,
+            'Millimeter(mm)': 0.001,
+            'Mile(miles)': 1609.34,
+            'Yard(yards)': 0.9144,
+            'Foot(feet)': 0.3048,
+            'Inch(inches)': 0.0254,
+            'Kilogram(kg)': 1000,
+            'Gram(g)': 1,
+            'Milligram(mg)': 0.001,
+            'Pound(lb)': 453.592,
+            'Ounce(oz)': 28.3495,
+            'Ton(t)': 1000000
+          }
+
+          if (this.selectedCategory === 'temperature') {
+            let celsius
+            const fromUnit = this.getUnitSymbol(this.fromTempUnit)
+            const toUnit = this.getUnitSymbol(this.toTempUnit)
+
+            if (fromUnit === '°C') celsius = value
+            else if (fromUnit === '°F') celsius = (value - 32) * 5 / 9
+            else if (fromUnit === 'K') celsius = value - 273.15
+
+            if (toUnit === '°C') this.outputValue = celsius.toFixed(2)
+            else if (toUnit === '°F') this.outputValue = (celsius * 9 / 5 + 32).toFixed(2)
+            else if (toUnit === 'K') this.outputValue = (celsius + 273.15).toFixed(2)
+          } else {
+            const fromUnit = this.selectedCategory === 'distance' ? this.fromDistanceUnit : this.fromWeightUnit
+            const toUnit = this.selectedCategory === 'distance' ? this.toDistanceUnit : this.toWeightUnit
+
+            const baseValue = value * conversionRates[fromUnit]
+            this.outputValue = (baseValue / conversionRates[toUnit]).toFixed(4)
+          }
+        },
+        calculateTime() {
+          if (!this.timeInput) {
+            this.timeOutput = ''
+            return
+          }
+
+          const [hours, minutes] = this.timeInput.split(':')
+          const date = new Date()
+          date.setHours(hours)
+          date.setMinutes(minutes)
+
+          const formatter = new Intl.DateTimeFormat('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: this.toTimezone
+          })
+
+          this.timeOutput = formatter.format(date)
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>
