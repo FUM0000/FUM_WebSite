@@ -146,8 +146,7 @@
                           @input="convert"></v-text-field>
                       </div>
                       <div class="unit-block">
-                        <v-select v-model="toWeightUnit" :items="weightUnits" label="To"
-                          @change="convert"></v-select>
+                        <v-select v-model="toWeightUnit" :items="weightUnits" label="To" @change="convert"></v-select>
                         <div class="value-display">
                           <span class="value-number">{{outputValue}}</span>
                           <span class="unit-symbol">{{getUnitSymbol(toWeightUnit)}}</span>
@@ -165,8 +164,7 @@
                   <v-card-text>
                     <div class="unit-container">
                       <div class="unit-block">
-                        <v-select v-model="fromTempUnit" :items="tempUnits" label="From"
-                          @change="convert"></v-select>
+                        <v-select v-model="fromTempUnit" :items="tempUnits" label="From" @change="convert"></v-select>
                         <v-text-field v-model="inputValue" type="number" :label="`${fromTempUnit}`"
                           @input="convert"></v-text-field>
                       </div>
@@ -189,14 +187,14 @@
                   <v-card-text>
                     <div class="time-container">
                       <div class="time-block">
-                        <v-autocomplete v-model="fromTimezone" :items="timezones" label="From"
-                          :filter="customFilter" @change="calculateTime"></v-autocomplete>
+                        <v-autocomplete v-model="fromTimezone" :items="timezones" label="From" :filter="customFilter"
+                          @change="calculateTime"></v-autocomplete>
                         <v-text-field v-model="timeInput" type="time" label="Time" @input="calculateTime"
                           class="time-input"></v-text-field>
                       </div>
                       <div class="time-block">
-                        <v-autocomplete v-model="toTimezone" :items="timezones" label="To"
-                          :filter="customFilter" @change="calculateTime"></v-autocomplete>
+                        <v-autocomplete v-model="toTimezone" :items="timezones" label="To" :filter="customFilter"
+                          @change="calculateTime"></v-autocomplete>
                         <div class="time-display">{{timeOutput}}</div>
                       </div>
                     </div>
@@ -393,20 +391,65 @@
             return
           }
 
-          const [hours, minutes] = this.timeInput.split(':')
-          const date = new Date()
-          date.setHours(hours)
-          date.setMinutes(minutes)
+          // 基準時刻を設定（例：2024-01-01 00:00:00）
+          const baseDate = new Date(2024, 0, 1, 0, 0, 0);
+
+          // 変換元タイムゾーンの時刻を取得
+          const fromTime = baseDate.toLocaleString('en-US', {
+            timeZone: this.fromTimezone,
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric',
+            hour12: false
+          });
+
+          // 変換先タイムゾーンの時刻を取得
+          const toTime = baseDate.toLocaleString('en-US', {
+            timeZone: this.toTimezone,
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric',
+            hour12: false
+          });
+
+          // それぞれをDateオブジェクトに変換
+          const fromDate = new Date(fromTime);
+          const toDate = new Date(toTime);
+
+          // 時差を計算（ミリ秒）
+          const diffMs = toDate - fromDate;
+
+          // ミリ秒を分に変換
+          const diffMins = diffMs / (1000 * 60);
+
+          // 時と分に変換
+          const diffHours = Math.floor(Math.abs(diffMins) / 60);
+          const diffMinutes = Math.abs(diffMins) % 60;
+
+          // 時差文字列を作成
+          const diffStr = `(${diffMins >= 0 ? '+' : '-'} ${String(diffHours).padStart(2, '0')}h${String(Math.floor(diffMinutes)).padStart(2, '0')}m)`;
+
+          // 入力された時刻を変換
+          const [hours, minutes] = this.timeInput.split(':');
+          const date = new Date();
+          date.setHours(hours);
+          date.setMinutes(minutes);
 
           const formatter = new Intl.DateTimeFormat('ja-JP', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false,
             timeZone: this.toTimezone
-          })
+          });
 
-          this.timeOutput = formatter.format(date)
-        }
+          this.timeOutput = `${formatter.format(date)} ${diffStr}`;
+        },
       }
     })
   </script>

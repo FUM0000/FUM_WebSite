@@ -31,8 +31,8 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
-    img {
-      user-select: auto !important;
+    #qrcode img {
+      margin: 0 auto;
     }
   </style>
 </head>
@@ -56,12 +56,17 @@
                     Generate QR Code
                   </v-card-title>
                   <v-card-text>
-                    <v-text-field v-model="qrText" label="Enter URL" outlined @keyup.enter="generateQR"></v-text-field>
-                    <v-btn color="primary" large block @click="generateQR" :disabled="!qrText">
+                    <v-text-field v-model="qrText" label="Enter URL" outlined :error-messages="urlError"
+                      @keyup.enter="generateQR"></v-text-field>
+                    <v-btn color="primary" large block @click="generateQR" :disabled="!isValidInput">
                       <v-icon left>mdi-qrcode</v-icon>
                       Generate
                     </v-btn>
                     <div id="qrcode" class="d-flex justify-center mt-4"></div>
+                    <v-btn v-if="qrGenerated" color="success" block class="mt-4" @click="saveQRCode">
+                      <v-icon left>mdi-download</v-icon>
+                      Save QR Code
+                    </v-btn>
                   </v-card-text>
                 </v-card>
 
@@ -72,7 +77,7 @@
                   </v-card-title>
                   <v-card-text>
                     <div id="reader" style="width: 100%"></div>
-                    <v-btn block outlined @click="$refs.fileInput.click()">
+                    <v-btn block color="primary" @click="$refs.fileInput.click()">
                       <v-icon left>mdi-folder-open</v-icon>
                       Open
                     </v-btn>
@@ -119,22 +124,73 @@
         scanResult: '',
         scanError: false,
         qrcode: null,
-        html5QrcodeScanner: null
+        html5QrcodeScanner: null,
+        urlError: '',
+        qrGenerated: false
+      },
+      computed: {
+        isValidInput() {
+          return this.qrText.length > 0 && !this.urlError;
+        }
+      },
+      watch: {
+        qrText(newValue) {
+          this.validateUrl(newValue);
+        }
       },
       methods: {
+        validateUrl(url) {
+          if (!url) {
+            this.urlError = '';
+            return;
+          }
+
+          // 最初にhttp/httpsで始まっているかチェック
+          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            this.urlError = 'URL must start with http:// or https://';
+            return;
+          }
+
+          // URL形式の検証
+          try {
+            new URL(url);
+            this.urlError = '';
+          } catch (e) {
+            this.urlError = 'Please enter a valid URL';
+          }
+        },
         generateQR() {
-          if (this.qrText) {
+          if (this.qrText && !this.urlError) {
             if (this.qrcode) {
               document.getElementById('qrcode').innerHTML = '';
             }
+
+            let finalUrl = this.qrText;
+            if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+              finalUrl = 'https://' + finalUrl;
+            }
+
             this.qrcode = new QRCode(document.getElementById('qrcode'), {
-              text: this.qrText,
+              text: finalUrl,
               width: 256,
               height: 256,
               colorDark: '#000000',
               colorLight: '#ffffff',
               correctLevel: QRCode.CorrectLevel.H
             });
+
+            this.qrGenerated = true;
+          }
+        },
+        saveQRCode() {
+          const qrImage = document.querySelector('#qrcode img');
+          if (qrImage) {
+            const link = document.createElement('a');
+            link.download = 'qrcode.png';
+            link.href = qrImage.src;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
           }
         },
         async onFileChange(event) {
