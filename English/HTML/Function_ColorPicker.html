@@ -1,0 +1,485 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+    <title>Color Picker</title>
+
+    <style>
+        [v-cloak] {
+            display: none;
+        }
+
+        /* Custom slider styles */
+        .v-slider__thumb {
+            transition: background-color 0.3s ease;
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        .v-slider__track-background {
+            transition: background 0.3s ease;
+        }
+
+        .v-slider__track-fill {
+            transition: background 0.3s ease;
+        }
+
+        .v-slider__thumb-label {
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+            /* Add text shadow to the label value */
+        }
+    </style>
+</head>
+
+<body>
+
+    <v-app id="App" v-cloak>
+        <template>
+
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Color Picker</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5"
+                        style="display: flex; align-content: center;">
+
+                        <v-row justify="center">
+                            <v-col xs="12" md="6" lg="6">
+                                <v-card class="mx-auto" max-width="500">
+                                    <v-card-text>
+                                        <v-row justify="center">
+                                            <v-col cols="12">
+                                                <div
+                                                    :style="{ backgroundColor: hexColor, height: '200px', borderRadius: '8px' }">
+                                                </div>
+                                            </v-col>
+                                            <v-col cols="12">
+                                                <v-btn-toggle v-model="colorMode" mandatory class="mb-4">
+                                                    <v-btn value="rgb">RGB</v-btn>
+                                                    <v-btn value="hsl">HSL</v-btn>
+                                                </v-btn-toggle>
+                                            </v-col>
+                                            <template v-if="colorMode === 'rgb'">
+                                                <v-col cols="12" class="pt-0 pb-0">
+                                                    Red (R)
+                                                    <v-slider v-model="red" min="0" max="255" thumb-label
+                                                        :thumb-color="`rgb(${red}, 0, 0)`"
+                                                        :track-color="`linear-gradient(to right, rgb(0, 0, 0), rgb(255, 0, 0))`"
+                                                        :track-fill-color="`rgb(${red}, 0, 0)`"></v-slider>
+                                                </v-col>
+                                                <v-col cols="12" class="pt-0 pb-0">
+                                                    Green (G)
+                                                    <v-slider v-model="green" min="0" max="255" thumb-label
+                                                        :thumb-color="`rgb(0, ${green}, 0)`"
+                                                        :track-color="`linear-gradient(to right, rgb(0, 0, 0), rgb(0, 255, 0))`"
+                                                        :track-fill-color="`rgb(0, ${green}, 0)`"></v-slider>
+                                                </v-col>
+                                                <v-col cols="12" class="pt-0 pb-0">
+                                                    Blue (B)
+                                                    <v-slider v-model="blue" min="0" max="255" thumb-label
+                                                        :thumb-color="`rgb(0, 0, ${blue})`"
+                                                        :track-color="`linear-gradient(to right, rgb(0, 0, 0), rgb(0, 0, 255))`"
+                                                        :track-fill-color="`rgb(0, 0, ${blue})`"></v-slider>
+                                                </v-col>
+                                            </template>
+                                            <template v-else>
+                                                <v-col cols="12" class="pt-0 pb-0">
+                                                    Hue (H)
+                                                    <v-slider v-model="hue" min="0" max="360"
+                                                        thumb-label :thumb-color="getHueColor(hue)" :track-color="`linear-gradient(to right, 
+                                                            hsl(0, 100%, 50%),
+                                                            hsl(60, 100%, 50%),
+                                                            hsl(120, 100%, 50%),
+                                                            hsl(180, 100%, 50%),
+                                                            hsl(240, 100%, 50%),
+                                                            hsl(300, 100%, 50%),
+                                                            hsl(360, 100%, 50%))`"
+                                                        :track-fill-color="getHueColor(hue)"></v-slider>
+                                                </v-col>
+                                                <v-col cols="12" class="pt-0 pb-0">
+                                                    Saturation (S)
+                                                    <v-slider v-model="saturation" min="0"
+                                                        max="100" thumb-label
+                                                        :thumb-color="`hsl(${hue}, ${saturation}%, ${lightness}%)`"
+                                                        :track-color="`linear-gradient(to right, 
+                                                            hsl(${hue}, 0%, ${lightness}%), 
+                                                            hsl(${hue}, 100%, ${lightness}%))`"
+                                                        :track-fill-color="`hsl(${hue}, ${saturation}%, ${lightness}%)`"></v-slider>
+                                                </v-col>
+                                                <v-col cols="12" class="pt-0 pb-0">
+                                                    Lightness (L)
+                                                    <v-slider v-model="lightness" min="0"
+                                                        max="100" thumb-label
+                                                        :thumb-color="`hsl(${hue}, ${saturation}%, ${lightness}%)`"
+                                                        :track-color="`linear-gradient(to right, 
+                                                            hsl(${hue}, ${saturation}%, 0%), 
+                                                            hsl(${hue}, ${saturation}%, 50%), 
+                                                            hsl(${hue}, ${saturation}%, 100%))`"
+                                                        :track-fill-color="`hsl(${hue}, ${saturation}%, ${lightness}%)`"></v-slider>
+                                                </v-col>
+                                            </template>
+                                            <v-col cols="12">
+                                                <div class="d-flex flex-wrap justify-end mb-2">
+                                                    <v-btn v-for="preset in presets.slice(0,1)" :key="preset.name"
+                                                        @click="applyPreset(preset)" class="ma-1" small
+                                                        style="background-color: #FFFFFF; color: #000000; text-shadow: 1px 1px 2px rgba(0,0,0,0.4)">
+                                                        {{ preset.name }}
+                                                    </v-btn>
+                                                </div>
+                                                <div class="d-flex flex-wrap justify-center mb-2">
+                                                    <v-btn v-for="preset in presets.slice(1,5)" :key="preset.name"
+                                                        @click="applyPreset(preset)" class="ma-1" small :style="{
+                                            backgroundColor: `hsl(${hue}, ${preset.s}%, ${preset.l}%)`,
+                                            color: preset.l > 70 ? '#000000' : '#FFFFFF',
+                                            textShadow: '1px 1px 2px rgba(0,0,0,0.4)'
+                                        }">
+                                                        {{ preset.name }}
+                                                    </v-btn>
+                                                </div>
+                                                <div class="d-flex flex-wrap justify-center mb-2">
+                                                    <v-btn v-for="preset in presets.slice(5,10)" :key="preset.name"
+                                                        @click="applyPreset(preset)" class="ma-1" small :style="{
+                                            backgroundColor: `hsl(${hue}, ${preset.s}%, ${preset.l}%)`,
+                                            color: preset.l > 70 ? '#000000' : '#FFFFFF',
+                                            textShadow: '1px 1px 2px rgba(0,0,0,0.4)'
+                                        }">
+                                                        {{ preset.name }}
+                                                    </v-btn>
+                                                </div>
+                                                <div class="d-flex flex-wrap justify-center">
+                                                    <v-btn v-for="preset in presets.slice(10)" :key="preset.name"
+                                                        @click="applyPreset(preset)" class="ma-1" small :style="{
+                                            backgroundColor: `hsl(${hue}, ${preset.s}%, ${preset.l}%)`,
+                                            color: preset.l > 70 ? '#000000' : '#FFFFFF',
+                                            textShadow: '1px 1px 2px rgba(0,0,0,0.4)'
+                                        }">
+                                                        {{ preset.name }}
+                                                    </v-btn>
+                                                </div>
+                                            </v-col>
+                                            <v-col cols="12"
+                                                class="text-center d-flex justify-space-between align-center">
+                                                <v-text-field v-model="hexInput" outlined dense class="mb-2"
+                                                    @input="updateFromHexInput" :rules="[rules.hexColor]"
+                                                    hint="Ex: #FF0000" persistent-hint></v-text-field>
+                                            </v-col>
+                                            <v-col cols="12" class="d-flex justify-space-between align-center">
+                                                <v-spacer></v-spacer>
+                                                <v-btn :color="hexColor" @click="copyColor" :style="{ 
+                                        color: '#FFFFFF',
+                                        textShadow: '1px 1px 2px rgba(0,0,0,0.4)'
+                                    }">
+                                                    {{ copyButtonText }}
+                                                </v-btn>
+                                                <v-btn class="ml-2" @click="saveCurrentColor" outlined :color="hexColor"
+                                                    :style="{ 
+                                        borderColor: hexColor, 
+                                        color: hexColor,
+                                        textShadow: '1px 1px 2px rgba(0,0,0,0.4)' // Changed from 0.2 to 0.4 for darker shadow
+                                    }" elevation="2">
+                                                    Save Color
+                                                </v-btn>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+
+                        <v-row justify="center">
+                            <v-col xs="12" md="6" lg="6">
+                                <v-card class="mx-auto mt-4" max-width="500" v-if="savedColors.length > 0">
+                                    <v-card-text>
+                                        <v-row>
+                                            <v-col v-for="(color, index) in savedColors" :key="index" cols="auto"
+                                                class="d-flex align-center">
+                                                <v-chip class="ma-1" :color="color" @click="loadColor(color)"
+                                                    :style="{ color: getContrastColor(color) }" close
+                                                    @click:close="removeColor(index)">
+                                                    {{ color }}
+                                                </v-chip>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js"></script>
+
+    <script>
+        new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                colorMode: 'rgb',
+                red: 128,
+                green: 128,
+                blue: 128,
+                hue: 0,
+                saturation: 50,
+                lightness: 50,
+                copyButtonText: 'Copy Code',
+                savedColors: [],
+                hexInput: '#808080', // Initialize with the default color
+                presets: [
+                    { name: 'RESET', h: 180, s: 50, l: 50, color: '#FFFFFF' },
+                    { name: 'DARK', h: 180, s: 100, l: 20, color: 'hsl(180, 100%, 20%)' },
+                    { name: 'DEEP', h: 180, s: 80, l: 30, color: 'hsl(180, 80%, 30%)' },
+                    { name: 'DULL', h: 180, s: 30, l: 50, color: 'hsl(180, 30%, 50%)' },
+                    { name: 'SOFT', h: 180, s: 40, l: 70, color: 'hsl(180, 40%, 70%)' },
+                    { name: 'VIVID', h: 180, s: 100, l: 50, color: 'hsl(180, 100%, 50%)' },
+                    { name: 'STRONG', h: 180, s: 85, l: 45, color: 'hsl(180, 85%, 45%)' },
+                    { name: 'BRIGHT', h: 180, s: 75, l: 65, color: 'hsl(180, 75%, 65%)' },
+                    { name: 'LIGHT', h: 180, s: 70, l: 80, color: 'hsl(180, 70%, 80%)' },
+                    { name: 'PALE', h: 180, s: 30, l: 85, color: 'hsl(180, 30%, 85%)' },
+                    { name: 'DARK GREYISH', h: 180, s: 10, l: 30, color: 'hsl(180, 10%, 30%)' },
+                    { name: 'GREYISH', h: 180, s: 10, l: 50, color: 'hsl(180, 10%, 50%)' },
+                    { name: 'LIGHT GREYISH', h: 180, s: 10, l: 70, color: 'hsl(180, 10%, 70%)' }
+                ],
+                rules: {
+                    hexColor: v => /^#[0-9A-F]{6}$/i.test(v) || 'Please enter a valid hex color code (e.g. #FF0000)',
+                }
+            },
+            methods: {
+                getHueColor(h) {
+                    return `hsl(${h}, 100%, 50%)`;
+                },
+                copyColor() {
+                    navigator.clipboard.writeText(this.hexColor)
+                        .then(() => {
+                            this.copyButtonText = 'Copied!';
+                            setTimeout(() => {
+                                this.copyButtonText = 'Copy Color Code';
+                            }, 2000);
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy:', err);
+                        });
+                },
+                getContrastColor(hexcolor) {
+                    const hex = hexcolor.replace('#', '');
+                    const r = parseInt(hex.substr(0, 2), 16);
+                    const g = parseInt(hex.substr(2, 2), 16);
+                    const b = parseInt(hex.substr(4, 2), 16);
+
+                    // Convert RGB to HSL
+                    const rNorm = r / 255;
+                    const gNorm = g / 255;
+                    const bNorm = b / 255;
+
+                    const max = Math.max(rNorm, gNorm, bNorm);
+                    const min = Math.min(rNorm, gNorm, bNorm);
+                    const l = (max + min) / 2;
+
+                    // Use 80% as the threshold
+                    return l > 0.8 ? '#000000' : '#FFFFFF';
+                },
+                saveCurrentColor() {
+                    if (!this.savedColors.includes(this.hexColor)) {
+                        this.savedColors.push(this.hexColor);
+                        // Save to localStorage
+                        localStorage.setItem('savedColors', JSON.stringify(this.savedColors));
+                    }
+                },
+                removeColor(index) {
+                    this.savedColors.splice(index, 1);
+                    // Update localStorage
+                    localStorage.setItem('savedColors', JSON.stringify(this.savedColors));
+                },
+                loadColor(hexColor) {
+                    const hex = hexColor.replace('#', '');
+                    const r = parseInt(hex.substr(0, 2), 16);
+                    const g = parseInt(hex.substr(2, 2), 16);
+                    const b = parseInt(hex.substr(4, 2), 16);
+
+                    if (this.colorMode === 'rgb') {
+                        this.red = r;
+                        this.green = g;
+                        this.blue = b;
+                    } else {
+                        // Convert RGB to HSL
+                        const rNorm = r / 255;
+                        const gNorm = g / 255;
+                        const bNorm = b / 255;
+
+                        const max = Math.max(rNorm, gNorm, bNorm);
+                        const min = Math.min(rNorm, gNorm, bNorm);
+                        const d = max - min;
+
+                        let h = 0;
+                        if (d === 0) h = 0;
+                        else if (max === rNorm) h = 60 * ((gNorm - bNorm) / d % 6);
+                        else if (max === gNorm) h = 60 * ((bNorm - rNorm) / d + 2);
+                        else if (max === bNorm) h = 60 * ((rNorm - gNorm) / d + 4);
+
+                        if (h < 0) h += 360;
+
+                        const l = (max + min) / 2;
+                        const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+
+                        this.hue = Math.round(h);
+                        this.saturation = Math.round(s * 100);
+                        this.lightness = Math.round(l * 100);
+                    }
+                },
+                updateFromHexInput(value) {
+                    // Validate hex color format
+                    if (/^#[0-9A-F]{6}$/i.test(value)) {
+                        const hex = value.replace('#', '');
+                        if (this.colorMode === 'rgb') {
+                            this.red = parseInt(hex.substr(0, 2), 16);
+                            this.green = parseInt(hex.substr(2, 2), 16);
+                            this.blue = parseInt(hex.substr(4, 2), 16);
+                        } else {
+                            // Temporarily switch to RGB mode to ensure proper conversion
+                            const currentMode = this.colorMode;
+                            this.colorMode = 'rgb';
+                            this.red = parseInt(hex.substr(0, 2), 16);
+                            this.green = parseInt(hex.substr(2, 2), 16);
+                            this.blue = parseInt(hex.substr(4, 2), 16);
+                            this.colorMode = currentMode;
+                        }
+                    }
+                },
+                applyPreset(preset) {
+                    this.colorMode = 'hsl';
+                    if (preset.name === 'RESET') {
+                        this.hue = this.hue; // Keep current hue
+                        this.saturation = 50;
+                        this.lightness = 50;
+                    } else {
+                        this.hue = this.hue; // Keep current hue
+                        this.saturation = preset.s;
+                        this.lightness = preset.l;
+                    }
+                },
+            },
+            computed: {
+                hexColor() {
+                    if (this.colorMode === 'rgb') {
+                        const r = this.red.toString(16).padStart(2, '0');
+                        const g = this.green.toString(16).padStart(2, '0');
+                        const b = this.blue.toString(16).padStart(2, '0');
+                        return `#${r}${g}${b}`.toUpperCase();
+                    } else {
+                        const h = this.hue;
+                        const s = this.saturation / 100;
+                        const l = this.lightness / 100;
+
+                        const c = (1 - Math.abs(2 * l - 1)) * s;
+                        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+                        const m = l - c / 2;
+
+                        let r, g, b;
+                        if (h >= 0 && h < 60) {
+                            [r, g, b] = [c, x, 0];
+                        } else if (h >= 60 && h < 120) {
+                            [r, g, b] = [x, c, 0];
+                        } else if (h >= 120 && h < 180) {
+                            [r, g, b] = [0, c, x];
+                        } else if (h >= 180 && h < 240) {
+                            [r, g, b] = [0, x, c];
+                        } else if (h >= 240 && h < 300) {
+                            [r, g, b] = [x, 0, c];
+                        } else {
+                            [r, g, b] = [c, 0, x];
+                        }
+
+                        const rgb = [
+                            Math.round((r + m) * 255),
+                            Math.round((g + m) * 255),
+                            Math.round((b + m) * 255)
+                        ];
+
+                        this.red = rgb[0];
+                        this.green = rgb[1];
+                        this.blue = rgb[2];
+
+                        return `#${rgb.map(x => x.toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+                    }
+                }
+            },
+            watch: {
+                colorMode(newMode) {
+                    if (newMode === 'hsl') {
+                        const r = this.red / 255;
+                        const g = this.green / 255;
+                        const b = this.blue / 255;
+
+                        const max = Math.max(r, g, b);
+                        const min = Math.min(r, g, b);
+                        const d = max - min;
+
+                        let h = 0;
+                        if (d === 0) h = 0;
+                        else if (max === r) h = 60 * ((g - b) / d % 6);
+                        else if (max === g) h = 60 * ((b - r) / d + 2);
+                        else if (max === b) h = 60 * ((r - g) / d + 4);
+
+                        if (h < 0) h += 360;
+
+                        const l = (max + min) / 2;
+                        const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+
+                        this.hue = Math.round(h);
+                        this.saturation = Math.round(s * 100);
+                        this.lightness = Math.round(l * 100);
+                    }
+                },
+                hexColor: {
+                    handler(newValue) {
+                        this.hexInput = newValue;
+                    },
+                    immediate: true
+                }
+            },
+            created() {
+                // Load saved colors from localStorage
+                const savedColors = localStorage.getItem('savedColors');
+                if (savedColors) {
+                    this.savedColors = JSON.parse(savedColors);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

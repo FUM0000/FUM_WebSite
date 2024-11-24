@@ -93,6 +93,10 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Function</v-list-item-title>
                 </template>
 
+                <v-list-item href="./Function_ColorPicker.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Color Picker</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Function_Converter.html">
                     <v-list-item-icon />
                     <v-list-item-title>Converter</v-list-item-title>
