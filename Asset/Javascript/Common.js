@@ -880,10 +880,16 @@ Vue.component('main-footer', {
     `,
     methods: {
         scrollToBottom() {
-            this.$vuetify.goTo(document.body.scrollHeight);
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
         },
         scrollToTop() {
-            this.$vuetify.goTo(0);
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
     }
 })
