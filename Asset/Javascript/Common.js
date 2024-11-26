@@ -105,6 +105,10 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Function_Roulette.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Roulette</v-list-item-title>
+                </v-list-item>
             </v-list-group>
             <!-- ▲ Function ▲ --------------------------------------------------------------------------------->
 

@@ -1,0 +1,357 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+    <title>Roulette</title>
+
+    <style>
+        .wheel-container {
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            perspective: 1000px;
+            margin: 0 auto 2rem;
+        }
+
+        .wheel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transition: transform 5s cubic-bezier(0.25, 0.1, 0.25, 1);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+            transform-style: preserve-3d;
+        }
+
+        .triangle {
+            position: absolute;
+            top: calc(100% + 20px);
+            right: 50%;
+            transform: translateX(50%) rotate(90deg);
+            width: 0;
+            height: 0;
+            border-top: 20px solid transparent;
+            border-bottom: 20px solid transparent;
+            border-right: 30px solid #ecf0f1;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 600px) {
+            .wheel-container {
+                max-width: 90vw;
+            }
+
+            .v-card {
+                padding: 1rem !important;
+            }
+
+            .v-btn {
+                margin: 0.5rem 0 !important;
+            }
+            .v-dialog {
+                margin: 0 !important;
+                width: 95% !important;
+                max-width: 95% !important;
+            }
+            
+            .v-dialog .v-card {
+                border-radius: 4px;
+            }
+            
+            .v-dialog__content--active {
+                align-items: center !important;
+            }
+            
+            .v-dialog .v-card__title {
+                font-size: 1.2rem !important;
+                padding: 1rem !important;
+                word-break: break-word;
+            }
+            
+            .v-dialog .v-card__actions {
+                flex-direction: column;
+                padding: 1rem !important;
+            }
+            
+            .v-dialog .v-btn {
+                width: 100%;
+                margin: 0.5rem 0 !important;
+            }
+        }
+
+        /* Ensure text in SVG is readable on smaller screens */
+        svg text {
+            font-size: 3px;
+        }
+
+        @media (max-width: 600px) {
+            svg text {
+                font-size: 2px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <v-app id="App" v-cloak>
+        <template>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Converter</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+                        <v-row justify="center">
+                            <v-col cols="12" md="10" lg="8">
+                                <v-card class="pa-6" elevation="10" dark>
+                                    <v-row>
+                                        <v-col cols="12" class="text-center">
+                                            <div class="wheel-container mx-auto">
+                                                <div class="triangle"></div>
+                                                <svg ref="wheel" class="wheel" viewBox="0 0 100 100">
+                                                    <!-- Wheel segments will be dynamically added here -->
+                                                </svg>
+                                            </div>
+                                        </v-col>
+                                    </v-row>
+
+                                    <v-row justify="center">
+                                        <v-col cols="12" sm="10" md="8">
+                                            <v-btn block x-large color="success" @click="spin"
+                                                :disabled="spinning || entries.length === 0" class="mt-4 mb-4">
+                                                Spin
+                                            </v-btn>
+
+                                            <v-card class="mb-4" height="300" outlined>
+                                                <v-card-text
+                                                    style="height: 100%; overflow-y: auto; scrollbar-width: none;">
+                                                    <v-row v-for="(entry, index) in entries" :key="index" align="center"
+                                                        no-gutters class="mt-1 mb-1">
+                                                        <v-col>
+                                                            <v-text-field v-model="entries[index]"
+                                                                :placeholder="`Entry ${index + 1}`" dense outlined
+                                                                @input="updateWheel" hide-details></v-text-field>
+                                                        </v-col>
+                                                        <v-col cols="auto" class="ml-2 mr-2">
+                                                            {{ (100 / entries.length).toFixed(1) }}%
+                                                        </v-col>
+                                                        <v-col cols="auto">
+                                                            <v-btn icon small @click="deleteEntry(index)"
+                                                                :disabled="entries.length <= 1">
+                                                                <v-icon>mdi-close</v-icon>
+                                                            </v-btn>
+                                                        </v-col>
+                                                    </v-row>
+                                                </v-card-text>
+                                            </v-card>
+
+                                            <v-btn block x-large color="primary" @click="addSlot"
+                                                :disabled="entries.length >= 1000" class="mb-8">
+                                                Add Item
+                                            </v-btn>
+
+                                            <v-card outlined class="mb-4"
+                                                style="background-color: rgba(236, 240, 241, 0.1)">
+                                                <v-card-text class="pa-4">
+                                                    <template v-if="winnerHistory.length">
+                                                        <div v-for="(winner, index) in winnerHistory" :key="index"
+                                                            class="d-flex align-center">
+                                                            <span class="mr-4 font-weight-bold">#{{ index + 1 }}</span>
+                                                            <span>{{ winner }}</span>
+                                                        </div>
+                                                    </template>
+                                                    <div v-else class="text-center grey--text">
+                                                        Winners
+                                                    </div>
+                                                </v-card-text>
+                                            </v-card>
+
+                                            <v-btn block color="error" @click="clearWinners"
+                                                :disabled="!winnerHistory.length">
+                                                Clear Winners
+                                            </v-btn>
+                                        </v-col>
+                                    </v-row>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+
+                        <v-dialog v-model="showWinnerDialog" max-width="500">
+                            <v-card>
+                                <v-card-title class="text-h4 justify-center pa-8">
+                                    {{ currentWinner }}
+                                </v-card-title>
+                                <v-card-actions class="pa-6">
+                                    <v-spacer></v-spacer>
+                                    <v-btn color="primary" @click="keepWinner" x-large class="px-8">
+                                        Keep Entry
+                                    </v-btn>
+                                    <v-btn color="error" @click="removeWinner" :disabled="entries.length <= 1" x-large
+                                        class="px-8 ml-4">
+                                        Remove Entry
+                                    </v-btn>
+                                    <v-spacer></v-spacer>
+                                </v-card-actions>
+                            </v-card>
+                        </v-dialog>
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+    </v-app>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js"></script>
+
+    <script>
+        new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                entries: [
+                    'Item 1',
+                    'Item 2',
+                    'Item 3',
+                    'Item 4',
+                    'Item 5',
+                    'Item 6',
+                    'Item 7',
+                    'Item 8'
+                ],
+                spinning: false,
+                currentRotation: 0,
+                winnerHistory: [],
+                showWinnerDialog: false,
+                currentWinner: '',
+            },
+            methods: {
+                updateWheel() {
+                    const wheel = this.$refs.wheel;
+                    wheel.innerHTML = '';
+                    const segmentAngle = 360 / this.entries.length;
+
+                    this.entries.forEach((entry, index) => {
+                        const startAngle = index * segmentAngle;
+                        const endAngle = (index + 1) * segmentAngle;
+                        const midAngle = (startAngle + endAngle) / 2;
+                        const largeArcFlag = endAngle - startAngle <= 180 ? 0 : 1;
+
+                        const startX = 50 + 50 * Math.cos(Math.PI * startAngle / 180);
+                        const startY = 50 + 50 * Math.sin(Math.PI * startAngle / 180);
+                        const endX = 50 + 50 * Math.cos(Math.PI * endAngle / 180);
+                        const endY = 50 + 50 * Math.sin(Math.PI * endAngle / 180);
+
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        path.setAttribute('d', `M50,50 L${startX},${startY} A50,50 0 ${largeArcFlag},1 ${endX},${endY} Z`);
+                        path.setAttribute('fill', `hsl(${index * 360 / this.entries.length}, 75%, 65%)`);
+                        wheel.appendChild(path);
+
+                        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        const textX = 50 + 40 * Math.cos(Math.PI * midAngle / 180);
+                        const textY = 50 + 40 * Math.sin(Math.PI * midAngle / 180);
+                        text.setAttribute('x', textX);
+                        text.setAttribute('y', textY);
+                        text.setAttribute('text-anchor', 'middle');
+                        text.setAttribute('dominant-baseline', 'middle');
+                        text.setAttribute('transform', `rotate(${midAngle}, ${textX}, ${textY})`);
+                        text.textContent = entry.length > 20 ? entry.substring(0, 17) + '...' : entry;
+                        text.style.fontSize = '3px';
+                        text.style.fontFamily = 'Poppins, sans-serif';
+                        text.style.fontWeight = 'bold';
+                        text.style.fill = 'white';
+                        wheel.appendChild(text);
+                    });
+                },
+                spin() {
+                    if (this.spinning || this.entries.length === 0) return;
+                    this.spinning = true;
+
+                    const rotations = 5;
+                    const degrees = rotations * 360 + Math.floor(Math.random() * 360);
+                    this.currentRotation += degrees;
+                    this.$refs.wheel.style.transform = `rotate(${this.currentRotation}deg)`;
+
+                    setTimeout(() => {
+                        this.spinning = false;
+
+                        const normalizedRotation = (this.currentRotation + 270) % 360;
+                        const winningIndex = Math.floor((normalizedRotation / 360) * this.entries.length);
+                        this.currentWinner = this.entries[this.entries.length - 1 - winningIndex];
+
+                        if (this.currentWinner) {
+                            this.winnerHistory.push(this.currentWinner);
+                        }
+
+                        this.showWinnerDialog = true;
+                    }, 5000);
+                },
+                addSlot() {
+                    if (this.entries.length < 1000) {
+                        this.entries.push(`Item ${this.entries.length + 1}`);
+                        this.$nextTick(this.updateWheel);
+                    }
+                },
+                deleteEntry(index) {
+                    if (this.entries.length > 1) {
+                        this.entries.splice(index, 1);
+                        this.$nextTick(this.updateWheel);
+                    }
+                },
+                keepWinner() {
+                    this.showWinnerDialog = false;
+                },
+                removeWinner() {
+                    if (this.entries.length > 1) {
+                        const normalizedRotation = (this.currentRotation + 270) % 360;
+                        const winningIndex = Math.floor((normalizedRotation / 360) * this.entries.length);
+                        this.entries.splice(this.entries.length - 1 - winningIndex, 1);
+                        this.$nextTick(this.updateWheel);
+                        this.showWinnerDialog = false;
+                    }
+                },
+                clearWinners() {
+                    this.winnerHistory = [];
+                }
+            },
+            mounted() {
+                this.updateWheel();
+            }
+        });
+    </script>
+</body>
+
+</html>
