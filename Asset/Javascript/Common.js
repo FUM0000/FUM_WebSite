@@ -690,6 +690,15 @@ Vue.component('main-navigation', {
                 <template v-slot:activator>
                     <v-list-item-title>Game</v-list-item-title>
                 </template>
+                
+                <v-list-item href="./Game_ReflexSpeed.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Reflex Speed</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-speedometer-slow</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
                 <v-list-item href="./Game_KittyHopper.html">
                     <v-list-item-icon />
                     <v-list-item-title>Kitty Hopper</v-list-item-title>
