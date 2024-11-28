@@ -514,7 +514,7 @@ Vue.component('main-navigation', {
 
 
             <!-- ▼ Programming ▼ ------------------------------------------------------------------------------>
-            <v-list-group :value="false" prepend-icon="mdi-hammer-wrench">
+            <v-list-group :value="false" prepend-icon="mdi-laptop">
                 <template v-slot:activator>
                     <v-list-item-title>Programming</v-list-item-title>
                 </template>
