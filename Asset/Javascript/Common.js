@@ -93,6 +93,10 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Function</v-list-item-title>
                 </template>
 
+                <v-list-item href="./Function_CodePreview.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Code Preview</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Function_ColorPicker.html">
                     <v-list-item-icon />
                     <v-list-item-title>Color Picker</v-list-item-title>
@@ -507,6 +511,20 @@ Vue.component('main-navigation', {
 
             </v-list-group>
             <!-- ▲ Japanese ▲ --------------------------------------------------------------------------------->
+
+
+            <!-- ▼ Programming ▼ ------------------------------------------------------------------------------>
+            <v-list-group :value="false" prepend-icon="mdi-hammer-wrench">
+                <template v-slot:activator>
+                    <v-list-item-title>Programming</v-list-item-title>
+                </template>
+
+                <v-list-item href="./Programming_Introduction.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Introduction</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
+            <!-- ▲ Programming ▲ ------------------------------------------------------------------------------>
 
 
             <!-- ▼ Cooking ▼ ---------------------------------------------------------------------------------->

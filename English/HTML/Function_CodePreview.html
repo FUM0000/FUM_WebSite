@@ -1,0 +1,203 @@
+<html><head>
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #1d1d1d;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    color: #fff;
+    font-family: monospace;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.editor {
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+}
+
+.editor textarea {
+    flex-grow: 1;
+    border: none;
+    padding: 15px;
+    font-family: monospace;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+}
+
+#output {
+    border-radius: 8px;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.cosmos {
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(to bottom, #0B0B2B, #1B1B3A);
+  position: relative;
+  overflow: hidden;
+  cursor: none;
+}
+
+.cursor {
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  position: absolute;
+  pointer-events: none;
+  mix-blend-mode: difference;
+  transition: transform 0.2s;
+  animation: glow 1.5s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0% { box-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #69b4ff; }
+  50% { box-shadow: 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #69b4ff; }
+  100% { box-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #69b4ff; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <v-app dark>
+        <v-main>
+            <v-container fluid class="pa-0 container">
+                <v-row no-gutters>
+                    <v-col cols="12">
+                        <v-card class="editor">
+                            <v-card-title class="primary">
+                                HTML
+                            </v-card-title>
+                            <v-textarea
+                                id="htmlEditor"
+                                outlined
+                                hide-details
+                                class="pa-2"
+                                :value="htmlCode"
+                                @input="updateHtml"
+                                auto-grow
+                                rows="5"
+                            ></v-textarea>
+                        </v-card>
+                    </v-col>
+
+                    <v-col cols="12">
+                        <v-card class="editor">
+                            <v-card-title class="primary">
+                                CSS
+                            </v-card-title>
+                            <v-textarea
+                                id="cssEditor"
+                                outlined
+                                hide-details
+                                class="pa-2"
+                                :value="cssCode"
+                                @input="updateCss"
+                                auto-grow
+                                rows="5"
+                            ></v-textarea>
+                        </v-card>
+                    </v-col>
+
+                    <v-col cols="12">
+                        <v-card class="editor">
+                            <v-card-title class="primary d-flex justify-space-between">
+                                JavaScript
+                            </v-card-title>
+                            <v-textarea
+                                id="jsEditor"
+                                outlined
+                                hide-details
+                                class="pa-2"
+                                :value="jsCode"
+                                @input="updateJs"
+                                auto-grow
+                                rows="5"
+                            ></v-textarea>
+                        </v-card>
+                    </v-col>
+
+                    <v-col cols="12">
+                        <v-card class="editor">
+                            <v-card-title class="primary">
+                                Preview
+                            </v-card-title>
+                            <div class="pa-2" style="height: 400px; position: relative;">
+                                <iframe id="preview" style="width: 100%; height: 100%; border: none;"></iframe>
+                            </div>
+                        </v-card>
+                    </v-col>
+                </v-row>
+            </v-container>
+        </v-main>
+    </v-app>
+</div>
+
+<script>
+new Vue({
+    el: '#app',
+    vuetify: new Vuetify({
+        theme: { dark: true }
+    }),
+    data: {
+        htmlCode: ``,
+        cssCode: ``,
+        jsCode: ``
+    },
+    methods: {
+        updateHtml(value) {
+            this.htmlCode = value;
+            this.runCode();
+        },
+        updateCss(value) {
+            this.cssCode = value;
+            this.runCode();
+        },
+        updateJs(value) {
+            this.jsCode = value;
+            this.runCode();
+        },
+        runCode() {
+            const iframe = document.getElementById('preview');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            iframeDoc.open();
+            iframeDoc.write(`
+                <html>
+                    <head>
+                        <style>${this.cssCode}</style>
+                    <\/head>
+                    <body>
+                        ${this.htmlCode}
+                        <script>${this.jsCode}<\/script>
+                    <\/body>
+                <\/html>
+            `);
+            iframeDoc.close();
+        }
+    },
+    mounted() {
+        this.runCode();
+    }
+});
+</script>
+</body></html>
