@@ -16,13 +16,13 @@ Vue.component('main-system-bar', {
     template: `
     <v-system-bar color="#CFD8DC80" class="font-weight-black" style="height: 50px;" app>
         <v-row aline="center">
-            <v-col cols="6" align-self="center">
+            <v-col cols="9" align-self="center">
                 <audio id="BGM" src="" paused loop></audio>
                 <v-icon id="Speaker">mdi-volume-variant-off</v-icon>
                 <slot></slot>
             </v-col>
             
-            <v-col cols="6" class="text-right" @click.stop="Drawer_Local = !Drawer_Local">
+            <v-col cols="3" class="text-right" @click.stop="Drawer_Local = !Drawer_Local">
                 <v-btn rounded small plain>MENU</v-btn>
             </v-col>
         </v-row>
