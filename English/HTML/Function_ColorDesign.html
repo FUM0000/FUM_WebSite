@@ -25,7 +25,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
-    <title>Color Picker</title>
+    <title>Color Design</title>
 
     <style>
         .v-slider__thumb {
@@ -73,7 +73,7 @@
     <v-app id="App">
         <template>
 
-            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Color Picker</main-system-bar>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Color Design</main-system-bar>
 
             <v-main id="Main">
                 <transition name="Fade_Page">
@@ -319,9 +319,44 @@
 
                                         <v-row>
                                             <v-col cols="12">
-                                                <v-btn block color="success" class="mr-4" @click="exportImage">
-                                                    Save Image
+                                                <v-btn block :style="{ 
+                                                    background: gradientCSS,
+                                                    color: '#FFFFFF',
+                                                    textShadow: '1px 1px 2px rgba(0,0,0,0.4)'
+                                                }" class="mr-4" @click="exportImage">
+                                                    Download Image
                                                 </v-btn>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-btn block @click="saveCurrentGradient" outlined :style="{ 
+                                                    borderColor: colors[1], 
+                                                    color: colors[1],
+                                                    textShadow: '1px 1px 2px rgba(0,0,0,0.4)'
+                                                }">
+                                                    Save Gradient
+                                                </v-btn>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-row v-if="savedGradients.length > 0">
+                                            <v-col cols="12">
+                                                <v-card>
+                                                    <v-card-text class="pt-5">
+                                                        <v-row justify="center">
+                                                            <v-col v-for="(gradient, index) in savedGradients" :key="index" cols="12" class="mb-2">
+                                                                <v-chip class="gradient-chip" close @click="loadGradient(gradient)" @click:close="removeGradient(index)"
+                                                                    style="width: 100%; height: 40px;" :style="{ background: gradient.css }">
+                                                                    <span :style="{ color: '#FFFFFF', textShadow: '1px 1px 2px rgba(0,0,0,0.4)' }">
+                                                                        {{ gradient.colors.join(' → ') }}
+                                                                    </span>
+                                                                </v-chip>
+                                                            </v-col>
+                                                        </v-row>
+                                                    </v-card-text>
+                                                </v-card>
                                             </v-col>
                                         </v-row>
 
@@ -333,8 +368,11 @@
                                                         <div class="css-code">
                                                             background: {{ gradientCSS }};
                                                         </div>
-                                                        <v-btn block class="mt-4" color="primary"
-                                                            @click="copyToClipboard">
+                                                        <v-btn block class="mt-4" :style="{ 
+                                                            background: gradientCSS,
+                                                            color: '#FFFFFF',
+                                                            textShadow: '1px 1px 2px rgba(0,0,0,0.4)'
+                                                        }" @click="copyToClipboard">
                                                             Copy
                                                         </v-btn>
                                                     </v-card-text>
@@ -411,7 +449,8 @@
                     { text: 'PNG', value: 'png' },
                     { text: 'JPEG', value: 'jpeg' }
                 ],
-                jpegQuality: 90
+                jpegQuality: 90,
+                savedGradients: [],
             },
             methods: {
                 getHueColor(h) {
@@ -598,7 +637,38 @@
                     const quality = this.imageFormat === 'jpeg' ? this.jpegQuality / 100 : 1;
                     link.href = canvas.toDataURL(`image/${this.imageFormat}`, quality);
                     link.click();
-                }
+                },
+                saveCurrentGradient() {
+                    const gradientData = {
+                        type: this.gradientType,
+                        angle: this.angle,
+                        colors: [...this.colors],
+                        css: this.gradientCSS
+                    };
+                    
+                    // 重複チェック
+                    const isDuplicate = this.savedGradients.some(g => 
+                        g.type === gradientData.type &&
+                        g.angle === gradientData.angle &&
+                        JSON.stringify(g.colors) === JSON.stringify(gradientData.colors)
+                    );
+                    
+                    if (!isDuplicate) {
+                        this.savedGradients.push(gradientData);
+                        localStorage.setItem('savedGradients', JSON.stringify(this.savedGradients));
+                    }
+                },
+                
+                loadGradient(gradient) {
+                    this.gradientType = gradient.type;
+                    this.angle = gradient.angle;
+                    this.colors = [...gradient.colors];
+                },
+                
+                removeGradient(index) {
+                    this.savedGradients.splice(index, 1);
+                    localStorage.setItem('savedGradients', JSON.stringify(this.savedGradients));
+                },
             },
             computed: {
                 hexColor() {
@@ -696,6 +766,10 @@
                 const savedColors = localStorage.getItem('savedColors');
                 if (savedColors) {
                     this.savedColors = JSON.parse(savedColors);
+                }
+                const savedGradients = localStorage.getItem('savedGradients');
+                if (savedGradients) {
+                    this.savedGradients = JSON.parse(savedGradients);
                 }
             },
             mounted() {

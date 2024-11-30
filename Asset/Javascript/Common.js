@@ -97,9 +97,9 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Code Preview</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Function_ColorPicker.html">
+                <v-list-item href="./Function_ColorDesign.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Color Picker</v-list-item-title>
+                    <v-list-item-title>Color Design</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Function_Converter.html">
                     <v-list-item-icon />
