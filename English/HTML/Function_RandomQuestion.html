@@ -1,0 +1,329 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Random Question</title>
+
+  <style>
+    .custom-shadow {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s;
+    }
+
+    .custom-shadow:hover {
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .question-box {
+      min-height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .v-btn.v-btn--disabled {
+      opacity: 0.6;
+      pointer-events: none;
+      background-color: #e0e0e0 !important;
+      color: #9e9e9e !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Random Question</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6" lg="6">
+                <v-card class="mt-5 custom-shadow">
+
+                  <v-card-text>
+                    <v-select v-model="selectedCategory" :items="genres" label="Category" outlined
+                      @change="clearQuestion"></v-select>
+
+                    <v-switch inset v-model="allowDuplicates" label="Duplicate" @change="resetUsedQuestions"></v-switch>
+
+                    <v-card class="question-box" outlined>
+                      <div>
+                        <h3 class="mb-3"
+                          :style="currentQuestion === 'Questions will be displayed here' ? 'color: #9e9e9e' : ''">
+                          {{ currentQuestion }}
+                        </h3>
+                      </div>
+                    </v-card>
+
+                    <v-btn @click="generateQuestion" color="primary" block class="mt-5"
+                      :disabled="!selectedCategory || (!allowDuplicates && isAllQuestionsUsed)">
+                      Generate Question
+                    </v-btn>
+
+                    <v-alert v-if="!selectedCategory" type="info" class="mt-3" dense>
+                      Please select a Category
+                    </v-alert>
+                    <v-alert v-else-if="!allowDuplicates && isAllQuestionsUsed" type="info" class="mt-3" dense>
+                      All Questions have been used. Please select a different Category.
+                    </v-alert>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer-simple></main-footer-simple>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        selectedCategory: '',
+        currentQuestion: 'Questions will be displayed here',
+        allowDuplicates: false,
+        usedQuestions: new Set(),
+        isAllQuestionsUsed: false,
+        genres: [
+          'Daily Life',
+          'Hobbies',
+          'Work',
+          'Love',
+          'Dreams & Goals',
+          'Food',
+          'Travel',
+          'Memories',
+          'Music',
+          'Movies & TV Shows',
+          'Reading',
+          'Sports',
+          'Pets',
+          'Seasons & Events'
+        ],
+        questions: {
+          'Daily Life': [
+            'What new habit have you started recently?',
+            'How do you spend your days off?',
+            'What\'s the first thing you do in the morning?',
+            'How do you relax?',
+            'What do you enjoy doing at home?',
+            'What\'s your recent best purchase?',
+            'Where do you feel most comfortable?',
+            'What do you eat for breakfast on holidays?'
+          ],
+          'Hobbies': [
+            'What are you into recently?',
+            'What was your childhood hobby?',
+            'What hobby would you like to start?',
+            'How many hours per week do you spend on your hobbies?',
+            'Do you have hobby friends?',
+            'What hobby do you spend the most money on?',
+            'How did you start your hobby?',
+            'What\'s the biggest discovery you\'ve made through your hobby?'
+          ],
+          'Work': [
+            'What makes your work worthwhile?',
+            'What\'s your ideal way of working?',
+            'What are your work goals?',
+            'Why did you choose your current job?',
+            'What\'s the best part of your job?',
+            'What values do you prioritize at work?',
+            'What\'s your dream job?',
+            'How have you grown through your work?'
+          ],
+          'Love': [
+            'What\'s your ideal date?',
+            'What do you value most in relationships?',
+            'What attracts you to someone?',
+            'What\'s a memorable gift you\'ve received?',
+            'What\'s your favorite romance memory?',
+            'What\'s your ideal confession scene?',
+            'What have you learned from love?',
+            'Where\'s your special place with your loved one?'
+          ],
+          'Dreams & Goals': [
+            'Where do you see yourself in 10 years?',
+            'What dreams do you want to achieve?',
+            'What are your goals for this year?',
+            'What would you like to challenge yourself with?',
+            'What do you want to accomplish in life?',
+            'What was your childhood dream?',
+            'What can you do now to achieve your goals?',
+            'What do you need to make your dreams come true?'
+          ],
+          'Food': [
+            'What\'s your favorite dish?',
+            'What\'s your specialty dish?',
+            'What\'s your most memorable taste?',
+            'What dish would you like to try?',
+            'What\'s your favorite food combination?',
+            'Where\'s your favorite restaurant?',
+            'What was your favorite school lunch?',
+            'What\'s your family\'s signature dish?'
+          ],
+          'Travel': [
+            'Where would you like to visit?',
+            'What\'s your most memorable trip?',
+            'What\'s your ideal travel style?',
+            'What do you always pack for trips?',
+            'Have you ever traveled alone?',
+            'What do you enjoy most while traveling?',
+            'What\'s your most memorable meal from traveling?',
+            'Where\'s your next desired destination?'
+          ],
+          'Memories': [
+            'What\'s your happiest life memory?',
+            'What are your school memories?',
+            'What are your family memories?',
+            'What are your memories with friends?',
+            'When did you feel you grew the most?',
+            'What\'s your most unforgettable birthday memory?',
+            'Where\'s your memorable place?',
+            'What event changed your life?'
+          ],
+          'Music': [
+            'Who\'s your favorite artist?',
+            'What song brings back memories?',
+            'What song lifts your mood?',
+            'What\'s your go-to karaoke song?',
+            'What songs are you listening to lately?',
+            'How did you discover your music taste?',
+            'What\'s your most memorable concert?',
+            'What\'s your favorite music genre?'
+          ],
+          'Movies & TV Shows': [
+            'What\'s your favorite movie genre?',
+            'What\'s your memorable movie quote?',
+            'Who\'s your favorite actor?',
+            'What show moved you the most?',
+            'What have you watched recently?',
+            'What show do you rewatch often?',
+            'What did you like watching as a child?',
+            'What classics do you recommend?'
+          ],
+          'Reading': [
+            'What book did you read recently?',
+            'What book influenced your life?',
+            'Who\'s your favorite author?',
+            'Do you have reading habits?',
+            'What book do you recommend?',
+            'Where and when do you read?',
+            'What story left an impression on you?',
+            'What genre would you like to read?'
+          ],
+          'Sports': [
+            'What\'s your favorite sport?',
+            'What team do you support?',
+            'What sport would you like to try?',
+            'What\'s your most memorable game?',
+            'Do you exercise regularly?',
+            'What sport are you good at?',
+            'What have you learned from sports?',
+            'Do you prefer watching or playing sports?'
+          ],
+          'Pets': [
+            'Tell me about your pet',
+            'What\'s your memory with your pet?',
+            'What\'s your ideal pet?',
+            'How did you name your pet?',
+            'What\'s your pet\'s cute habit?',
+            'How did you meet your pet?',
+            'What\'s your daily routine with your pet?',
+            'What does your pet mean to your family?'
+          ],
+          'Seasons & Events': [
+            'What\'s your favorite season?',
+            'What event are you looking forward to?',
+            'How do you enjoy each season?',
+            'What\'s your memorable seasonal event?',
+            'What\'s your favorite seasonal food?',
+            'How do you spend different seasons?',
+            'What\'s your memorable festival?',
+            'What do you notice when seasons change?'
+          ]
+        }
+      },
+      methods: {
+        generateQuestion() {
+          if (!this.selectedCategory || (!this.allowDuplicates && this.isAllQuestionsUsed)) {
+            return;
+          }
+
+          const questions = this.questions[this.selectedCategory];
+          if (this.allowDuplicates) {
+            const randomIndex = Math.floor(Math.random() * questions.length);
+            this.currentQuestion = questions[randomIndex];
+          } else {
+            const unusedQuestions = questions.filter(q => !this.usedQuestions.has(q));
+            if (unusedQuestions.length === 0) {
+              this.isAllQuestionsUsed = true;
+              return;
+            }
+            const randomIndex = Math.floor(Math.random() * unusedQuestions.length);
+            this.currentQuestion = unusedQuestions[randomIndex];
+            this.usedQuestions.add(this.currentQuestion);
+
+            if (this.usedQuestions.size >= questions.length) {
+              this.isAllQuestionsUsed = true;
+            }
+          }
+        },
+        clearQuestion() {
+          this.currentQuestion = 'Questions will be displayed here';
+          this.usedQuestions.clear();
+          this.isAllQuestionsUsed = false;
+        },
+        resetUsedQuestions() {
+          this.usedQuestions.clear();
+          this.isAllQuestionsUsed = false;
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>

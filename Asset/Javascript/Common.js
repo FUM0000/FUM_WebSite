@@ -105,9 +105,17 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Converter</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Function_ImageEditor.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Image Editor</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Function_QRCode.html">
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Function_RandomQuestion.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Random Question</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Function_Roulette.html">
                     <v-list-item-icon />

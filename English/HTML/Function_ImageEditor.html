@@ -1,0 +1,301 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Image Editor</title>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Image Editor</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6" lg="6">
+                <v-card>
+
+                  <v-card-text>
+                    <v-file-input v-model="file" accept="image/*" label="Select Image" prepend-icon="mdi-image"
+                      @change="onFileSelected"></v-file-input>
+
+                    <v-text-field class="mt-0 pt-0" v-model="outputFileName" label="Output filename"></v-text-field>
+
+                    <v-row v-if="imagePreview">
+                      <v-col cols="12">
+                        <v-img :src="showOriginal ? originalImage : previewImage" contain max-height="300"
+                          :style="getFilterStyle"></v-img>
+                        <v-btn block text color="primary" class="mt-2 mb-2" @mousedown="showOriginalImage"
+                          @mouseup="hideOriginalImage" @mouseleave="hideOriginalImage"
+                          @touchstart.prevent="showOriginalImage" @touchend.prevent="hideOriginalImage">
+                          Hold to show original
+                        </v-btn>
+                      </v-col>
+                    </v-row>
+
+                    <v-expansion-panels>
+                      <v-expansion-panel>
+                        <v-expansion-panel-header>Resize</v-expansion-panel-header>
+                        <v-expansion-panel-content>
+                          <v-row>
+                            <v-col cols="12" md="6">
+                              <v-text-field v-model.number="width" label="Width (px)" type="number"
+                                min="1"></v-text-field>
+                            </v-col>
+                            <v-col cols="12" md="6">
+                              <v-text-field v-model.number="height" label="Height (px)" type="number"
+                                min="1"></v-text-field>
+                            </v-col>
+                          </v-row>
+
+                          <v-checkbox v-model="maintainAspectRatio" label="Maintain aspect ratio"></v-checkbox>
+                        </v-expansion-panel-content>
+                      </v-expansion-panel>
+
+                      <v-expansion-panel>
+                        <v-expansion-panel-header>Filter</v-expansion-panel-header>
+                        <v-expansion-panel-content>
+                          <v-slider v-model="brightness" min="-100" max="100" label="Brightness" thumb-label
+                            @input="updatePreview"></v-slider>
+
+                          <v-slider v-model="contrast" min="-100" max="100" label="Contrast" thumb-label
+                            @input="updatePreview"></v-slider>
+
+                          <v-slider v-model="saturation" min="-100" max="100" label="Saturation" thumb-label
+                            @input="updatePreview"></v-slider>
+
+                          <v-switch inset v-model="grayscale" label="Grayscale" @change="updatePreview"></v-switch>
+                        </v-expansion-panel-content>
+                      </v-expansion-panel>
+
+                      <v-expansion-panel>
+                        <v-expansion-panel-header>Format</v-expansion-panel-header>
+                        <v-expansion-panel-content>
+                          <v-select v-model="format" :items="formats" label="Output format"></v-select>
+
+                          <v-slider v-if="format === 'image/jpeg'" v-model="quality" min="0" max="100" label="Quality"
+                            thumb-label></v-slider>
+                        </v-expansion-panel-content>
+                      </v-expansion-panel>
+                    </v-expansion-panels>
+                  </v-card-text>
+
+                  <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="primary" block :disabled="!file || !outputFileName" @click="processImage">
+                      Save Image
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer-simple></main-footer-simple>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        file: null,
+        imagePreview: null,
+        originalImage: null,
+        previewImage: null,
+        showOriginal: false,
+        width: 1024,
+        height: 1024,
+        maintainAspectRatio: true,
+        format: 'image/png', // JPEGからPNGに変更
+        formats: [
+          { text: 'PNG', value: 'image/png' },
+          { text: 'JPEG', value: 'image/jpeg' }
+        ],
+        quality: 90,
+        originalAspectRatio: null,
+        outputFileName: '',
+        brightness: 0,
+        contrast: 0,
+        saturation: 0,
+        grayscale: false
+      },
+      computed: {
+        getFilterStyle() {
+          if (this.showOriginal) return {};
+          return {
+            filter: `brightness(${100 + this.brightness}%) ` +
+              `contrast(${100 + this.contrast}%) ` +
+              `saturate(${100 + this.saturation}%) ` +
+              `${this.grayscale ? 'grayscale(100%)' : ''}`
+          };
+        }
+      },
+      watch: {
+        width(newWidth) {
+          if (this.maintainAspectRatio && this.originalAspectRatio) {
+            this.height = Math.round(newWidth / this.originalAspectRatio);
+          }
+          this.updatePreview();
+        },
+        height(newHeight) {
+          if (this.maintainAspectRatio && this.originalAspectRatio) {
+            this.width = Math.round(newHeight * this.originalAspectRatio);
+          }
+          this.updatePreview();
+        }
+      },
+      methods: {
+        onFileSelected(file) {
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.originalImage = e.target.result;
+              this.imagePreview = e.target.result;
+              this.previewImage = e.target.result;
+
+              const img = new Image();
+              img.onload = () => {
+                this.originalAspectRatio = img.width / img.height;
+                this.width = img.width;
+                this.height = img.height;
+                if (!this.outputFileName) {
+                  const originalName = file.name.substring(0, file.name.lastIndexOf('.'));
+                  this.outputFileName = `${originalName}_edited`;
+                }
+                this.updatePreview();
+              };
+              img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          } else {
+            this.imagePreview = null;
+            this.originalImage = null;
+            this.previewImage = null;
+            this.originalAspectRatio = null;
+            this.outputFileName = '';
+          }
+        },
+        showOriginalImage() {
+          this.showOriginal = true;
+        },
+        hideOriginalImage() {
+          this.showOriginal = false;
+        },
+        updatePreview() {
+          if (!this.imagePreview) return;
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+
+          img.onload = () => {
+            canvas.width = this.width;
+            canvas.height = this.height;
+
+            // リサイズ
+            ctx.drawImage(img, 0, 0, this.width, this.height);
+
+            // プレビュー更新
+            this.previewImage = canvas.toDataURL(this.format, this.quality / 100);
+          };
+
+          img.src = this.originalImage;
+        },
+        applyFilters(ctx, canvas) {
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = canvas.height;
+          const tempCtx = tempCanvas.getContext('2d');
+
+          tempCtx.drawImage(canvas, 0, 0);
+
+          if (this.grayscale) {
+            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+              const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+              data[i] = avg;
+              data[i + 1] = avg;
+              data[i + 2] = avg;
+            }
+            tempCtx.putImageData(imageData, 0, 0);
+          }
+
+          ctx.filter = `brightness(${100 + this.brightness}%) ` +
+            `contrast(${100 + this.contrast}%) ` +
+            `saturate(${100 + this.saturation}%)`;
+
+          ctx.drawImage(tempCanvas, 0, 0);
+          ctx.filter = 'none';
+        },
+        processImage() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+
+          img.onload = () => {
+            canvas.width = this.width;
+            canvas.height = this.height;
+
+            ctx.drawImage(img, 0, 0, this.width, this.height);
+            this.applyFilters(ctx, canvas);
+
+            const processedImage = canvas.toDataURL(this.format, this.quality / 100);
+
+            const link = document.createElement('a');
+            const extension = this.format.split('/')[1];
+            link.download = `${this.outputFileName}.${extension}`;
+            link.href = processedImage;
+            link.click();
+          };
+
+          img.src = this.imagePreview;
+        }
+      }
+    })
+  </script>
+
+</body>
+
+</html>
