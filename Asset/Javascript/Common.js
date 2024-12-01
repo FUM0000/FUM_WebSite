@@ -109,6 +109,10 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Image Editor</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Function_JapaneseCalendar.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Japanese Calendar</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Function_QRCode.html">
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
