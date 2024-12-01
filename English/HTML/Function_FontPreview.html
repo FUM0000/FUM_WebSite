@@ -1,0 +1,515 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Font Preview</title>
+
+  <style>
+
+    .preview-box {
+      padding: 30px;
+      min-height: 200px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      margin-top: 16px;
+    }
+
+    .font-info {
+      font-size: 0.875rem;
+      color: rgba(0, 0, 0, 0.6);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Japanese Calendar</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card>
+                  <v-card-text>
+                    <v-select v-model="currentLanguage" :items="languages" :label="uiText[currentLanguage].language"
+                      @change="handleLanguageChange"></v-select>
+
+                    <v-text-field v-model="previewText" :label="uiText[currentLanguage].previewText" outlined></v-text-field>
+
+                    <v-row align="center">
+                      <v-col cols="12" md="6">
+                        <v-slider class="pt-5" v-model="fontSize" :label="uiText[currentLanguage].size" min="12" max="72" thumb-label
+                          @input="updatePreview"></v-slider>
+                      </v-col>
+                      <v-col cols="12" md="6">
+                        <v-select v-model="fontWeight" :items="weightItems" :label="uiText[currentLanguage].weight"
+                          @change="updatePreview"></v-select>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card>
+                  <v-card-text>
+                    <v-row>
+                      <v-col xs="12" md="6">
+                        <v-select v-model="selectedFontA" :items="currentFontOptions" :label="uiText[currentLanguage].fontA"
+                          item-text="label" item-value="value" @change="updatePreview" :menu-props="{ maxHeight: '400' }">
+                          <template v-slot:selection="{ item }">
+                            <div>{{ item.label }}</div>
+                          </template>
+                          <template v-slot:item="{ item }">
+                            <div>
+                              <strong>{{ item.category }}</strong>
+                              <div>{{ item.label }}</div>
+                            </div>
+                          </template>
+                        </v-select>
+                        <div class="preview-box" :style="previewStyleA">
+                          {{ previewText }}
+                        </div>
+                      </v-col>
+
+                      <v-col xs="12" md="6">
+                        <v-select v-model="selectedFontB" :items="currentFontOptions" :label="uiText[currentLanguage].fontB"
+                          item-text="label" item-value="value" @change="updatePreview" :menu-props="{ maxHeight: '400' }">
+                          <template v-slot:selection="{ item }">
+                            <div>{{ item.label }}</div>
+                          </template>
+                          <template v-slot:item="{ item }">
+                            <div>
+                              <strong>{{ item.category }}</strong>
+                              <div>{{ item.label }}</div>
+                            </div>
+                          </template>
+                        </v-select>
+                        <div class="preview-box" :style="previewStyleB">
+                          {{ previewText }}
+                        </div>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <v-row justify="center" v-for="category in currentFontCategories" :key="category.name">
+              <v-col xs="12" md="6">
+                <h2 class="text-h5 mb-4">{{ category.name }}</h2>
+                <v-row>
+                  <v-col v-for="font in category.fonts" :key="font.value" xs="12" md="6">
+                    <v-card>
+                      <v-card-title class="subtitle-1">{{ font.label }}</v-card-title>
+                      <v-card-text>
+                        <p :style="{ fontFamily: font.value, fontSize: '16px' }">
+                          {{ previewText }}
+                        </p>
+                        <div class="font-info">
+                          {{ getFontDescription(font.label) }}
+                          <br>
+                          <v-btn :href="'https://fonts.google.com/specimen/' + font.label.replace(/\s+/g, '+')"
+                            target="_blank" text color="primary" small>
+                            SIL Open Font License
+                          </v-btn>
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </v-col>
+                </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer-simple></main-footer-simple>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        currentLanguage: 'ja',
+        previewText: 'こんにちは、世界。Hello, World! 123',
+        fontSize: 24,
+        fontWeight: '400',
+        selectedFontA: "'BIZ UDPGothic'",
+        selectedFontB: "'Zen Kaku Gothic New'",
+        languages: [
+          { text: '日本語', value: 'ja' },
+          { text: 'English', value: 'en' },
+          { text: '中文', value: 'zh' }
+        ],
+        uiText: {
+          ja: {
+            language: "言語 / Language / 语言",
+            previewText: "プレビューテキスト",
+            size: "サイズ",
+            weight: "ウェイト",
+            fontA: "フォント A",
+            fontB: "フォント B",
+            font: "フォント",
+            weights: {
+              100: "Thin (100)",
+              300: "Light (300)",
+              400: "Regular (400)",
+              500: "Medium (500)",
+              700: "Bold (700)",
+              900: "Black (900)"
+            }
+          },
+          en: {
+            language: "Language / 言語 / 语言",
+            previewText: "Preview Text",
+            size: "Size",
+            weight: "Weight",
+            fontA: "Font A",
+            fontB: "Font B",
+            font: "Font",
+            weights: {
+              100: "Thin (100)",
+              300: "Light (300)",
+              400: "Regular (400)",
+              500: "Medium (500)",
+              700: "Bold (700)",
+              900: "Black (900)"
+            }
+          },
+          zh: {
+            language: "语言 / Language / 言語",
+            previewText: "预览文本",
+            size: "字体大小",
+            weight: "字重",
+            fontA: "字体 A",
+            fontB: "字体 B",
+            font: "字体",
+            weights: {
+              100: "极细 (100)",
+              300: "细体 (300)",
+              400: "标准 (400)",
+              500: "中等 (500)",
+              700: "粗体 (700)",
+              900: "黑体 (900)"
+            }
+          }
+        },
+        fontOptions: {
+          ja: {
+            gothic: {
+              name: 'ゴシック体',
+              fonts: [
+                { value: "'BIZ UDPGothic'", label: "BIZ UDPGothic" },
+                { value: "'Zen Kaku Gothic New'", label: "Zen Kaku Gothic New" },
+                { value: "'M PLUS 1'", label: "M PLUS 1" },
+                { value: "'M PLUS 2'", label: "M PLUS 2" },
+                { value: "'Noto Sans JP'", label: "Noto Sans JP" },
+                { value: "'Sawarabi Gothic'", label: "Sawarabi Gothic" },
+                { value: "'Kosugi'", label: "Kosugi" }
+              ]
+            },
+            mincho: {
+              name: '明朝体',
+              fonts: [
+                { value: "'Zen Old Mincho'", label: "Zen Old Mincho" },
+                { value: "'Kaisei Decol'", label: "Kaisei Decol" },
+                { value: "'Kaisei Opti'", label: "Kaisei Opti" },
+                { value: "'Kaisei Tokumin'", label: "Kaisei Tokumin" },
+                { value: "'Shippori Mincho'", label: "Shippori Mincho" },
+                { value: "'Sawarabi Mincho'", label: "Sawarabi Mincho" },
+                { value: "'Noto Serif JP'", label: "Noto Serif JP" }
+              ]
+            },
+            rounded: {
+              name: '丸文字',
+              fonts: [
+                { value: "'Zen Maru Gothic'", label: "Zen Maru Gothic" },
+                { value: "'M PLUS Rounded 1c'", label: "M PLUS Rounded 1c" },
+                { value: "'Kiwi Maru'", label: "Kiwi Maru" },
+                { value: "'Kosugi Maru'", label: "Kosugi Maru" }
+              ]
+            },
+            decorative: {
+              name: '装飾・個性派',
+              fonts: [
+                { value: "'Rampart One'", label: "Rampart One" },
+                { value: "'Stick'", label: "Stick" },
+                { value: "'Reggae One'", label: "Reggae One" },
+                { value: "'Train One'", label: "Train One" },
+                { value: "'DotGothic16'", label: "DotGothic16" }
+              ]
+            },
+            handwriting: {
+              name: '手書き風',
+              fonts: [
+                { value: "'Yuji Syuku'", label: "Yuji Syuku" },
+                { value: "'New Tegomin'", label: "New Tegomin" }
+              ]
+            }
+          },
+          en: {
+            sansSerif: {
+              name: 'Sans Serif',
+              fonts: [
+                { value: "'Roboto'", label: "Roboto" },
+                { value: "'Open Sans'", label: "Open Sans" },
+                { value: "'Lato'", label: "Lato" },
+                { value: "'Source Sans Pro'", label: "Source Sans Pro" },
+                { value: "'Inter'", label: "Inter" },
+                { value: "'Fira Sans'", label: "Fira Sans" }
+              ]
+            },
+            geometric: {
+              name: 'Geometric Sans',
+              fonts: [
+                { value: "'Montserrat'", label: "Montserrat" },
+                { value: "'Poppins'", label: "Poppins" },
+                { value: "'Space Grotesk'", label: "Space Grotesk" },
+                { value: "'DM Sans'", label: "DM Sans" }
+              ]
+            },
+            rounded: {
+              name: 'Rounded Sans',
+              fonts: [
+                { value: "'Nunito'", label: "Nunito" },
+                { value: "'Quicksand'", label: "Quicksand" },
+                { value: "'Rubik'", label: "Rubik" }
+              ]
+            },
+            serif: {
+              name: 'Serif',
+              fonts: [
+                { value: "'Merriweather'", label: "Merriweather" },
+                { value: "'Playfair Display'", label: "Playfair Display" }
+              ]
+            },
+            modern: {
+              name: 'Modern & Stylish',
+              fonts: [
+                { value: "'Raleway'", label: "Raleway" },
+                { value: "'Ubuntu'", label: "Ubuntu" },
+                { value: "'Josefin Sans'", label: "Josefin Sans" },
+                { value: "'Work Sans'", label: "Work Sans" },
+                { value: "'Oswald'", label: "Oswald" }
+              ]
+            }
+          },
+          zh: {
+            sans: {
+              name: '无衬线',
+              fonts: [
+                { value: "'Noto Sans SC'", label: "Noto Sans SC" },
+                { value: "'Noto Sans TC'", label: "Noto Sans TC" }
+              ]
+            },
+            serif: {
+              name: '衬线',
+              fonts: [
+                { value: "'Noto Serif SC'", label: "Noto Serif SC" },
+                { value: "'Noto Serif TC'", label: "Noto Serif TC" },
+                { value: "'ZCOOL XiaoWei'", label: "ZCOOL XiaoWei" }
+              ]
+            },
+            handwriting: {
+              name: '手写体',
+              fonts: [
+                { value: "'Ma Shan Zheng'", label: "Ma Shan Zheng" },
+                { value: "'Long Cang'", label: "Long Cang" },
+                { value: "'Liu Jian Mao Cao'", label: "Liu Jian Mao Cao" },
+                { value: "'Zhi Mang Xing'", label: "Zhi Mang Xing" }
+              ]
+            },
+            modern: {
+              name: '现代风格',
+              fonts: [
+                { value: "'ZCOOL QingKe HuangYou'", label: "ZCOOL QingKe HuangYou" },
+                { value: "'ZCOOL KuaiLe'", label: "ZCOOL KuaiLe" }
+              ]
+            },
+            special: {
+              name: '特殊字体',
+              fonts: [
+                { value: "'Noto Traditional Nushu'", label: "Noto Traditional Nushu" },
+                { value: "'Zen Kurenaido'", label: "Zen Kurenaido" }
+              ]
+            }
+          }
+        },
+        defaultText: {
+          ja: "こんにちは、世界。Hello, World! 123",
+          en: "The quick brown fox jumps over the lazy dog. 123",
+          zh: "永和九年，岁在癸丑。 The Sample Text 123"
+        },
+        fontDescriptions: {
+          ja: {
+            'BIZ UDPGothic': 'ユニバーサルデザインに基づいたゴシック体',
+            'Zen Kaku Gothic New': '現代的でクリーンな印象のゴシック体',
+            'M PLUS 1': '現代的でシャープなゴシック体',
+            'M PLUS 2': 'M PLUS 1の派生フォント、より洗練された印象',
+            'Noto Sans JP': 'Googleが開発した高品質なサンセリフフォント',
+            'Sawarabi Gothic': 'クリーンでモダンなゴシック体フォント',
+            'Kosugi': 'バランスの良いゴシック体フォント',
+            'Zen Old Mincho': 'クラシカルな雰囲気の明朝体',
+            'Kaisei Decol': '装飾的な要素を持つ明朝体',
+            'Kaisei Opti': '最適化された可読性の高い明朝体',
+            'Kaisei Tokumin': '特徴的な太さのコントラストを持つ明朝体',
+            'Shippori Mincho': '現代的でエレガントな明朝体',
+            'Sawarabi Mincho': '洗練された明朝体フォント',
+            'Noto Serif JP': 'Googleによる高品質な明朝体フォント',
+            'Zen Maru Gothic': '丸みのある親しみやすいゴシック体',
+            'M PLUS Rounded 1c': '丸みのある親しみやすいデザインのゴシック体',
+            'Kiwi Maru': '丸みのある親しみやすい書体',
+            'Yuji Syuku': '手書き風の縮小版書体',
+            'Rampart One': '太くてインパクトのある装飾的な書体',
+            'Stick': '棒状の独特なデザインの書体',
+            'Reggae One': '個性的でポップな装飾フォント',
+            'New Tegomin': '手書き風の明朝体フォント',
+            'Train One': 'インパクトのある装飾フォント',
+            'DotGothic16': 'ドット風のレトロなフォント'
+          },
+          en: {
+            'Roboto': 'Modern sans-serif font designed by Google',
+            'Open Sans': 'A humanist sans-serif typeface',
+            'Lato': 'A sans-serif typeface family',
+            'Source Sans Pro': 'The first open-source font family from Adobe',
+            'Montserrat': 'A modern geometric sans-serif typeface',
+            'Raleway': 'An elegant sans-serif typeface',
+            'Nunito': 'A well-balanced sans-serif with rounded terminals',
+            'Poppins': 'A geometric sans-serif with modern proportions',
+            'Ubuntu': 'A contemporary sans-serif for modern interfaces',
+            'Merriweather': 'A serif design for optimal reading experience',
+            'Josefin Sans': 'A geometric sans-serif with Art Deco influence',
+            'Work Sans': 'A minimalist and highly readable sans-serif',
+            'Quicksand': 'A geometric sans-serif with rounded terminals',
+            'Playfair Display': 'A classical serif font with high contrast',
+            'Inter': 'A modern typeface designed for computer screens',
+            'Fira Sans': 'A versatile and modern humanist sans-serif',
+            'Oswald': 'A reworked classic gothic/grotesque style',
+            'Rubik': 'A rounded geometric sans-serif',
+            'Space Grotesk': 'A modern geometric sans-serif with character',
+            'DM Sans': 'A low-contrast geometric sans-serif'
+          },
+          zh: {
+            'Noto Sans SC': '优化的简体中文无衬线字体',
+            'Noto Serif SC': '优化的简体中文衬线字体',
+            'Ma Shan Zheng': '毛山正体，适合文言文',
+            'ZCOOL XiaoWei': '适合中文的现代字体',
+            'ZCOOL QingKe HuangYou': '适合中文的优雅字体',
+            'Long Cang': '传统书法风格的手写体',
+            'Liu Jian Mao Cao': '流畅的手写草书字体',
+            'Zhi Mang Xing': '独特的艺术手写体',
+            'Noto Sans TC': '优化的繁体中文无衬线字体',
+            'Noto Serif TC': '优化的繁体中文衬线字体',
+            'ZCOOL KuaiLe': '现代活泼的中文字体',
+            'Noto Traditional Nushu': '传统女书字体',
+            'Zen Kurenaido': '优雅柔和的书法字体'
+          }
+        }
+      },
+      computed: {
+        currentFontOptions() {
+          return Object.entries(this.fontOptions[this.currentLanguage]).flatMap(([key, category]) => {
+            return category.fonts.map(font => ({
+              ...font,
+              category: category.name
+            }));
+          });
+        },
+        weightItems() {
+          return Object.entries(this.uiText[this.currentLanguage].weights)
+            .map(([value, label]) => ({
+              text: label,
+              value: value
+            }));
+        },
+        previewStyleA() {
+          return {
+            fontFamily: this.selectedFontA,
+            fontSize: `${this.fontSize}px`,
+            fontWeight: this.fontWeight
+          };
+        },
+        previewStyleB() {
+          return {
+            fontFamily: this.selectedFontB,
+            fontSize: `${this.fontSize}px`,
+            fontWeight: this.fontWeight
+          };
+        },
+        currentFontCategories() {
+          return Object.entries(this.fontOptions[this.currentLanguage]).map(([key, category]) => ({
+            name: category.name,
+            fonts: category.fonts
+          }));
+        },
+        getAllFonts() {
+          const fonts = [];
+          Object.values(this.fontOptions[this.currentLanguage]).forEach(category => {
+            fonts.push(...category.fonts);
+          });
+          return fonts;
+        }
+      },
+      methods: {
+        handleLanguageChange() {
+          this.previewText = this.defaultText[this.currentLanguage];
+          const allFonts = this.getAllFonts;
+          this.selectedFontA = allFonts[0]?.value || '';
+          this.selectedFontB = allFonts[1]?.value || '';
+        },
+        getFontDescription(fontName) {
+          return this.fontDescriptions[this.currentLanguage][fontName] || 'A free font for commercial use';
+        },
+        updatePreview() {
+          // Vue's reactivity will handle the updates automatically
+        }
+      },
+      created() {
+        this.handleLanguageChange();
+      }
+    });
+  </script>
+</body>
+
+</html>

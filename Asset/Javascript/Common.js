@@ -105,6 +105,10 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Converter</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Function_FontPreview.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Font Preview</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Function_ImageEditor.html">
                     <v-list-item-icon />
                     <v-list-item-title>Image Editor</v-list-item-title>
@@ -946,7 +950,7 @@ Vue.component('main-footer-simple', {
 Vue.component('custom-carousel', {
     template: `
         <v-row justify="center">
-            <v-col xs="12" md="6" lg="6">
+            <v-col xs="12" md="6">
                 <v-card>
                     <v-system-bar class="font-weight-medium" style="background-color: #BFC8CC99;">{{ title }}</v-system-bar>
                     <v-carousel delimiter-icon="mdi-album" :show-arrows="false" :height="height" v-model="internalpagenumber">
@@ -985,7 +989,7 @@ Vue.component('custom-carousel', {
 Vue.component('custom-carousel-left', {
     template: `
         <v-row justify="center">
-            <v-col xs="12" md="6" lg="6">
+            <v-col xs="12" md="6">
                 <v-card>
                     <v-system-bar class="font-weight-medium" style="background-color: #BFC8CC99;">{{ title }}</v-system-bar>
                     <v-carousel delimiter-icon="mdi-album" :show-arrows="false" :height="height" v-model="internalpagenumber">
