@@ -31,6 +31,9 @@
 </head>
 
 <body>
+
+    <canvas id="ElectronShell"></canvas>
+
     <v-app id="App">
         <template>
 
@@ -40,9 +43,6 @@
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="align-content: flex-start;">
 
-                        <v-container id="Scan"></v-container>
-                        <canvas id="Balls"></canvas>
-
                         <v-container id="TextFlow">
                             <span style="color: red">&lt; NEWS &gt;</span>&nbsp;
                             <span>
@@ -50,62 +50,6 @@
                                 Take a look at the beautiful autumn leaves.
                             </span>
                         </v-container>
-
-                        <v-container>
-                            <v-btn class="item-1" icon small @click="Change_BGM(14);">
-                                <v-icon color="hsl(205 100% 94%)" small>mdi-bicycle</v-icon>
-                            </v-btn>
-                            <v-btn class="item-2" icon small @click="Change_BGM(13);">
-                                <v-icon color="hsl(205 100% 91%)" small>mdi-cat</v-icon>
-                            </v-btn>
-                            <v-btn class="item-3" icon @click="Change_BGM(12);">
-                                <v-icon color="hsl(205 100% 88%)">mdi-dumbbell</v-icon>
-                            </v-btn>
-                            <v-btn class="item-4" icon @click="Change_BGM(11);">
-                                <v-icon color="hsl(205 100% 83%)">mdi-glass-mug-variant</v-icon>
-                            </v-btn>
-                            <v-btn class="item-5" icon @click="Change_BGM(10);">
-                                <v-icon color="hsl(205 100% 80%)">mdi-google-downasaur</v-icon>
-                            </v-btn>
-                            <v-btn class="item-6" icon @click="Change_BGM(9);">
-                                <v-icon color="hsl(205 100% 75%)">mdi-hand-heart</v-icon>
-                            </v-btn>
-                            <v-btn class="item-7" icon large @click="Change_BGM(8);">
-                                <v-icon color="hsl(205 100% 70%)">mdi-island</v-icon>
-                            </v-btn>
-                            <v-btn class="item-8" icon large @click="Change_BGM(7);">
-                                <v-icon color="hsl(205 100% 65%)" large>mdi-jellyfish</v-icon>
-                            </v-btn>
-                            <v-btn class="item-9" icon large @click="Change_BGM(6);">
-                                <v-icon color="hsl(205 100% 60%)" large>mdi-linux</v-icon>
-                            </v-btn>
-                            <v-btn class="item-10" icon x-large @click="Change_BGM(5);">
-                                <v-icon color="hsl(205 100% 55%)" x-large>mdi-mustache</v-icon>
-                            </v-btn>
-                            <v-btn class="item-11" icon x-large @click="Change_BGM(4);">
-                                <v-icon color="hsl(205 100% 50%)" x-large>mdi-noodles</v-icon>
-                            </v-btn>
-                            <v-btn class="item-12" icon x-large @click="Change_BGM(3);">
-                                <v-icon color="hsl(205 100% 45%)" large>mdi-ocarina</v-icon>
-                            </v-btn>
-                            <v-btn class="item-13" icon x-large @click="Change_BGM(2);">
-                                <v-icon color="hsl(205 100% 40%)" x-large>mdi-pot-mix</v-icon>
-                            </v-btn>
-                            <v-btn class="item-14" icon x-large @click="Change_BGM(1);">
-                                <v-icon color="hsl(205 100% 35%)" x-large>mdi-skull</v-icon>
-                            </v-btn>
-                            <v-btn class="item-15" icon x-large @click="Change_BGM(0);">
-                                <v-icon color="hsl(205 100% 30%)" x-large>mdi-teddy-bear</v-icon>
-                            </v-btn>
-                        </v-container>
-
-                        <v-spacer></v-spacer>
-
-                        <v-row justify="center">
-                            <v-col id="SelectMusic" cols="auto" class="text-h6 Glitch_Text pa-1">
-                                <span style="color: hsl(205 100% 65%)">Select Music</span>
-                            </v-col>
-                        </v-row>
 
                     </v-container>
                 </transition>
@@ -123,6 +67,15 @@
     <script src="../../Asset/Javascript/Common.js"></script>
     <script src="../../Asset/Javascript/Index.js"></script>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
     <script>
         let vue = new Vue({
             el: '#App',
@@ -132,58 +85,320 @@
     </script>
 
     <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
-
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xCFD8DC);
-
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 15;
-
         const renderer = new THREE.WebGLRenderer({
-            canvas: document.querySelector("#Balls"),
+            canvas: document.querySelector("#ElectronShell"),
             antialias: true
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.toneMappingExposure = 2;
 
-        const geometry = new THREE.SphereGeometry(1, 32, 32);
-        const material = new THREE.MeshBasicMaterial({ color: 0xD3E1E6 });
-
-        const spheres = [];
-        const numSpheres = 60;
-        for (let i = 0; i < numSpheres; i++) {
-            const sphere = new THREE.Mesh(geometry, material);
-            const size = RandomNumber_Between(1, 5);
-            sphere.size = new THREE.Vector3(size, size, size);
-            const speed = 100 / Math.pow(size, 1.75)
-            sphere.velocity = new THREE.Vector3(
-                Math.random() * 2 - 1,
-                Math.random() * 2 - 1,
-                Math.random() * 2 - 1
-            ).multiplyScalar(speed * 0.01);
-            spheres.push(sphere);
-            scene.add(sphere);
-        }
-
-        const animate = () => {
-            requestAnimationFrame(animate);
-
-            spheres.forEach(sphere => {
-                sphere.position.add(sphere.velocity);
-
-                if (Math.abs(sphere.position.x) > 10) {
-                    sphere.velocity.x *= -0.95;
-                }
-                if (Math.abs(sphere.position.y) > 10) {
-                    sphere.velocity.y *= -0.95;
-                }
-                if (Math.abs(sphere.position.z) > 10) {
-                    sphere.velocity.z *= -0.95;
-                }
+        const loader = new THREE.FontLoader();
+        loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+            const textGeometry = new THREE.TextGeometry('WELCOME', {
+                font: font,
+                size: 2,
+                height: 0.25,
+                curveSegments: 2,
+                bevelEnabled: true,
+                bevelThickness: 0,
+                bevelSize: 0.02,
+                bevelOffset: 0,
+                bevelSegments: 0
             });
 
-            renderer.render(scene, camera);
-        };
+            const textMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ff00,
+                emissive: 0x00ffcc,
+                emissiveIntensity: 0.5,
+                shininess: 100
+            });
+
+            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textGeometry.computeBoundingBox();
+            const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x;
+            textMesh.position.set(-textWidth / 2, 0, 0);
+            scene.add(textMesh);
+
+            // Add light for the text
+            const light = new THREE.PointLight(0x00ffcc, 1);
+            light.position.set(0, 0, 5);
+            scene.add(light);
+        });
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 0.5;
+        controls.zoomSpeed = 0.8;
+
+        const mouse = new THREE.Vector2();
+        const raycaster = new THREE.Raycaster();
+
+        const cursorParticles = [];
+        const cursorParticleGeometry = new THREE.BufferGeometry();
+        const cursorParticleMaterial = new THREE.PointsMaterial({
+            color: 0x00ffcc,
+            size: 0.05,
+            transparent: true,
+            opacity: 0.8,
+            emissive: 0x00ffcc,
+            emissiveIntensity: 2.0
+        });
+
+        const electronShells = [
+            { name: 'K', electrons: 2, radius: 5 },
+            { name: 'L', electrons: 8, radius: 8 },
+            { name: 'M', electrons: 18, radius: 11 },
+            { name: 'N', electrons: 32, radius: 14 },
+            { name: 'O', electrons: 32, radius: 17 }
+        ];
+
+        const totalElectrons = electronShells.reduce((sum, shell) => sum + shell.electrons, 0);
+        const pointSize = 0.15;
+        const connectionDistance = Math.PI * 2;
+        const avoidanceDistance = 1.2;
+        const repulsionStrength = 0.02;
+
+        const pointMaterial = new THREE.PointsMaterial({
+            color: 0x00ffcc,
+            size: pointSize,
+            sizeAttenuation: true,
+            emissive: 0x00ffcc,
+            emissiveIntensity: 2.0
+        });
+
+        const positions = new Float32Array(totalElectrons * 3);
+        const velocities = new Float32Array(totalElectrons * 3);
+
+        const ALPHA = 1 / 137;
+        const LIGHT_SPEED = .299792458;
+
+        let currentIndex = 0;
+        electronShells.forEach((shell, shellIndex) => {
+            const baseSpeed = (92 * ALPHA * LIGHT_SPEED / (shellIndex + 1)) * 2;
+
+            for (let i = 0; i < shell.electrons; i++) {
+                const golden_ratio = (1 + Math.sqrt(5)) / 2;
+                const theta = 2 * Math.PI * i / golden_ratio;
+                const phi = Math.acos(1 - 2 * (i + 0.5) / shell.electrons);
+
+                const x = shell.radius * Math.sin(phi) * Math.cos(theta);
+                const y = shell.radius * Math.sin(phi) * Math.sin(theta);
+                const z = shell.radius * Math.cos(phi);
+
+                positions[currentIndex * 3] = x;
+                positions[currentIndex * 3 + 1] = y;
+                positions[currentIndex * 3 + 2] = z;
+
+                const tangentX = -Math.sin(theta);
+                const tangentY = Math.cos(theta);
+                const tangentZ = 0;
+
+                velocities[currentIndex * 3] = tangentX * baseSpeed;
+                velocities[currentIndex * 3 + 1] = tangentY * baseSpeed;
+                velocities[currentIndex * 3 + 2] = tangentZ * baseSpeed;
+
+                currentIndex++;
+            }
+        });
+
+        const pointGeometry = new THREE.BufferGeometry();
+        pointGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const pointCloud = new THREE.Points(pointGeometry, pointMaterial);
+        scene.add(pointCloud);
+
+        const lineMaterial = new THREE.LineBasicMaterial({
+            color: 0x00ffff,
+            opacity: 0.3,
+            transparent: true,
+            emissive: 0x00ffff,
+            emissiveIntensity: 1.5
+        });
+
+        const lineGeometry = new THREE.BufferGeometry();
+        scene.add(new THREE.LineSegments(lineGeometry, lineMaterial));
+
+        const composer = new THREE.EffectComposer(renderer);
+        const renderPass = new THREE.RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const bloomPass = new THREE.UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            2.0,
+            0.3,
+            0.7
+        );
+        bloomPass.threshold = 0;
+        bloomPass.strength = 2.5;
+        bloomPass.radius = 0.7;
+        composer.addPass(bloomPass);
+
+        camera.position.x = -25;
+        camera.position.y = -25;
+        camera.position.z = 50;
+
+        function createCursorParticle(x, y, z) {
+            for (let i = 0; i < 1; i++) {
+                const speed = 0.05;
+                const particle = {
+                    position: new THREE.Vector3(
+                        x,
+                        y,
+                        z
+                    ),
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * speed,
+                        (Math.random() - 0.5) * speed,
+                        (Math.random() - 0.5) * speed
+                    ),
+                    life: 1.0
+                };
+                cursorParticles.push(particle);
+            }
+        }
+
+        function updateCursorParticles() {
+            for (let i = cursorParticles.length - 1; i >= 0; i--) {
+                const particle = cursorParticles[i];
+
+                particle.position.add(particle.velocity);
+                particle.life -= 0.01;
+
+                if (particle.life <= 0) {
+                    cursorParticles.splice(i, 1);
+                }
+            }
+
+            const positions = new Float32Array(cursorParticles.length * 3);
+            cursorParticles.forEach((particle, i) => {
+                positions[i * 3] = particle.position.x;
+                positions[i * 3 + 1] = particle.position.y;
+                positions[i * 3 + 2] = particle.position.z;
+            });
+
+            cursorParticleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            if (!scene.children.includes(cursorParticleSystem) && cursorParticles.length > 0) {
+                scene.add(cursorParticleSystem);
+            } else if (scene.children.includes(cursorParticleSystem) && cursorParticles.length === 0) {
+                scene.remove(cursorParticleSystem);
+            }
+        }
+
+        const cursorParticleSystem = new THREE.Points(cursorParticleGeometry, cursorParticleMaterial);
+
+        function animatePoints() {
+            const positions = pointGeometry.attributes.position.array;
+            let currentIndex = 0;
+
+            electronShells.forEach((shell, shellIndex) => {
+                const shellStartIndex = currentIndex;
+                const shellEndIndex = currentIndex + shell.electrons;
+
+                for (let i = shellStartIndex; i < shellEndIndex; i++) {
+                    const idx = i * 3;
+                    let x = positions[idx];
+                    let y = positions[idx + 1];
+                    let z = positions[idx + 2];
+
+                    const currentRadius = Math.sqrt(x * x + y * y + z * z);
+
+                    const radiusCorrection = (shell.radius - currentRadius) * 0.1;
+                    const radiusVector = {
+                        x: x / currentRadius * radiusCorrection,
+                        y: y / currentRadius * radiusCorrection,
+                        z: z / currentRadius * radiusCorrection
+                    };
+
+                    let repulsionX = 0, repulsionY = 0, repulsionZ = 0;
+                    for (let j = shellStartIndex; j < shellEndIndex; j++) {
+                        if (i !== j) {
+                            const dx = x - positions[j * 3];
+                            const dy = y - positions[j * 3 + 1];
+                            const dz = z - positions[j * 3 + 2];
+                            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                            if (distance < avoidanceDistance) {
+                                const repulsion = (avoidanceDistance - distance) * repulsionStrength;
+                                repulsionX += dx / distance * repulsion;
+                                repulsionY += dy / distance * repulsion;
+                                repulsionZ += dz / distance * repulsion;
+                            }
+                        }
+                    }
+
+                    velocities[idx] += radiusVector.x + repulsionX;
+                    velocities[idx + 1] += radiusVector.y + repulsionY;
+                    velocities[idx + 2] += radiusVector.z + repulsionZ;
+
+                    positions[idx] += velocities[idx];
+                    positions[idx + 1] += velocities[idx + 1];
+                    positions[idx + 2] += velocities[idx + 2];
+                }
+
+                currentIndex += shell.electrons;
+            });
+
+            pointGeometry.attributes.position.needsUpdate = true;
+        }
+
+        function updateLines() {
+            const positions = pointGeometry.attributes.position.array;
+            const linePositions = [];
+
+            for (let i = 0; i < positions.length / 3; i++) {
+                for (let j = i + 1; j < positions.length / 3; j++) {
+                    const dx = positions[i * 3] - positions[j * 3];
+                    const dy = positions[i * 3 + 1] - positions[j * 3 + 1];
+                    const dz = positions[i * 3 + 2] - positions[j * 3 + 2];
+                    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                    if (distance < connectionDistance) {
+                        linePositions.push(
+                            positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2],
+                            positions[j * 3], positions[j * 3 + 1], positions[j * 3 + 2]
+                        );
+                    }
+                }
+            }
+
+            lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+            lineGeometry.computeBoundingSphere();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            animatePoints();
+            updateLines();
+            updateCursorParticles();
+            controls.update();
+            composer.render();
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersection = raycaster.ray.at(20);
+
+            if (Math.random() < 0.5) {
+                createCursorParticle(intersection.x, intersection.y, intersection.z);
+            }
+        }
+
+        window.addEventListener('mousemove', onMouseMove);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
 
         animate();
     </script>
