@@ -91,7 +91,6 @@
             canvas: document.querySelector("#ElectronShell"),
             antialias: true
         });
-        renderer.setClearColor(0x020202, 1);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.toneMapping = THREE.ReinhardToneMapping;
         renderer.toneMappingExposure = 2;
@@ -134,9 +133,6 @@
         controls.dampingFactor = 0.05;
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
-        
-        camera.position.set(-20, 20, 50);
-        controls.update();
 
         const mouse = new THREE.Vector2();
         const raycaster = new THREE.Raycaster();
@@ -230,11 +226,18 @@
         const renderPass = new THREE.RenderPass(scene, camera);
         composer.addPass(renderPass);
 
-        const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight));
+        const bloomPass = new THREE.UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            2.0,
+            0.3,
+            0.7
+        );
         bloomPass.threshold = 0;
-        bloomPass.strength = 0.5;
-        bloomPass.radius = 0.5;
+        bloomPass.strength = 2.5;
+        bloomPass.radius = 0.7;
         composer.addPass(bloomPass);
+
+        camera.position.z = 50;
 
         function createCursorParticle(x, y, z) {
             for (let i = 0; i < 1; i++) {
@@ -396,175 +399,6 @@
         });
 
         animate();
-
-        /**
-         * 宇宙を詳細に再現した演出を生成する関数
-         * 中央のオブジェクト（0,0,0付近）を壊さないように、宇宙に実在する配置法則（球面座標や非一様分布）を採用し、
-         * ・遠方の星空（背景の微小な星群）
-         * ・螺旋銀河（中央を避けた円盤状の銀河構造）
-         * ・星雲効果（中央から十分離れた位置に配置したダスト・ガス雲）
-         * を生成します。
-         */
-        function createUniverseDetail() {
-            // ★ 遠方の星空 ★
-            const starCount = 5000;
-            const starPositions = new Float32Array(starCount * 3);
-            const starColors = new Float32Array(starCount * 3);
-            for (let i = 0; i < starCount; i++) {
-                const r = 300 + Math.random() * 200;
-                const theta = Math.acos(2 * Math.random() - 1);
-                const phi = Math.random() * 2 * Math.PI;
-                starPositions[i * 3]     = r * Math.sin(theta) * Math.cos(phi);
-                starPositions[i * 3 + 1] = r * Math.sin(theta) * Math.sin(phi);
-                starPositions[i * 3 + 2] = r * Math.cos(theta);
-                
-                let t = Math.random();
-                let color = new THREE.Color();
-                if (t < 0.3) {
-                    color.set(0x99ccff);
-                } else if (t < 0.7) {
-                    color.set(0xffffff);
-                } else {
-                    color.set(0xffeeaa);
-                }
-                starColors[i * 3]     = color.r;
-                starColors[i * 3 + 1] = color.g;
-                starColors[i * 3 + 2] = color.b;
-            }
-            const starGeometry = new THREE.BufferGeometry();
-            starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-            starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
-            const starMaterial = new THREE.PointsMaterial({
-                vertexColors: true,
-                size: 0.3,
-                sizeAttenuation: true,
-                transparent: true,
-                opacity: 0.8,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-            });
-            const starField = new THREE.Points(starGeometry, starMaterial);
-            scene.add(starField);
-
-            // ★ 螺旋銀河の効果 ★
-            // 中央のオブジェクトを避けるため、内半径40～外半径80の範囲で銀河を形成
-            const galaxyStars = 3000;
-            const galaxyPositions = new Float32Array(galaxyStars * 3);
-            const galaxyColors = new Float32Array(galaxyStars * 3);
-            const spiralArms = 4;             // 螺旋の腕の本数
-            const spiralSpread = 10;          // 螺旋腕に沿った拡散度合い
-            const minGalaxyRadius = 20;
-            const maxGalaxyRadius = 200;
-            
-            // 各腕の間隔調整用の重み配列（各腕が占有する角度の比率を決定します）
-            // 例：均等配置の場合は [1, 1, 1, 1]、特定の腕を広げたい場合は [1, 1.5, 1, 1.5] など
-            const armWeights = [1, 1.5, 1, 1.5];
-            
-            // 各腕の開始角度を計算（全体で一周（2π）するように正規化）
-            const totalWeight = armWeights.reduce((sum, weight) => sum + weight, 0);
-            const armAngles = [];
-            let cumulativeWeight = 0;
-            for (let i = 0; i < spiralArms; i++) {
-                armAngles.push((cumulativeWeight / totalWeight) * (2 * Math.PI));
-                cumulativeWeight += armWeights[i];
-            }
-            
-            for (let i = 0; i < galaxyStars; i++) {
-                // 内側に密度が高くなるよう、平方根を用いた分布
-                let r = minGalaxyRadius + (maxGalaxyRadius - minGalaxyRadius) * Math.sqrt(Math.random());
-                // 各星を対応する腕に割り当て
-                let armIndex = i % spiralArms;
-                let baseArmAngle = armAngles[armIndex];
-                
-                // 螺旋腕の効果：半径に応じたねじれ（twist）とランダムな散らばりを付与
-                // twist係数を0.08から0.04に低減して、渦を巻く回数を減らしています。
-                let twist = r * 0.04;
-                let randomScatter = (Math.random() - 0.5) * 0.4;
-                let angle = baseArmAngle + twist + randomScatter;
-                
-                const x = r * Math.cos(angle) + (Math.random() - 0.5) * spiralSpread;
-                const y = (Math.random() - 0.5) * (spiralSpread * 0.3);
-                const z = r * Math.sin(angle) + (Math.random() - 0.5) * spiralSpread;
-                galaxyPositions[i * 3]     = x;
-                galaxyPositions[i * 3 + 1] = y;
-                galaxyPositions[i * 3 + 2] = z;
-                
-                // 銀河内では、内側は暖色（黄色～オレンジ）、外側はやわらかいトーンで表現
-                let t = r / maxGalaxyRadius;
-                let color = new THREE.Color();
-                if (t < 0.5) {
-                    color.set(0xfff4e5);
-                } else {
-                    color.set(0xffeedd);
-                }
-                galaxyColors[i * 3]     = color.r;
-                galaxyColors[i * 3 + 1] = color.g;
-                galaxyColors[i * 3 + 2] = color.b;
-            }
-            
-            const galaxyGeometry = new THREE.BufferGeometry();
-            galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
-            galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
-            const galaxyMaterial = new THREE.PointsMaterial({
-                vertexColors: true,
-                size: 0.1,
-                sizeAttenuation: true,
-                transparent: true,
-                opacity: 0.9,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-            });
-            const galaxyField = new THREE.Points(galaxyGeometry, galaxyMaterial);
-            scene.add(galaxyField);
-
-            // ★ 星雲（Nebula）の効果 ★
-            // 中央付近（半径100以内）は景観を損なわないよう除外し、球状の領域内（半径100～150）に均一な体積分布で配置
-            const nebulaCount = 2000;
-            const nebulaPositions = new Float32Array(nebulaCount * 3);
-            const nebulaColors = new Float32Array(nebulaCount * 3);
-            const nebulaMinRadius = 100;
-            const nebulaMaxRadius = 200;
-            for (let i = 0; i < nebulaCount; i++) {
-                const u = Math.random();
-                const r = Math.cbrt(u * (Math.pow(nebulaMaxRadius, 3) - Math.pow(nebulaMinRadius, 3)) + Math.pow(nebulaMinRadius, 3));
-                const theta = Math.acos(2 * Math.random() - 1);
-                const phi = Math.random() * 2 * Math.PI;
-                const x = r * Math.sin(theta) * Math.cos(phi);
-                const y = r * Math.sin(theta) * Math.sin(phi);
-                const z = r * Math.cos(theta);
-                nebulaPositions[i * 3]     = x;
-                nebulaPositions[i * 3 + 1] = y;
-                nebulaPositions[i * 3 + 2] = z;
-                
-                let t = Math.random();
-                let color = new THREE.Color();
-                if (t < 0.5) {
-                    color = new THREE.Color(0xff4455).lerp(new THREE.Color(0xffaa66), Math.random());
-                } else {
-                    color = new THREE.Color(0x8844ff).lerp(new THREE.Color(0xaa88ff), Math.random());
-                }
-                nebulaColors[i * 3]     = color.r;
-                nebulaColors[i * 3 + 1] = color.g;
-                nebulaColors[i * 3 + 2] = color.b;
-            }
-            const nebulaGeometry = new THREE.BufferGeometry();
-            nebulaGeometry.setAttribute('position', new THREE.BufferAttribute(nebulaPositions, 3));
-            nebulaGeometry.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
-            const nebulaMaterial = new THREE.PointsMaterial({
-                vertexColors: true,
-                size: 0.3,
-                sizeAttenuation: true,
-                transparent: true,
-                opacity: 0.3,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-            });
-            const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
-            scene.add(nebulaField);
-        }
-
-        // ★ 既存の星フィールド生成コードはコメントアウトまたは削除し、下記の呼び出しにより中央のオブジェクトの景観を壊さない詳細な宇宙演出を実現します ★
-        createUniverseDetail();
     </script>
 
 </body>
