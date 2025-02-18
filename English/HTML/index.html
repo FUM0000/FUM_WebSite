@@ -137,8 +137,29 @@
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
         
-        camera.position.set(-20, 20, 50);
-        controls.update();
+        // 平行移動（パン操作）を無効化して焦点の移動を禁止
+        controls.enablePan = false;
+
+        // ズームアウト時にカメラが焦点から1200以上離れないように制限
+        controls.maxDistance = 1200;
+        
+        // 最終カメラ位置（現在の初期位置）
+        const finalCameraPosition = new THREE.Vector3(-20, 20, 50);
+        // 開始位置：finalCameraPositionと同じ方向で中心から1500の位置
+        const startCameraPosition = finalCameraPosition.clone().normalize().multiplyScalar(3000);
+
+        // カメラ初期位置は開始位置に設定
+        camera.position.copy(startCameraPosition);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+        // カメラアニメーションの設定
+        const cameraAnimationDuration = 4000; // アニメーション時間（ミリ秒例：4秒）
+        let cameraAnimationStartTime = null;
+        let initialCameraAnimation = true;
+
+        function easeOutCubic(t) {
+            return (--t) * t * t + 1;
+        }
 
         const mouse = new THREE.Vector2();
         const raycaster = new THREE.Raycaster();
@@ -369,13 +390,48 @@
             lineGeometry.computeBoundingSphere();
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
+        // --- animate() 関数 ---
+        function animate(time) {
+            // 初回呼び出し時にタイムスタンプを設定
+            if (initialCameraAnimation) {
+                if (!cameraAnimationStartTime) {
+                    cameraAnimationStartTime = time;
+                }
+                const elapsed = time - cameraAnimationStartTime;
+                let t = Math.min(elapsed / cameraAnimationDuration, 1);
+                t = easeOutCubic(t);
+
+                const sphericalStart = new THREE.Spherical().setFromVector3(startCameraPosition);
+                const sphericalEnd = new THREE.Spherical().setFromVector3(finalCameraPosition);
+
+                // カメラの半径と仰角は線形補間
+                const currentRadius = THREE.MathUtils.lerp(sphericalStart.radius, sphericalEnd.radius, t);
+                const currentPhi = THREE.MathUtils.lerp(sphericalStart.phi, sphericalEnd.phi, t);
+
+                // 水平角（theta）は線形補間に加え、サイン波による回転オフセットを適用
+                // tが0のときはオフセットなし、途中で最大（ここでは最大45°＝Math.PI/4）、t=1で再び0になる
+                const rotationOffset = Math.sin(t * Math.PI) * (Math.PI * 2);
+                const currentTheta = THREE.MathUtils.lerp(sphericalStart.theta, sphericalEnd.theta, t) + rotationOffset;
+
+                const currentSpherical = new THREE.Spherical(currentRadius, currentPhi, currentTheta);
+                const currentCameraPosition = new THREE.Vector3().setFromSpherical(currentSpherical);
+                camera.position.copy(currentCameraPosition);
+                camera.lookAt(0, 0, 0);
+
+                if (t >= 1) {
+                    initialCameraAnimation = false;
+                    // アニメーション終了後、OrbitControlsの操作を有効にする場合はここで処理を追加
+                }
+            }
+
+            // 他のアニメーション処理
             animatePoints();
             updateLines();
             updateCursorParticles();
             controls.update();
             composer.render();
+
+            requestAnimationFrame(animate);
         }
 
         function onMouseMove(event) {
