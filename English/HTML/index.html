@@ -145,8 +145,8 @@
         
         // 最終カメラ位置（現在の初期位置）
         const finalCameraPosition = new THREE.Vector3(-20, 20, 50);
-        // 開始位置：finalCameraPositionと同じ方向で中心から1500の位置
-        const startCameraPosition = finalCameraPosition.clone().normalize().multiplyScalar(3000);
+        // 開始位置：中心からの距離はそのままにy軸上側に配置
+        const startCameraPosition = new THREE.Vector3(0, 1, 0).multiplyScalar(4000);
 
         // カメラ初期位置は開始位置に設定
         camera.position.copy(startCameraPosition);
@@ -157,8 +157,8 @@
         let cameraAnimationStartTime = null;
         let initialCameraAnimation = true;
 
-        function easeOutCubic(t) {
-            return (--t) * t * t + 1;
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         }
 
         const mouse = new THREE.Vector2();
@@ -399,20 +399,18 @@
                 }
                 const elapsed = time - cameraAnimationStartTime;
                 let t = Math.min(elapsed / cameraAnimationDuration, 1);
-                t = easeOutCubic(t);
+                t = easeInOutCubic(t);
 
                 const sphericalStart = new THREE.Spherical().setFromVector3(startCameraPosition);
                 const sphericalEnd = new THREE.Spherical().setFromVector3(finalCameraPosition);
 
-                // カメラの半径と仰角は線形補間
+                // カメラの半径は線形補間
                 const currentRadius = THREE.MathUtils.lerp(sphericalStart.radius, sphericalEnd.radius, t);
+                // theta方向（水平方向）に t*2π のオフセットを加える
+                const currentTheta = THREE.MathUtils.lerp(sphericalStart.theta, sphericalEnd.theta, t) + t * 2 * Math.PI;
+                // phi方向（垂直方向）にも t*2π のオフセットを加える（必要に応じて倍率を調整）
                 const currentPhi = THREE.MathUtils.lerp(sphericalStart.phi, sphericalEnd.phi, t);
-
-                // 水平角（theta）は線形補間に加え、サイン波による回転オフセットを適用
-                // tが0のときはオフセットなし、途中で最大（ここでは最大45°＝Math.PI/4）、t=1で再び0になる
-                const rotationOffset = Math.sin(t * Math.PI) * (Math.PI * 2);
-                const currentTheta = THREE.MathUtils.lerp(sphericalStart.theta, sphericalEnd.theta, t) + rotationOffset;
-
+                
                 const currentSpherical = new THREE.Spherical(currentRadius, currentPhi, currentTheta);
                 const currentCameraPosition = new THREE.Vector3().setFromSpherical(currentSpherical);
                 camera.position.copy(currentCameraPosition);
