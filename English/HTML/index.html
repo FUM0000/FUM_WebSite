@@ -136,15 +136,15 @@
         controls.dampingFactor = 0.05;
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
-        
+
+        // 初期の最大ズーム距離を4000に設定
+        controls.maxDistance = 1700;
+
         // 平行移動（パン操作）を無効化して焦点の移動を禁止
         controls.enablePan = false;
 
-        // ズームアウト時にカメラが焦点から1200以上離れないように制限
-        controls.maxDistance = 1200;
-        
         // 最終カメラ位置（現在の初期位置）
-        const finalCameraPosition = new THREE.Vector3(-20, 20, 50);
+        const finalCameraPosition = new THREE.Vector3(-30, 20, 40);
         // 開始位置：中心からの距離はそのままにy軸上側に配置
         const startCameraPosition = new THREE.Vector3(0, 1, 0).multiplyScalar(4000);
 
@@ -153,12 +153,15 @@
         camera.lookAt(new THREE.Vector3(0, 0, 0));
 
         // カメラアニメーションの設定
-        const cameraAnimationDuration = 4000; // アニメーション時間（ミリ秒例：4秒）
+        const cameraAnimationDuration = 15000; // アニメーション時間（ミリ秒例：4秒）
         let cameraAnimationStartTime = null;
         let initialCameraAnimation = true;
 
         function easeInOutCubic(t) {
             return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+        function easeInOutSloMo(t) {
+            return Math.pow(easeInOutCubic(t), 2);
         }
 
         const mouse = new THREE.Vector2();
@@ -391,34 +394,70 @@
         }
 
         // --- animate() 関数 ---
-        function animate(time) {
-            // 初回呼び出し時にタイムスタンプを設定
+        function animate(time = performance.now()) {
+            if (typeof time !== 'number') {
+                time = performance.now();
+            }
+
+            // カメラアニメーションを2フェーズに分割
+            const phase1Duration = cameraAnimationDuration * 0.5; // フェーズ1：中心寄りへの移動＆一回転
+            const phase2Duration = cameraAnimationDuration * 0.5; // フェーズ2：最終位置へ戻る
+            const innerFactor = 0.25; // inner位置は finalCameraPosition の半径の50%（必要に応じて調整可能）
+
             if (initialCameraAnimation) {
-                if (!cameraAnimationStartTime) {
+                if (cameraAnimationStartTime === null) {
                     cameraAnimationStartTime = time;
                 }
                 const elapsed = time - cameraAnimationStartTime;
-                let t = Math.min(elapsed / cameraAnimationDuration, 1);
-                t = easeInOutCubic(t);
+                // 全体の進行度（0～1）
+                const totalProgress = Math.min(elapsed / (phase1Duration + phase2Duration), 1);
 
+                // start と final の球座標（spherical）を取得
                 const sphericalStart = new THREE.Spherical().setFromVector3(startCameraPosition);
                 const sphericalEnd = new THREE.Spherical().setFromVector3(finalCameraPosition);
+                // 内側の半径（フェーズ1終了時の値）
+                const innerRadius = sphericalEnd.radius * innerFactor;
 
-                // カメラの半径は線形補間
-                const currentRadius = THREE.MathUtils.lerp(sphericalStart.radius, sphericalEnd.radius, t);
-                // theta方向（水平方向）に t*2π のオフセットを加える
-                const currentTheta = THREE.MathUtils.lerp(sphericalStart.theta, sphericalEnd.theta, t) + t * 2 * Math.PI;
-                // phi方向（垂直方向）にも t*2π のオフセットを加える（必要に応じて倍率を調整）
-                const currentPhi = THREE.MathUtils.lerp(sphericalStart.phi, sphericalEnd.phi, t);
-                
+                let currentRadius, currentPhi;
+
+                // フェーズ1：通常の補間
+                if (elapsed < phase1Duration) {
+                    let t1 = elapsed / phase1Duration;
+                    t1 = easeInOutCubic(t1);
+                    currentRadius = THREE.MathUtils.lerp(sphericalStart.radius, innerRadius, t1);
+                    currentPhi = THREE.MathUtils.lerp(sphericalStart.phi, sphericalEnd.phi, t1);
+                } else {
+                    let t2 = (elapsed - phase1Duration) / phase2Duration;
+                    currentRadius = THREE.MathUtils.lerp(innerRadius, sphericalEnd.radius, t2);
+                    // フェーズ2：下方向から中心を見上げるように、offsetPhi を easeInOutCubic に基づいて補間
+                    const offsetPhi = Math.PI * 0.25; // 下方向から見る角度の最大オフセット（ラジアン）
+                    const rate = 1.0;
+                    // if (t2 < rate) {
+                    //     // t2 が rate 未満では一定の offsetPhi を維持
+                    //     currentPhi = sphericalEnd.phi + offsetPhi * Math.sin(Math.PI * t2);
+                    // } else {
+                    //     const t_remap = (t2 - rate) / (1 - rate);
+                    //     currentPhi = sphericalEnd.phi + offsetPhi * Math.sin(Math.PI * rate + Math.PI * (1 - rate) * (1 - (1 - t_remap) ** 2));
+                    // }
+                    
+                    currentPhi = sphericalEnd.phi + offsetPhi * Math.sin(Math.PI * t2);
+                }
+
+                // θは全体の進行度で連続に補間（例では sphericalEnd.theta に4回転分加算）
+                const currentTheta = THREE.MathUtils.lerp(
+                    sphericalStart.theta,
+                    sphericalEnd.theta + 4 * Math.PI,
+                    easeInOutCubic(totalProgress)
+                );
+
                 const currentSpherical = new THREE.Spherical(currentRadius, currentPhi, currentTheta);
                 const currentCameraPosition = new THREE.Vector3().setFromSpherical(currentSpherical);
                 camera.position.copy(currentCameraPosition);
                 camera.lookAt(0, 0, 0);
 
-                if (t >= 1) {
+                if (totalProgress >= 1) {
                     initialCameraAnimation = false;
-                    // アニメーション終了後、OrbitControlsの操作を有効にする場合はここで処理を追加
+                    controls.maxDistance = 1200;
                 }
             }
 
@@ -435,7 +474,7 @@
         function onMouseMove(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            
+
             raycaster.setFromCamera(mouse, camera);
             const intersection = raycaster.ray.at(20);
 
@@ -472,10 +511,10 @@
                 const r = 300 + Math.random() * 200;
                 const theta = Math.acos(2 * Math.random() - 1);
                 const phi = Math.random() * 2 * Math.PI;
-                starPositions[i * 3]     = r * Math.sin(theta) * Math.cos(phi);
+                starPositions[i * 3] = r * Math.sin(theta) * Math.cos(phi);
                 starPositions[i * 3 + 1] = r * Math.sin(theta) * Math.sin(phi);
                 starPositions[i * 3 + 2] = r * Math.cos(theta);
-                
+
                 let t = Math.random();
                 let color = new THREE.Color();
                 if (t < 0.3) {
@@ -485,7 +524,7 @@
                 } else {
                     color.set(0xffeeaa);
                 }
-                starColors[i * 3]     = color.r;
+                starColors[i * 3] = color.r;
                 starColors[i * 3 + 1] = color.g;
                 starColors[i * 3 + 2] = color.b;
             }
@@ -514,11 +553,11 @@
             const spiralSpread = 10;          // 螺旋腕に沿った拡散度合い
             const minGalaxyRadius = 20;
             const maxGalaxyRadius = 200;
-            
+
             // 各腕の間隔調整用の重み配列（各腕が占有する角度の比率を決定します）
             // 例：均等配置の場合は [1, 1, 1, 1]、特定の腕を広げたい場合は [1, 1.5, 1, 1.5] など
             const armWeights = [1, 1.5, 1, 1.5];
-            
+
             // 各腕の開始角度を計算（全体で一周（2π）するように正規化）
             const totalWeight = armWeights.reduce((sum, weight) => sum + weight, 0);
             const armAngles = [];
@@ -527,27 +566,27 @@
                 armAngles.push((cumulativeWeight / totalWeight) * (2 * Math.PI));
                 cumulativeWeight += armWeights[i];
             }
-            
+
             for (let i = 0; i < galaxyStars; i++) {
                 // 内側に密度が高くなるよう、平方根を用いた分布
                 let r = minGalaxyRadius + (maxGalaxyRadius - minGalaxyRadius) * Math.sqrt(Math.random());
                 // 各星を対応する腕に割り当て
                 let armIndex = i % spiralArms;
                 let baseArmAngle = armAngles[armIndex];
-                
+
                 // 螺旋腕の効果：半径に応じたねじれ（twist）とランダムな散らばりを付与
                 // twist係数を0.08から0.04に低減して、渦を巻く回数を減らしています。
                 let twist = r * 0.04;
                 let randomScatter = (Math.random() - 0.5) * 0.4;
                 let angle = baseArmAngle + twist + randomScatter;
-                
+
                 const x = r * Math.cos(angle) + (Math.random() - 0.5) * spiralSpread;
                 const y = (Math.random() - 0.5) * (spiralSpread * 0.3);
                 const z = r * Math.sin(angle) + (Math.random() - 0.5) * spiralSpread;
-                galaxyPositions[i * 3]     = x;
+                galaxyPositions[i * 3] = x;
                 galaxyPositions[i * 3 + 1] = y;
                 galaxyPositions[i * 3 + 2] = z;
-                
+
                 // 銀河内では、内側は暖色（黄色～オレンジ）、外側はやわらかいトーンで表現
                 let t = r / maxGalaxyRadius;
                 let color = new THREE.Color();
@@ -556,11 +595,11 @@
                 } else {
                     color.set(0xffeedd);
                 }
-                galaxyColors[i * 3]     = color.r;
+                galaxyColors[i * 3] = color.r;
                 galaxyColors[i * 3 + 1] = color.g;
                 galaxyColors[i * 3 + 2] = color.b;
             }
-            
+
             const galaxyGeometry = new THREE.BufferGeometry();
             galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
             galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
@@ -592,10 +631,10 @@
                 const x = r * Math.sin(theta) * Math.cos(phi);
                 const y = r * Math.sin(theta) * Math.sin(phi);
                 const z = r * Math.cos(theta);
-                nebulaPositions[i * 3]     = x;
+                nebulaPositions[i * 3] = x;
                 nebulaPositions[i * 3 + 1] = y;
                 nebulaPositions[i * 3 + 2] = z;
-                
+
                 let t = Math.random();
                 let color = new THREE.Color();
                 if (t < 0.5) {
@@ -603,7 +642,7 @@
                 } else {
                     color = new THREE.Color(0x8844ff).lerp(new THREE.Color(0xaa88ff), Math.random());
                 }
-                nebulaColors[i * 3]     = color.r;
+                nebulaColors[i * 3] = color.r;
                 nebulaColors[i * 3 + 1] = color.g;
                 nebulaColors[i * 3 + 2] = color.b;
             }
