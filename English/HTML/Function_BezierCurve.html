@@ -1,0 +1,259 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Bezier Curve</title>
+
+  <style>
+    .container {
+      width: 80%;
+      max-width: 800px;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .curve-editor {
+      margin-bottom: 20px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .controls label {
+      text-align: right;
+    }
+
+    .output {
+      margin-bottom: 20px;
+    }
+
+    #generatedFunction {
+      width: 100%;
+      resize: none;
+    }
+
+    .usage pre {
+      background-color: #eee;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    .usage code {
+      font-family: monospace;
+    }
+  </style>
+</head>
+
+<body>
+
+  <v-app id="App">
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Color Design</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-card>
+              <canvas id="curveCanvas" width="400" height="200"></canvas>
+            </v-card>
+
+            <v-card>
+              <v-row>
+                <template v-for="(point, index) in points">
+                  <v-col cols="6" :key="`x-${index}`">
+                    <v-text-field :label="`P${index} X`" type="number" v-model.number="point.x" min="0" max="1" step="0.01"></v-text-field>
+                  </v-col>
+                  <v-col cols="6" :key="`y-${index}`">
+                    <v-text-field :label="`P${index} Y`" type="number" v-model.number="point.y" min="0" max="1" step="0.01"></v-text-field>
+                  </v-col>
+                </template>
+              </v-row>
+              <v-btn @click="addControlPoint">制御点を追加</v-btn>
+            </v-card>
+
+            <v-card>
+              <v-textarea label="Generated Function" v-model="generatedFunction" readonly></v-textarea>
+              <v-btn @click="copyFunction">Copy</v-btn>
+            </v-card>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        points: [
+          { x: 0, y: 0 },
+          { x: 0.25, y: 0.1 },
+          { x: 0.75, y: 0.9 },
+          { x: 1, y: 1 }
+        ],
+        generatedFunction: '',
+      },
+      watch: {
+        points: {
+          deep: true,
+          handler: 'updateCurve'
+        }
+      },
+      mounted() {
+        this.updateCurve();
+      },
+      methods: {
+        addControlPoint() {
+          if (this.points.length < 2) return;
+          
+          // ランダムな位置に新しい制御点を挿入
+          const insertIndex = Math.floor(Math.random() * (this.points.length - 1)) + 1;
+          
+          // 前後の点の中間位置を計算
+          const prevPoint = this.points[insertIndex - 1];
+          const nextPoint = this.points[insertIndex];
+          const newPoint = {
+            x: (prevPoint.x + nextPoint.x) / 2,
+            y: (prevPoint.y + nextPoint.y) / 2
+          };
+          
+          this.points.splice(insertIndex, 0, newPoint);
+          this.updateCurve();
+        },
+        drawCurve() {
+          const canvas = document.getElementById('curveCanvas');
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Scale points to canvas size
+          const scaleX = canvas.width;
+          const scaleY = canvas.height;
+
+          const scaledPoints = this.points.map(p => ({
+            x: p.x * scaleX,
+            y: (1 - p.y) * scaleY
+          }));
+
+          ctx.beginPath();
+          ctx.moveTo(scaledPoints[0].x, scaledPoints[0].y);
+          
+          // 制御点が4つ以上ある場合、複数のベジエ曲線を描画
+          for (let i = 0; i < scaledPoints.length - 3; i += 3) {
+            ctx.bezierCurveTo(
+              scaledPoints[i + 1].x, scaledPoints[i + 1].y,
+              scaledPoints[i + 2].x, scaledPoints[i + 2].y,
+              scaledPoints[i + 3].x, scaledPoints[i + 3].y
+            );
+          }
+          
+          ctx.strokeStyle = 'blue';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // 制御点の描画
+          scaledPoints.forEach((p, i) => {
+            this.drawControlPoint(p.x, p.y, i === 0 || i === scaledPoints.length - 1 ? 'red' : 'green');
+          });
+        },
+        drawControlPoint(x, y, color) {
+          const canvas = document.getElementById('curveCanvas');
+          const ctx = canvas.getContext('2d');
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, 2 * Math.PI);
+          ctx.fillStyle = color;
+          ctx.fill();
+        },
+        updateCurve() {
+          this.drawCurve();
+          this.updateFunctionOutput();
+        },
+        generateBezierFunction() {
+          return `
+    function(x) {
+      const p0x = ${this.points[0].x};
+      const p0y = ${this.points[0].y};
+      const p1x = ${this.points[1].x};
+      const p1y = ${this.points[1].y};
+      const p2x = ${this.points[2].x};
+      const p2y = ${this.points[2].y};
+      const p3x = ${this.points[3].x};
+      const p3y = ${this.points[3].y};
+
+      let t = x;
+      let u = 1 - t;
+      let tt = t * t;
+      let uu = u * u;
+      let uuu = uu * u;
+      let ttt = tt * t;
+
+      let p = uuu * p0y; //first term
+      p += 3 * uu * t * p1y; //second term
+      p += 3 * u * tt * p2y; //third term
+      p += ttt * p3y; //fourth term
+
+      return p;
+    }
+    `;
+        },
+        updateFunctionOutput() {
+          this.generatedFunction = this.generateBezierFunction();
+        },
+        copyFunction() {
+          const el = document.createElement('textarea');
+          el.value = this.generatedFunction;
+          document.body.appendChild(el);
+          el.select();
+          document.execCommand('copy');
+          document.body.removeChild(el);
+          alert('Copied the Code.');
+        },
+      }
+    });
+  </script>
+</body>
+
+</html>
