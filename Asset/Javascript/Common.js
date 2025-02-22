@@ -97,10 +97,6 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Bezier Curve</v-list-item-title>
                 </v-list-item>
-                <v-list-item href="./Function_CodePreview.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Code Preview</v-list-item-title>
-                </v-list-item>
                 <v-list-item href="./Function_ColorDesign.html">
                     <v-list-item-icon />
                     <v-list-item-title>Color Design</v-list-item-title>
@@ -124,14 +120,6 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Function_QRCode.html">
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Function_RandomQuestion.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Random Question</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Function_Roulette.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Roulette</v-list-item-title>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Function ▲ --------------------------------------------------------------------------------->
@@ -729,6 +717,14 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Game</v-list-item-title>
                 </template>
                 
+                <v-list-item href="./Function_RandomQuestion.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Random Question</v-list-item-title>
+
+                    <v-list-item-icon>
+                        <v-icon>mdi-comment-question-outline</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
                 <v-list-item href="./Game_ReflexSpeed.html">
                     <v-list-item-icon />
                     <v-list-item-title>Reflex Speed</v-list-item-title>
@@ -737,20 +733,20 @@ Vue.component('main-navigation', {
                         <v-icon>mdi-speedometer-slow</v-icon>
                     </v-list-item-icon>
                 </v-list-item>
+                <v-list-item href="./Function_Roulette.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Roulette</v-list-item-title>
+                    
+                    <v-list-item-icon>
+                        <v-icon>mdi-pizza</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
                 <v-list-item href="./Game_KittyHopper.html">
                     <v-list-item-icon />
                     <v-list-item-title>Kitty Hopper</v-list-item-title>
                         
                     <v-list-item-icon>
                         <v-icon>mdi-cat</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_Ball.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Ping-Pong Ping-Pong</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-circle-multiple-outline</v-icon>
                     </v-list-item-icon>
                 </v-list-item>
             </v-list-group>
