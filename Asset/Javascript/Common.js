@@ -93,6 +93,10 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Function</v-list-item-title>
                 </template>
 
+                <v-list-item href="./Function_BezierCurve.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Bezier Curve</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Function_CodePreview.html">
                     <v-list-item-icon />
                     <v-list-item-title>Code Preview</v-list-item-title>

@@ -26,14 +26,6 @@
   <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
   <title>Bezier Curve</title>
-
-  <style>
-    .v-card {
-      width: 100%;
-      padding: 20px;
-      margin: 20px;
-    }
-  </style>
 </head>
 
 <body>
@@ -50,27 +42,56 @@
             <v-row justify="center">
               <v-col xs="12" md="6" align="center">
                 <v-card max-width="500">
-                  <canvas id="curveCanvas" width="400" height="200"></canvas>
-                </v-card>
-
-                <v-card max-width="500">
-                  <v-row>
-                    <template v-for="(point, index) in points">
-                      <v-col cols="6" :key="`x-${index}`">
-                        <v-text-field :label="`P${index} X`" type="number" v-model.number="point.x" min="0" max="1"
-                          step="0.01"></v-text-field>
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="12" class="text-center my-5">
+                        <h2>Graph</h2>
                       </v-col>
-                      <v-col cols="6" :key="`y-${index}`">
-                        <v-text-field :label="`P${index} Y`" type="number" v-model.number="point.y" min="0" max="1"
-                          step="0.01"></v-text-field>
-                      </v-col>
-                    </template>
-                  </v-row>
+                    </v-row>
+                    <canvas id="curveCanvas" width="400" height="200"></canvas>
+                  </v-card-text>
                 </v-card>
+              </v-col>
+            </v-row>
 
+            <v-row justify="center">
+              <v-col xs="12" md="6" align="center">
                 <v-card max-width="500">
-                  <v-textarea label="Generated Function" v-model="generatedFunction" readonly></v-textarea>
-                  <v-btn block @click="copyFunction">Copy</v-btn>
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="12" class="text-center my-5">
+                        <h2>Control Points</h2>
+                      </v-col>
+                    </v-row>
+                    <v-row>
+                      <template v-for="(point, index) in points">
+                        <v-col cols="6" :key="`x-${index}`">
+                          <v-text-field :label="`P${index} X`" type="number" v-model.number="point.x" min="0" max="1"
+                            step="0.01"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" :key="`y-${index}`">
+                          <v-text-field :label="`P${index} Y`" type="number" v-model.number="point.y" min="0" max="1"
+                            step="0.01"></v-text-field>
+                        </v-col>
+                      </template>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <v-row justify="center">
+              <v-col xs="12" md="6" align="center">
+                <v-card max-width="500">
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="12" class="text-center my-5">
+                        <h2>Code</h2>
+                      </v-col>
+                    </v-row>
+                    <v-textarea v-model="generatedFunction" readonly></v-textarea>
+                    <v-btn block @click="copyFunction">Copy</v-btn>
+                  </v-card-text>
                 </v-card>
               </v-col>
             </v-row>
@@ -130,7 +151,7 @@
             ctx.moveTo(pos, 0);
             ctx.lineTo(pos, canvas.height);
             ctx.stroke();
-            
+
             const posY = i * (canvas.height / 10);
             ctx.beginPath();
             ctx.moveTo(0, posY);
@@ -179,7 +200,7 @@
         },
         generateBezierFunction() {
           return `
-            function(x) {
+            Bezier(x) {
               const p0x = ${this.points[0].x};
               const p0y = ${this.points[0].y};
               const p1x = ${this.points[1].x};
@@ -219,12 +240,12 @@
         },
         initCanvasEvents() {
           const canvas = document.getElementById('curveCanvas');
-          
+
           canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            
+
             // 制御点の検出
             this.points.forEach((point, index) => {
               const px = point.x * canvas.width;
@@ -239,7 +260,7 @@
           });
 
           // キャンバス上のmousemoveは削除（グローバルに移動）
-          
+
           // キャンバス上のmouseupとmouseleaveは削除（グローバルに移動）
         },
 
@@ -250,19 +271,19 @@
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            
+
             // 0.1単位でグリッド化
             let newX = Math.round((x / canvas.width) * 10) / 10;
             let newY = Math.round((1 - y / canvas.height) * 10) / 10;
-            
+
             // 値の制限
             newX = Math.max(0, Math.min(1, newX));
             newY = Math.max(0, Math.min(1, newY));
-            
+
             // 端点（P0とP3）のX座標は固定
             if (this.selectedPoint === 0) newX = 0;
             if (this.selectedPoint === 3) newX = 1;
-            
+
             this.points[this.selectedPoint].x = newX;
             this.points[this.selectedPoint].y = newY;
           }
