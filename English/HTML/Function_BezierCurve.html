@@ -28,48 +28,10 @@
   <title>Bezier Curve</title>
 
   <style>
-    .container {
-      width: 80%;
-      max-width: 800px;
-      padding: 20px;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .curve-editor {
-      margin-bottom: 20px;
-    }
-
-    .controls {
-      display: grid;
-      grid-template-columns: auto auto;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .controls label {
-      text-align: right;
-    }
-
-    .output {
-      margin-bottom: 20px;
-    }
-
-    #generatedFunction {
+    .v-card {
       width: 100%;
-      resize: none;
-    }
-
-    .usage pre {
-      background-color: #eee;
-      padding: 10px;
-      border-radius: 4px;
-      overflow-x: auto;
-    }
-
-    .usage code {
-      font-family: monospace;
+      padding: 20px;
+      margin: 20px;
     }
   </style>
 </head>
@@ -79,34 +41,39 @@
   <v-app id="App">
     <template>
 
-      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Color Design</main-system-bar>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Bezier Curve</main-system-bar>
 
       <v-main id="Main">
         <transition name="Fade_Page">
           <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
 
-            <v-card>
-              <canvas id="curveCanvas" width="400" height="200"></canvas>
-            </v-card>
+            <v-row justify="center">
+              <v-col xs="12" md="6" align="center">
+                <v-card max-width="500">
+                  <canvas id="curveCanvas" width="400" height="200"></canvas>
+                </v-card>
 
-            <v-card>
-              <v-row>
-                <template v-for="(point, index) in points">
-                  <v-col cols="6" :key="`x-${index}`">
-                    <v-text-field :label="`P${index} X`" type="number" v-model.number="point.x" min="0" max="1" step="0.01"></v-text-field>
-                  </v-col>
-                  <v-col cols="6" :key="`y-${index}`">
-                    <v-text-field :label="`P${index} Y`" type="number" v-model.number="point.y" min="0" max="1" step="0.01"></v-text-field>
-                  </v-col>
-                </template>
-              </v-row>
-              <v-btn @click="addControlPoint">制御点を追加</v-btn>
-            </v-card>
+                <v-card max-width="500">
+                  <v-row>
+                    <template v-for="(point, index) in points">
+                      <v-col cols="6" :key="`x-${index}`">
+                        <v-text-field :label="`P${index} X`" type="number" v-model.number="point.x" min="0" max="1"
+                          step="0.01"></v-text-field>
+                      </v-col>
+                      <v-col cols="6" :key="`y-${index}`">
+                        <v-text-field :label="`P${index} Y`" type="number" v-model.number="point.y" min="0" max="1"
+                          step="0.01"></v-text-field>
+                      </v-col>
+                    </template>
+                  </v-row>
+                </v-card>
 
-            <v-card>
-              <v-textarea label="Generated Function" v-model="generatedFunction" readonly></v-textarea>
-              <v-btn @click="copyFunction">Copy</v-btn>
-            </v-card>
+                <v-card max-width="500">
+                  <v-textarea label="Generated Function" v-model="generatedFunction" readonly></v-textarea>
+                  <v-btn block @click="copyFunction">Copy</v-btn>
+                </v-card>
+              </v-col>
+            </v-row>
 
           </v-container>
         </transition>
@@ -136,6 +103,7 @@
           { x: 1, y: 1 }
         ],
         generatedFunction: '',
+        selectedPoint: null,
       },
       watch: {
         points: {
@@ -145,29 +113,30 @@
       },
       mounted() {
         this.updateCurve();
+        this.initCanvasEvents();
       },
       methods: {
-        addControlPoint() {
-          if (this.points.length < 2) return;
-          
-          // ランダムな位置に新しい制御点を挿入
-          const insertIndex = Math.floor(Math.random() * (this.points.length - 1)) + 1;
-          
-          // 前後の点の中間位置を計算
-          const prevPoint = this.points[insertIndex - 1];
-          const nextPoint = this.points[insertIndex];
-          const newPoint = {
-            x: (prevPoint.x + nextPoint.x) / 2,
-            y: (prevPoint.y + nextPoint.y) / 2
-          };
-          
-          this.points.splice(insertIndex, 0, newPoint);
-          this.updateCurve();
-        },
         drawCurve() {
           const canvas = document.getElementById('curveCanvas');
           const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // グリッドの描画
+          ctx.strokeStyle = '#eee';
+          ctx.lineWidth = 1;
+          for (let i = 0; i <= 10; i++) {
+            const pos = i * (canvas.width / 10);
+            ctx.beginPath();
+            ctx.moveTo(pos, 0);
+            ctx.lineTo(pos, canvas.height);
+            ctx.stroke();
+            
+            const posY = i * (canvas.height / 10);
+            ctx.beginPath();
+            ctx.moveTo(0, posY);
+            ctx.lineTo(canvas.width, posY);
+            ctx.stroke();
+          }
 
           // Scale points to canvas size
           const scaleX = canvas.width;
@@ -180,16 +149,13 @@
 
           ctx.beginPath();
           ctx.moveTo(scaledPoints[0].x, scaledPoints[0].y);
-          
-          // 制御点が4つ以上ある場合、複数のベジエ曲線を描画
-          for (let i = 0; i < scaledPoints.length - 3; i += 3) {
-            ctx.bezierCurveTo(
-              scaledPoints[i + 1].x, scaledPoints[i + 1].y,
-              scaledPoints[i + 2].x, scaledPoints[i + 2].y,
-              scaledPoints[i + 3].x, scaledPoints[i + 3].y
-            );
-          }
-          
+
+          ctx.bezierCurveTo(
+            scaledPoints[1].x, scaledPoints[1].y,
+            scaledPoints[2].x, scaledPoints[2].y,
+            scaledPoints[3].x, scaledPoints[3].y
+          );
+
           ctx.strokeStyle = 'blue';
           ctx.lineWidth = 2;
           ctx.stroke();
@@ -213,31 +179,31 @@
         },
         generateBezierFunction() {
           return `
-    function(x) {
-      const p0x = ${this.points[0].x};
-      const p0y = ${this.points[0].y};
-      const p1x = ${this.points[1].x};
-      const p1y = ${this.points[1].y};
-      const p2x = ${this.points[2].x};
-      const p2y = ${this.points[2].y};
-      const p3x = ${this.points[3].x};
-      const p3y = ${this.points[3].y};
+            function(x) {
+              const p0x = ${this.points[0].x};
+              const p0y = ${this.points[0].y};
+              const p1x = ${this.points[1].x};
+              const p1y = ${this.points[1].y};
+              const p2x = ${this.points[2].x};
+              const p2y = ${this.points[2].y};
+              const p3x = ${this.points[3].x};
+              const p3y = ${this.points[3].y};
 
-      let t = x;
-      let u = 1 - t;
-      let tt = t * t;
-      let uu = u * u;
-      let uuu = uu * u;
-      let ttt = tt * t;
+              let t = x;
+              let u = 1 - t;
+              let tt = t * t;
+              let uu = u * u;
+              let uuu = uu * u;
+              let ttt = tt * t;
 
-      let p = uuu * p0y; //first term
-      p += 3 * uu * t * p1y; //second term
-      p += 3 * u * tt * p2y; //third term
-      p += ttt * p3y; //fourth term
+              let p = uuu * p0y; //first term
+              p += 3 * uu * t * p1y; //second term
+              p += 3 * u * tt * p2y; //third term
+              p += ttt * p3y; //fourth term
 
-      return p;
-    }
-    `;
+              return p;
+            }
+          `;
         },
         updateFunctionOutput() {
           this.generatedFunction = this.generateBezierFunction();
@@ -250,6 +216,64 @@
           document.execCommand('copy');
           document.body.removeChild(el);
           alert('Copied the Code.');
+        },
+        initCanvasEvents() {
+          const canvas = document.getElementById('curveCanvas');
+          
+          canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 制御点の検出
+            this.points.forEach((point, index) => {
+              const px = point.x * canvas.width;
+              const py = (1 - point.y) * canvas.height;
+              if (Math.hypot(x - px, y - py) < 10) {
+                this.selectedPoint = index;
+                // マウスダウン時にグローバルイベントリスナーを追加
+                window.addEventListener('mousemove', this.handleGlobalMouseMove);
+                window.addEventListener('mouseup', this.handleGlobalMouseUp);
+              }
+            });
+          });
+
+          // キャンバス上のmousemoveは削除（グローバルに移動）
+          
+          // キャンバス上のmouseupとmouseleaveは削除（グローバルに移動）
+        },
+
+        // グローバルマウス移動ハンドラー
+        handleGlobalMouseMove(e) {
+          if (this.selectedPoint !== null) {
+            const canvas = document.getElementById('curveCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 0.1単位でグリッド化
+            let newX = Math.round((x / canvas.width) * 10) / 10;
+            let newY = Math.round((1 - y / canvas.height) * 10) / 10;
+            
+            // 値の制限
+            newX = Math.max(0, Math.min(1, newX));
+            newY = Math.max(0, Math.min(1, newY));
+            
+            // 端点（P0とP3）のX座標は固定
+            if (this.selectedPoint === 0) newX = 0;
+            if (this.selectedPoint === 3) newX = 1;
+            
+            this.points[this.selectedPoint].x = newX;
+            this.points[this.selectedPoint].y = newY;
+          }
+        },
+
+        // グローバルマウスアップハンドラー
+        handleGlobalMouseUp() {
+          this.selectedPoint = null;
+          // グローバルイベントリスナーを削除
+          window.removeEventListener('mousemove', this.handleGlobalMouseMove);
+          window.removeEventListener('mouseup', this.handleGlobalMouseUp);
         },
       }
     });
