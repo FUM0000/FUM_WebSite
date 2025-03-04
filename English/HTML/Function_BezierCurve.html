@@ -66,11 +66,11 @@
                     <v-row>
                       <template v-for="(point, index) in points">
                         <v-col cols="6" :key="`x-${index}`">
-                          <v-text-field :label="`P${index} X`" type="number" v-model.number="point.x" min="0" max="1"
+                          <v-text-field :label="`P${index} X`" type="number" v-model.number="point.x" min="-1" max="1"
                             step="0.01"></v-text-field>
                         </v-col>
                         <v-col cols="6" :key="`y-${index}`">
-                          <v-text-field :label="`P${index} Y`" type="number" v-model.number="point.y" min="0" max="1"
+                          <v-text-field :label="`P${index} Y`" type="number" v-model.number="point.y" min="-1" max="1"
                             step="0.01"></v-text-field>
                         </v-col>
                       </template>
@@ -90,7 +90,7 @@
                       </v-col>
                     </v-row>
                     <v-textarea v-model="generatedFunction" readonly></v-textarea>
-                    <v-btn block @click="copyFunction">Copy</v-btn>
+                    <v-btn block @click="copyFunction">{{ copyButtonText }}</v-btn>
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -119,12 +119,13 @@
       data: {
         points: [
           { x: 0, y: 0 },
-          { x: 0.25, y: 0.1 },
-          { x: 0.75, y: 0.9 },
+          { x: 0.3, y: 0.1 },
+          { x: 0.7, y: 0.9 },
           { x: 1, y: 1 }
         ],
         generatedFunction: '',
         selectedPoint: null,
+        copyButtonText: 'Copy',
       },
       watch: {
         points: {
@@ -145,6 +146,21 @@
           // グリッドの描画
           ctx.strokeStyle = '#eee';
           ctx.lineWidth = 1;
+          
+          // 中心線を強調表示
+          ctx.strokeStyle = '#ccc';
+          ctx.beginPath();
+          ctx.moveTo(canvas.width / 2, 0);
+          ctx.lineTo(canvas.width / 2, canvas.height);
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.moveTo(0, canvas.height / 2);
+          ctx.lineTo(canvas.width, canvas.height / 2);
+          ctx.stroke();
+          
+          // グリッド線
+          ctx.strokeStyle = '#eee';
           for (let i = 0; i <= 10; i++) {
             const pos = i * (canvas.width / 10);
             ctx.beginPath();
@@ -160,11 +176,11 @@
           }
 
           // Scale points to canvas size
-          const scaleX = canvas.width;
-          const scaleY = canvas.height;
+          const scaleX = canvas.width / 2;
+          const scaleY = canvas.height / 2;
 
           const scaledPoints = this.points.map(p => ({
-            x: p.x * scaleX,
+            x: (p.x + 1) * scaleX,
             y: (1 - p.y) * scaleY
           }));
 
@@ -210,19 +226,32 @@
               const p3x = ${this.points[3].x};
               const p3y = ${this.points[3].y};
 
-              let t = x;
+              let t = 0.5;
+              const epsilon = 0.0001;
+              const maxIterations = 10;
+
+              for (let i = 0; i < maxIterations; i++) {
+                let u = 1 - t;
+                let tt = t * t;
+                let uu = u * u;
+                let uuu = uu * u;
+                let ttt = tt * t;
+
+                let currentX = uuu * p0x + 3 * uu * t * p1x + 3 * u * tt * p2x + ttt * p3x;
+                let dx = -3 * p0x * uu + 3 * p1x * (1 - 4*t + 3*tt) + 3 * p2x * (2*t - 3*tt) + 3 * p3x * tt;
+                if (Math.abs(x - currentX) < epsilon) break;
+                
+                t = t - (currentX - x) / dx;
+                t = Math.max(0, Math.min(1, t));
+              }
+
               let u = 1 - t;
               let tt = t * t;
               let uu = u * u;
               let uuu = uu * u;
               let ttt = tt * t;
 
-              let p = uuu * p0y; //first term
-              p += 3 * uu * t * p1y; //second term
-              p += 3 * u * tt * p2y; //third term
-              p += ttt * p3y; //fourth term
-
-              return p;
+              return uuu * p0y + 3 * uu * t * p1y + 3 * u * tt * p2y + ttt * p3y;
             }
           `;
         },
@@ -236,21 +265,35 @@
           el.select();
           document.execCommand('copy');
           document.body.removeChild(el);
-          alert('Copied the Code.');
+          this.copyButtonText = 'COPIED!';
+          setTimeout(() => {
+            this.copyButtonText = 'Copy';
+          }, 2000);
         },
         initCanvasEvents() {
           const canvas = document.getElementById('curveCanvas');
 
           canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // キャンバス上の座標を計算
+            const scaleX = canvas.width / 2;
+            const scaleY = canvas.height / 2;
 
             // 制御点の検出
             this.points.forEach((point, index) => {
-              const px = point.x * canvas.width;
-              const py = (1 - point.y) * canvas.height;
-              if (Math.hypot(x - px, y - py) < 10) {
+              const px = (point.x + 1) * scaleX;
+              const py = (1 - point.y) * scaleY;
+
+              // マウス位置と制御点の距離を計算
+              const distance = Math.sqrt(
+                Math.pow(mouseX - px, 2) + Math.pow(mouseY - py, 2)
+              );
+
+              // 制御点の半径（5ピクセル）以内をクリックした場合
+              if (distance < 5) {
                 this.selectedPoint = index;
                 // マウスダウン時にグローバルイベントリスナーを追加
                 window.addEventListener('mousemove', this.handleGlobalMouseMove);
@@ -260,7 +303,6 @@
           });
         },
 
-        // グローバルマウス移動ハンドラー
         handleGlobalMouseMove(e) {
           if (this.selectedPoint !== null) {
             const canvas = document.getElementById('curveCanvas');
@@ -268,24 +310,23 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
+            // キャンバス座標から-1から1の範囲に変換
+            let newX = (x / canvas.width) * 2 - 1;
+            let newY = -((y / canvas.height) * 2 - 1);
+
             // 0.1単位でグリッド化
-            let newX = Math.round((x / canvas.width) * 10) / 10;
-            let newY = Math.round((1 - y / canvas.height) * 10) / 10;
+            newX = Math.round(newX * 10) / 10;
+            newY = Math.round(newY * 10) / 10;
 
             // 値の制限
-            newX = Math.max(0, Math.min(1, newX));
-            newY = Math.max(0, Math.min(1, newY));
-
-            // 端点（P0とP3）のX座標は固定
-            if (this.selectedPoint === 0) newX = 0;
-            if (this.selectedPoint === 3) newX = 1;
+            newX = Math.max(-1, Math.min(1, newX));
+            newY = Math.max(-1, Math.min(1, newY));
 
             this.points[this.selectedPoint].x = newX;
             this.points[this.selectedPoint].y = newY;
           }
         },
 
-        // グローバルマウスアップハンドラー
         handleGlobalMouseUp() {
           this.selectedPoint = null;
           // グローバルイベントリスナーを削除

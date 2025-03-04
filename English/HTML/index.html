@@ -46,7 +46,8 @@
                         <v-container id="TextFlow">
                             <span style="color: red">&lt; NEWS &gt;</span>&nbsp;
                             <span style="color: rgb(200, 200, 200)">
-                                In February and March, Snow Fstivals are popular in HOKKAIDOU and other snowy regions of Japan. Check on SNS or visit with warm clothing.
+                                In February and March, Snow Fstivals are popular in HOKKAIDOU and other snowy regions of
+                                Japan. Check on SNS or visit with warm clothing.
                             </span>
                         </v-container>
 
@@ -84,7 +85,7 @@
     </script>
 
     <script type="module">
-        
+
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x020202, 1000, 1500);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1500);
@@ -137,25 +138,12 @@
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
 
-        // 初期の最大ズーム距離を4000に設定
-        controls.maxDistance = 1700;
-
         // 平行移動（パン操作）を無効化して焦点の移動を禁止
         controls.enablePan = false;
 
-        // 最終カメラ位置（現在の初期位置）
-        const finalCameraPosition = new THREE.Vector3(-30, 20, 40);
-        // 開始位置：中心からの距離はそのままにy軸上側に配置
-        const startCameraPosition = new THREE.Vector3(0, 1, 0).multiplyScalar(4000);
-
         // カメラ初期位置は開始位置に設定
-        camera.position.copy(startCameraPosition);
+        camera.position.copy(new THREE.Vector3(0, 1, 0).multiplyScalar(10000));
         camera.lookAt(new THREE.Vector3(0, 0, 0));
-
-        // カメラアニメーションの設定
-        const cameraAnimationDuration = 15000; // アニメーション時間（ミリ秒例：4秒）
-        let cameraAnimationStartTime = null;
-        let initialCameraAnimation = true;
 
         function easeInOutCubic(t) {
             return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -260,9 +248,155 @@
 
         const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight));
         bloomPass.threshold = 0;
-        bloomPass.strength = 0.5;
-        bloomPass.radius = 0.5;
+        bloomPass.strength = 1.0;
+        bloomPass.radius = 1.0;
         composer.addPass(bloomPass);
+
+        // グリッチエフェクトのためのシェーダー
+        const DigitalGlitchShader = {
+            uniforms: {
+                'tDiffuse': { value: null },
+                'tDisp': { value: null },
+                'byp': { value: 0 },
+                'amount': { value: 0.08 },
+                'angle': { value: 0.02 },
+                'seed': { value: 0.02 },
+                'seed_x': { value: 0.02 },
+                'seed_y': { value: 0.02 },
+                'distortion_x': { value: 0.5 },
+                'distortion_y': { value: 0.6 },
+                'col_s': { value: 0.05 }
+            },
+
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+
+            fragmentShader: `
+                uniform int byp;
+                uniform sampler2D tDiffuse;
+                uniform sampler2D tDisp;
+                uniform float amount;
+                uniform float angle;
+                uniform float seed;
+                uniform float seed_x;
+                uniform float seed_y;
+                uniform float distortion_x;
+                uniform float distortion_y;
+                uniform float col_s;
+                varying vec2 vUv;
+
+                float rand(vec2 co) {
+                    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+                }
+
+                void main() {
+                    if(byp < 1) {
+                        vec2 p = vUv;
+                        
+                        if (amount > 0.0) {  // グリッチ時のみ歪み効果を適用
+                            float xs = floor(gl_FragCoord.x / 0.5);
+                            float ys = floor(gl_FragCoord.y / 0.5);
+                            vec4 normal = texture2D(tDisp, p*seed*seed);
+
+                            if(p.y < distortion_x+col_s && p.y > distortion_x-col_s*seed) {
+                                if(seed_x>0.){
+                                    p.y = 1.-(p.y + distortion_y);
+                                }
+                                else {
+                                    p.y = distortion_y;
+                                }
+                            }
+
+                            if(p.x < distortion_y+col_s && p.x > distortion_y-col_s*seed) {
+                                if(seed_y>0.){
+                                    p.x=distortion_x;
+                                }
+                                else {
+                                    p.x = 1.-(p.x + distortion_x);
+                                }
+                            }
+
+                            p.x+=normal.x*seed_x*(seed/5.);
+                            p.y+=normal.y*seed_y*(seed/5.);
+
+                            vec2 offset = amount * vec2(cos(angle), sin(angle));
+                            vec4 cr = texture2D(tDiffuse, p + offset);
+                            vec4 cga = texture2D(tDiffuse, p);
+                            vec4 cb = texture2D(tDiffuse, p - offset);
+                            gl_FragColor = vec4(cr.r, cga.g, cb.b, 1.0);
+                        } else {
+                            gl_FragColor = texture2D(tDiffuse, p);
+                        }
+                    }
+                    else {
+                        gl_FragColor = texture2D(tDiffuse, vUv);
+                    }
+                }
+            `
+        };
+
+        // ノイズテクスチャの生成
+        function generateNoiseTexture() {
+            const size = 64;
+            const data = new Uint8Array(size * size * 4);
+            for (let i = 0; i < size * size * 4; i++) {
+                data[i] = Math.random() * 255;
+            }
+            const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        // グリッチパスの設定
+        const glitchPass = new THREE.ShaderPass(DigitalGlitchShader);
+        glitchPass.uniforms.tDisp.value = generateNoiseTexture();
+        glitchPass.renderToScreen = true;
+        composer.addPass(glitchPass);
+
+        // グリッチエフェクトの状態管理
+        let isGlitching = false;
+        let glitchTimeout;
+        let glitchIntensity = 0;
+
+        // グリッチエフェクトのアニメーション
+        function updateGlitch() {
+            if (isGlitching) {
+                glitchPass.uniforms.seed.value = Math.random();
+                glitchPass.uniforms.amount.value = Math.random() * 0.1 + 0.02;
+                glitchPass.uniforms.angle.value = Math.random() * 2;
+                glitchPass.uniforms.seed_x.value = (Math.random() > 0.5 ? 0.02 : -0.02);
+                glitchPass.uniforms.seed_y.value = (Math.random() > 0.5 ? 0.02 : -0.02);
+                glitchPass.uniforms.distortion_x.value = Math.random() * 0.5;
+                glitchPass.uniforms.distortion_y.value = Math.random() * 0.5;
+                glitchPass.uniforms.col_s.value = Math.random() * 0.05;
+            } else {
+                glitchPass.uniforms.amount.value = 0;
+            }
+        }
+
+        // グリッチエフェクトのトリガー
+        function triggerGlitch() {
+            isGlitching = true;
+            clearTimeout(glitchTimeout);
+
+            // グリッチの持続時間をランダムに設定
+            const duration = (Math.random() - 0.5) * 500;
+            glitchTimeout = setTimeout(() => {
+                isGlitching = false;
+            }, duration);
+
+            // 次のグリッチまでの間隔をランダムに設定
+            const nextTrigger = Math.random() * 5000 + 3000;
+            setTimeout(triggerGlitch, nextTrigger);
+        }
+
+        // 初回のグリッチをトリガー
+        setTimeout(triggerGlitch, 2000);
 
         function createCursorParticle(x, y, z) {
             for (let i = 0; i < 1; i++) {
@@ -394,70 +528,189 @@
         }
 
         // --- animate() 関数 ---
-        function animate(time = performance.now()) {
-            if (typeof time !== 'number') {
-                time = performance.now();
+
+        const POSITION_START = new THREE.Vector3(0, 1, 0).multiplyScalar(2000);
+        const POSITION_END = new THREE.Vector3(-20, 20, 40);
+        const DISTANCE_INNER = 30;
+        const DURATION_ALL = 20 * 1000;
+        const DURATION_INNER = DURATION_ALL * 0.6;
+        const DURATION_TRUN = DURATION_ALL * 0.8;
+        const DURATION_END = DURATION_ALL - DURATION_INNER;
+        const DURATION_WAVE = DURATION_END * 0.5;
+        let Flag_CameraAnimation = true;
+        let Flag_Start_Trun = false;
+        let Flag_Start_Wave = false;
+        let Flag_Start_End = false;
+        let Time_CameraAnimation_Start = null;
+        let Position_Trun_Start = null;
+        let Position_Wave_Start = null;
+        let Position_End_Start = null;
+
+        function Bezier_Calculate(x, p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
+            let t = 0.5;
+            const epsilon = 0.0001;
+            const maxIterations = 10;
+
+            for (let i = 0; i < maxIterations; i++) {
+                let u = 1 - t;
+                let tt = t * t;
+                let uu = u * u;
+                let uuu = uu * u;
+                let ttt = tt * t;
+
+                let currentX = uuu * p0x + 3 * uu * t * p1x + 3 * u * tt * p2x + ttt * p3x;
+                let dx = -3 * p0x * uu + 3 * p1x * (1 - 4 * t + 3 * tt) + 3 * p2x * (2 * t - 3 * tt) + 3 * p3x * tt;
+                if (Math.abs(x - currentX) < epsilon) break;
+
+                t = t - (currentX - x) / dx;
+                t = Math.max(0, Math.min(1, t));
             }
 
-            // カメラアニメーションを2フェーズに分割
-            const phase1Duration = cameraAnimationDuration * 0.5; // フェーズ1：中心寄りへの移動＆一回転
-            const phase2Duration = cameraAnimationDuration * 0.5; // フェーズ2：最終位置へ戻る
-            const innerFactor = 0.25; // inner位置は finalCameraPosition の半径の50%（必要に応じて調整可能）
+            let u = 1 - t;
+            let tt = t * t;
+            let uu = u * u;
+            let uuu = uu * u;
+            let ttt = tt * t;
 
-            if (initialCameraAnimation) {
-                if (cameraAnimationStartTime === null) {
-                    cameraAnimationStartTime = time;
+            return uuu * p0y + 3 * uu * t * p1y + 3 * u * tt * p2y + ttt * p3y;
+        }
+
+        function Bezier_Distance_Inner(x) {
+            return Bezier_Calculate(x,
+                0, 1,
+                0.4, 1,
+                0.6, 0,
+                1, 0
+            );
+        }
+        function Bezier_Distance_End(x) {
+            return Bezier_Calculate(x,
+                0, 0,
+                0.6, 0,
+                0.4, 1,
+                1, 1
+            );
+        }
+
+        function Bezier_Theta(x) {
+            return Bezier_Calculate(x,
+                0, 0,
+                1, 0,
+                0.9, 0.4,
+                1, 1
+            );
+        }
+
+        function Bezier_Phi(x) {
+            return Bezier_Calculate(x,
+                0, 0,
+                0.4, 0,
+                0.9, 1,
+                1, 1
+            );
+        }
+
+        function animate(_time = performance.now()) {
+            if (typeof _time !== 'number') {
+                _time = performance.now();
+            }
+
+            if (Flag_CameraAnimation) {
+                if (Time_CameraAnimation_Start === null) {
+                    Time_CameraAnimation_Start = _time;
                 }
-                const elapsed = time - cameraAnimationStartTime;
-                // 全体の進行度（0～1）
-                const totalProgress = Math.min(elapsed / (phase1Duration + phase2Duration), 1);
 
-                // start と final の球座標（spherical）を取得
-                const sphericalStart = new THREE.Spherical().setFromVector3(startCameraPosition);
-                const sphericalEnd = new THREE.Spherical().setFromVector3(finalCameraPosition);
-                // 内側の半径（フェーズ1終了時の値）
-                const innerRadius = sphericalEnd.radius * innerFactor;
+                const elapsed = _time - Time_CameraAnimation_Start;
+                let currentPosition;
 
-                let currentRadius, currentPhi;
+                if (elapsed < DURATION_ALL) {
 
-                // フェーズ1：通常の補間
-                if (elapsed < phase1Duration) {
-                    let t1 = elapsed / phase1Duration;
-                    t1 = easeInOutCubic(t1);
-                    currentRadius = THREE.MathUtils.lerp(sphericalStart.radius, innerRadius, t1);
-                    currentPhi = THREE.MathUtils.lerp(sphericalStart.phi, sphericalEnd.phi, t1);
-                } else {
-                    let t2 = (elapsed - phase1Duration) / phase2Duration;
-                    currentRadius = THREE.MathUtils.lerp(innerRadius, sphericalEnd.radius, t2);
-                    // フェーズ2：下方向から中心を見上げるように、offsetPhi を easeInOutCubic に基づいて補間
-                    const offsetPhi = Math.PI * 0.25; // 下方向から見る角度の最大オフセット（ラジアン）
-                    const rate = 1.0;
-                    // if (t2 < rate) {
-                    //     // t2 が rate 未満では一定の offsetPhi を維持
-                    //     currentPhi = sphericalEnd.phi + offsetPhi * Math.sin(Math.PI * t2);
-                    // } else {
-                    //     const t_remap = (t2 - rate) / (1 - rate);
-                    //     currentPhi = sphericalEnd.phi + offsetPhi * Math.sin(Math.PI * rate + Math.PI * (1 - rate) * (1 - (1 - t_remap) ** 2));
-                    // }
-                    
-                    currentPhi = sphericalEnd.phi + offsetPhi * Math.sin(Math.PI * t2);
+                    // Theta
+                    if (elapsed < DURATION_INNER) {
+
+                        const progress = elapsed / DURATION_INNER;
+                        const distanceFactor = Bezier_Distance_Inner(progress);
+                        const targetDistance = POSITION_START.length() * distanceFactor + DISTANCE_INNER * (1 - distanceFactor);
+
+                        const rotationFactor = Bezier_Theta(progress);
+                        const targetRotation = Math.PI * (90 / 180) * rotationFactor;
+
+                        currentPosition = POSITION_START.clone()
+                            .normalize()
+                            .applyAxisAngle(new THREE.Vector3(1, 0, 0), targetRotation)
+                            .multiplyScalar(targetDistance);
+
+                    } else {
+
+                        const progress = (elapsed - DURATION_INNER) / DURATION_END;
+                        const distanceFactor = Bezier_Distance_End(progress);
+                        const startDistance = DISTANCE_INNER;
+                        const endDistance = POSITION_END.length();
+                        const targetDistance = startDistance * (1 - distanceFactor) + endDistance * distanceFactor;
+
+                        if (elapsed < DURATION_INNER + DURATION_WAVE) {
+
+                            if (!Flag_Start_Wave) {
+                                Flag_Start_Wave = true;
+                                Position_Wave_Start = camera.position.clone();
+                            }
+
+                            const waveProgress = (elapsed - DURATION_INNER) / DURATION_WAVE;
+                            const rotationAngle = Math.sin(waveProgress * Math.PI * 2.6) * Math.PI * (15 / 180);
+
+                            currentPosition = Position_Wave_Start.clone()
+                                .normalize()
+                                .applyAxisAngle(new THREE.Vector3(1, 0, 0), rotationAngle)
+                                .multiplyScalar(targetDistance);
+
+                        } else {
+
+                            if (!Flag_Start_End) {
+                                Flag_Start_End = true;
+                                Position_End_Start = camera.position.clone();
+                            }
+
+                            const endProgress = (elapsed - (DURATION_INNER + DURATION_WAVE)) / (DURATION_ALL - (DURATION_INNER + DURATION_WAVE));
+
+                            const thetaStart = Position_End_Start.clone().normalize().angleTo(new THREE.Vector3(1, 0, 0));
+                            const thetaEnd = POSITION_END.clone().normalize().angleTo(new THREE.Vector3(1, 0, 0));
+                            const theta = (thetaStart - thetaEnd) * endProgress;
+
+                            currentPosition = Position_End_Start.clone()
+                                .normalize()
+                                .applyAxisAngle(new THREE.Vector3(1, 0, 0), theta)
+                                .multiplyScalar(targetDistance);
+                        }
+                    }
+
+                    // Phi
+                    if (elapsed > DURATION_ALL - DURATION_TRUN) {
+                        if (!Flag_Start_Trun) {
+                            Flag_Start_Trun = true;
+                            Position_Trun_Start = camera.position.clone();
+                        }
+
+                        const phiProgress = (elapsed - (DURATION_ALL - DURATION_TRUN)) / DURATION_TRUN;
+                        const phiDistanceFactor = Bezier_Phi(phiProgress);
+
+                        const phiStart = Math.atan2(Position_Trun_Start.z, Position_Trun_Start.x);
+                        const phiEnd = Math.atan2(POSITION_END.z, POSITION_END.x);
+                        const targetPhi = phiStart + (phiEnd - phiStart + 4 * Math.PI) * phiDistanceFactor;
+                        const radius = currentPosition.clone().distanceTo(new THREE.Vector3(0, currentPosition.y, 0));
+                        const x = radius * Math.cos(targetPhi);
+                        const z = radius * Math.sin(targetPhi);
+                        const y = currentPosition.clone().y;
+                        currentPosition.set(x, y, z);
+                    }
+
+                    camera.position.copy(currentPosition);
+                    camera.lookAt(0, 0, 0);
                 }
 
-                // θは全体の進行度で連続に補間（例では sphericalEnd.theta に4回転分加算）
-                const currentTheta = THREE.MathUtils.lerp(
-                    sphericalStart.theta,
-                    sphericalEnd.theta + 4 * Math.PI,
-                    easeInOutCubic(totalProgress)
-                );
-
-                const currentSpherical = new THREE.Spherical(currentRadius, currentPhi, currentTheta);
-                const currentCameraPosition = new THREE.Vector3().setFromSpherical(currentSpherical);
-                camera.position.copy(currentCameraPosition);
-                camera.lookAt(0, 0, 0);
-
-                if (totalProgress >= 1) {
-                    initialCameraAnimation = false;
+                if (elapsed > DURATION_ALL) {
+                    Flag_CameraAnimation = false;
                     controls.maxDistance = 1200;
+                    controls.enabled = true;
                 }
             }
 
@@ -467,6 +720,7 @@
             updateCursorParticles();
             controls.update();
             composer.render();
+            updateGlitch();
 
             requestAnimationFrame(animate);
         }
