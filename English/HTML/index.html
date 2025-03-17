@@ -528,25 +528,22 @@
         }
 
         // --- animate() 関数 ---
+        let Flag_CameraAnimation = true;
+        let Time_CameraAnimation_Start = null;
+        let Position_Trun_Start = null;
+
+        let Elapsed;
+        let Radius, Theta, Phi;
 
         const POSITION_START = new THREE.Vector3(0, 1, 0).multiplyScalar(2000);
         const POSITION_END = new THREE.Vector3(-20, 20, 40);
         const DISTANCE_INNER = 30;
         const DURATION_ALL = 20 * 1000;
         const DURATION_INNER = DURATION_ALL * 0.6;
-        const DURATION_TRUN = DURATION_ALL * 0.8;
-        const DURATION_END = DURATION_ALL - DURATION_INNER;
-        const DURATION_WAVE = DURATION_END * 0.5;
-        let Flag_CameraAnimation = true;
-        let Flag_Start_Trun = false;
-        let Flag_Start_Wave = false;
-        let Flag_Start_End = false;
-        let Time_CameraAnimation_Start = null;
-        let Position_Trun_Start = null;
-        let Position_Wave_Start = null;
-        let Position_End_Start = null;
+        const DURATION_END = DURATION_ALL * 0.3;
+        const DURATION_ADJUST = DURATION_ALL - DURATION_INNER - DURATION_END;
 
-        function Bezier_Calculate(x, p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
+        function Calculate_Bezier(x, p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
             let t = 0.5;
             const epsilon = 0.0001;
             const maxIterations = 10;
@@ -575,39 +572,45 @@
             return uuu * p0y + 3 * uu * t * p1y + 3 * u * tt * p2y + ttt * p3y;
         }
 
-        function Bezier_Distance_Inner(x) {
-            return Bezier_Calculate(x,
-                0, 1,
-                0.4, 1,
-                0.6, 0,
-                1, 0
-            );
-        }
-        function Bezier_Distance_End(x) {
-            return Bezier_Calculate(x,
-                0, 0,
-                0.6, 0,
-                0.4, 1,
-                1, 1
-            );
+        function Calculate_Radius() {
+            if (Elapsed < DURATION_INNER) {
+                const progress = Elapsed / DURATION_INNER;
+                const distanceFactor = Calculate_Bezier(progress, 0, 1, 0.4, 1, 0.6, 0, 1, 0);
+                Radius = POSITION_START.length() * distanceFactor + DISTANCE_INNER * (1 - distanceFactor);
+            }
+            else if (Elapsed < DURATION_ALL) {
+                const progress = (Elapsed - DURATION_INNER) / DURATION_END;
+                const distanceFactor = Calculate_Bezier(progress, 0, 0, 0.6, 0, 0.4, 1, 1, 1);
+                const startDistance = DISTANCE_INNER;
+                const endDistance = POSITION_END.length();
+                Radius = startDistance * (1 - distanceFactor) + endDistance * distanceFactor;
+            }
         }
 
-        function Bezier_Theta(x) {
-            return Bezier_Calculate(x,
-                0, 0,
-                1, 0,
-                0.9, 0.4,
-                1, 1
-            );
+        function Calculate_Theta() {
+            if (Elapsed < DURATION_INNER) {
+                const progress = Elapsed / DURATION_INNER;
+                Theta = Math.PI * 0.5 - Math.PI * (90 / 180) * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.4, 0, 1, 1);
+            }
+            else if (Elapsed > DURATION_INNER + DURATION_END && Elapsed < DURATION_ALL) {
+                const progress = (Elapsed - DURATION_INNER - DURATION_END) / DURATION_ADJUST;
+                Theta = Math.PI * (15 / 180) * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.3, 1, 1, 1);
+            }
         }
 
-        function Bezier_Phi(x) {
-            return Bezier_Calculate(x,
-                0, 0,
-                0.4, 0,
-                0.9, 1,
-                1, 1
-            );
+        function Calculate_Phi() {
+            if (Elapsed < DURATION_INNER) {
+                const progress = Elapsed / DURATION_INNER;
+                Phi = Math.PI * 4 * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.4, 0, 1, 1);
+            }
+            else if (Elapsed < DURATION_INNER + DURATION_END) {
+                const progress = (Elapsed - DURATION_INNER) / DURATION_END;
+                Phi = Math.PI * 2 * Calculate_Bezier(progress, 0, 0, 0, 0.2, 0.8, 0.1, 1, 1);
+            }
+            else if (Elapsed < DURATION_ALL) {
+                const progress = (Elapsed - DURATION_INNER - DURATION_END) / DURATION_ADJUST;
+                Phi = Math.PI * (120 / 180) * Calculate_Bezier(progress, 0, 0, 0, 0.4, 0.4, 1, 1, 1);
+            }
         }
 
         function animate(_time = performance.now()) {
@@ -616,98 +619,30 @@
             }
 
             if (Flag_CameraAnimation) {
+                // Initialize
                 if (Time_CameraAnimation_Start === null) {
                     Time_CameraAnimation_Start = _time;
+                    Position_Trun_Start = camera.position.clone();
                 }
 
-                const elapsed = _time - Time_CameraAnimation_Start;
-                let currentPosition;
+                Elapsed = _time - Time_CameraAnimation_Start;
 
-                if (elapsed < DURATION_ALL) {
+                if (Elapsed < DURATION_ALL) {
 
-                    // Theta
-                    if (elapsed < DURATION_INNER) {
+                    Calculate_Radius();
+                    Calculate_Theta();
+                    Calculate_Phi();
 
-                        const progress = elapsed / DURATION_INNER;
-                        const distanceFactor = Bezier_Distance_Inner(progress);
-                        const targetDistance = POSITION_START.length() * distanceFactor + DISTANCE_INNER * (1 - distanceFactor);
+                    const x = Radius * Math.cos(Theta) * Math.cos(Phi);
+                    const y = Radius * Math.sin(Theta);
+                    const z = Radius * Math.cos(Theta) * Math.sin(Phi);
 
-                        const rotationFactor = Bezier_Theta(progress);
-                        const targetRotation = Math.PI * (90 / 180) * rotationFactor;
-
-                        currentPosition = POSITION_START.clone()
-                            .normalize()
-                            .applyAxisAngle(new THREE.Vector3(1, 0, 0), targetRotation)
-                            .multiplyScalar(targetDistance);
-
-                    } else {
-
-                        const progress = (elapsed - DURATION_INNER) / DURATION_END;
-                        const distanceFactor = Bezier_Distance_End(progress);
-                        const startDistance = DISTANCE_INNER;
-                        const endDistance = POSITION_END.length();
-                        const targetDistance = startDistance * (1 - distanceFactor) + endDistance * distanceFactor;
-
-                        if (elapsed < DURATION_INNER + DURATION_WAVE) {
-
-                            if (!Flag_Start_Wave) {
-                                Flag_Start_Wave = true;
-                                Position_Wave_Start = camera.position.clone();
-                            }
-
-                            const waveProgress = (elapsed - DURATION_INNER) / DURATION_WAVE;
-                            const rotationAngle = Math.sin(waveProgress * Math.PI * 2.6) * Math.PI * (15 / 180);
-
-                            currentPosition = Position_Wave_Start.clone()
-                                .normalize()
-                                .applyAxisAngle(new THREE.Vector3(1, 0, 0), rotationAngle)
-                                .multiplyScalar(targetDistance);
-
-                        } else {
-
-                            if (!Flag_Start_End) {
-                                Flag_Start_End = true;
-                                Position_End_Start = camera.position.clone();
-                            }
-
-                            const endProgress = (elapsed - (DURATION_INNER + DURATION_WAVE)) / (DURATION_ALL - (DURATION_INNER + DURATION_WAVE));
-
-                            const thetaStart = Position_End_Start.clone().normalize().angleTo(new THREE.Vector3(1, 0, 0));
-                            const thetaEnd = POSITION_END.clone().normalize().angleTo(new THREE.Vector3(1, 0, 0));
-                            const theta = (thetaStart - thetaEnd) * endProgress;
-
-                            currentPosition = Position_End_Start.clone()
-                                .normalize()
-                                .applyAxisAngle(new THREE.Vector3(1, 0, 0), theta)
-                                .multiplyScalar(targetDistance);
-                        }
-                    }
-
-                    // Phi
-                    if (elapsed > DURATION_ALL - DURATION_TRUN) {
-                        if (!Flag_Start_Trun) {
-                            Flag_Start_Trun = true;
-                            Position_Trun_Start = camera.position.clone();
-                        }
-
-                        const phiProgress = (elapsed - (DURATION_ALL - DURATION_TRUN)) / DURATION_TRUN;
-                        const phiDistanceFactor = Bezier_Phi(phiProgress);
-
-                        const phiStart = Math.atan2(Position_Trun_Start.z, Position_Trun_Start.x);
-                        const phiEnd = Math.atan2(POSITION_END.z, POSITION_END.x);
-                        const targetPhi = phiStart + (phiEnd - phiStart + 4 * Math.PI) * phiDistanceFactor;
-                        const radius = currentPosition.clone().distanceTo(new THREE.Vector3(0, currentPosition.y, 0));
-                        const x = radius * Math.cos(targetPhi);
-                        const z = radius * Math.sin(targetPhi);
-                        const y = currentPosition.clone().y;
-                        currentPosition.set(x, y, z);
-                    }
-
-                    camera.position.copy(currentPosition);
+                    camera.position.set(x, y, z);
                     camera.lookAt(0, 0, 0);
+
                 }
 
-                if (elapsed > DURATION_ALL) {
+                if (Elapsed > DURATION_ALL) {
                     Flag_CameraAnimation = false;
                     controls.maxDistance = 1200;
                     controls.enabled = true;
