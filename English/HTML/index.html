@@ -414,8 +414,6 @@
                     ),
                     life: 1.0
                 };
-                console.log(particle);
-                
                 cursorParticles.push(particle);
             }
         }
@@ -613,7 +611,8 @@
         }
 
         let lastTime = performance.now();
-        let thetaOffset = Math.PI;
+        let countDistance = Math.PI;
+        let countTheata = Math.PI;
 
         function animate() {
             const currentTime = performance.now(); // 現在の時間を取得
@@ -650,18 +649,30 @@
             }
             else if (!Flag_CameraAnimation) {
 
-                const distance = camera.position.length();
+                console.log(camera.position.length());
+                countDistance += Math.PI * 0.01 * deltaTime;
+                const currentDistance = camera.position.length();
+                let newDistance = currentDistance + Math.sin(countDistance) * 0.5 * deltaTime;
+
+                if (newDistance < 15) {
+                    newDistance = 15;
+                }
 
                 const currentPhi = Math.atan2(camera.position.z, camera.position.x);
                 const newPhi = currentPhi + Math.PI * 0.05 * deltaTime;
 
-                thetaOffset += Math.PI * 0.2 * deltaTime;
-                const currentTheta = Math.asin(camera.position.y / distance);
-                const newTheta = currentTheta + Math.sin(thetaOffset) * Math.PI * 2.5 / 180 * deltaTime;
+                countTheata += Math.PI * 0.2 * deltaTime;
+                let currentTheta = Math.asin(camera.position.y / newDistance);
+                
+                if (currentTheta < 0) {
+                    currentTheta = 0;
+                }
+                
+                const newTheta = currentTheta + Math.sin(countTheata) * Math.PI * 2.5 / 180 * deltaTime;
 
-                const x = distance * Math.cos(newTheta) * Math.cos(newPhi);
-                const y = distance * Math.sin(newTheta);
-                const z = distance * Math.cos(newTheta) * Math.sin(newPhi);
+                const x = newDistance * Math.cos(newTheta) * Math.cos(newPhi);
+                const y = newDistance * Math.sin(newTheta);
+                const z = newDistance * Math.cos(newTheta) * Math.sin(newPhi);
 
                 camera.position.set(x, y, z);
                 camera.lookAt(0, 0, 0);
@@ -686,8 +697,6 @@
             const intersection = raycaster.ray.at(20);
 
             if (Math.random() < 0.5) {
-                console.log("TEST");
-                
                 createCursorParticle(intersection.x, intersection.y, intersection.z);
             }
         }
