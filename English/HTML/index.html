@@ -538,6 +538,7 @@
         const POSITION_START = new THREE.Vector3(0, 1, 0).multiplyScalar(2000);
         const POSITION_END = new THREE.Vector3(-20, 20, 40);
         const DISTANCE_INNER = 30;
+
         const DURATION_ALL = 20 * 1000;
         const DURATION_INNER = DURATION_ALL * 0.6;
         const DURATION_END = DURATION_ALL * 0.3;
@@ -580,7 +581,7 @@
             }
             else if (Elapsed < DURATION_ALL) {
                 const progress = (Elapsed - DURATION_INNER) / DURATION_END;
-                const distanceFactor = Calculate_Bezier(progress, 0, 0, 0.6, 0, 0.4, 1, 1, 1);
+                const distanceFactor = Calculate_Bezier(progress, 0, 0, 0.9, 0.1, 0.7, 0.7, 1, 1);
                 const startDistance = DISTANCE_INNER;
                 const endDistance = POSITION_END.length();
                 Radius = startDistance * (1 - distanceFactor) + endDistance * distanceFactor;
@@ -594,7 +595,7 @@
             }
             else if (Elapsed > DURATION_INNER + DURATION_END && Elapsed < DURATION_ALL) {
                 const progress = (Elapsed - DURATION_INNER - DURATION_END) / DURATION_ADJUST;
-                Theta = Math.PI * (15 / 180) * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.3, 1, 1, 1);
+                Theta = Math.PI * (10 / 180) * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.3, 1, 1, 1);
             }
         }
 
@@ -609,26 +610,28 @@
             }
             else if (Elapsed < DURATION_ALL) {
                 const progress = (Elapsed - DURATION_INNER - DURATION_END) / DURATION_ADJUST;
-                Phi = Math.PI * (120 / 180) * Calculate_Bezier(progress, 0, 0, 0, 0.4, 0.4, 1, 1, 1);
+                Phi = Math.PI * (120 / 180) * Calculate_Bezier(progress, 0, 0, 0, 0.4, 0.4, 0.9, 1, 1);
             }
         }
 
-        function animate(_time = performance.now()) {
-            if (typeof _time !== 'number') {
-                _time = performance.now();
-            }
+        let lastTime = performance.now();
+        let thetaOffset = Math.PI;
+
+        function animate() {
+            const currentTime = performance.now(); // 現在の時間を取得
+            const deltaTime = (currentTime - lastTime) / 1000; // デルタタイムを秒単位に変換
+            lastTime = currentTime; // 現在の時間を次のフレームのために保存
 
             if (Flag_CameraAnimation) {
                 // Initialize
                 if (Time_CameraAnimation_Start === null) {
-                    Time_CameraAnimation_Start = _time;
+                    Time_CameraAnimation_Start = currentTime;
                     Position_Trun_Start = camera.position.clone();
                 }
 
-                Elapsed = _time - Time_CameraAnimation_Start;
+                Elapsed = currentTime - Time_CameraAnimation_Start;
 
                 if (Elapsed < DURATION_ALL) {
-
                     Calculate_Radius();
                     Calculate_Theta();
                     Calculate_Phi();
@@ -639,7 +642,6 @@
 
                     camera.position.set(x, y, z);
                     camera.lookAt(0, 0, 0);
-
                 }
 
                 if (Elapsed > DURATION_ALL) {
@@ -647,6 +649,24 @@
                     controls.maxDistance = 1200;
                     controls.enabled = true;
                 }
+            }
+            else if (!Flag_CameraAnimation) {
+
+                const distance = camera.position.length();
+
+                const currentPhi = Math.atan2(camera.position.z, camera.position.x);
+                const newPhi = currentPhi + Math.PI * 0.05 * deltaTime;
+
+                thetaOffset += Math.PI * 0.2 * deltaTime;
+                const currentTheta = Math.asin(camera.position.y / distance);
+                const newTheta = currentTheta + Math.sin(thetaOffset) * Math.PI * 2.5 / 180 * deltaTime;
+
+                const x = distance * Math.cos(newTheta) * Math.cos(newPhi);
+                const y = distance * Math.sin(newTheta);
+                const z = distance * Math.cos(newTheta) * Math.sin(newPhi);
+
+                camera.position.set(x, y, z);
+                camera.lookAt(0, 0, 0);
             }
 
             // 他のアニメーション処理
