@@ -27,40 +27,6 @@
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
     <title>Music > Utada Hikaru</title>
-
-    <style>
-        .slide-in {
-            animation: slideIn 0.5s forwards;
-        }
-
-        .slide-out {
-            animation: slideOut 0.5s forwards;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -154,7 +120,7 @@
                                         </div>
                                     </v-timeline-item>
                                     <v-timeline-item v-for="(content, i) in Contents" :key="i" :color="content.color"
-                                        small @scroll="handleScroll(i)">
+                                        small>
                                         <template v-slot:opposite>
                                             <span :style="`color: ${content.color};`"
                                                 :class="`headline font-weight-bold`" v-text="content.year"></span>
@@ -165,10 +131,9 @@
                                                     :class="`timeline-title font-weight-light mb-4`">
                                                     {{ content.title }}
                                                 </h2>
-                                                <iframe class="Youtube" :class="`iframe-${i}`" :src="content.url"
-                                                    frameborder="0" allow="encrypted-media; picture-in-picture"
-                                                    allowfullscreen
-                                                    style="max-width: 100%; height: auto; background-color: rgba(0, 0, 0, 0.5);"></iframe>
+                                                <iframe class="Youtube" :src="content.url" frameborder="0"
+                                                    allow="encrypted-media; picture-in-picture"
+                                                    permissions="compute-pressure" allowfullscreen></iframe>
                                             </v-col>
                                         </v-row>
                                     </v-timeline-item>
@@ -198,17 +163,13 @@
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Youtube],
             data: {
-                List_URL: [
-                    'https://www.youtube-nocookie.com/embed/FtHpWnr99OY?controls=1',
-                    'https://www.youtube-nocookie.com/embed/A_5wTaQKK6c?controls=1',
-                ],
                 Contents: [
                     { year: '1999', color: 'hsl(0, 75%, 65%)', title: 'First Love', url: 'https://www.youtube-nocookie.com/embed/GcpsTmDO9k0?controls=1' },
                     { year: '', color: 'hsl(0, 75%, 65%)', title: 'Automatic', url: 'https://www.youtube-nocookie.com/embed/rJwLPcL2u3c?controls=1' },
                     { year: '', color: 'hsl(0, 75%, 65%)', title: 'Movin on without you', url: 'https://www.youtube-nocookie.com/embed/w4w6OTjV7so?controls=1' },
                     { year: '2000', color: 'hsl(40, 75%, 65%)', title: 'Wait & See ～リスク～', url: 'https://www.youtube-nocookie.com/embed/jWPs_orw2Dk?controls=1' },
                     { year: '', color: 'hsl(40, 75%, 65%)', title: 'Addicted To You', url: 'https://www.youtube-nocookie.com/embed/PFzQ3ZXBsbo?controls=1' },
-                    { year: '2001', color: 'hsl(80, 75%, 65%)', title: 'Traveling', url: 'https://www.youtube-nocookie.com/embed/4j2ZJAgdrGE?controls=1' },
+                    { year: '2001', color: 'hsl(80, 75%, 65%)', title: 'traveling', url: 'https://www.youtube-nocookie.com/embed/4j2ZJAgdrGE?controls=1' },
                     { year: '2002', color: 'hsl(120, 75%, 65%)', title: 'SAKURAドロップス', url: 'https://www.youtube-nocookie.com/embed/V6PisCGexEU?controls=1' },
                     { year: '', color: 'hsl(120, 75%, 65%)', title: '光', url: 'https://www.youtube-nocookie.com/embed/PFzQ3ZXBsbo?controls=1' },
                     { year: '2005', color: 'hsl(160, 75%, 65%)', title: 'Be My Last', url: 'https://www.youtube-nocookie.com/embed/li2TjO2P-Pg?controls=1' },
@@ -227,42 +188,107 @@
                     { year: '2022', color: 'hsl(180, 75%, 65%)', title: 'BADモード', url: 'https://www.youtube-nocookie.com/embed/VJGCeAWIfEA?controls=1' }
                 ],
                 showYearNavigation: false,
-                currentIframe: null,
+                lastScrollTop: 0,
+                iframeStates: {}
+            },
+            mounted() {
+                this.setupScrollAnimations();
+                window.addEventListener('scroll', this.handleScroll, { passive: true });
+                this.$nextTick(() => {
+                    this.checkVisibility();
+                });
+            },
+            beforeDestroy() {
+                window.removeEventListener('scroll', this.handleScroll);
             },
             methods: {
                 toggleYearNavigation() {
                     this.showYearNavigation = !this.showYearNavigation;
                 },
-                showIframe(index) {
-                    // Hide current iframe if exists
-                    if (this.currentIframe !== null) {
-                        const currentElement = document.getElementById(`iframe-${this.currentIframe}`);
-                        if (currentElement) {
-                            currentElement.classList.remove('slide-in', 'iframe-visible');
-                            currentElement.classList.add('slide-out', 'iframe-hidden');
-                        }
-                    }
+                handleScroll() {
+                    const st = window.pageYOffset || document.documentElement.scrollTop;
+                    const scrollDirection = st > this.lastScrollTop ? 'down' : 'up';
+                    document.documentElement.setAttribute('data-scroll-direction', scrollDirection);
+                    this.lastScrollTop = st <= 0 ? 0 : st;
 
-                    // Show new iframe
-                    setTimeout(() => {
-                        const newElement = document.getElementById(`iframe-${index}`);
-                        if (newElement) {
-                            newElement.classList.remove('slide-out', 'iframe-hidden');
-                            newElement.classList.add('slide-in', 'iframe-visible');
-                            this.currentIframe = index;
-                        }
-                    }, this.currentIframe !== null ? 500 : 0); // Wait for animation to complete if hiding previous iframe
+                    this.checkVisibility();
                 },
-            },
-            mounted() {
-                setTimeout(() => {
-                    const timelineItems = document.querySelectorAll('.timeline-item');
-                    timelineItems.forEach((item, index) => {
-                        item.setAttribute('data-index', index);
+                checkVisibility() {
+                    const iframes = document.querySelectorAll('.Youtube');
+                    const scrollDirection = document.documentElement.getAttribute('data-scroll-direction') || 'down';
+
+                    iframes.forEach((iframe, index) => {
+                        const rect = iframe.getBoundingClientRect();
+                        const isVisible = this.isElementVisible(rect);
+                        const id = `iframe-${index}`;
+
+                        const wasVisible = this.iframeStates[id] ? this.iframeStates[id].visible : false;
+
+                        if (isVisible !== wasVisible) {
+                            if (isVisible) {
+                                if (scrollDirection === 'down') {
+                                    iframe.classList.add('slide-in-from-bottom');
+                                    iframe.classList.remove('slide-out-to-top', 'slide-in-from-top', 'slide-out-to-bottom');
+                                } else {
+                                    iframe.classList.add('slide-in-from-top');
+                                    iframe.classList.remove('slide-out-to-top', 'slide-in-from-bottom', 'slide-out-to-bottom');
+                                }
+                            } else {
+                                if (scrollDirection === 'down' && rect.top < window.innerHeight * 0.3) {
+                                    iframe.classList.add('slide-out-to-top');
+                                    iframe.classList.remove('slide-in-from-bottom');
+                                } else if (scrollDirection === 'up' && rect.bottom > window.innerHeight * 0.7) {
+                                    iframe.classList.add('slide-out-to-bottom');
+                                    iframe.classList.remove('slide-in-from-top');
+                                }
+                            }
+                        }
+
+                        this.iframeStates[id] = {
+                            visible: isVisible,
+                            rect: rect
+                        };
                     });
-                }, 100);
+                },
+                isElementVisible(rect) {
+                    const scrollDirection = document.documentElement.getAttribute('data-scroll-direction') || 'down';
+                    if (scrollDirection === 'down') {
+                        return (
+                            rect.top < window.innerHeight &&
+                            rect.bottom > window.innerHeight * 0.25 &&
+                            rect.left < window.innerWidth &&
+                            rect.right > 0
+                        );
+                    }
+                    else if (scrollDirection === 'up') {
+                        return (
+                            rect.top < window.innerHeight * 0.75 &&
+                            rect.bottom > 0 &&
+                            rect.left < window.innerWidth &&
+                            rect.right > 0
+                        );
+                    }
+                },
+                setupScrollAnimations() {
+                    const iframes = document.querySelectorAll('.Youtube');
+                    const scrollDirection = document.documentElement.getAttribute('data-scroll-direction') || 'down';
+
+                    iframes.forEach((iframe, index) => {
+                        if (scrollDirection === 'down') {
+                            iframe.classList.add('initial-bottom');
+                        } else {
+                            iframe.classList.add('initial-top');
+                        }
+
+                        const id = `iframe-${index}`;
+                        this.iframeStates[id] = {
+                            visible: false,
+                            rect: iframe.getBoundingClientRect()
+                        };
+                    });
+                }
             }
-        })
+        });
 
     </script>
 
