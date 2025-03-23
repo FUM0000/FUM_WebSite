@@ -1253,6 +1253,9 @@ window.Mixins_Youtube = {
         });
         this.Initialize_SlideAnimation();
         window.addEventListener('scroll', this.Handle_Scroll);
+        this.$nextTick(() => {
+            this.Check_Visibility();
+        });
     },
     updated() {
         $(".Youtube").width($(".Youtube_Col").width());
