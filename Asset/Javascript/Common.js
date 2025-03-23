@@ -1103,7 +1103,6 @@ window.Mixins_Common = {
         ChangeDrawer(_value) { this.Drawer = _value; },
     },
     mounted() {
-        // Event
         $(window).ready(() => {
             this.Ready_Page = true;
         });
@@ -1120,11 +1119,40 @@ window.Mixins_Youtube = {
             Drawer: false,
         };
     },
+    computed: {
+        Get_Years() {
+            const years = [];
+            this.Contents.forEach(content => {
+                if (!years.includes(content.year)) {
+                    years.push(content.year);
+                }
+            });
+            return years.sort((a, b) => parseInt(a) - parseInt(b));
+        }
+    },
     methods: {
         ChangeDrawer(_value) { this.Drawer = _value; },
+        Get_YearColor(year) {
+            const contentWithYear = this.Contents.find(content => content.year === year);
+            return contentWithYear ? contentWithYear.color : 'primary';
+        },
+        Scroll_Year(year) {
+            let targetElement = null;
+            const timelineItems = document.querySelectorAll('.v-timeline-item');
+            timelineItems.forEach(item => {
+                const yearElement = item.querySelector('.headline.font-weight-bold');
+                if (yearElement && yearElement.textContent === year) {
+                    targetElement = item;
+                    return;
+                }
+            });
+
+            if (targetElement) {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
     },
     mounted() {
-        // Event
         $(window).ready(() => {
             this.Ready_Page = true;
         });

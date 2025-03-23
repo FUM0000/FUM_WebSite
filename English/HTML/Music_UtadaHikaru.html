@@ -27,6 +27,40 @@
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
     <title>Music > Utada Hikaru</title>
+
+    <style>
+        .slide-in {
+            animation: slideIn 0.5s forwards;
+        }
+
+        .slide-out {
+            animation: slideOut 0.5s forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -40,6 +74,20 @@
             <v-main id="Main">
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
+
+                        <div class="year-navigation-minimal">
+                            <v-btn @click="toggleYearNavigation" class="toggle-btn"
+                                style="color: white; background-color: transparent;">
+                                <v-icon>mdi-menu</v-icon>
+                            </v-btn>
+                            <div v-if="showYearNavigation">
+                                <div v-for="year in Get_Years" :key="year" :style="{ color: Get_YearColor(year) }"
+                                    @click="Scroll_Year(year)" class="year-btn">
+                                    {{ year }}
+                                </div>
+                            </div>
+                        </div>
+
 
                         <v-row align="center" justify="center">
                             <v-col cols="12" md="6">
@@ -90,12 +138,14 @@
                             </v-col>
                         </v-row>
 
+
                         <v-row align="center" justify="center">
-                            <v-col cols="12" md="8">
+                            <v-col cols="12" md="6">
                                 <v-timeline>
                                     <v-timeline-item :color="`hsl(0, 0%, 75%)`" small>
                                         <template v-slot:opposite>
-                                            <span class="headline font-weight-bold" style="color: hsl(0, 0%, 75%);" v-text="'1998'"></span>
+                                            <span class="headline font-weight-bold" style="color: hsl(0, 0%, 75%);"
+                                                v-text="'1998'"></span>
                                         </template>
                                         <div>
                                             <h2 class="headline font-weight-light" style="color: hsl(0, 0%, 75%);">
@@ -104,24 +154,23 @@
                                         </div>
                                     </v-timeline-item>
                                     <v-timeline-item v-for="(content, i) in Contents" :key="i" :color="content.color"
-                                        small>
+                                        small @scroll="handleScroll(i)">
                                         <template v-slot:opposite>
                                             <span :style="`color: ${content.color};`"
                                                 :class="`headline font-weight-bold`" v-text="content.year"></span>
                                         </template>
-                                        <div class="py-4">
-                                            <v-row justify="center">
-                                                <v-col cols="12" md="8">
-                                                    <h2 :style="`color: ${content.color};`"
-                                                        :class="`headline font-weight-light mb-4`">
-                                                        {{ content.title }}
-                                                    </h2>
-                                                    <iframe class="Youtube" :src="content.url" frameborder="0"
-                                                        allow="encrypted-media; picture-in-picture"
-                                                        allowfullscreen></iframe>
-                                                </v-col>
-                                            </v-row>
-                                        </div>
+                                        <v-row justify="center">
+                                            <v-col cols="12" md="8">
+                                                <h2 :style="`color: ${content.color};`"
+                                                    :class="`timeline-title font-weight-light mb-4`">
+                                                    {{ content.title }}
+                                                </h2>
+                                                <iframe class="Youtube" :class="`iframe-${i}`" :src="content.url"
+                                                    frameborder="0" allow="encrypted-media; picture-in-picture"
+                                                    allowfullscreen
+                                                    style="max-width: 100%; height: auto; background-color: rgba(0, 0, 0, 0.5);"></iframe>
+                                            </v-col>
+                                        </v-row>
                                     </v-timeline-item>
                                 </v-timeline>
                             </v-col>
@@ -155,29 +204,63 @@
                 ],
                 Contents: [
                     { year: '1999', color: 'hsl(0, 75%, 65%)', title: 'First Love', url: 'https://www.youtube-nocookie.com/embed/GcpsTmDO9k0?controls=1' },
-                    { year: '1999', color: 'hsl(0, 75%, 65%)', title: 'Automatic', url: 'https://www.youtube-nocookie.com/embed/rJwLPcL2u3c?controls=1' },
-                    { year: '1999', color: 'hsl(0, 75%, 65%)', title: 'Movin on without you', url: 'https://www.youtube-nocookie.com/embed/w4w6OTjV7so?controls=1' },
+                    { year: '', color: 'hsl(0, 75%, 65%)', title: 'Automatic', url: 'https://www.youtube-nocookie.com/embed/rJwLPcL2u3c?controls=1' },
+                    { year: '', color: 'hsl(0, 75%, 65%)', title: 'Movin on without you', url: 'https://www.youtube-nocookie.com/embed/w4w6OTjV7so?controls=1' },
                     { year: '2000', color: 'hsl(40, 75%, 65%)', title: 'Wait & See ～リスク～', url: 'https://www.youtube-nocookie.com/embed/jWPs_orw2Dk?controls=1' },
-                    { year: '2000', color: 'hsl(40, 75%, 65%)', title: 'Addicted To You', url: 'https://www.youtube-nocookie.com/embed/PFzQ3ZXBsbo?controls=1' },
-                    { year: '2001', color: 'hsl(80, 75%, 65%)', title: 'traveling', url: 'https://www.youtube-nocookie.com/embed/4j2ZJAgdrGE?controls=1' },
+                    { year: '', color: 'hsl(40, 75%, 65%)', title: 'Addicted To You', url: 'https://www.youtube-nocookie.com/embed/PFzQ3ZXBsbo?controls=1' },
+                    { year: '2001', color: 'hsl(80, 75%, 65%)', title: 'Traveling', url: 'https://www.youtube-nocookie.com/embed/4j2ZJAgdrGE?controls=1' },
                     { year: '2002', color: 'hsl(120, 75%, 65%)', title: 'SAKURAドロップス', url: 'https://www.youtube-nocookie.com/embed/V6PisCGexEU?controls=1' },
-                    { year: '2002', color: 'hsl(120, 75%, 65%)', title: '光', url: 'https://www.youtube-nocookie.com/embed/PFzQ3ZXBsbo?controls=1' },
+                    { year: '', color: 'hsl(120, 75%, 65%)', title: '光', url: 'https://www.youtube-nocookie.com/embed/PFzQ3ZXBsbo?controls=1' },
                     { year: '2005', color: 'hsl(160, 75%, 65%)', title: 'Be My Last', url: 'https://www.youtube-nocookie.com/embed/li2TjO2P-Pg?controls=1' },
-                    { year: '2005', color: 'hsl(160, 75%, 65%)', title: 'Passion', url: 'https://www.youtube-nocookie.com/embed/j01KLlxfoN4?controls=1' },
+                    { year: '', color: 'hsl(160, 75%, 65%)', title: 'Passion', url: 'https://www.youtube-nocookie.com/embed/j01KLlxfoN4?controls=1' },
                     { year: '2007', color: 'hsl(200, 75%, 65%)', title: 'Flavor Of Life', url: 'https://www.youtube-nocookie.com/embed/iX4FRMcV88Y?controls=1' },
                     { year: '2008', color: 'hsl(240, 75%, 65%)', title: 'Prisoner Of Love', url: 'https://www.youtube-nocookie.com/embed/EHj3ljJvo5Y?controls=1' },
                     { year: '2010', color: 'hsl(280, 75%, 65%)', title: 'Goodbye Happiness', url: 'https://www.youtube-nocookie.com/embed/rUhhPZtYl7Y?controls=1' },
                     { year: '2012', color: 'hsl(320, 75%, 65%)', title: '桜流し', url: 'https://www.youtube-nocookie.com/embed/5GUHzOvKG8g?controls=1' },
                     { year: '2018', color: 'hsl(20, 75%, 65%)', title: '初恋', url: 'https://www.youtube-nocookie.com/embed/FtHpWnr99OY?controls=1' },
-                    { year: '2018', color: 'hsl(20, 75%, 65%)', title: 'あなた', url: 'https://www.youtube-nocookie.com/embed/A_5wTaQKK6c?controls=1' },
-                    { year: '2018', color: 'hsl(20, 75%, 65%)', title: 'Forevermore', url: 'https://www.youtube-nocookie.com/embed/x4WFZv4hJs4?controls=1' },
+                    { year: '', color: 'hsl(20, 75%, 65%)', title: 'あなた', url: 'https://www.youtube-nocookie.com/embed/A_5wTaQKK6c?controls=1' },
+                    { year: '', color: 'hsl(20, 75%, 65%)', title: 'Forevermore', url: 'https://www.youtube-nocookie.com/embed/x4WFZv4hJs4?controls=1' },
                     { year: '2019', color: 'hsl(60, 75%, 65%)', title: 'Face My Fears', url: 'https://www.youtube-nocookie.com/embed/P6fHi2hmG1Q?controls=1' },
                     { year: '2020', color: 'hsl(100, 75%, 65%)', title: 'Time', url: 'https://www.youtube-nocookie.com/embed/1ksh8x9bIPI?controls=1' },
                     { year: '2021', color: 'hsl(140, 75%, 65%)', title: 'One Last Kiss', url: 'https://www.youtube-nocookie.com/embed/0Uhh62MUEic?controls=1' },
-                    { year: '2021', color: 'hsl(140, 75%, 65%)', title: 'Pink Blood', url: 'https://www.youtube-nocookie.com/embed/U_Ry2dM0B34?controls=1' },
+                    { year: '', color: 'hsl(140, 75%, 65%)', title: 'Pink Blood', url: 'https://www.youtube-nocookie.com/embed/U_Ry2dM0B34?controls=1' },
                     { year: '2022', color: 'hsl(180, 75%, 65%)', title: 'BADモード', url: 'https://www.youtube-nocookie.com/embed/VJGCeAWIfEA?controls=1' }
                 ],
+                showYearNavigation: false,
+                currentIframe: null,
+            },
+            methods: {
+                toggleYearNavigation() {
+                    this.showYearNavigation = !this.showYearNavigation;
+                },
+                showIframe(index) {
+                    // Hide current iframe if exists
+                    if (this.currentIframe !== null) {
+                        const currentElement = document.getElementById(`iframe-${this.currentIframe}`);
+                        if (currentElement) {
+                            currentElement.classList.remove('slide-in', 'iframe-visible');
+                            currentElement.classList.add('slide-out', 'iframe-hidden');
+                        }
+                    }
 
+                    // Show new iframe
+                    setTimeout(() => {
+                        const newElement = document.getElementById(`iframe-${index}`);
+                        if (newElement) {
+                            newElement.classList.remove('slide-out', 'iframe-hidden');
+                            newElement.classList.add('slide-in', 'iframe-visible');
+                            this.currentIframe = index;
+                        }
+                    }, this.currentIframe !== null ? 500 : 0); // Wait for animation to complete if hiding previous iframe
+                },
+            },
+            mounted() {
+                setTimeout(() => {
+                    const timelineItems = document.querySelectorAll('.timeline-item');
+                    timelineItems.forEach((item, index) => {
+                        item.setAttribute('data-index', index);
+                    });
+                }, 100);
             }
         })
 
