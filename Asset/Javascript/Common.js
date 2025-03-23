@@ -1117,6 +1117,9 @@ window.Mixins_Youtube = {
         return {
             Ready_Page: false,
             Drawer: false,
+            Showing_PageNavigation: false,
+            ScrollTop_Past: 0,
+            States_Iframe: {}
         };
     },
     computed: {
@@ -1150,6 +1153,91 @@ window.Mixins_Youtube = {
             if (targetElement) {
                 targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        },
+        Toggle_PageNavigation() {
+            this.Showing_PageNavigation = !this.Showing_PageNavigation;
+        },
+        Handle_Scroll() {
+            const st = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollDirection = st > this.ScrollTop_Past ? 'down' : 'up';
+            document.documentElement.setAttribute('data-scroll-direction', scrollDirection);
+            this.ScrollTop_Past = st <= 0 ? 0 : st;
+
+            this.Check_Visibility();
+        },
+        Check_Visibility() {
+            const iframes = document.querySelectorAll('.Youtube');
+            const scrollDirection = document.documentElement.getAttribute('data-scroll-direction') || 'down';
+
+            iframes.forEach((iframe, index) => {
+                const rect = iframe.getBoundingClientRect();
+                const isVisible = this.Check_Area(rect);
+                const id = `iframe-${index}`;
+
+                const wasVisible = this.States_Iframe[id] ? this.States_Iframe[id].visible : false;
+
+                if (isVisible !== wasVisible) {
+                    if (isVisible) {
+                        if (scrollDirection === 'down') {
+                            iframe.classList.add('slide-in-from-bottom');
+                            iframe.classList.remove('slide-out-to-top', 'slide-in-from-top', 'slide-out-to-bottom');
+                        } else {
+                            iframe.classList.add('slide-in-from-top');
+                            iframe.classList.remove('slide-out-to-top', 'slide-in-from-bottom', 'slide-out-to-bottom');
+                        }
+                    } else {
+                        if (scrollDirection === 'down' && rect.top < window.innerHeight * 0.3) {
+                            iframe.classList.add('slide-out-to-top');
+                            iframe.classList.remove('slide-in-from-bottom');
+                        } else if (scrollDirection === 'up' && rect.bottom > window.innerHeight * 0.7) {
+                            iframe.classList.add('slide-out-to-bottom');
+                            iframe.classList.remove('slide-in-from-top');
+                        }
+                    }
+                }
+
+                this.States_Iframe[id] = {
+                    visible: isVisible,
+                    rect: rect
+                };
+            });
+        },
+        Check_Area(rect) {
+            const scrollDirection = document.documentElement.getAttribute('data-scroll-direction') || 'down';
+            if (scrollDirection === 'down') {
+                return (
+                    rect.top < window.innerHeight &&
+                    rect.bottom > window.innerHeight * 0.25 &&
+                    rect.left < window.innerWidth &&
+                    rect.right > 0
+                );
+            }
+            else if (scrollDirection === 'up') {
+                return (
+                    rect.top < window.innerHeight * 0.75 &&
+                    rect.bottom > 0 &&
+                    rect.left < window.innerWidth &&
+                    rect.right > 0
+                );
+            }
+        },
+        Initialize_SlideAnimation() {
+            const iframes = document.querySelectorAll('.Youtube');
+            const scrollDirection = document.documentElement.getAttribute('data-scroll-direction') || 'down';
+
+            iframes.forEach((iframe, index) => {
+                if (scrollDirection === 'down') {
+                    iframe.classList.add('initial-bottom');
+                } else {
+                    iframe.classList.add('initial-top');
+                }
+
+                const id = `iframe-${index}`;
+                this.States_Iframe[id] = {
+                    visible: false,
+                    rect: iframe.getBoundingClientRect()
+                };
+            });
         }
     },
     mounted() {
@@ -1163,8 +1251,13 @@ window.Mixins_Youtube = {
         $(window).resize(() => {
             $(".Youtube").width($(".Youtube_Col").width());
         });
+        this.Initialize_SlideAnimation();
+        window.addEventListener('scroll', this.Handle_Scroll);
     },
     updated() {
         $(".Youtube").width($(".Youtube_Col").width());
+    },
+    beforeDestroy() {
+        window.removeEventListener('scroll', this.Handle_Scroll);
     },
 };
