@@ -1177,7 +1177,7 @@ window.Mixins_Youtube = {
             this.Check_Visibility();
         },
         Check_Visibility() {
-            const iframes = document.querySelectorAll('.Youtube');
+            const iframes = document.querySelectorAll('.Youtube_Animation');
             const scrollDirection = document.documentElement.getAttribute('data-scroll-direction') || 'down';
 
             iframes.forEach((iframe, index) => {
@@ -1233,7 +1233,7 @@ window.Mixins_Youtube = {
             }
         },
         Initialize_SlideAnimation() {
-            const iframes = document.querySelectorAll('.Youtube');
+            const iframes = document.querySelectorAll('.Youtube_Animation');
             const scrollDirection = document.documentElement.getAttribute('data-scroll-direction') || 'down';
 
             iframes.forEach((iframe, index) => {

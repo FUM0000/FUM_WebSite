@@ -27,6 +27,16 @@
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
     <title>Music > Other</title>
+    <style>
+        #ThreeDVideoContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+    </style>
 </head>
 
 <body>
@@ -39,48 +49,8 @@
             <v-main id="Main">
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
-
-                        <v-row align="center" justify="center">
-                            <v-col cols="12" md="8">
-                                <h1 class="text-h3 font-weight-bold mb-4">Show-Go</h1>
-                                <h2 class="text-h5 font-weight-light mb-6">Show-Go</h2>
-                                <v-card class="mb-4" elevation="2">
-
-                                    <v-row align="center" justify="center">
-                                        <v-col cols="12" md="8">
-                                            <h1 class="text-h3 font-weight-bold mb-4">UA</h1>
-                                            <h2 class="text-h5 font-weight-light mb-6">UA</h2>
-                                            <p class="mb-4">
-                                                　She is known for her unique musical style and powerful vocals, beloved
-                                                by many listeners.
-                                            </p>
-                                            <p class="mb-4">
-                                                　Her music incorporates the essence of African rhythms and traditional
-                                                Japanese music, evoking rich emotions and deep sensations. While
-                                                constantly exploring new expressions, she values a natural sensibility
-                                                and connection to the heart, enhancing her unique charm.
-                                            </p>
-                                        </v-col>
-                                    </v-row>
-
-                                </v-card>
-                            </v-col>
-                        </v-row>
-
-                        <v-row>
-                            <v-col class="Youtube_Col" xs="12" md="3">
-                                <iframe class="Youtube" src="https://www.youtube-nocookie.com/embed/R53CceEY77Y"
-                                    frameborder="0" allow="encrypted-media; picture-in-picture"
-                                    allowfullscreen></iframe>
-                            </v-col>
-                            <v-col class="Youtube_Col" xs="12" md="3">
-                                <iframe class="Youtube" src="https://www.youtube-nocookie.com/embed/8RAEYRRJ8H8"
-                                    frameborder="0" allow="encrypted-media; picture-in-picture"
-                                    allowfullscreen></iframe>
-                                </iframe>
-                            </v-col>
-                        </v-row>
-
+                        <!-- 3D Video Container -->
+                        <div id="ThreeDVideoContainer"></div>
                     </v-container>
                 </transition>
             </v-main>
@@ -91,6 +61,55 @@
         </template>
     </v-app>
 
+    <!-- Load scripts in order -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+
+        // Custom OrbitControls implementation since the CDN script isn't working
+        THREE.OrbitControls = function (object, domElement) {
+            this.object = object;
+            this.domElement = domElement;
+
+            this.enabled = true;
+            this.target = new THREE.Vector3();
+            this.enableDamping = false;
+            this.dampingFactor = 0.05;
+
+            // Basic mouse interaction
+            let isMouseDown = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            domElement.addEventListener('mousedown', (e) => {
+                isMouseDown = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            domElement.addEventListener('mousemove', (e) => {
+                if (!isMouseDown) return;
+
+                const deltaMove = {
+                    x: e.clientX - previousMousePosition.x,
+                    y: e.clientY - previousMousePosition.y
+                };
+
+                // Rotate object based on mouse movement
+                object.rotation.y += deltaMove.x * 0.001;
+                object.rotation.x += deltaMove.y * 0.001;
+
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            domElement.addEventListener('mouseup', () => {
+                isMouseDown = false;
+            });
+
+            this.update = function () {
+                // Placeholder for potential future updates
+            };
+        };
+
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
@@ -98,17 +117,219 @@
 
     <script>
 
+
+        class ThreeDVideoCylinder {
+            constructor(containerId, videos) {
+                this.containerId = containerId;
+                this.videos = videos;
+                this.videoPlaneMeshes = []; // Store video plane meshes for animation
+                this.centerGroup = new THREE.Group(); // 全体を回転させるグループ
+                this.rotationSpeed = 0.001; // Default rotation speed
+                this.init();
+            }
+
+            init() {
+                // Scene setup
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x111111);
+
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.z = 5;
+
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                document.getElementById(this.containerId).appendChild(this.renderer.domElement);
+
+                // Custom orbit controls
+                this.setupCustomControls();
+
+                // Create cylinder
+                this.createVideoCylinder();
+
+                // Add center group to scene
+                this.scene.add(this.centerGroup);
+
+                // Raycaster for interactions
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+
+                // Add event listeners
+                this.renderer.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
+                this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+                this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
+                this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
+                window.addEventListener('resize', this.onWindowResize.bind(this), false);
+
+                // Start animation
+                this.animate();
+            }
+
+            setupCustomControls() {
+                this.isMouseDown = false;
+                this.previousMousePosition = { x: 0, y: 0 };
+            }
+
+            onMouseDown(event) {
+                this.isMouseDown = true;
+                this.previousMousePosition = { x: event.clientX, y: event.clientY };
+            }
+
+            onMouseMove(event) {
+                if (!this.isMouseDown) return;
+
+                const deltaMove = {
+                    x: event.clientX - this.previousMousePosition.x,
+                    y: event.clientY - this.previousMousePosition.y
+                };
+
+                // Control rotation of the entire center group based on x-axis drag
+                this.centerGroup.rotation.y -= deltaMove.x * 0.005;
+
+                // Update previous mouse position
+                this.previousMousePosition = { x: event.clientX, y: event.clientY };
+            }
+
+            onMouseUp() {
+                this.isMouseDown = false;
+            }
+
+            createVideoCylinder() {
+                const radius = 2;
+                const videoCount = this.videos.length;
+                const angleStep = (Math.PI * 2) / videoCount;
+
+                this.videos.forEach((video, index) => {
+                    // Randomize plane size while maintaining 16:9 aspect ratio
+                    const baseWidth = 0.5; // Base width
+                    const randomScaleFactor = 0.5 + Math.random(); // Random scale between 0.5 and 1.5
+                    const width = baseWidth * randomScaleFactor;
+                    const height = width * (9 / 16); // Maintain 16:9 aspect ratio
+                    const geometry = new THREE.PlaneGeometry(width, height);
+
+                    // Create canvas for video thumbnail
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 480;
+                    canvas.height = 360;
+                    const ctx = canvas.getContext('2d');
+
+                    // Create thumbnail texture
+                    const texture = new THREE.CanvasTexture(canvas);
+
+                    // Position on cylinder
+                    const angle = index * angleStep;
+                    const x = radius * Math.cos(angle);
+                    const z = radius * Math.sin(angle);
+
+                    // Randomize initial y position
+                    const randomY = (Math.random() - 0.5) * 2; // Random y between -1 and 1
+
+                    const material = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        side: THREE.DoubleSide
+                    });
+                    const plane = new THREE.Mesh(geometry, material);
+
+                    // Create a group to handle individual plane orientation
+                    const planeGroup = new THREE.Group();
+                    planeGroup.add(plane);
+
+                    // Position plane with randomized y
+                    planeGroup.position.set(x, randomY, z);
+
+                    // Rotate plane to always face camera
+                    plane.lookAt(this.camera.position);
+
+                    // Add metadata for interaction
+                    plane.userData = {
+                        videoId: video.id,
+                        title: video.title
+                    };
+
+                    // Add to center group instead of scene directly
+                    this.centerGroup.add(planeGroup);
+                    this.videoPlaneMeshes.push(planeGroup);
+
+                    // Fetch and draw thumbnail
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.src = `https://img.youtube.com/vi/${video.id}/0.jpg`;
+                    img.onload = () => {
+                        ctx.drawImage(img, 0, 0, 480, 360);
+                        texture.needsUpdate = true;
+                    };
+                });
+            }
+
+            onMouseClick(event) {
+                // Calculate mouse position
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                // Update the picking ray with the camera and mouse position
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                // Calculate intersections
+                const intersects = this.raycaster.intersectObjects(
+                    this.scene.children.flatMap(group => group.children)
+                );
+
+                if (intersects.length > 0) {
+                    const selectedObject = intersects[0].object;
+                    if (selectedObject.userData.videoId) {
+                        // Open video in a new window
+                        window.open(`https://www.youtube.com/watch?v=${selectedObject.userData.videoId}`, '_blank');
+                    }
+                }
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            animate() {
+                requestAnimationFrame(this.animate.bind(this));
+
+                // Rotate the entire group if not being manually dragged
+                if (!this.isMouseDown) {
+                    this.centerGroup.rotation.y += this.rotationSpeed;
+                }
+
+                // Ensure each plane always faces the camera
+                this.videoPlaneMeshes.forEach((planeGroup) => {
+                    const plane = planeGroup.children[0];
+                    plane.lookAt(this.camera.position);
+                });
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Vue initialization remains the same as in the original code
         let vue = new Vue({
             el: '#App',
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Youtube],
+            mounted() {
+                this.$nextTick(() => {
+                    // Reduced number of videos
+                    const videos = [
+                        { id: 'R53CceEY77Y', title: 'Video 1' },
+                        { id: '8RAEYRRJ8H8', title: 'Video 2' },
+                        { id: 'xxxxxxxxxxx', title: 'Video 3' },
+                        { id: 'yyyyyyyyyyy', title: 'Video 4' }
+                    ];
+
+                    // Initialize 3D Video Cylinder
+                    this.threeDVideoCylinder = new ThreeDVideoCylinder('ThreeDVideoContainer', videos);
+                });
+            }
         })
 
-        $(document).ready(function () {
-            $(".Youtube").width($(".Youtube_Col").width());
-            $(".Youtube").height($(".Youtube_Col").width() * (315 / 560));
-        });
-
+        
     </script>
 
 </body>
