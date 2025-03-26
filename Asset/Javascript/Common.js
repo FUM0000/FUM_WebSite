@@ -579,14 +579,25 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Music</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Music_UtadaHikaru.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Utada Hikaru</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Music_Showgo.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Show-Go</v-list-item-title>
-                </v-list-item>
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Artist</v-list-item-title>
+                        
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-music</v-icon>
+                        </v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Music_Showgo.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Show-Go</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Music_UtadaHikaru.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Utada Hikaru</v-list-item-title>
+                    </v-list-item>
+                </v-list-group sub-group>
+
                 <v-list-item href="./Music_Other.html">
                     <v-list-item-icon />
                     <v-list-item-title>Other</v-list-item-title>

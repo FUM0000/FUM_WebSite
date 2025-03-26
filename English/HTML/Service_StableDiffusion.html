@@ -1,0 +1,589 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Stable Diffusion</title>
+</head>
+
+<body>
+
+  <v-app id="App">
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Stable Diffusion</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: start;">
+            
+            <v-row>
+              <v-col cols="12" md="8">
+                <v-card class="mb-5" elevation="2">
+                  <v-card-title class="headline">Stable Diffusion イメージ生成</v-card-title>
+                  <v-card-text>
+                    <v-form ref="form">
+                      <v-textarea
+                        v-model="prompt"
+                        label="プロンプト"
+                        rows="3"
+                        counter
+                        :rules="[v => !!v || 'プロンプトを入力してください']"
+                        hint="生成したい画像の詳細な説明を入力してください"
+                        persistent-hint
+                      ></v-textarea>
+                      
+                      <v-textarea
+                        v-model="negativePrompt"
+                        label="ネガティブプロンプト（オプション）"
+                        rows="2"
+                        counter
+                        hint="避けたい要素を入力してください"
+                        persistent-hint
+                      ></v-textarea>
+                      
+                      <v-row>
+                        <v-col cols="12" sm="6">
+                          <v-select
+                            v-model="model"
+                            :items="modelOptions"
+                            label="モデル"
+                            hint="使用するStable Diffusionモデル"
+                            persistent-hint
+                          ></v-select>
+                        </v-col>
+                        
+                        <v-col cols="12" sm="6">
+                          <v-select
+                            v-model="sampler"
+                            :items="samplerOptions"
+                            label="サンプラー"
+                            hint="画像生成アルゴリズム"
+                            persistent-hint
+                          ></v-select>
+                        </v-col>
+                      </v-row>
+                      
+                      <v-row>
+                        <v-col cols="12" sm="4">
+                          <v-text-field
+                            v-model.number="width"
+                            type="number"
+                            label="幅"
+                            suffix="px"
+                            :rules="[v => v >= 384 && v <= 1024 || '384〜1024pxの範囲で入力してください']"
+                          ></v-text-field>
+                        </v-col>
+                        
+                        <v-col cols="12" sm="4">
+                          <v-text-field
+                            v-model.number="height"
+                            type="number"
+                            label="高さ"
+                            suffix="px"
+                            :rules="[v => v >= 384 && v <= 1024 || '384〜1024pxの範囲で入力してください']"
+                          ></v-text-field>
+                        </v-col>
+                        
+                        <v-col cols="12" sm="4">
+                          <v-text-field
+                            v-model.number="steps"
+                            type="number"
+                            label="ステップ数"
+                            :rules="[v => v >= 10 && v <= 150 || '10〜150の範囲で入力してください']"
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                      
+                      <v-row>
+                        <v-col cols="12" sm="4">
+                          <v-text-field
+                            v-model.number="seed"
+                            type="number"
+                            label="シード値"
+                            hint="-1でランダム"
+                            persistent-hint
+                          ></v-text-field>
+                        </v-col>
+                        
+                        <v-col cols="12" sm="4">
+                          <v-slider
+                            v-model="cfgScale"
+                            label="CFG Scale"
+                            min="1"
+                            max="30"
+                            thumb-label="always"
+                            hint="プロンプトの影響力"
+                            persistent-hint
+                          ></v-slider>
+                        </v-col>
+                        
+                        <v-col cols="12" sm="4">
+                          <v-text-field
+                            v-model.number="batchSize"
+                            type="number"
+                            label="バッチサイズ"
+                            :rules="[v => v >= 1 && v <= 4 || '1〜4の範囲で入力してください']"
+                            hint="一度に生成する画像数"
+                            persistent-hint
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                    </v-form>
+                  </v-card-text>
+                  
+                  <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn 
+                      color="primary" 
+                      :loading="isGenerating" 
+                      :disabled="!isFormValid || isGenerating"
+                      @click="generateImage"
+                    >
+                      生成する
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-col>
+              
+              <v-col cols="12" md="4">
+                <v-card class="mb-5" elevation="2">
+                  <v-card-title>生成設定プリセット</v-card-title>
+                  <v-card-text>
+                    <v-select
+                      v-model="selectedPreset"
+                      :items="presets"
+                      item-text="name"
+                      item-value="id"
+                      label="プリセット選択"
+                      @change="applyPreset"
+                    ></v-select>
+                    
+                    <v-btn 
+                      block 
+                      color="secondary" 
+                      class="mt-3"
+                      @click="savePreset"
+                    >
+                      現在の設定を保存
+                    </v-btn>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+            
+            <v-row>
+              <v-col cols="12">
+                <v-card v-if="generatedImages.length > 0">
+                  <v-card-title>生成された画像</v-card-title>
+                  <v-card-text>
+                    <v-row>
+                      <v-col 
+                        v-for="(image, index) in generatedImages" 
+                        :key="index"
+                        cols="12" sm="6" md="4" lg="3"
+                      >
+                        <v-card>
+                          <v-img
+                            :src="image.url"
+                            :aspect-ratio="image.width/image.height"
+                            class="grey lighten-2"
+                          ></v-img>
+                          <v-card-actions>
+                            <v-btn 
+                              text 
+                              color="primary"
+                              @click="downloadImage(image.url, `stable-diffusion-${Date.now()}-${index}.png`)"
+                            >
+                              <v-icon left>mdi-download</v-icon>
+                              ダウンロード
+                            </v-btn>
+                            <v-btn 
+                              text 
+                              @click="useAsInput(image)"
+                            >
+                              <v-icon left>mdi-refresh</v-icon>
+                              再利用
+                            </v-btn>
+                          </v-card-actions>
+                        </v-card>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+                
+                <v-card v-else-if="isGenerating" elevation="2">
+                  <v-card-text class="text-center py-5">
+                    <v-progress-circular
+                      indeterminate
+                      size="64"
+                      color="primary"
+                    ></v-progress-circular>
+                    <p class="mt-3 text-h6">画像を生成中...</p>
+                    <p class="text-body-2">複雑な画像は時間がかかる場合があります</p>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+            
+            <v-snackbar
+              v-model="snackbar.show"
+              :color="snackbar.color"
+              :timeout="snackbar.timeout"
+            >
+              {{ snackbar.text }}
+              <template v-slot:action="{ attrs }">
+                <v-btn
+                  text
+                  v-bind="attrs"
+                  @click="snackbar.show = false"
+                >
+                  閉じる
+                </v-btn>
+              </template>
+            </v-snackbar>
+            
+            <v-dialog v-model="presetDialog.show" max-width="500px">
+              <v-card>
+                <v-card-title>プリセットを保存</v-card-title>
+                <v-card-text>
+                  <v-text-field
+                    v-model="presetDialog.name"
+                    label="プリセット名"
+                    :rules="[v => !!v || 'プリセット名を入力してください']"
+                  ></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                  <v-spacer></v-spacer>
+                  <v-btn text @click="presetDialog.show = false">キャンセル</v-btn>
+                  <v-btn 
+                    color="primary" 
+                    :disabled="!presetDialog.name"
+                    @click="confirmSavePreset"
+                  >
+                    保存
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Ready_Page: false,
+        prompt: "",
+        negativePrompt: "",
+        model: "stabilityai/stable-diffusion-2-1",
+        modelOptions: [
+          { text: "Stable Diffusion 2.1", value: "stabilityai/stable-diffusion-2-1" },
+          { text: "Stable Diffusion XL", value: "stabilityai/stable-diffusion-xl-base-1.0" },
+          { text: "Midjourney風", value: "prompthero/midjourney-v4-diffusion" },
+          { text: "Anime (Anything V3)", value: "Linaqruf/anything-v3.0" }
+        ],
+        sampler: "DPM++ 2M Karras",
+        samplerOptions: [
+          "Euler a", 
+          "Euler", 
+          "LMS", 
+          "Heun", 
+          "DPM2", 
+          "DPM2 a", 
+          "DPM++ 2S a", 
+          "DPM++ 2M", 
+          "DPM++ SDE", 
+          "DPM++ 2M Karras", 
+          "DDIM"
+        ],
+        width: 512,
+        height: 512,
+        steps: 30,
+        seed: -1,
+        cfgScale: 7,
+        batchSize: 1,
+        isGenerating: false,
+        generatedImages: [],
+        snackbar: {
+          show: false,
+          text: "",
+          color: "info",
+          timeout: 3000
+        },
+        presets: [
+          { id: 1, name: "標準設定" },
+          { id: 2, name: "高品質" },
+          { id: 3, name: "高速生成" }
+        ],
+        selectedPreset: 1,
+        presetDialog: {
+          show: false,
+          name: ""
+        },
+        // APIエンドポイントの設定
+        api: {
+          url: "https://api.example.com/v1/images/generations", // 実際のAPIエンドポイントに変更する必要があります
+          key: "" // 実際のAPIキーに変更する必要があります
+        }
+      },
+      computed: {
+        isFormValid() {
+          return this.prompt.trim() !== "";
+        }
+      },
+      created() {
+        // ページの準備ができたらフェードイン
+        setTimeout(() => {
+          this.Ready_Page = true;
+        }, 200);
+        
+        // ローカルストレージからプリセットを読み込む
+        this.loadPresetsFromStorage();
+        
+        // デフォルトプリセットを適用
+        this.applyPreset();
+      },
+      methods: {
+        generateImage() {
+          if (!this.isFormValid) return;
+          
+          this.isGenerating = true;
+          
+          // 実際のAPI呼び出しをシミュレート
+          // 実装時には、実際のStable Diffusion APIに接続する必要があります
+          setTimeout(() => {
+            // デモ用にダミー画像を生成
+            const dummyImages = [];
+            for (let i = 0; i < this.batchSize; i++) {
+              const randomSeed = this.seed === -1 ? Math.floor(Math.random() * 1000000) : this.seed + i;
+              dummyImages.push({
+                url: `https://picsum.photos/${this.width}/${this.height}?random=${randomSeed}`,
+                width: this.width,
+                height: this.height,
+                seed: randomSeed,
+                prompt: this.prompt,
+                settings: this.getCurrentSettings()
+              });
+            }
+            
+            this.generatedImages = dummyImages;
+            this.isGenerating = false;
+            
+            this.showSnackbar("画像生成が完了しました", "success");
+            
+            // 実際のAPI実装は以下のようなコード
+            /*
+            fetch(this.api.url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.api.key}`
+              },
+              body: JSON.stringify({
+                prompt: this.prompt,
+                negative_prompt: this.negativePrompt,
+                model: this.model,
+                sampler: this.sampler,
+                width: this.width,
+                height: this.height,
+                num_inference_steps: this.steps,
+                guidance_scale: this.cfgScale,
+                seed: this.seed,
+                num_images: this.batchSize
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              this.generatedImages = data.images.map(img => ({
+                url: img.url,
+                width: this.width,
+                height: this.height,
+                seed: img.seed,
+                prompt: this.prompt,
+                settings: this.getCurrentSettings()
+              }));
+              this.isGenerating = false;
+              this.showSnackbar("画像生成が完了しました", "success");
+            })
+            .catch(error => {
+              console.error("Error generating images:", error);
+              this.isGenerating = false;
+              this.showSnackbar("エラーが発生しました: " + error.message, "error");
+            });
+            */
+          }, 3000);
+        },
+        
+        downloadImage(url, filename) {
+          // 実際の実装では、Fetch APIを使って画像をダウンロードし、
+          // Blob URLを作成してダウンロードリンクをトリガーします
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        },
+        
+        useAsInput(image) {
+          // 画像の設定を入力フィールドに適用
+          if (image.settings) {
+            Object.assign(this, image.settings);
+          }
+          
+          this.seed = image.seed;
+          this.showSnackbar("設定を適用しました", "info");
+        },
+        
+        showSnackbar(text, color = "info") {
+          this.snackbar.text = text;
+          this.snackbar.color = color;
+          this.snackbar.show = true;
+        },
+        
+        getCurrentSettings() {
+          return {
+            model: this.model,
+            sampler: this.sampler,
+            width: this.width,
+            height: this.height,
+            steps: this.steps,
+            cfgScale: this.cfgScale,
+            negativePrompt: this.negativePrompt
+          };
+        },
+        
+        loadPresetsFromStorage() {
+          const savedPresets = localStorage.getItem("stableDiffusionPresets");
+          if (savedPresets) {
+            try {
+              const parsedPresets = JSON.parse(savedPresets);
+              if (Array.isArray(parsedPresets) && parsedPresets.length > 0) {
+                // デフォルトプリセットを保持しつつ、保存されたプリセットを追加
+                this.presets = [
+                  ...this.presets.slice(0, 3),
+                  ...parsedPresets.filter(p => p.id > 3)
+                ];
+              }
+            } catch (e) {
+              console.error("Error parsing presets from storage:", e);
+            }
+          }
+        },
+        
+        savePresetsToStorage() {
+          const presetsToSave = this.presets.filter(p => p.id > 3);
+          localStorage.setItem("stableDiffusionPresets", JSON.stringify(presetsToSave));
+        },
+        
+        applyPreset() {
+          const preset = this.presets.find(p => p.id === this.selectedPreset);
+          if (!preset) return;
+          
+          switch (preset.id) {
+            case 1: // 標準設定
+              this.model = "stabilityai/stable-diffusion-2-1";
+              this.sampler = "DPM++ 2M Karras";
+              this.width = 512;
+              this.height = 512;
+              this.steps = 30;
+              this.cfgScale = 7;
+              break;
+            case 2: // 高品質
+              this.model = "stabilityai/stable-diffusion-xl-base-1.0";
+              this.sampler = "DPM++ 2M Karras";
+              this.width = 768;
+              this.height = 768;
+              this.steps = 50;
+              this.cfgScale = 9;
+              break;
+            case 3: // 高速生成
+              this.model = "stabilityai/stable-diffusion-2-1";
+              this.sampler = "Euler a";
+              this.width = 512;
+              this.height = 512;
+              this.steps = 20;
+              this.cfgScale = 7;
+              break;
+            default:
+              // カスタムプリセット
+              if (preset.settings) {
+                Object.assign(this, preset.settings);
+              }
+          }
+        },
+        
+        savePreset() {
+          this.presetDialog.show = true;
+          this.presetDialog.name = "";
+        },
+        
+        confirmSavePreset() {
+          if (!this.presetDialog.name) return;
+          
+          // 新しいIDを作成（既存の最大ID + 1）
+          const maxId = Math.max(...this.presets.map(p => p.id), 0);
+          const newId = maxId + 1;
+          
+          // 新しいプリセットを追加
+          this.presets.push({
+            id: newId,
+            name: this.presetDialog.name,
+            settings: this.getCurrentSettings()
+          });
+          
+          // ローカルストレージに保存
+          this.savePresetsToStorage();
+          
+          // ダイアログを閉じる
+          this.presetDialog.show = false;
+          
+          // 新しいプリセットを選択
+          this.selectedPreset = newId;
+          
+          this.showSnackbar("プリセットを保存しました", "success");
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
