@@ -487,10 +487,6 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Service_BezierCurve.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Bezier Curve</v-list-item-title>
-                </v-list-item>
                 <v-list-item href="./Service_CalculateSalary.html">
                     <v-list-item-icon />
                     <v-list-item-title>Calculate Salary</v-list-item-title>
@@ -501,11 +497,7 @@ Vue.component('main-navigation', {
                 </v-list-item>
                 <v-list-item href="./Service_Converter.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Converter</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Service_FontPreview.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Font Preview</v-list-item-title>
+                    <v-list-item-title>Various Converter</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Service_ImageEditor.html">
                     <v-list-item-icon />
@@ -519,6 +511,21 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
                 </v-list-item>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Creator</v-list-item-title>
+                    </template>
+
+                    <v-list-item href="./Service_BezierCurve.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Bezier Curve</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Service_FontPreview.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Font Preview</v-list-item-title>
+                    </v-list-item>
+                </v-list-group sub-group>
             </v-list-group>
             <!-- ▲ Service ▲ ---------------------------------------------------------------------------------->
 
@@ -653,7 +660,7 @@ Vue.component('main-navigation', {
             <!-- ▼ Plant ▼ ------------------------------------------------------------------------------------>
             <v-list-group :value="false" prepend-icon="mdi-sprout">
                 <template v-slot:activator>
-                    <v-list-item-title>Plants</v-list-item-title>
+                    <v-list-item-title>Plant</v-list-item-title>
                 </template>
 
                 <v-list-item href="./Plant_General.html">

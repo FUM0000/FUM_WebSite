@@ -96,7 +96,6 @@
                     <v-alert
                       v-if="errorMessages.length > 0"
                       type="error"
-                      dismissible
                     >
                       <ul>
                         <li v-for="(error, index) in errorMessages" :key="index">
@@ -135,7 +134,7 @@
                       <v-col>
                         <v-text-field label="Break End" v-model="shift.breakEnd" placeholder="00:00"></v-text-field>
                       </v-col>
-                      <v-col>
+                      <v-col class="d-flex align-center">
                         <v-btn small color="error" @click="removeShift(index)">Remove</v-btn>
                       </v-col>
                     </v-row>
@@ -204,19 +203,22 @@
       },
       computed: {
         payrollResult() {
+          this.errorMessages = [];
           let result = '';
           let totalPay = 0;
 
-          this.shifts.forEach(shift => {
-            const pay = this.calculateShiftPay(shift);
-            result += `Date: ${shift.date}, Day: ${shift.day}, Pay: ${pay} 円\n`;
+          this.shifts.forEach((shift, index) => {
+            const pay = this.calculateShiftPay(shift, index);
+            result += `Date: ${shift.date}, Day: ${shift.day}, Pay: ${pay}\n`;
             totalPay += pay;
           });
 
           return result;
         },
         totalPay() {
-          return this.shifts.reduce((sum, shift) => sum + this.calculateShiftPay(shift), 0);
+          return this.shifts.reduce((sum, shift, index) => {
+            return sum + this.calculateShiftPay(shift, index);
+          }, 0);
         }
       },
       methods: {
@@ -284,8 +286,8 @@
 
           return errors;
         },
-        calculateShiftPay(shift) {
-          const errors = this.validateShift(shift, this.shifts.indexOf(shift));
+        calculateShiftPay(shift, index) {
+          const errors = this.validateShift(shift, index);
           if (errors.length > 0) {
             this.errorMessages = errors;
             return 0; // エラーがある場合は0円を返す
