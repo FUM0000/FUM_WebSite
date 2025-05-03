@@ -1,0 +1,290 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Counter Pick Recommender</title>
+</head>
+<body>
+  <v-app id="App">
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Function > Counter Pick Recommender</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <!-- Anti-Pick Configuration -->
+            <v-row justify="center">
+              <v-col xs="12" md="6" align="center">
+                <v-card max-width="500">
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="12" class="text-center my-5">
+                        <h2>Anti-Pick Configuration</h2>
+                      </v-col>
+                    </v-row>
+                    <v-row>
+                      <v-col cols="12">
+                        <h3 class="mb-3">Anti-Pick Relationships</h3>
+                        <v-row v-for="(antiPick, index) in antiPicksList" :key="index" align="center">
+                          <v-col cols="5">
+                            <v-text-field
+                              v-model="antiPick.target"
+                              label="Target Character"
+                              @input="updateAvailableCharacters"
+                            ></v-text-field>
+                          </v-col>
+                          <v-col cols="5">
+                            <v-combobox
+                              v-model="antiPick.counters"
+                              label="Counter Characters"
+                              multiple
+                              chips
+                              clearable
+                              @input="updateAvailableCharacters"
+                            ></v-combobox>
+                          </v-col>
+                          <v-col cols="2">
+                            <v-btn icon color="red" @click="removeAntiPick(index)">
+                              <v-icon>mdi-delete</v-icon>
+                            </v-btn>
+                          </v-col>
+                        </v-row>
+                        <v-btn block color="primary" class="mt-3" @click="addAntiPick">Add Anti-Pick</v-btn>
+                      </v-col>
+                    </v-row>
+                    <v-row>
+                      <v-col cols="12">
+                        <v-btn block color="primary" @click="saveAntiPicks">Save Configuration</v-btn>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <!-- Enemy Party Input -->
+            <v-row justify="center">
+              <v-col xs="12" md="6" align="center">
+                <v-card max-width="500">
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="12" class="text-center my-5">
+                        <h2>Enemy Party</h2>
+                      </v-col>
+                    </v-row>
+                    <v-row>
+                      <v-col cols="12">
+                        <v-combobox
+                          v-model="enemyParty"
+                          label="Select Enemy Characters"
+                          multiple
+                          chips
+                          clearable
+                          :items="availableCharacters"
+                          hint="Select or type enemy characters"
+                          persistent-hint
+                        ></v-combobox>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <!-- Recommendations -->
+            <v-row justify="center">
+              <v-col xs="12" md="6" align="center">
+                <v-card max-width="500">
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="12" class="text-center my-5">
+                        <h2>Recommendations</h2>
+                      </v-col>
+                    </v-row>
+                    <v-row v-if="recommendations.length > 0">
+                      <v-col cols="12">
+                        <v-list>
+                          <v-list-item v-for="(rec, index) in recommendations" :key="index">
+                            <v-list-item-content>
+                              <v-list-item-title>{{ rec.text }}</v-list-item-title>
+                            </v-list-item-content>
+                          </v-list-item>
+                        </v-list>
+                      </v-col>
+                    </v-row>
+                    <v-row v-else>
+                      <v-col cols="12" class="text-center">
+                        <p>No recommendations available. Please input enemy party.</p>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        antiPicksList: [
+          { target: 'A', counters: ['B', 'C'] },
+          { target: 'B', counters: ['A'] },
+          { target: 'C', counters: ['B'] },
+          { target: 'D', counters: ['A'] },
+          { target: 'E', counters: ['C'] },
+          { target: 'F', counters: ['H'] },
+          { target: 'G', counters: ['A'] },
+          { target: 'H', counters: ['B'] }
+        ],
+        enemyParty: [],
+        recommendations: [],
+        availableCharacters: []
+      },
+      watch: {
+        enemyParty: {
+          deep: true,
+          handler() {
+            this.generateRecommendations();
+          }
+        },
+        antiPicksList: {
+          deep: true,
+          handler() {
+            this.generateRecommendations();
+          }
+        }
+      },
+      mounted() {
+        this.loadAntiPicks();
+        this.updateAvailableCharacters();
+      },
+      methods: {
+        addAntiPick() {
+          this.antiPicksList.push({ target: '', counters: [] });
+          this.updateAvailableCharacters();
+        },
+        removeAntiPick(index) {
+          this.antiPicksList.splice(index, 1);
+          this.updateAvailableCharacters();
+        },
+        saveAntiPicks() {
+          // Convert antiPicksList to antiPicks object
+          const antiPicks = {};
+          this.antiPicksList.forEach(({ target, counters }) => {
+            if (target && counters.length > 0) {
+              antiPicks[target] = counters.filter(c => c.trim());
+            }
+          });
+          // Save to localStorage
+          localStorage.setItem('antiPicks', JSON.stringify(antiPicks));
+          this.updateAvailableCharacters();
+          this.$nextTick(() => {
+            this.$vuetify.goTo(0); // Scroll to top
+            alert('Configuration saved!');
+          });
+        },
+        loadAntiPicks() {
+          // Load from localStorage
+          const savedAntiPicks = localStorage.getItem('antiPicks');
+          if (savedAntiPicks) {
+            const antiPicks = JSON.parse(savedAntiPicks);
+            this.antiPicksList = Object.entries(antiPicks).map(([target, counters]) => ({
+              target,
+              counters
+            }));
+          }
+          this.updateAvailableCharacters();
+        },
+        updateAvailableCharacters() {
+          // Extract unique characters from antiPicksList
+          const characters = new Set();
+          this.antiPicksList.forEach(({ target, counters }) => {
+            if (target) characters.add(target);
+            counters.forEach(c => characters.add(c));
+          });
+          this.availableCharacters = Array.from(characters).filter(c => c).sort();
+        },
+        generateRecommendations() {
+          this.recommendations = [];
+          if (this.enemyParty.length === 0) {
+            return;
+          }
+
+          // Convert antiPicksList to antiPicks object for processing
+          const antiPicks = {};
+          this.antiPicksList.forEach(({ target, counters }) => {
+            if (target && counters.length > 0) {
+              antiPicks[target] = counters.filter(c => c.trim());
+            }
+          });
+
+          // Count how many enemies each character counters
+          const counterScores = {};
+          this.enemyParty.forEach(enemy => {
+            if (antiPicks[enemy]) {
+              antiPicks[enemy].forEach(counter => {
+                if (!counterScores[counter]) {
+                  counterScores[counter] = { count: 0, enemies: [] };
+                }
+                counterScores[counter].count += 1;
+                counterScores[counter].enemies.push(enemy);
+              });
+            }
+          });
+
+          // Sort recommendations by count (descending)
+          const recommendations = Object.entries(counterScores)
+            .map(([counter, { count, enemies }]) => ({
+              text: `${count === this.enemyParty.length ? 'Best Pick' : 'Secondary Pick'}: ${counter} (counters ${enemies.join(', ')})`,
+              count
+            }))
+            .sort((a, b) => b.count - a.count || a.text.localeCompare(b.text));
+
+          this.recommendations = recommendations;
+          this.$nextTick(() => {
+            if (recommendations.length > 0) {
+              this.$vuetify.goTo(document.querySelector('.v-list')); // Scroll to recommendations
+            }
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>

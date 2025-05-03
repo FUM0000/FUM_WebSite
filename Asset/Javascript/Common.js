@@ -493,6 +493,10 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Bezier Curve</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Service_CalculateSalary.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Calculate Salary</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Service_ColorDesign.html">
                     <v-list-item-icon />
                     <v-list-item-title>Color Design</v-list-item-title>
