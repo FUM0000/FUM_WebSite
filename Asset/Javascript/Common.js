@@ -71,7 +71,9 @@ Vue.component('main-navigation', {
 
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
-        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline primary" block tile @click.stop="Drawer_Local = false;">MENU</v-btn>
+        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" style="height: 50px; background-color: #333333; color: white;">
+            MENU
+        </v-btn>
         <!-- ▲ Title ▲ ------------------------------------------------------------------------------------>
 
         
@@ -87,23 +89,19 @@ Vue.component('main-navigation', {
             <!-- ▲ Home ▲ ------------------------------------------------------------------------------------->
 
 
+            <!-- ▼ Introduction ▼ ----------------------------------------------------------------------------->
+            <v-list-item href="./Introduction.html">
+                <v-list-item-icon><v-icon>mdi-human-greeting-variant</v-icon></v-list-item-icon>
+                <v-list-item-title>Introduction</v-list-item-title>
+            </v-list-item>
+            <!-- ▲ Introduction ▲ ----------------------------------------------------------------------------->
+
+
             <!-- ▼ Japanese ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-translate-variant">
                 <template v-slot:activator>
                     <v-list-item-title>Japanese</v-list-item-title>
                 </template>
-
-
-                <!-- ▼ Introduction ▼ ----------------------------------------------------------------------------->
-                <v-list-item href="./Introduction.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Introduction</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-human-greeting-variant</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-                <!-- ▲ Introduction ▲ ----------------------------------------------------------------------------->
 
 
                 <!-- ▼ Basic ▼ ------------------------------------------------------------------------------------>
