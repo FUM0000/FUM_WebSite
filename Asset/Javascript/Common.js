@@ -583,10 +583,6 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Service_Converter.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Various Converter</v-list-item-title>
-                </v-list-item>
                 <v-list-item href="./Service_ImageEditor.html">
                     <v-list-item-icon />
                     <v-list-item-title>Image Editor</v-list-item-title>
@@ -598,6 +594,14 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Service_QRCode.html">
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Service_VariousConverter.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Various Converter</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Service_VariousStatistic.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Various Statistic</v-list-item-title>
                 </v-list-item>
 
                 <v-list-group sub-group :value="false">
