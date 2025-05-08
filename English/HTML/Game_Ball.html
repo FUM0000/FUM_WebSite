@@ -150,27 +150,48 @@
             #UI_Home_1;
             #UI_Start_1;
             #UI_Clear_1;
+            #Score;
+            #Level;
+            #UI_Score_1;
+            #UI_Level_1;
 
 
             // Base
             constructor() {
                 this.State = "Made";
+                this.#Score = 0;
+                this.#Level = 1;
+                
                 //// UI
                 // Home
                 this.#UI_Home_1 = document.createElement('div');
                 this.#UI_Home_1.setAttribute("id", "UI_Home_1");
                 this.#UI_Home_1.innerHTML = "HOME";
                 document.body.appendChild(this.#UI_Home_1);
+                
                 // Start
                 this.#UI_Start_1 = document.createElement('div');
                 this.#UI_Start_1.setAttribute("id", "UI_Start_1");
                 this.#UI_Start_1.innerHTML = "";
                 document.body.appendChild(this.#UI_Start_1);
+                
                 // WOOOW
                 this.#UI_Clear_1 = document.createElement('div');
                 this.#UI_Clear_1.setAttribute("id", "UI_Clear_1");
                 this.#UI_Clear_1.innerHTML = "";
                 document.body.appendChild(this.#UI_Clear_1);
+
+                // Score
+                this.#UI_Score_1 = document.createElement('div');
+                this.#UI_Score_1.setAttribute("id", "UI_Score_1");
+                this.#UI_Score_1.innerHTML = "Score: 0";
+                document.body.appendChild(this.#UI_Score_1);
+
+                // Level
+                this.#UI_Level_1 = document.createElement('div');
+                this.#UI_Level_1.setAttribute("id", "UI_Level_1");
+                this.#UI_Level_1.innerHTML = "Level: 1";
+                document.body.appendChild(this.#UI_Level_1);
 
                 // Audio
                 var bgm = new Audio();
@@ -188,6 +209,7 @@
             // Get Set
             Get_State() { return this.#State; }
             Set_State(_state) { this.#State = _state; }
+            Get_Level() { return this.#Level; }
 
 
             // Functions
@@ -209,7 +231,18 @@
             }
             Clear() {
                 this.#State = "Goal";
-                this.#UI_Clear_1.innerHTML = "WOOOW!";
+                this.#Score += 100 * this.#Level;
+                this.#UI_Score_1.innerHTML = "Score: " + this.#Score;
+                this.#UI_Clear_1.innerHTML = "WOOOW! +" + (100 * this.#Level) + "pts";
+                
+                // Level up
+                if (this.#Score >= this.#Level * 500) {
+                    this.#Level++;
+                    this.#UI_Level_1.innerHTML = "Level: " + this.#Level;
+                    // Increase difficulty
+                    Ball_1.Set_Difficulty(this.#Level);
+                    PaperCup_1.Set_Difficulty(this.#Level);
+                }
             }
         }
         class Ball_1_CLASS {
@@ -227,11 +260,13 @@
             #StartHeight;
             #Velocity;
             #Velocity_Past;
+            #Difficulty;
 
 
             // Base
             constructor() {
                 this.Initialize();
+                this.#Difficulty = 1;
                 Loader_FBX.load(
                     "../../Asset/Model/Ball_PinPon_1.fbx",
                     (_object) => {
@@ -276,13 +311,18 @@
 
             // Get Set
             Get_Flag_Shoot() { return this.#Flag_Shoot; }
+            Set_Difficulty(level) {
+                this.#Difficulty = level;
+                this.#Bounce_Max = Math.max(38 - (level * 2), 20); // レベルが上がるごとにバウンス回数が減少
+                this.#Restitution = Math.max(0.95 - (level * 0.01), 0.8); // レベルが上がるごとに反発係数が減少
+            }
 
 
             // Functions
             Shoot() {
                 Base_Manager_1.Set_State("Playing");
                 this.#Flag_Shoot = true;
-                this.#Velocity = Progress_1.Get_Percentage() * 0.01 * 2.5;
+                this.#Velocity = Progress_1.Get_Percentage() * 0.01 * (2.5 - (this.#Difficulty * 0.1)); // レベルが上がるごとに速度が減少
                 this.#Velocity_Past = this.#Velocity;
 
                 const element = document.getElementById('Circle_1');
@@ -392,13 +432,17 @@
             #Height;
             #Object;
             #Radius;
+            #Difficulty;
+            #OriginalRadius;
 
 
             // Base
             constructor() {
                 // Variables
                 this.#Height = 0.08;
-                this.#Radius = 0.073 * 0.5;
+                this.#OriginalRadius = 0.073 * 0.5;
+                this.#Radius = this.#OriginalRadius;
+                this.#Difficulty = 1;
 
                 Loader_FBX.load(
                     "../../Asset/Model/Cup_Paper_1.fbx",
@@ -417,6 +461,14 @@
             Get_Height() { return this.#Height; }
             Get_Object() { return this.#Object; }
             Get_Radius() { return this.#Radius; }
+            Set_Difficulty(level) {
+                this.#Difficulty = level;
+                // レベルが上がるごとにカップの半径が小さくなる
+                this.#Radius = this.#OriginalRadius * Math.max(1 - (level * 0.05), 0.5);
+                if (this.#Object) {
+                    this.#Object.scale.set(0.01 * (1 - (level * 0.05)), 0.01, 0.01 * (1 - (level * 0.05)));
+                }
+            }
         }
         class Progress_1_CLASS {
             // Variables
@@ -609,6 +661,45 @@
             color: red;
         }
 
+        #UI_Score_1 {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+
+        #UI_Level_1 {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #666;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+
+        #UI_Clear_1 {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            font-weight: bold;
+            color: #ff4444;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: bounce 0.5s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+
         #Progress_1 {
             position: absolute;
             left: 50%;
@@ -616,6 +707,19 @@
             transform: translateX(-50%) translateY(-50%);
             block-size: 2em;
             inline-size: 20em;
+            border-radius: 1em;
+            background: rgba(255,255,255,0.3);
+        }
+
+        #Progress_1::-webkit-progress-bar {
+            background: rgba(255,255,255,0.3);
+            border-radius: 1em;
+        }
+
+        #Progress_1::-webkit-progress-value {
+            background: linear-gradient(to right, #ff4444, #ff8800);
+            border-radius: 1em;
+            transition: width 0.1s ease;
         }
 
         #UI_Home_1 {
@@ -630,16 +734,6 @@
         #UI_Start_1 {
             position: absolute;
             top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.4em;
-            font-weight: bold;
-            color: red;
-        }
-
-        #UI_Clear_1 {
-            position: absolute;
-            top: 45%;
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 1.4em;

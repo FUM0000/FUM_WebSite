@@ -633,6 +633,17 @@ Vue.component('main-navigation', {
                         <v-list-item-title>Font Preview</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Game</v-list-item-title>
+                    </template>
+
+                    <v-list-item href="./Service_RecommendCounterPick.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Counter Pick</v-list-item-title>
+                    </v-list-item>
+                </v-list-group sub-group>
             </v-list-group>
             <!-- ▲ Service ▲ ---------------------------------------------------------------------------------->
 
