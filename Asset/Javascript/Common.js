@@ -891,6 +891,20 @@ Vue.component('main-navigation', {
             <!-- ▲ Programming ▲ ------------------------------------------------------------------------------>
 
 
+            <!-- ▼ Learning ▼ --------------------------------------------------------------------------------->
+            <v-list-group :value="false" prepend-icon="mdi-laptop">
+                <template v-slot:activator>
+                    <v-list-item-title>Learning</v-list-item-title>
+                </template>
+
+                <v-list-item href="./Learning_Makeup.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Makeup</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
+            <!-- ▲ Learning ▲ --------------------------------------------------------------------------------->
+
+
 
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-stamper">

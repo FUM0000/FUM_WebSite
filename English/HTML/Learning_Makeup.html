@@ -1,0 +1,758 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Learning > Makeup</title>
+
+  <style>
+    .code-block {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .content-text {
+      color: rgba(0, 0, 0, 0.87) !important;
+    }
+
+    .step-title {
+      cursor: pointer;
+      padding: 8px;
+      transition: background-color 0.3s;
+    }
+
+    .step-title:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+  </style>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Learning > Makeup</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+
+                <v-card>
+                  <v-card-title class="content-text">試験について</v-card-title>
+                  <v-card-text>
+
+                    <v-stepper v-model="Count_Step_1">
+
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1"
+                          class="step-title">概要</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2"
+                          class="step-title">出題傾向</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">概要</v-card-title>
+                              <v-simple-table>
+                                <template v-slot:default>
+                                  <thead style="background-color: #CFD8DC;">
+                                    <tr>
+                                      <th class="text-left" style="width: 30%; min-width: 120px;">項目</th>
+                                      <th class="text-left" style="width: 70%; min-width: 400px;">説明</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="item in overview" :key="item.name">
+                                      <td style="padding: 12px;">{{ item.name }}</td>
+                                      <td v-html="item.description" style="font-size: 16px; padding: 12px;"></td>
+                                    </tr>
+                                  </tbody>
+                                </template>
+                              </v-simple-table>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <p class="text-subtitle-2 font-weight-bold">出題傾向</p>
+                              <v-simple-table>
+                                <template v-slot:default>
+                                  <thead style="background-color: #CFD8DC;">
+                                    <tr>
+                                      <th class="text-left" style="width: 25%; min-width: 100px;">分野</th>
+                                      <th class="text-left" style="width: 25%; min-width: 100px;">割合</th>
+                                      <th class="text-left" style="width: 50%; min-width: 200px;">内容</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="item in exam_trend" :key="item.name">
+                                      <td style="padding: 12px;">{{ item.name }}</td>
+                                      <td v-html="item.rate" style="font-size: 16px; padding: 12px;"></td>
+                                      <td v-html="item.description" style="font-size: 16px; padding: 12px;"></td>
+                                    </tr>
+                                  </tbody>
+                                </template>
+                              </v-simple-table>
+                              <p class="mt-4 text-caption" style="color: #666;">
+                                ※上記の割合は、公式テキストや問題集の構成、受験者の報告などを基にした推定値であり、実際の試験では変動する可能性があります。
+                              </p>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">学習</v-card-title>
+                  <v-card-text>
+
+                    <v-stepper v-model="Count_Step_2">
+
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_2 > 1" step="1" @click="Count_Step_2 = 1"
+                          class="step-title">皮膚科学</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 2" step="2" @click="Count_Step_2 = 2"
+                          class="step-title">化粧品成分</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 3" step="3" @click="Count_Step_2 = 3"
+                          class="step-title">製品知識</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 4" step="4" @click="Count_Step_2 = 4"
+                          class="step-title">法規と安全性</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 5" step="5" @click="Count_Step_2 = 5"
+                          class="step-title">その他</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">皮膚科学</v-card-title>
+                              <v-treeview :items="skinStructure" item-key="name" activatable open-on-click dense>
+                                <template v-slot:label="{ item }">
+                                  <span>{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_2 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <p class="text-subtitle-2 font-weight-bold">化粧品成分</p>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 3">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <p class="text-subtitle-2 font-weight-bold">製品知識</p>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <p class="text-subtitle-2 font-weight-bold">法規と安全性</p>
+                            </v-card-text>
+                          </v-card>
+
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 3">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 5">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="5">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <p class="text-subtitle-2 font-weight-bold">その他</p>
+                            </v-card-text>
+                          </v-card>
+
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 4">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <v-dialog v-model="dialog" max-width="500">
+        <v-card>
+          <v-card-title class="text-h5">
+            表皮の情報
+          </v-card-title>
+          <v-card-text>
+            <v-simple-table>
+              <template v-slot:default>
+                <thead>
+                  <tr>
+                    <th>位置</th>
+                    <th>特徴・機能</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{{ epidermis_info.position }}</td>
+                    <td>{{ epidermis_info.function }}</td>
+                  </tr>
+                </tbody>
+              </template>
+            </v-simple-table>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="primary" text @click="dialog = false">
+              閉じる
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        Count_Step_2: 1,
+        dialog: false,
+        epidermis_info: {
+          position: '最外層の薄い層',
+          function: '皮膚のバリア機能とターンオーバー'
+        },
+        overview: [
+          { name: 'メリット', description: '・信頼される美容アドバイザーとしてのスキル向上。<br>・就職やキャリアアップに有利。' },
+          { name: '出題形式', description: '60問（マークシート方式）、試験時間60分' },
+          { name: '合格基準', description: '正答率70％前後（難易度により変動あり）' },
+          { name: '出題範囲', description: '皮膚科学、化粧品成分、製品知識、法規と安全性、その他' },
+        ],
+        exam_trend: [
+          { name: '皮膚科学', rate: '約25%', description: '皮膚の構造、ターンオーバー、バリア機能、肌悩み（乾燥・ニキビ・シミ・シワ）など' },
+          { name: '化粧品成分', rate: '約25%', description: '保湿成分、美白成分、抗酸化成分、界面活性剤、防腐剤など' },
+          { name: '製品知識', rate: '約20%', description: 'スキンケア、メイクアップ、ヘアケア、ネイル、フレグランス、オーラルケア製品など' },
+          { name: '法規と安全性', rate: '約15%', description: '薬機法、成分表示ルール、広告規制、品質と安全性の確保など' },
+          { name: 'その他', rate: '約15%', description: '化粧品の歴史、官能評価、サプリメントの基礎知識など' }
+        ],
+        makeup: [
+          { name: 'ベースメイク', description: '下地、ファンデーション、コンシーラーの使い方。' },
+          { name: 'ポイントメイク', description: 'アイメイク、リップメイク、チークの基本テクニック。' },
+          { name: 'メイクアップツール', description: 'ブラシ、スポンジなどの道具の選び方と使い方。' },
+          { name: 'メイクアップテクニック', description: '顔のパーツに合わせたメイクアップ方法。' }
+        ],
+        advice: [
+          { name: '学習の進め方', description: 'テキストの読み方、重要ポイントの押さえ方。' },
+          { name: '実技対策', description: '実技試験のポイントと練習方法。' },
+          { name: '筆記対策', description: '筆記試験の出題傾向と対策。' },
+          { name: '本番対策', description: '試験当日の心構えと準備。' }
+        ],
+        skinStructure: [
+          {
+            name: "1. 皮膚の基本構造と機能",
+            children: [
+              { name: "最外層から最内層までの順序で記載" },
+              {
+                name: "1.1 表皮",
+                children: [
+                  { name: "皮膚のバリア機能、ターンオーバー" },
+                  {
+                    name: "・角質層",
+                    children: [
+                      { name: "死細胞が重なり合い、バリア機能と保湿機能を持つ" }
+                    ]
+                  },
+                  {
+                    name: "・透明層（手のひら, 足の裏 のみ）",
+                    children: [
+                      { name: "無核で透明な層" }
+                    ]
+                  },
+                  {
+                    name: "・顆粒(かりゅう)層",
+                    children: [
+                      { name: "ケラトヒアリン顆粒を含み、角質形成が進む" }
+                    ]
+                  },
+                  {
+                    name: "・有棘(ゆうきょく)層",
+                    children: [
+                      { name: "デスモソームで結合、ランゲルハンス細胞が存在し、免疫に関与" }
+                    ]
+                  },
+                  {
+                    name: "・基底層",
+                    children: [
+                      { name: "細胞分裂により新しい角質細胞を生成、メラノサイトが存在し、メラニンを産生" }
+                    ]
+                  },
+                ]
+              },
+              {
+                name: "1.2 真皮",
+                children: [
+                  { name: "皮膚の弾力・ハリ、栄養供給" },
+                  {
+                    name: "・乳頭層",
+                    children: [
+                      { name: "コラーゲン、エラスチンが豊富、指紋やシワの形成に関与" }
+                    ]
+                  },
+                  {
+                    name: "・網状(もうじょう)層",
+                    children: [
+                      { name: "厚く、強靭なコラーゲン線維が密集、皮膚の強度を支える" }
+                    ]
+                  },
+                  {
+                    name: "成分",
+                    children: [
+                      {
+                        name: "・コラーゲン",
+                        children: [
+                          { name: "網状層の主要成分。皮膚の弾力と保湿性を維持" }
+                        ]
+                      },
+                      {
+                        name: "・エラスチン",
+                        children: [
+                          { name: "コラーゲンと共に存在。弾力性と伸縮性を提供" }
+                        ]
+                      },
+                      {
+                        name: "・ヒアルロン酸",
+                        children: [
+                          { name: "真皮の保湿成分。高い保水力を持ち、肌のハリを保つ" }
+                        ]
+                      }
+                    ]
+                  },
+                ]
+              },
+              {
+                name: "1.3 皮下組織",
+                children: [
+                  { name: "真皮の下。クッション・保温・エネルギー貯蔵" },
+                  {
+                    name: "・脂肪細胞",
+                    children: [
+                      { name: "エネルギーの貯蔵、衝撃吸収、体温維持" }
+                    ]
+                  },
+                  {
+                    name: "・血管",
+                    children: [
+                      { name: "栄養・酸素の供給、老廃物の排出。体温調節に関与" }
+                    ]
+                  },
+                  {
+                    name: "・神経",
+                    children: [
+                      { name: "皮膚感覚を司る。痛覚、圧覚、温度感覚を伝える" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            name: "2. 皮膚の働き",
+            children: [
+              {
+                name: "・バリア機能",
+                children: [
+                  { name: "角質層が皮膚を守る" },
+                  { name: "細胞間脂質（セラミド）や天然保湿因子（NMF）が重要" },
+                  { name: "弱酸性（pH4.5〜6.5）が健康な肌の条件" }
+                ]
+              },
+              {
+                name: "・保湿機能",
+                children: [
+                  { name: "角質層が水分を保持" },
+                  { name: "セラミド、NMF、皮脂膜が関与" },
+                  { name: "外的環境や加齢で低下する" }
+                ]
+              },
+              {
+                name: "・免疫機能",
+                children: [
+                  { name: "ランゲルハンス細胞が中心" },
+                  { name: "紫外線やストレスで機能が低下" },
+                  { name: "自然免疫と獲得免疫が連携" }
+                ]
+              },
+              {
+                name: "・体温調節",
+                children: [
+                  { name: "発汗と血管の収縮・拡張" },
+                  { name: "エクリン汗腺（全身）とアポクリン汗腺（特定部位）" }
+                ]
+              },
+              {
+                name: "・感覚機能",
+                children: [
+                  { name: "触覚、痛覚、温冷覚" },
+                  { name: "メルケル細胞、マイスナー小体、ルフィニ終末など" }
+                ]
+              },
+              {
+                name: "・老廃物の排出",
+                children: [
+                  { name: "汗腺からの汗で排出" },
+                  { name: "代謝産物や毒素も含む" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "3. 皮膚の代謝とターンオーバー",
+            children: [
+              {
+                name: "・ターンオーバーのメカニズム",
+                children: [
+                  { name: "表皮細胞は基底層で生成され、角質層まで上昇して剥がれ落ちる" },
+                  { name: "基底層で新しい細胞が作られ、数週間かけて上層に移動" },
+                  { name: "細胞の移動とともに形状が変わり、角質細胞に変わる" }
+                ]
+              },
+              {
+                name: "・正常なターンオーバー周期",
+                children: [
+                  { name: "通常28日周期（個人差あり）" },
+                  { name: "幼少期は早く、加齢とともに遅くなる" },
+                  { name: "皮膚が正常に働くためにはこの周期の維持が重要" }
+                ]
+              },
+              {
+                name: "・年齢や生活習慣が与える影響",
+                children: [
+                  { name: "加齢によりターンオーバーが遅くなる（周期が長くなる）" },
+                  { name: "不規則な生活や睡眠不足、ストレスが影響" },
+                  { name: "栄養不足や過剰な紫外線もターンオーバーに悪影響を与える" }
+                ]
+              },
+              {
+                name: "・ターンオーバー異常",
+                children: [
+                  { name: "過剰なターンオーバー（角化症など）や遅延（乾燥肌、シワの原因）" },
+                  { name: "皮膚の乾燥や角質層の異常が引き起こされる" },
+                  { name: "生活習慣の改善やスキンケアで改善可能な場合も" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "4. 皮脂と汗腺",
+            children: [
+              {
+                name: "・皮脂腺の構造と働き",
+                children: [
+                  { name: "皮脂腺は皮膚の真皮に位置し、毛根の近くに存在" },
+                  { name: "皮脂腺はホルモンの影響を受け、特に思春期に活発になる" },
+                  { name: "皮脂を分泌し、皮膚を潤滑に保ち、外的刺激から守る" }
+                ]
+              },
+              {
+                name: "・汗腺の種類（エクリン腺とアポクリン腺）",
+                children: [
+                  {
+                    name: "エクリン腺",
+                    children: [
+                      { name: "全身に分布し、主に体温調節を担う" },
+                      { name: "分泌する汗はほぼ無臭で、水分が主成分" },
+                      { name: "運動や暑さによって活発に分泌される" }
+                    ]
+                  },
+                  {
+                    name: "アポクリン腺",
+                    children: [
+                      { name: "脇の下や陰部、耳周りに分布" },
+                      { name: "ストレスや感情によって分泌が増える" },
+                      { name: "分泌物にタンパク質や脂質が含まれ、これが細菌と反応して臭いを発生" }
+                    ]
+                  }
+                ]
+              },
+              {
+                name: "・皮脂膜の形成と役割",
+                children: [
+                  { name: "皮脂腺から分泌された皮脂と汗腺からの汗が混ざり合って皮脂膜を形成" },
+                  { name: "皮脂膜は皮膚の保護バリアとして働き、乾燥を防ぐ" },
+                  { name: "外的刺激や有害物質の侵入を防ぐ役割を持つ" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "5. メラニンと色素沈着",
+            children: [
+              {
+                name: "・メラノサイトとメラニン生成",
+                children: [
+                  { name: "メラノサイトは皮膚の基底層に存在" },
+                  { name: "紫外線などの刺激を受けて、メラニンを生成" },
+                  { name: "メラニンは皮膚を保護するために紫外線を吸収し、肌を守る役割を持つ" }
+                ]
+              },
+              {
+                name: "・紫外線の影響",
+                children: [
+                  { name: "紫外線はメラニン生成を促進し、肌に色素沈着を引き起こす" },
+                  { name: "過剰な紫外線曝露は、シミやそばかすの原因となる" },
+                  { name: "UVBが直接DNA損傷を与えるため、シミや老化の原因になる" }
+                ]
+              },
+              {
+                name: "・シミ、そばかす、肝斑(かんぱん)の原因と対策",
+                children: [
+                  { name: "シミは過剰な紫外線曝露が主な原因" },
+                  { name: "そばかすは遺伝的要因と紫外線が関与" },
+                  { name: "肝斑はホルモンの影響や紫外線、ストレスが関与し、女性に多く見られる" },
+                  { name: "予防策として、日焼け止めの使用、紫外線対策、規則正しい生活が推奨される" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "6. 肌悩みとその原因",
+            children: [
+              {
+                name: "・乾燥肌",
+                children: [
+                  { name: "皮膚の水分が不足し、バリア機能が低下することが原因" },
+                  { name: "空気の乾燥や洗顔後の水分補給不足が影響" },
+                  { name: "乾燥肌は肌荒れやかゆみ、赤みを引き起こすことがある" }
+                ]
+              },
+              {
+                name: "・敏感肌",
+                children: [
+                  { name: "皮膚のバリア機能が弱く、外的刺激に敏感な状態" },
+                  { name: "化粧品や環境因子（温度や湿度）によって炎症を起こしやすい" },
+                  { name: "ストレスやホルモンバランスの乱れも敏感肌を悪化させる原因となる" }
+                ]
+              },
+              {
+                name: "・ニキビ",
+                children: [
+                  { name: "皮脂腺が活発に働き、毛穴が詰まることが原因" },
+                  { name: "ホルモンバランスの乱れ、食生活の乱れ、ストレスが影響する" },
+                  { name: "不衛生な環境や間違ったスキンケアが悪化を招く" }
+                ]
+              },
+              {
+                name: "・シミ・くすみ",
+                children: [
+                  { name: "紫外線によるメラニン生成の過剰がシミを引き起こす" },
+                  { name: "血行不良やターンオーバーの遅れがくすみの原因となる" },
+                  { name: "老化やホルモンバランスの影響もシミ・くすみの原因に" }
+                ]
+              },
+              {
+                name: "・シワ・たるみ",
+                children: [
+                  { name: "コラーゲンやエラスチンの減少がシワやたるみの原因となる" },
+                  { name: "紫外線、喫煙、乾燥、加齢が大きな要因" },
+                  { name: "肌の弾力を保つためには、保湿やUVケア、栄養バランスが重要" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "7. 肌の老化と対策",
+            children: [
+              {
+                name: "・光老化",
+                children: [
+                  { name: "紫外線（UV）によるダメージが蓄積し、皮膚の老化を引き起こす" },
+                  { name: "紫外線A波（UVA）は真皮に深く到達し、コラーゲンやエラスチンを破壊" },
+                  { name: "紫外線B波（UVB）は表皮で日焼けを引き起こし、シミやしわの原因" }
+                ]
+              },
+              {
+                name: "・活性酸素と酸化ストレス",
+                children: [
+                  { name: "活性酸素は細胞にダメージを与え、老化を加速させる" },
+                  { name: "酸化ストレスは体内で発生し、細胞膜やDNAにダメージを与える" },
+                  { name: "喫煙や紫外線、ストレスが酸化ストレスを増加させる原因" }
+                ]
+              },
+              {
+                name: "・コラーゲンやエラスチンの減少",
+                children: [
+                  { name: "コラーゲンとエラスチンは皮膚の弾力やハリを保つために重要" },
+                  { name: "加齢や紫外線、喫煙によりこれらの成分が減少" },
+                  { name: "コラーゲンが減少すると、肌にシワやたるみが現れる" }
+                ]
+              },
+              {
+                name: "・抗酸化ケアの重要性",
+                children: [
+                  { name: "抗酸化物質は活性酸素を中和し、細胞の酸化ダメージを防ぐ" },
+                  { name: "ビタミンC、ビタミンE、ポリフェノールなどが代表的な抗酸化成分" },
+                  { name: "抗酸化ケアにより、肌の老化を遅らせ、健康的な肌を維持することができる" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "8. 皮膚トラブルとその予防",
+            children: [
+              {
+                name: "・接触皮膚炎",
+                children: [
+                  { name: "外的刺激（化学物質やアレルゲン）が皮膚に直接触れることで発症する" },
+                  { name: "症状としては発赤、かゆみ、腫れ、発疹が現れる" },
+                  { name: "予防には、アレルゲンや刺激物の回避と保湿が重要" }
+                ]
+              },
+              {
+                name: "・アトピー性皮膚炎",
+                children: [
+                  { name: "遺伝的要因と環境因子が関与し、皮膚のバリア機能が弱くなる" },
+                  { name: "乾燥やかゆみが主な症状で、慢性的な炎症を引き起こす" },
+                  { name: "予防には、適切な保湿、アレルゲンの管理、ストレスの軽減が重要" }
+                ]
+              },
+              {
+                name: "・脂漏(しろう)性皮膚炎",
+                children: [
+                  { name: "皮脂腺が活発になり、皮脂が過剰に分泌されることが原因" },
+                  { name: "顔や頭皮にフケや赤み、かゆみが現れる" },
+                  { name: "予防には、過剰な皮脂をコントロールするスキンケアと清潔を保つことが重要" }
+                ]
+              },
+              {
+                name: "・皮膚バリアの修復と保護",
+                children: [
+                  { name: "皮膚バリアは水分の蒸発を防ぎ、外部の刺激から守る役割を果たす" },
+                  { name: "乾燥や刺激によってバリア機能が低下し、皮膚トラブルを引き起こす" },
+                  { name: "保湿剤やバリア機能をサポートする成分（セラミドなど）で修復・保護することが大切" }
+                ]
+              }
+            ]
+          },
+          {
+            name: "9. その他",
+            children: [
+              {
+                name: "・皮膚のpHと酸性被膜",
+                children: [
+                  { name: "皮膚の表面は弱酸性（pH 4.5～6）で、これが酸性被膜を形成している" },
+                  { name: "酸性被膜は外部からの刺激や病原菌から皮膚を守る役割を果たす" },
+                  { name: "pHが乱れると、バリア機能が低下し、乾燥や炎症、感染のリスクが高まる" }
+                ]
+              },
+              {
+                name: "・マイクロバイオーム（皮膚常在菌）",
+                children: [
+                  { name: "皮膚にはさまざまな常在菌が存在し、健康を維持するのに重要な役割を果たす" },
+                  { name: "常在菌は病原菌の繁殖を抑制し、皮膚のバリア機能をサポート" },
+                  { name: "皮膚環境の変化や過剰な洗浄によって常在菌のバランスが崩れることがある" }
+                ]
+              },
+              {
+                name: "・年齢・性別・部位による皮膚の違い",
+                children: [
+                  { name: "年齢や性別によって皮膚の構造や機能が異なる（例：女性はホルモンの影響で乾燥しやすい）" },
+                  { name: "年齢を重ねると皮膚のターンオーバーが遅くなり、乾燥やシワが目立ちやすくなる" },
+                  { name: "皮膚の部位によって皮脂の分泌量や水分保持能力が異なる（例：顔は皮脂が多く、手足は乾燥しやすい）" }
+                ]
+              }
+            ]
+          }
+
+        ],
+
+      }
+    })
+  </script>
+</body>
+
+</html>
