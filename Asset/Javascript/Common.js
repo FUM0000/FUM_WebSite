@@ -892,7 +892,7 @@ Vue.component('main-navigation', {
 
 
             <!-- ▼ Learning ▼ --------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-laptop">
+            <v-list-group :value="false" prepend-icon="mdi-library-outline">
                 <template v-slot:activator>
                     <v-list-item-title>Learning</v-list-item-title>
                 </template>
