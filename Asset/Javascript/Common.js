@@ -877,20 +877,6 @@ Vue.component('main-navigation', {
             <!-- ▲ Plant ▲ ------------------------------------------------------------------------------------>
 
 
-            <!-- ▼ Programming ▼ ------------------------------------------------------------------------------>
-            <v-list-group :value="false" prepend-icon="mdi-laptop">
-                <template v-slot:activator>
-                    <v-list-item-title>Programming</v-list-item-title>
-                </template>
-
-                <v-list-item href="./Programming_Introduction.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Introduction</v-list-item-title>
-                </v-list-item>
-            </v-list-group>
-            <!-- ▲ Programming ▲ ------------------------------------------------------------------------------>
-
-
             <!-- ▼ Learning ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-library-outline">
                 <template v-slot:activator>
@@ -900,10 +886,28 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Learning_Makeup.html">
                     <v-list-item-icon />
                     <v-list-item-title>Makeup</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-lipstick</v-icon>
+                    </v-list-item-icon>
                 </v-list-item>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Programming</v-list-item-title>
+                        
+                        <v-list-item-icon>
+                            <v-icon>mdi-laptop</v-icon>
+                        </v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Programming_Introduction.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Introduction</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
             </v-list-group>
             <!-- ▲ Learning ▲ --------------------------------------------------------------------------------->
-
 
 
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
