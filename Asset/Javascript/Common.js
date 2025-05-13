@@ -883,15 +883,6 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Learning</v-list-item-title>
                 </template>
 
-                <v-list-item href="./Learning_Makeup.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Makeup</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-lipstick</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Programming</v-list-item-title>
@@ -908,6 +899,34 @@ Vue.component('main-navigation', {
                 </v-list-group>
             </v-list-group>
             <!-- ▲ Learning ▲ --------------------------------------------------------------------------------->
+
+
+            <!-- ▼ Qualification ▼ ---------------------------------------------------------------------------->
+            <v-list-group :value="false" prepend-icon="mdi-library-outline">
+                <template v-slot:activator>
+                    <v-list-item-title>Qualification</v-list-item-title>
+                </template>
+
+                <v-list-item href="./Learning_AppliedInformation.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>応用情報技術者試験</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-account-tie</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+
+                <v-list-item href="./Learning_Makeup.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>日本化粧品検定１級</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-lipstick</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+
+            </v-list-group>
+            <!-- ▲ Qualification ▲ ---------------------------------------------------------------------------->
 
 
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
