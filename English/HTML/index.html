@@ -125,7 +125,7 @@
             textMesh.position.set(-textWidth / 2, 0, 0);
             scene.add(textMesh);
 
-            // Add light for the text
+            // Light for the text
             const light = new THREE.PointLight(0x00ffcc, 1);
             light.position.set(0, 0, 5);
             scene.add(light);
@@ -137,10 +137,8 @@
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
 
-        // 平行移動（パン操作）を無効化して焦点の移動を禁止
         controls.enablePan = false;
 
-        // カメラ初期位置は開始位置に設定
         camera.position.copy(new THREE.Vector3(0, 1, 0).multiplyScalar(10000));
         camera.lookAt(new THREE.Vector3(0, 0, 0));
 
@@ -251,7 +249,6 @@
         bloomPass.radius = 1.0;
         composer.addPass(bloomPass);
 
-        // グリッチエフェクトのためのシェーダー
         const DigitalGlitchShader = {
             uniforms: {
                 'tDiffuse': { value: null },
@@ -297,7 +294,7 @@
                     if(byp < 1) {
                         vec2 p = vUv;
                         
-                        if (amount > 0.0) {  // グリッチ時のみ歪み効果を適用
+                        if (amount > 0.0) {
                             float xs = floor(gl_FragCoord.x / 0.5);
                             float ys = floor(gl_FragCoord.y / 0.5);
                             vec4 normal = texture2D(tDisp, p*seed*seed);
@@ -339,7 +336,6 @@
             `
         };
 
-        // ノイズテクスチャの生成
         function generateNoiseTexture() {
             const size = 64;
             const data = new Uint8Array(size * size * 4);
@@ -351,18 +347,15 @@
             return texture;
         }
 
-        // グリッチパスの設定
         const glitchPass = new THREE.ShaderPass(DigitalGlitchShader);
         glitchPass.uniforms.tDisp.value = generateNoiseTexture();
         glitchPass.renderToScreen = true;
         composer.addPass(glitchPass);
 
-        // グリッチエフェクトの状態管理
         let isGlitching = false;
         let glitchTimeout;
         let glitchIntensity = 0;
 
-        // グリッチエフェクトのアニメーション
         function updateGlitch() {
             if (isGlitching) {
                 glitchPass.uniforms.seed.value = Math.random();
@@ -378,23 +371,19 @@
             }
         }
 
-        // グリッチエフェクトのトリガー
         function triggerGlitch() {
             isGlitching = true;
             clearTimeout(glitchTimeout);
 
-            // グリッチの持続時間をランダムに設定
             const duration = (Math.random() - 0.5) * 500;
             glitchTimeout = setTimeout(() => {
                 isGlitching = false;
             }, duration);
 
-            // 次のグリッチまでの間隔をランダムに設定
             const nextTrigger = Math.random() * 5000 + 3000;
             setTimeout(triggerGlitch, nextTrigger);
         }
 
-        // 初回のグリッチをトリガー
         setTimeout(triggerGlitch, 2000);
 
         function createCursorParticle(x, y, z) {
@@ -522,7 +511,6 @@
             lineGeometry.computeBoundingSphere();
         }
 
-        // --- animate() 関数 ---
         let Flag_CameraAnimation = true;
         let Time_CameraAnimation_Start = null;
         let Position_Trun_Start = null;
@@ -614,12 +602,11 @@
         let countTheata = Math.PI;
 
         function animate() {
-            const currentTime = performance.now(); // 現在の時間を取得
-            const deltaTime = (currentTime - lastTime) / 1000; // デルタタイムを秒単位に変換
-            lastTime = currentTime; // 現在の時間を次のフレームのために保存
+            const currentTime = performance.now();
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
 
             if (Flag_CameraAnimation) {
-                // Initialize
                 if (Time_CameraAnimation_Start === null) {
                     Time_CameraAnimation_Start = currentTime;
                     Position_Trun_Start = camera.position.clone();
@@ -680,7 +667,6 @@
                 camera.lookAt(0, 0, 0);
             }
 
-            // 他のアニメーション処理
             animatePoints();
             updateLines();
             updateCursorParticles();
@@ -714,16 +700,7 @@
 
         animate();
 
-        /**
-         * 宇宙を詳細に再現した演出を生成する関数
-         * 中央のオブジェクト（0,0,0付近）を壊さないように、宇宙に実在する配置法則（球面座標や非一様分布）を採用し、
-         * ・遠方の星空（背景の微小な星群）
-         * ・螺旋銀河（中央を避けた円盤状の銀河構造）
-         * ・星雲効果（中央から十分離れた位置に配置したダスト・ガス雲）
-         * を生成します。
-         */
         function createUniverseDetail() {
-            // ★ 遠方の星空 ★
             const starCount = 5000;
             const starPositions = new Float32Array(starCount * 3);
             const starColors = new Float32Array(starCount * 3);
@@ -764,21 +741,16 @@
             const starField = new THREE.Points(starGeometry, starMaterial);
             scene.add(starField);
 
-            // ★ 螺旋銀河の効果 ★
-            // 中央のオブジェクトを避けるため、内半径40～外半径80の範囲で銀河を形成
             const galaxyStars = 3000;
             const galaxyPositions = new Float32Array(galaxyStars * 3);
             const galaxyColors = new Float32Array(galaxyStars * 3);
-            const spiralArms = 4;             // 螺旋の腕の本数
-            const spiralSpread = 10;          // 螺旋腕に沿った拡散度合い
+            const spiralArms = 4;
+            const spiralSpread = 10;
             const minGalaxyRadius = 20;
             const maxGalaxyRadius = 200;
 
-            // 各腕の間隔調整用の重み配列（各腕が占有する角度の比率を決定します）
-            // 例：均等配置の場合は [1, 1, 1, 1]、特定の腕を広げたい場合は [1, 1.5, 1, 1.5] など
             const armWeights = [1, 1.5, 1, 1.5];
 
-            // 各腕の開始角度を計算（全体で一周（2π）するように正規化）
             const totalWeight = armWeights.reduce((sum, weight) => sum + weight, 0);
             const armAngles = [];
             let cumulativeWeight = 0;
@@ -788,14 +760,10 @@
             }
 
             for (let i = 0; i < galaxyStars; i++) {
-                // 内側に密度が高くなるよう、平方根を用いた分布
                 let r = minGalaxyRadius + (maxGalaxyRadius - minGalaxyRadius) * Math.sqrt(Math.random());
-                // 各星を対応する腕に割り当て
                 let armIndex = i % spiralArms;
                 let baseArmAngle = armAngles[armIndex];
-
-                // 螺旋腕の効果：半径に応じたねじれ（twist）とランダムな散らばりを付与
-                // twist係数を0.08から0.04に低減して、渦を巻く回数を減らしています。
+                
                 let twist = r * 0.04;
                 let randomScatter = (Math.random() - 0.5) * 0.4;
                 let angle = baseArmAngle + twist + randomScatter;
@@ -807,7 +775,6 @@
                 galaxyPositions[i * 3 + 1] = y;
                 galaxyPositions[i * 3 + 2] = z;
 
-                // 銀河内では、内側は暖色（黄色～オレンジ）、外側はやわらかいトーンで表現
                 let t = r / maxGalaxyRadius;
                 let color = new THREE.Color();
                 if (t < 0.5) {
@@ -836,8 +803,6 @@
             const galaxyField = new THREE.Points(galaxyGeometry, galaxyMaterial);
             scene.add(galaxyField);
 
-            // ★ 星雲（Nebula）の効果 ★
-            // 中央付近（半径100以内）は景観を損なわないよう除外し、球状の領域内（半径100～150）に均一な体積分布で配置
             const nebulaCount = 2000;
             const nebulaPositions = new Float32Array(nebulaCount * 3);
             const nebulaColors = new Float32Array(nebulaCount * 3);
@@ -883,7 +848,6 @@
             scene.add(nebulaField);
         }
 
-        // ★ 既存の星フィールド生成コードはコメントアウトまたは削除し、下記の呼び出しにより中央のオブジェクトの景観を壊さない詳細な宇宙演出を実現します ★
         createUniverseDetail();
     </script>
 
