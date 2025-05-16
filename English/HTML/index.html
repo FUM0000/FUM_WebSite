@@ -20,8 +20,7 @@
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
     <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
@@ -36,30 +35,25 @@
 
     <v-app id="App">
         <template>
-
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Home</main-system-bar>
 
             <v-main id="Main">
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="align-content: flex-start;">
-
                         <v-container id="TextFlow">
                             <span style="color: red">< NEWS ></span> 
                             <span style="color: rgb(200, 200, 200)">
                                 GOLDEN WEEK is a long holiday period in Japan from late April to early May, featuring a
                                 series of national holidays (Showa Day, Constitution Memorial Day, Greenery Day, and
-                                Children’s Day). Many people enjoy traveling or spending time with family during this
-                                time.
+                                Children’s Day). Many people enjoy traveling or spending time with family during this time.
                             </span>
                         </v-container>
-
                     </v-container>
                 </transition>
             </v-main>
 
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
             <main-footer-simple></main-footer-simple>
-
         </template>
     </v-app>
 
@@ -87,7 +81,6 @@
     </script>
 
     <script type="module">
-
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x020202, 0, 5000);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
@@ -102,7 +95,6 @@
 
         const isMobile = window.innerWidth <= 768;
 
-        // Generate noise texture programmatically
         function generateNoiseTexture(width = 256, height = 256) {
             const size = width * height;
             const data = new Uint8Array(size * 4);
@@ -119,7 +111,6 @@
             return texture;
         }
 
-        // Use generated noise texture for void background
         const voidTexture = generateNoiseTexture();
         const voidBackground = new THREE.Mesh(
             new THREE.SphereGeometry(3000, 32, 32),
@@ -129,7 +120,6 @@
                 opacity: 0.2,
                 transparent: true,
                 color: 0x020206,
-                // color: 0x050509,
                 fog: false
             })
         );
@@ -280,7 +270,7 @@
 
         const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight));
         bloomPass.threshold = 0;
-        bloomPass.strength = 0.8;
+        bloomPass.strength = 1.2; // Increased for more pronounced sparkle
         bloomPass.radius = 1.0;
         composer.addPass(bloomPass);
 
@@ -312,7 +302,7 @@
             uniform float amount;
             uniform float angle;
             uniform float seed;
-            uniform float seed_x;
+            float seed_x;
             uniform float seed_y;
             uniform float distortion_x;
             uniform float distortion_y;
@@ -707,34 +697,34 @@
         animate();
 
         const colorDistribution = [
-        { type: "blue-white", prob: 0.45, colors: [ // 40～50%（中央値45%）
-            { r: 0.53, g: 0.67, b: 1.0 }, // O型: 青 (0x88aaff)
-            { r: 0.67, g: 0.73, b: 1.0 }, // B型: 青白 (0xaabbff)
-            { r: 0.93, g: 0.93, b: 1.0 }  // A型: 白 (0xeeeeff)
-        ]},
-        { type: "yellow", prob: 0.325, colors: [ // 30～35%（中央値32.5%）
-            { r: 1.0, g: 1.0, b: 0.8 },   // F型: 黄白 (0xffffcc)
-            { r: 1.0, g: 1.0, b: 0.6 }    // G型: 黄色 (0xffff99)
-        ]},
-        { type: "orange-red", prob: 0.225, colors: [ // 15～25%（中央値22.5%）
-            { r: 1.0, g: 0.67, b: 0.4 },  // K型: 橙 (0xffaa66)
-            { r: 1.0, g: 0.4, b: 0.4 }    // M型: 赤 (0xff6666)
-        ]}
+            { type: "blue-white", prob: 0.45, colors: [
+                { r: 0.53, g: 0.67, b: 1.0 },
+                { r: 0.67, g: 0.73, b: 1.0 },
+                { r: 0.93, g: 0.93, b: 1.0 }
+            ]},
+            { type: "yellow", prob: 0.325, colors: [
+                { r: 1.0, g: 1.0, b: 0.8 },
+                { r: 1.0, g: 1.0, b: 0.6 }
+            ]},
+            { type: "orange-red", prob: 0.225, colors: [
+                { r: 1.0, g: 0.67, b: 0.4 },
+                { r: 1.0, g: 0.4, b: 0.4 }
+            ]}
         ];
+
         const randomColor = () => {
-        const rand = Math.random();
-        let cumulativeProb = 0;
-        for (const category of colorDistribution) {
-            cumulativeProb += category.prob;
-            if (rand <= cumulativeProb) {
-            // カテゴリ内の色をランダムに選択
-            const colorChoice = category.colors[Math.floor(Math.random() * category.colors.length)];
-            return new THREE.Color(colorChoice.r, colorChoice.g, colorChoice.b);
+            const rand = Math.random();
+            let cumulativeProb = 0;
+            for (const category of colorDistribution) {
+                cumulativeProb += category.prob;
+                if (rand <= cumulativeProb) {
+                    const colorChoice = category.colors[Math.floor(Math.random() * category.colors.length)];
+                    return new THREE.Color(colorChoice.r, colorChoice.g, colorChoice.b);
+                }
             }
-        }
-        // フォールバック（念のため）
-        return new THREE.Color(1, 1, 1);
+            return new THREE.Color(1, 1, 1);
         };
+
         function createUniverseDetail() {
             const starCount = 10000;
             const starPositions = new Float32Array(starCount * 3);
@@ -866,10 +856,51 @@
             const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
             scene.add(nebulaField);
 
-            // Add galaxy clusters
+            // Add sparkling billboard instances
+            function createSparkleTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 128; // Increased resolution
+                canvas.height = 128;
+                const context = canvas.getContext('2d');
+                const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.7)');
+                gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, 128, 128);
+                return new THREE.CanvasTexture(canvas);
+            }
+
+            const sparkleTexture = createSparkleTexture();
+            const sparkleCount = 500; // Reduced count for performance
+            for (let i = 0; i < sparkleCount; i++) {
+                const r = 3000 + Math.random() * 1000; // Closer range for visibility
+                const theta = Math.acos(2 * Math.random() - 1);
+                const phi = Math.random() * 2 * Math.PI;
+                const sprite = new THREE.Sprite(
+                    new THREE.SpriteMaterial({
+                        map: sparkleTexture,
+                        color: randomColor(),
+                        transparent: true,
+                        opacity: 0.8, // Increased opacity
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        fog: true
+                    })
+                );
+                sprite.position.set(
+                    r * Math.sin(theta) * Math.cos(phi),
+                    r * Math.sin(theta) * Math.sin(phi),
+                    r * Math.cos(theta)
+                );
+                sprite.scale.set(30 + Math.random() * 50, 30 + Math.random() * 50, 1); // Increased scale
+                scene.add(sprite);
+            }
+
             const clusterCount = 10;
             for (let c = 0; c < clusterCount; c++) {
-                const clusterRadius = 3000 + Math.random() * 2000
+                const clusterRadius = 3000 + Math.random() * 2000;
                 const clusterTheta = Math.acos(2 * Math.random() - 1);
                 const clusterPhi = Math.random() * 2 * Math.PI;
                 const clusterCenter = new THREE.Vector3(
@@ -917,7 +948,6 @@
                 }
             }
 
-            // Add individual distant galaxies
             const distantGalaxyCount = 1000;
             for (let g = 0; g < distantGalaxyCount; g++) {
                 const particleCount = 200 + Math.floor(Math.random() * 600);
