@@ -89,7 +89,7 @@
     <script type="module">
 
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x020202, 1400, 1800);
+        scene.fog = new THREE.Fog(0x020202, 0, 5000);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({
             canvas: document.querySelector("#ElectronShell"),
@@ -122,13 +122,14 @@
         // Use generated noise texture for void background
         const voidTexture = generateNoiseTexture();
         const voidBackground = new THREE.Mesh(
-            new THREE.SphereGeometry(2000, 32, 32),
+            new THREE.SphereGeometry(3000, 32, 32),
             new THREE.MeshBasicMaterial({
                 map: voidTexture,
                 side: THREE.BackSide,
-                opacity: 0.5,
+                opacity: 0.2,
                 transparent: true,
-                color: 0x010104,
+                color: 0x020206,
+                // color: 0x050509,
                 fog: false
             })
         );
@@ -510,64 +511,6 @@
             lineGeometry.computeBoundingSphere();
         }
 
-        const voidParticleCount = 500;
-        const voidParticlePositions = new Float32Array(voidParticleCount * 3);
-        const voidParticleVelocities = new Float32Array(voidParticleCount * 3);
-        const voidParticleColors = new Float32Array(voidParticleCount * 3);
-        for (let i = 0; i < voidParticleCount; i++) {
-            const r = 500 + Math.random() * 1500;
-            const theta = Math.random() * 2 * Math.PI;
-            const phi = Math.acos(2 * Math.random() - 1);
-            voidParticlePositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-            voidParticlePositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            voidParticlePositions[i * 3 + 2] = r * Math.cos(phi);
-            voidParticleVelocities[i * 3] = (Math.random() - 0.5) * 0.1;
-            voidParticleVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.1;
-            voidParticleVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
-            const color = new THREE.Color(0x88aaff).lerp(new THREE.Color(0x445566), Math.random());
-            voidParticleColors[i * 3] = color.r;
-            voidParticleColors[i * 3 + 1] = color.g;
-            voidParticleColors[i * 3 + 2] = color.b;
-        }
-        const voidParticleGeometry = new THREE.BufferGeometry();
-        voidParticleGeometry.setAttribute('position', new THREE.BufferAttribute(voidParticlePositions, 3));
-        voidParticleGeometry.setAttribute('color', new THREE.BufferAttribute(voidParticleColors, 3));
-        const voidParticleMaterial = new THREE.PointsMaterial({
-            vertexColors: true,
-            size: isMobile ? 1 : 0.5,
-            sizeAttenuation: true,
-            transparent: true,
-            opacity: 0.4,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            fog: true
-        });
-        const voidParticleSystem = new THREE.Points(voidParticleGeometry, voidParticleMaterial);
-        scene.add(voidParticleSystem);
-
-        function updateVoidParticles() {
-            const positions = voidParticleGeometry.attributes.position.array;
-            for (let i = 0; i < voidParticleCount; i++) {
-                positions[i * 3] = positions[i * 3] + voidParticleVelocities[i * 3];
-                positions[i * 3 + 1] = positions[i * 3 + 1] + voidParticleVelocities[i * 3 + 1];
-                positions[i * 3 + 2] = positions[i * 3 + 2] + voidParticleVelocities[i * 3 + 2];
-                const r = Math.sqrt(
-                    positions[i * 3] ** 2 +
-                    positions[i * 3 + 1] ** 2 +
-                    positions[i * 3 + 2] ** 2
-                );
-                if (r > 2000) {
-                    const theta = Math.random() * 2 * Math.PI;
-                    const phi = Math.acos(2 * Math.random() - 1);
-                    const newR = 500;
-                    positions[i * 3] = newR * Math.sin(phi) * Math.cos(theta);
-                    positions[i * 3 + 1] = newR * Math.sin(phi) * Math.sin(theta);
-                    positions[i * 3 + 2] = newR * Math.cos(phi);
-                }
-            }
-            voidParticleGeometry.attributes.position.needsUpdate = true;
-        }
-
         const galaxyCount = 50;
         const galaxyPositions = new Float32Array(galaxyCount * 3);
         const galaxyColors = new Float32Array(galaxyCount * 3);
@@ -735,7 +678,6 @@
             animatePoints();
             updateLines();
             updateCursorParticles();
-            updateVoidParticles();
             controls.update();
             composer.render();
             updateGlitch();
@@ -764,18 +706,47 @@
 
         animate();
 
+        const colorDistribution = [
+        { type: "blue-white", prob: 0.45, colors: [ // 40～50%（中央値45%）
+            { r: 0.53, g: 0.67, b: 1.0 }, // O型: 青 (0x88aaff)
+            { r: 0.67, g: 0.73, b: 1.0 }, // B型: 青白 (0xaabbff)
+            { r: 0.93, g: 0.93, b: 1.0 }  // A型: 白 (0xeeeeff)
+        ]},
+        { type: "yellow", prob: 0.325, colors: [ // 30～35%（中央値32.5%）
+            { r: 1.0, g: 1.0, b: 0.8 },   // F型: 黄白 (0xffffcc)
+            { r: 1.0, g: 1.0, b: 0.6 }    // G型: 黄色 (0xffff99)
+        ]},
+        { type: "orange-red", prob: 0.225, colors: [ // 15～25%（中央値22.5%）
+            { r: 1.0, g: 0.67, b: 0.4 },  // K型: 橙 (0xffaa66)
+            { r: 1.0, g: 0.4, b: 0.4 }    // M型: 赤 (0xff6666)
+        ]}
+        ];
+        const randomColor = () => {
+        const rand = Math.random();
+        let cumulativeProb = 0;
+        for (const category of colorDistribution) {
+            cumulativeProb += category.prob;
+            if (rand <= cumulativeProb) {
+            // カテゴリ内の色をランダムに選択
+            const colorChoice = category.colors[Math.floor(Math.random() * category.colors.length)];
+            return new THREE.Color(colorChoice.r, colorChoice.g, colorChoice.b);
+            }
+        }
+        // フォールバック（念のため）
+        return new THREE.Color(1, 1, 1);
+        };
         function createUniverseDetail() {
             const starCount = 10000;
             const starPositions = new Float32Array(starCount * 3);
             const starColors = new Float32Array(starCount * 3);
             for (let i = 0; i < starCount; i++) {
-                const r = 1000 + Math.random() * 1000;
+                const r = 1500 + Math.random() * 1000;
                 const theta = Math.acos(2 * Math.random() - 1);
                 const phi = Math.random() * 2 * Math.PI;
                 starPositions[i * 3] = r * Math.sin(theta) * Math.cos(phi);
                 starPositions[i * 3 + 1] = r * Math.sin(theta) * Math.sin(phi);
                 starPositions[i * 3 + 2] = r * Math.cos(theta);
-                const color = new THREE.Color(0x88aaff).lerp(new THREE.Color(0x445566), Math.random());
+                const color = randomColor();
                 starColors[i * 3] = color.r;
                 starColors[i * 3 + 1] = color.g;
                 starColors[i * 3 + 2] = color.b;
@@ -785,7 +756,7 @@
             starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
             const starMaterial = new THREE.PointsMaterial({
                 vertexColors: true,
-                size: isMobile ? 0.4 : 0.2,
+                size: 1 + Math.random() * 4,
                 sizeAttenuation: true,
                 transparent: true,
                 opacity: 0.5,
@@ -884,7 +855,7 @@
             nebulaGeometry.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
             const nebulaMaterial = new THREE.PointsMaterial({
                 vertexColors: true,
-                size: 0.1,
+                size: isMobile ? 0.2 : 0.1,
                 sizeAttenuation: true,
                 transparent: true,
                 opacity: 0.3,
@@ -947,10 +918,10 @@
             }
 
             // Add individual distant galaxies
-            const distantGalaxyCount = 100;
+            const distantGalaxyCount = 1000;
             for (let g = 0; g < distantGalaxyCount; g++) {
                 const particleCount = 200 + Math.floor(Math.random() * 600);
-                const galaxyRadius = 1000 + Math.random() * 3000;
+                const galaxyRadius = 1500 + Math.random() * 3500;
                 const galaxyTheta = Math.acos(2 * Math.random() - 1);
                 const galaxyPhi = Math.random() * 2 * Math.PI;
                 const distantPositions = new Float32Array(particleCount * 3);
@@ -962,7 +933,7 @@
                     distantPositions[i * 3] = galaxyRadius * Math.sin(galaxyTheta) * Math.cos(galaxyPhi) + r * Math.sin(theta) * Math.cos(phi);
                     distantPositions[i * 3 + 1] = galaxyRadius * Math.sin(galaxyTheta) * Math.sin(galaxyPhi) + r * Math.sin(theta) * Math.sin(phi);
                     distantPositions[i * 3 + 2] = galaxyRadius * Math.cos(galaxyTheta) + r * Math.cos(theta);
-                    const color = new THREE.Color(0xffffff).lerp(new THREE.Color(0xbbaaff), Math.random() * 0.4);
+                    const color = randomColor();
                     distantColors[i * 3] = color.r;
                     distantColors[i * 3 + 1] = color.g;
                     distantColors[i * 3 + 2] = color.b;
@@ -972,13 +943,13 @@
                 distantGeometry.setAttribute('color', new THREE.BufferAttribute(distantColors, 3));
                 const distantMaterial = new THREE.PointsMaterial({
                     vertexColors: true,
-                    size: isMobile ? 0.1 + Math.random() * 2 : 0.1 + Math.random() * 1,
+                    size: 0.1 + Math.random() * 5,
                     sizeAttenuation: true,
                     transparent: true,
-                    opacity: 0.1,
+                    opacity: 0.05,
                     blending: THREE.AdditiveBlending,
                     depthWrite: false,
-                    fog: false
+                    fog: true
                 });
                 const distantField = new THREE.Points(distantGeometry, distantMaterial);
                 scene.add(distantField);
