@@ -44,7 +44,7 @@
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="align-content: flex-start;">
 
                         <v-container id="TextFlow">
-                            <span style="color: red">&lt; NEWS &gt;</span>&nbsp;
+                            <span style="color: red">< NEWS ></span> 
                             <span style="color: rgb(200, 200, 200)">
                                 GOLDEN WEEK is a long holiday period in Japan from late April to early May, featuring a
                                 series of national holidays (Showa Day, Constitution Memorial Day, Greenery Day, and
@@ -89,7 +89,7 @@
     <script type="module">
 
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x020202, 1400, 1600);
+        scene.fog = new THREE.Fog(0x020202, 1400, 1800);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({
             canvas: document.querySelector("#ElectronShell"),
@@ -548,9 +548,9 @@
         function updateVoidParticles() {
             const positions = voidParticleGeometry.attributes.position.array;
             for (let i = 0; i < voidParticleCount; i++) {
-                positions[i * 3] += voidParticleVelocities[i * 3];
-                positions[i * 3 + 1] += voidParticleVelocities[i * 3 + 1];
-                positions[i * 3 + 2] += voidParticleVelocities[i * 3 + 2];
+                positions[i * 3] = positions[i * 3] + voidParticleVelocities[i * 3];
+                positions[i * 3 + 1] = positions[i * 3 + 1] + voidParticleVelocities[i * 3 + 1];
+                positions[i * 3 + 2] = positions[i * 3 + 2] + voidParticleVelocities[i * 3 + 2];
                 const r = Math.sqrt(
                     positions[i * 3] ** 2 +
                     positions[i * 3 + 1] ** 2 +
@@ -894,6 +894,95 @@
             });
             const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
             scene.add(nebulaField);
+
+            // Add galaxy clusters
+            const clusterCount = 10;
+            for (let c = 0; c < clusterCount; c++) {
+                const clusterRadius = 3000 + Math.random() * 2000
+                const clusterTheta = Math.acos(2 * Math.random() - 1);
+                const clusterPhi = Math.random() * 2 * Math.PI;
+                const clusterCenter = new THREE.Vector3(
+                    clusterRadius * Math.sin(clusterTheta) * Math.cos(clusterPhi),
+                    clusterRadius * Math.sin(clusterTheta) * Math.sin(clusterPhi),
+                    clusterRadius * Math.cos(clusterTheta)
+                );
+                const galaxyInCluster = 3 + Math.floor(Math.random() * 5);
+                for (let g = 0; g < galaxyInCluster; g++) {
+                    const particleCount = 500 + Math.floor(Math.random() * 1000);
+                    const clusterPositions = new Float32Array(particleCount * 3);
+                    const clusterColors = new Float32Array(particleCount * 3);
+                    const offset = new THREE.Vector3(
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100
+                    );
+                    for (let i = 0; i < particleCount; i++) {
+                        const r = Math.random() * 50;
+                        const theta = Math.acos(2 * Math.random() - 1);
+                        const phi = Math.random() * 2 * Math.PI;
+                        clusterPositions[i * 3] = clusterCenter.x + offset.x + r * Math.sin(theta) * Math.cos(phi);
+                        clusterPositions[i * 3 + 1] = clusterCenter.y + offset.y + r * Math.sin(theta) * Math.sin(phi);
+                        clusterPositions[i * 3 + 2] = clusterCenter.z + offset.z + r * Math.cos(theta);
+                        const color = new THREE.Color(0xffffff).lerp(new THREE.Color(0xaabbff), Math.random() * 0.3);
+                        clusterColors[i * 3] = color.r;
+                        clusterColors[i * 3 + 1] = color.g;
+                        clusterColors[i * 3 + 2] = color.b;
+                    }
+                    const clusterGeometry = new THREE.BufferGeometry();
+                    clusterGeometry.setAttribute('position', new THREE.BufferAttribute(clusterPositions, 3));
+                    clusterGeometry.setAttribute('color', new THREE.BufferAttribute(clusterColors, 3));
+                    const clusterMaterial = new THREE.PointsMaterial({
+                        vertexColors: true,
+                        size: isMobile ? 0.2 + Math.random() * 0.3 : 0.1 + Math.random() * 0.2,
+                        sizeAttenuation: true,
+                        transparent: true,
+                        opacity: 0.4,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        fog: true
+                    });
+                    const clusterField = new THREE.Points(clusterGeometry, clusterMaterial);
+                    scene.add(clusterField);
+                }
+            }
+
+            // Add individual distant galaxies
+            const distantGalaxyCount = 100;
+            for (let g = 0; g < distantGalaxyCount; g++) {
+                const particleCount = 200 + Math.floor(Math.random() * 600);
+                const galaxyRadius = 1000 + Math.random() * 3000;
+                const galaxyTheta = Math.acos(2 * Math.random() - 1);
+                const galaxyPhi = Math.random() * 2 * Math.PI;
+                const distantPositions = new Float32Array(particleCount * 3);
+                const distantColors = new Float32Array(particleCount * 3);
+                for (let i = 0; i < particleCount; i++) {
+                    const r = Math.random() * 30;
+                    const theta = Math.acos(2 * Math.random() - 1);
+                    const phi = Math.random() * 2 * Math.PI;
+                    distantPositions[i * 3] = galaxyRadius * Math.sin(galaxyTheta) * Math.cos(galaxyPhi) + r * Math.sin(theta) * Math.cos(phi);
+                    distantPositions[i * 3 + 1] = galaxyRadius * Math.sin(galaxyTheta) * Math.sin(galaxyPhi) + r * Math.sin(theta) * Math.sin(phi);
+                    distantPositions[i * 3 + 2] = galaxyRadius * Math.cos(galaxyTheta) + r * Math.cos(theta);
+                    const color = new THREE.Color(0xffffff).lerp(new THREE.Color(0xbbaaff), Math.random() * 0.4);
+                    distantColors[i * 3] = color.r;
+                    distantColors[i * 3 + 1] = color.g;
+                    distantColors[i * 3 + 2] = color.b;
+                }
+                const distantGeometry = new THREE.BufferGeometry();
+                distantGeometry.setAttribute('position', new THREE.BufferAttribute(distantPositions, 3));
+                distantGeometry.setAttribute('color', new THREE.BufferAttribute(distantColors, 3));
+                const distantMaterial = new THREE.PointsMaterial({
+                    vertexColors: true,
+                    size: isMobile ? 0.1 + Math.random() * 2 : 0.1 + Math.random() * 1,
+                    sizeAttenuation: true,
+                    transparent: true,
+                    opacity: 0.1,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    fog: false
+                });
+                const distantField = new THREE.Points(distantGeometry, distantMaterial);
+                scene.add(distantField);
+            }
         }
 
         createUniverseDetail();
