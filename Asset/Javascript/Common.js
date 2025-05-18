@@ -1013,7 +1013,7 @@ Vue.component('main-footer', {
             <v-icon color="blue">mdi-chevron-down</v-icon>
         </v-btn>
         <v-spacer />
-        <span style="font-size: 0.8rem;">© 2024 FUM / © 2024 FUM WebSite</span>
+        <span style="font-size: 0.8rem;">© 2025 FUM. All rights reserved.</span>
         <v-spacer />
         <v-btn @click="scrollToTop" text x-small>
             <v-icon color="red">mdi-chevron-up</v-icon>
