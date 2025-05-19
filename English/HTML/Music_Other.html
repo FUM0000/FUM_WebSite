@@ -45,8 +45,16 @@
             right: 20px;
             width: 480px;
             height: 270px;
-            z-index: 11;
+            z-index: -1;
+            /* Initially hidden below canvas */
             pointer-events: auto;
+            transition: z-index 0.1s;
+            /* Smooth z-index change */
+        }
+
+        #YouTubePlayerContainer.active {
+            z-index: 11;
+            /* Active when player is visible */
         }
 
         #ClosePlayerButton {
@@ -68,12 +76,27 @@
             background-color: rgba(0, 0, 0, 0.9);
         }
 
+        /* Ensure other UI elements don’t block the canvas */
+        v-main,
+        main-system-bar,
+        main-navigation,
+        main-footer {
+            pointer-events: none;
+        }
+
+        v-main>*,
+        main-system-bar>*,
+        main-navigation>*,
+        main-footer>* {
+            pointer-events: auto;
+        }
+
         @media (max-width: 600px) {
             #YouTubePlayerContainer {
                 width: 90vw;
                 height: calc(90vw * 9 / 16);
                 bottom: 52px;
-                right: auto;
+                right: 10px;
             }
 
             #ClosePlayerButton {
@@ -108,8 +131,16 @@
         </template>
     </v-app>
 
+    <!-- Three.js and Postprocessing Scripts -->
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         THREE.OrbitControls = function (object, domElement) {
             this.object = object;
@@ -186,16 +217,30 @@
                 this.rotationSpeed = 0.001;
                 this.currentPlayer = null;
                 this.closeButton = document.getElementById('ClosePlayerButton');
+                this.playerContainer = document.getElementById('YouTubePlayerContainer');
+                this.usePostprocessing = true;
                 this.init();
             }
 
             init() {
+                if (!THREE.EffectComposer) {
+                    console.error('EffectComposer is not defined. Check if postprocessing scripts are loaded.');
+                    this.usePostprocessing = false;
+                }
+                if (!THREE.UnrealBloomPass || !THREE.LuminosityHighPassShader) {
+                    console.error('UnrealBloomPass or LuminosityHighPassShader is not defined.');
+                    this.usePostprocessing = false;
+                }
+
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x111111);
                 this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
                 this.camera.position.z = 5;
                 this.renderer = new THREE.WebGLRenderer({ antialias: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.domElement.style.position = 'absolute';
+                this.renderer.domElement.style.top = '0';
+                this.renderer.domElement.style.left = '0';
                 document.getElementById(this.containerId).appendChild(this.renderer.domElement);
                 this.setupCustomControls();
                 this.createVideoCylinder();
@@ -203,19 +248,100 @@
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
 
-                // Mouse and touch events
-                this.renderer.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
-                this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
-                this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
-                this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
-                this.renderer.domElement.addEventListener('touchstart', this.onTouchStart.bind(this), false);
-                this.renderer.domElement.addEventListener('touchmove', this.onTouchMove.bind(this), false);
-                this.renderer.domElement.addEventListener('touchend', this.onTouchEnd.bind(this), false);
-                window.addEventListener('resize', this.onWindowResize.bind(this), false);
+                if (this.usePostprocessing) {
+                    try {
+                        this.composer = new THREE.EffectComposer(this.renderer);
+                        const renderPass = new THREE.RenderPass(this.scene, this.camera);
+                        this.composer.addPass(renderPass);
 
-                // Close button event
+                        const bloomPass = new THREE.UnrealBloomPass(
+                            new THREE.Vector2(window.innerWidth, window.innerHeight),
+                            0.2,
+                            0.25,
+                            0.25
+                        );
+                        this.composer.addPass(bloomPass);
+
+                        const motionBlurShader = {
+                            uniforms: {
+                                tDiffuse: { value: null },
+                                time: { value: 0.0 },
+                                rotationSpeed: { value: this.rotationSpeed }
+                            },
+                            vertexShader: `
+                                varying vec2 vUv;
+                                void main() {
+                                    vUv = uv;
+                                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                                }
+                            `,
+                            fragmentShader: `
+                                uniform sampler2D tDiffuse;
+                                uniform float time;
+                                uniform float rotationSpeed;
+                                varying vec2 vUv;
+                                void main() {
+                                    vec2 uv = vUv;
+                                    vec4 color = texture2D(tDiffuse, uv);
+                                    vec4 blurColor = vec4(0.0);
+                                    float blurAmount = abs(rotationSpeed) * 0.1;
+                                    int samples = 8;
+                                    for (int i = 0; i < samples; i++) {
+                                        float t = float(i) / float(samples - 1) - 0.5;
+                                        vec2 offset = vec2(cos(time + t * blurAmount), sin(time + t * blurAmount)) * blurAmount;
+                                        blurColor += texture2D(tDiffuse, uv + offset);
+                                    }
+                                    blurColor /= float(samples);
+                                    gl_FragColor = mix(color, blurColor, 0.5);
+                                    gl_FragColor.rgb *= vec3(0.8, 0.9, 1.2);
+                                }
+                            `
+                        };
+                        const motionBlurPass = new THREE.ShaderPass(motionBlurShader);
+                        this.composer.addPass(motionBlurPass);
+
+                        const copyPass = new THREE.ShaderPass(THREE.CopyShader);
+                        copyPass.renderToScreen = true;
+                        this.composer.addPass(copyPass);
+                    } catch (e) {
+                        console.error('Failed to initialize postprocessing:', e);
+                        this.usePostprocessing = false;
+                    }
+                }
+
+                // Event listeners with debug logging
+                this.renderer.domElement.addEventListener('mousedown', (e) => {
+                    console.log('Mouse down at:', e.clientX, e.clientY);
+                    this.onMouseDown(e);
+                }, false);
+                this.renderer.domElement.addEventListener('mousemove', (e) => {
+                    console.log('Mouse move at:', e.clientX, e.clientY);
+                    this.onMouseMove(e);
+                }, false);
+                this.renderer.domElement.addEventListener('mouseup', (e) => {
+                    console.log('Mouse up at:', e.clientX, e.clientY);
+                    this.onMouseUp(e);
+                }, false);
+                this.renderer.domElement.addEventListener('click', (e) => {
+                    console.log('Click at:', e.clientX, e.clientY);
+                    this.onMouseClick(e);
+                }, false);
+                this.renderer.domElement.addEventListener('touchstart', (e) => {
+                    console.log('Touch start at:', e.touches[0].clientX, e.touches[0].clientY);
+                    this.onTouchStart(e);
+                }, false);
+                this.renderer.domElement.addEventListener('touchmove', (e) => {
+                    console.log('Touch move at:', e.touches[0].clientX, e.touches[0].clientY);
+                    this.onTouchMove(e);
+                }, false);
+                this.renderer.domElement.addEventListener('touchend', (e) => {
+                    console.log('Touch end');
+                    this.onTouchEnd(e);
+                }, false);
+                window.addEventListener('resize', this.onWindowResize.bind(this), false);
                 this.closeButton.addEventListener('click', this.closePlayer.bind(this));
 
+                this.time = 0;
                 this.animate();
             }
 
@@ -225,6 +351,8 @@
                     this.currentPlayer.destroy();
                     this.currentPlayer = null;
                     this.closeButton.style.display = 'none';
+                    this.playerContainer.classList.remove('active');
+                    console.log('YouTube player closed, z-index set to -1');
                 }
             }
 
@@ -302,10 +430,46 @@
                     const randomY = (Math.random() - 0.5) * height_cylinder * 0.5;
                     console.log('Plane position:', { x, y: randomY, z });
 
-                    const material = new THREE.MeshBasicMaterial({
-                        map: texture,
-                        side: THREE.DoubleSide
+                    // シェーダーマテリアルを定義
+                    const material = new THREE.ShaderMaterial({
+                        uniforms: {
+                            map: { value: texture },
+                            cornerRadius: { value: 0.1 }, // 角の丸め具合（0.0〜0.5程度）
+                            aspect: { value: width / height } // アスペクト比
+                        },
+                        vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+                        fragmentShader: `
+                uniform sampler2D map;
+                uniform float cornerRadius;
+                uniform float aspect;
+                varying vec2 vUv;
+
+                float roundedBox(vec2 uv, vec2 size, float radius) {
+                    vec2 d = abs(uv - 0.5) * vec2(aspect, 1.0) - size + radius;
+                    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+                }
+
+                void main() {
+                    vec2 uv = vUv;
+                    vec4 texColor = texture2D(map, uv);
+
+                    // 角を丸めるためのマスク計算
+                    float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
+                    float alpha = smoothstep(0.0, 0.01, -dist);
+
+                    gl_FragColor = texColor * alpha;
+                }
+            `,
+                        side: THREE.DoubleSide,
+                        transparent: true
                     });
+
                     const plane = new THREE.Mesh(geometry, material);
 
                     const planeGroup = new THREE.Group();
@@ -332,14 +496,16 @@
             }
 
             onMouseClick(event) {
-                console.log('Click detected on canvas', event);
+                console.log('Click event received at:', event.clientX, event.clientY);
                 const canvas = this.renderer.domElement;
                 const rect = canvas.getBoundingClientRect();
+                console.log('Canvas rect:', rect);
+
                 this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
                 this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-                console.log('Adjusted mouse coords:', this.mouse.x, this.mouse.y);
-                this.raycaster.setFromCamera(this.mouse, this.camera);
+                console.log('Normalized mouse coords:', this.mouse.x, this.mouse.y);
 
+                this.raycaster.setFromCamera(this.mouse, this.camera);
                 const objectsToIntersect = this.videoPlaneMeshes.map(group => group.children[0]);
                 const intersects = this.raycaster.intersectObjects(objectsToIntersect, true);
                 console.log('Intersects:', intersects);
@@ -373,18 +539,24 @@
                                 'onReady': (event) => {
                                     console.log('Player ready for video:', videoId);
                                     event.target.playVideo();
-                                    this.closeButton.style.display = 'block'; // Show close button when player is ready
+                                    this.closeButton.style.display = 'block';
+                                    this.playerContainer.classList.add('active');
+                                    console.log('YouTube player active, z-index set to 11');
                                 },
                                 'onStateChange': (event) => {
                                     if (event.data === YT.PlayerState.ENDED) {
                                         this.currentPlayer.destroy();
                                         this.currentPlayer = null;
-                                        this.closeButton.style.display = 'none'; // Hide close button when video ends
+                                        this.closeButton.style.display = 'none';
+                                        this.playerContainer.classList.remove('active');
+                                        console.log('YouTube player ended, z-index set to -1');
                                     }
                                 }
                             }
                         });
                     }
+                } else {
+                    console.log('No intersections detected');
                 }
             }
 
@@ -392,10 +564,16 @@
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.domElement.style.width = window.innerWidth + 'px';
+                this.renderer.domElement.style.height = window.innerHeight + 'px';
+                if (this.usePostprocessing && this.composer) {
+                    this.composer.setSize(window.innerWidth, window.innerHeight);
+                }
             }
 
             animate() {
                 requestAnimationFrame(this.animate.bind(this));
+                this.time += 0.016;
                 if (!this.isMouseDown) {
                     this.centerGroup.rotation.y += this.rotationSpeed;
                 }
@@ -403,29 +581,51 @@
                     const plane = planeGroup.children[0];
                     plane.lookAt(this.camera.position);
                 });
-                this.renderer.render(this.scene, this.camera);
+
+                if (this.usePostprocessing && this.composer) {
+                    try {
+                        this.composer.passes.forEach(pass => {
+                            if (pass.material && pass.material.uniforms && pass.material.uniforms.time) {
+                                pass.material.uniforms.time.value = this.time;
+                                pass.material.uniforms.rotationSpeed.value = this.rotationSpeed;
+                            }
+                        });
+                        this.composer.render();
+                    } catch (e) {
+                        console.error('Postprocessing render error:', e);
+                        this.renderer.render(this.scene, this.camera);
+                    }
+                } else {
+                    this.renderer.render(this.scene, this.camera);
+                }
             }
         }
 
-        let vue = new Vue({
-            el: '#App',
-            vuetify: new Vuetify(),
-            mixins: [window.Mixins_Youtube],
-            mounted() {
-                this.$nextTick(() => {
-                    const videos = [
-                        { id: 'R53CceEY77Y', title: 'UA' },
-                        { id: '8RAEYRRJ8H8', title: 'UA' },
-                        { id: 'p_2F2lKV9uA', title: '森山直太朗 - さくら' },
-                        { id: 's8IkaLm9VHw', title: 'HystericBlue - Haru ~spring~' },
-                        { id: 'z9tECKZ60zk', title: 'Ryuichi Sakamoto - Merry Christmas' },
-                        { id: 'gol5dFrv4Ao', title: '松任谷由実 - 春よ、来い' },
-                        { id: '_me2yfR7Jfk', title: 'X Japan - Rusty Nail ' },
-                        { id: 'gDFQNM9HdP8', title: 'X Japan - 紅' },
-                    ];
-                    this.threeDVideoCylinder = new ThreeDVideoCylinder('ThreeDVideoContainer', videos);
-                });
-            }
+        window.addEventListener('DOMContentLoaded', () => {
+            let vue = new Vue({
+                el: '#App',
+                vuetify: new Vuetify(),
+                mixins: [window.Mixins_Youtube],
+                mounted() {
+                    this.$nextTick(() => {
+                        const videos = [
+                            { id: 'R53CceEY77Y', title: 'UA - 情熱' },
+                            { id: '8RAEYRRJ8H8', title: 'UA - 微熱' },
+                            { id: 'p_2F2lKV9uA', title: '森山直太朗 - さくら' },
+                            { id: 's8IkaLm9VHw', title: 'HystericBlue - Haru ~spring~' },
+                            { id: 'z9tECKZ60zk', title: 'Ryuichi Sakamoto - Merry Christmas' },
+                            { id: 'gol5dFrv4Ao', title: '松任谷由実 - 春よ、来い' },
+                            { id: '_me2yfR7Jfk', title: 'X Japan - Rusty Nail ' },
+                            { id: 'gDFQNM9HdP8', title: 'X Japan - 紅' },
+                        ];
+                        try {
+                            this.threeDVideoCylinder = new ThreeDVideoCylinder('ThreeDVideoContainer', videos);
+                        } catch (e) {
+                            console.error('Failed to initialize ThreeDVideoCylinder:', e);
+                        }
+                    });
+                }
+            });
         });
     </script>
 </body>
