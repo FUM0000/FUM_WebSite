@@ -37,7 +37,6 @@
             z-index: 1;
             pointer-events: auto;
             touch-action: none;
-            /* Prevent default touch behaviors like pinch-zoom */
         }
 
         #YouTubePlayerContainer {
@@ -50,12 +49,38 @@
             pointer-events: auto;
         }
 
+        #ClosePlayerButton {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 12;
+            transition: background-color 0.3s;
+        }
+
+        #ClosePlayerButton:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
         @media (max-width: 600px) {
             #YouTubePlayerContainer {
                 width: 90vw;
                 height: calc(90vw * 9 / 16);
                 bottom: 52px;
                 right: auto;
+            }
+
+            #ClosePlayerButton {
+                top: -36px;
+                right: 5px;
+                padding: 6px 10px;
+                font-size: 12px;
             }
         }
     </style>
@@ -71,6 +96,7 @@
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
                         <div id="ThreeDVideoContainer"></div>
                         <div id="YouTubePlayerContainer">
+                            <button id="ClosePlayerButton" style="display: none;">Close Player</button>
                             <div id="YouTubePlayer"></div>
                         </div>
                     </v-container>
@@ -116,7 +142,6 @@
                 isMouseDown = false;
             });
 
-            // Add touch events for mobile
             domElement.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 1) {
                     isMouseDown = true;
@@ -160,6 +185,7 @@
                 this.centerGroup = new THREE.Group();
                 this.rotationSpeed = 0.001;
                 this.currentPlayer = null;
+                this.closeButton = document.getElementById('ClosePlayerButton');
                 this.init();
             }
 
@@ -187,7 +213,19 @@
                 this.renderer.domElement.addEventListener('touchend', this.onTouchEnd.bind(this), false);
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
 
+                // Close button event
+                this.closeButton.addEventListener('click', this.closePlayer.bind(this));
+
                 this.animate();
+            }
+
+            closePlayer() {
+                if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
+                    this.currentPlayer.stopVideo();
+                    this.currentPlayer.destroy();
+                    this.currentPlayer = null;
+                    this.closeButton.style.display = 'none';
+                }
             }
 
             setupCustomControls() {
@@ -218,7 +256,7 @@
                 if (event.touches.length === 1) {
                     this.isMouseDown = true;
                     this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-                    this.onMouseClick(event.touches[0]); // Simulate click for touch
+                    this.onMouseClick(event.touches[0]);
                     event.preventDefault();
                 }
             }
@@ -325,21 +363,23 @@
                             videoId: videoId,
                             playerVars: {
                                 'autoplay': 1,
-                                'controls': 1, // Enable default controls (includes volume)
-                                'rel': 0, // Don't show related videos
-                                'showinfo': 1, // Deprecated but included for compatibility
-                                'modestbranding': 1, // Minimize YouTube branding (hides share button)
-                                'iv_load_policy': 3 // Disable annotations
+                                'controls': 1,
+                                'rel': 0,
+                                'showinfo': 1,
+                                'modestbranding': 1,
+                                'iv_load_policy': 3
                             },
                             events: {
                                 'onReady': (event) => {
                                     console.log('Player ready for video:', videoId);
                                     event.target.playVideo();
+                                    this.closeButton.style.display = 'block'; // Show close button when player is ready
                                 },
                                 'onStateChange': (event) => {
                                     if (event.data === YT.PlayerState.ENDED) {
                                         this.currentPlayer.destroy();
                                         this.currentPlayer = null;
+                                        this.closeButton.style.display = 'none'; // Hide close button when video ends
                                     }
                                 }
                             }
@@ -376,8 +416,12 @@
                     const videos = [
                         { id: 'R53CceEY77Y', title: 'UA' },
                         { id: '8RAEYRRJ8H8', title: 'UA' },
-                        { id: 'p_2F2lKV9uA', title: '森山直太朗 - さくら（独唱）' },
-                        { id: 's8IkaLm9VHw', title: 'Haru ~spring~ (春~spring~)' }
+                        { id: 'p_2F2lKV9uA', title: '森山直太朗 - さくら' },
+                        { id: 's8IkaLm9VHw', title: 'HystericBlue - Haru ~spring~' },
+                        { id: 'z9tECKZ60zk', title: 'Ryuichi Sakamoto - Merry Christmas' },
+                        { id: 'gol5dFrv4Ao', title: '松任谷由実 - 春よ、来い' },
+                        { id: '_me2yfR7Jfk', title: 'X Japan - Rusty Nail ' },
+                        { id: 'gDFQNM9HdP8', title: 'X Japan - 紅' },
                     ];
                     this.threeDVideoCylinder = new ThreeDVideoCylinder('ThreeDVideoContainer', videos);
                 });
