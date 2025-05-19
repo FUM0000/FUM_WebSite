@@ -262,44 +262,6 @@
                         );
                         this.composer.addPass(bloomPass);
 
-                        const motionBlurShader = {
-                            uniforms: {
-                                tDiffuse: { value: null },
-                                time: { value: 0.0 },
-                                rotationSpeed: { value: this.rotationSpeed }
-                            },
-                            vertexShader: `
-                                varying vec2 vUv;
-                                void main() {
-                                    vUv = uv;
-                                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                                }
-                            `,
-                            fragmentShader: `
-                                uniform sampler2D tDiffuse;
-                                uniform float time;
-                                uniform float rotationSpeed;
-                                varying vec2 vUv;
-                                void main() {
-                                    vec2 uv = vUv;
-                                    vec4 color = texture2D(tDiffuse, uv);
-                                    vec4 blurColor = vec4(0.0);
-                                    float blurAmount = abs(rotationSpeed) * 0.1;
-                                    int samples = 8;
-                                    for (int i = 0; i < samples; i++) {
-                                        float t = float(i) / float(samples - 1) - 0.5;
-                                        vec2 offset = vec2(cos(time + t * blurAmount), sin(time + t * blurAmount)) * blurAmount;
-                                        blurColor += texture2D(tDiffuse, uv + offset);
-                                    }
-                                    blurColor /= float(samples);
-                                    gl_FragColor = mix(color, blurColor, 0.5);
-                                    gl_FragColor.rgb *= vec3(0.8, 0.9, 1.2);
-                                }
-                            `
-                        };
-                        const motionBlurPass = new THREE.ShaderPass(motionBlurShader);
-                        this.composer.addPass(motionBlurPass);
-
                         const copyPass = new THREE.ShaderPass(THREE.CopyShader);
                         copyPass.renderToScreen = true;
                         this.composer.addPass(copyPass);
@@ -412,8 +374,8 @@
                 const angleStep = (Math.PI * 2) / videoCount;
 
                 this.videos.forEach((video, index) => {
-                    const baseWidth = 1;
-                    const randomScaleFactor = 0.5 + Math.random();
+                    const baseWidth = 1.5;
+                    const randomScaleFactor = 0.5 + Math.random() * 0.5;
                     const width = baseWidth * randomScaleFactor;
                     const height = width * (9 / 16);
                     const geometry = new THREE.PlaneGeometry(width, height);
@@ -617,6 +579,7 @@
                             { id: 'gol5dFrv4Ao', title: '松任谷由実 - 春よ、来い' },
                             { id: '_me2yfR7Jfk', title: 'X Japan - Rusty Nail ' },
                             { id: 'gDFQNM9HdP8', title: 'X Japan - 紅' },
+                            { id: 'RHBumUYrap4', title: 'Keno - Ohayou' },
                         ];
                         try {
                             this.threeDVideoCylinder = new ThreeDVideoCylinder('ThreeDVideoContainer', videos);
