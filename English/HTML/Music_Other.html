@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="author" content="F U M">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -36,15 +36,27 @@
             height: 100%;
             z-index: 1;
             pointer-events: auto;
+            touch-action: none;
+            /* Prevent default touch behaviors like pinch-zoom */
         }
+
         #YouTubePlayerContainer {
             position: fixed;
-            bottom: 20px;
+            bottom: 52px;
             right: 20px;
             width: 480px;
             height: 270px;
             z-index: 11;
             pointer-events: auto;
+        }
+
+        @media (max-width: 600px) {
+            #YouTubePlayerContainer {
+                width: 90vw;
+                height: calc(90vw * 9 / 16);
+                bottom: 52px;
+                right: auto;
+            }
         }
     </style>
 </head>
@@ -56,7 +68,7 @@
 
             <v-main id="Main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="pointer-events: none;">
+                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
                         <div id="ThreeDVideoContainer"></div>
                         <div id="YouTubePlayerContainer">
                             <div id="YouTubePlayer"></div>
@@ -104,7 +116,33 @@
                 isMouseDown = false;
             });
 
-            this.update = function () {};
+            // Add touch events for mobile
+            domElement.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isMouseDown = true;
+                    previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    e.preventDefault();
+                }
+            });
+
+            domElement.addEventListener('touchmove', (e) => {
+                if (isMouseDown && e.touches.length === 1) {
+                    const deltaMove = {
+                        x: e.touches[0].clientX - previousMousePosition.x,
+                        y: e.touches[0].clientY - previousMousePosition.y
+                    };
+                    object.rotation.y += deltaMove.x * 0.001;
+                    object.rotation.x += deltaMove.y * 0.001;
+                    previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    e.preventDefault();
+                }
+            });
+
+            domElement.addEventListener('touchend', () => {
+                isMouseDown = false;
+            });
+
+            this.update = function () { };
         };
     </script>
 
@@ -139,10 +177,14 @@
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
 
+                // Mouse and touch events
                 this.renderer.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
                 this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
                 this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
                 this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
+                this.renderer.domElement.addEventListener('touchstart', this.onTouchStart.bind(this), false);
+                this.renderer.domElement.addEventListener('touchmove', this.onTouchMove.bind(this), false);
+                this.renderer.domElement.addEventListener('touchend', this.onTouchEnd.bind(this), false);
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
 
                 this.animate();
@@ -172,6 +214,31 @@
                 this.isMouseDown = false;
             }
 
+            onTouchStart(event) {
+                if (event.touches.length === 1) {
+                    this.isMouseDown = true;
+                    this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+                    this.onMouseClick(event.touches[0]); // Simulate click for touch
+                    event.preventDefault();
+                }
+            }
+
+            onTouchMove(event) {
+                if (this.isMouseDown && event.touches.length === 1) {
+                    const deltaMove = {
+                        x: event.touches[0].clientX - this.previousMousePosition.x,
+                        y: event.touches[0].clientY - this.previousMousePosition.y
+                    };
+                    this.centerGroup.rotation.y -= deltaMove.x * 0.005;
+                    this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+                    event.preventDefault();
+                }
+            }
+
+            onTouchEnd() {
+                this.isMouseDown = false;
+            }
+
             createVideoCylinder() {
                 const radius = 3;
                 const videoCount = this.videos.length;
@@ -194,7 +261,7 @@
                     const angle = index * angleStep;
                     const x = radius * Math.cos(angle);
                     const z = radius * Math.sin(angle);
-                    const randomY = (Math.random() - 0.5) * height_cylinder * 0.5; // Y範囲を狭める
+                    const randomY = (Math.random() - 0.5) * height_cylinder * 0.5;
                     console.log('Plane position:', { x, y: randomY, z });
 
                     const material = new THREE.MeshBasicMaterial({
@@ -253,14 +320,16 @@
                         }
 
                         this.currentPlayer = new YT.Player('YouTubePlayer', {
-                            height: '270',
-                            width: '480',
+                            height: '100%',
+                            width: '100%',
                             videoId: videoId,
                             playerVars: {
                                 'autoplay': 1,
-                                'controls': 1,
-                                'rel': 0,
-                                'showinfo': 0
+                                'controls': 1, // Enable default controls (includes volume)
+                                'rel': 0, // Don't show related videos
+                                'showinfo': 1, // Deprecated but included for compatibility
+                                'modestbranding': 1, // Minimize YouTube branding (hides share button)
+                                'iv_load_policy': 3 // Disable annotations
                             },
                             events: {
                                 'onReady': (event) => {
