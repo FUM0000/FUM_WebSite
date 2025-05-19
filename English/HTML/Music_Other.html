@@ -34,48 +34,53 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        #YouTubePlayerContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 480px;
+            height: 270px;
+            z-index: 11;
+            pointer-events: auto;
         }
     </style>
 </head>
 
 <body>
-
     <v-app id="App">
         <template>
-
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Music > Other</main-system-bar>
 
             <v-main id="Main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
-                        <!-- 3D Video Container -->
+                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="pointer-events: none;">
                         <div id="ThreeDVideoContainer"></div>
+                        <div id="YouTubePlayerContainer">
+                            <div id="YouTubePlayer"></div>
+                        </div>
                     </v-container>
                 </transition>
             </v-main>
 
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
             <main-footer></main-footer>
-
         </template>
     </v-app>
 
-    <!-- Load scripts in order -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-
-        // Custom OrbitControls implementation since the CDN script isn't working
         THREE.OrbitControls = function (object, domElement) {
             this.object = object;
             this.domElement = domElement;
-
             this.enabled = true;
             this.target = new THREE.Vector3();
             this.enableDamping = false;
             this.dampingFactor = 0.05;
 
-            // Basic mouse interaction
             let isMouseDown = false;
             let previousMousePosition = { x: 0, y: 0 };
 
@@ -86,16 +91,12 @@
 
             domElement.addEventListener('mousemove', (e) => {
                 if (!isMouseDown) return;
-
                 const deltaMove = {
                     x: e.clientX - previousMousePosition.x,
                     y: e.clientY - previousMousePosition.y
                 };
-
-                // Rotate object based on mouse movement
                 object.rotation.y += deltaMove.x * 0.001;
                 object.rotation.x += deltaMove.y * 0.001;
-
                 previousMousePosition = { x: e.clientX, y: e.clientY };
             });
 
@@ -103,11 +104,8 @@
                 isMouseDown = false;
             });
 
-            this.update = function () {
-                // Placeholder for potential future updates
-            };
+            this.update = function () {};
         };
-
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -116,53 +114,37 @@
     <script src="../../Asset/Javascript/Common.js"></script>
 
     <script>
-
-
         class ThreeDVideoCylinder {
             constructor(containerId, videos) {
                 this.containerId = containerId;
                 this.videos = videos;
-                this.videoPlaneMeshes = []; // Store video plane meshes for animation
-                this.centerGroup = new THREE.Group(); // 全体を回転させるグループ
-                this.rotationSpeed = 0.001; // Default rotation speed
+                this.videoPlaneMeshes = [];
+                this.centerGroup = new THREE.Group();
+                this.rotationSpeed = 0.001;
+                this.currentPlayer = null;
                 this.init();
             }
 
             init() {
-                // Scene setup
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x111111);
-
-                // Camera
                 this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
                 this.camera.position.z = 5;
-
-                // Renderer
                 this.renderer = new THREE.WebGLRenderer({ antialias: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 document.getElementById(this.containerId).appendChild(this.renderer.domElement);
-
-                // Custom orbit controls
                 this.setupCustomControls();
-
-                // Create cylinder
                 this.createVideoCylinder();
-
-                // Add center group to scene
                 this.scene.add(this.centerGroup);
-
-                // Raycaster for interactions
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
 
-                // Add event listeners
                 this.renderer.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
                 this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
                 this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
                 this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
 
-                // Start animation
                 this.animate();
             }
 
@@ -178,16 +160,11 @@
 
             onMouseMove(event) {
                 if (!this.isMouseDown) return;
-
                 const deltaMove = {
                     x: event.clientX - this.previousMousePosition.x,
                     y: event.clientY - this.previousMousePosition.y
                 };
-
-                // Control rotation of the entire center group based on x-axis drag
                 this.centerGroup.rotation.y -= deltaMove.x * 0.005;
-
-                // Update previous mouse position
                 this.previousMousePosition = { x: event.clientX, y: event.clientY };
             }
 
@@ -196,34 +173,29 @@
             }
 
             createVideoCylinder() {
-                const radius = 2;
+                const radius = 3;
                 const videoCount = this.videos.length;
+                const height_cylinder = videoCount;
                 const angleStep = (Math.PI * 2) / videoCount;
 
                 this.videos.forEach((video, index) => {
-                    // Randomize plane size while maintaining 16:9 aspect ratio
-                    const baseWidth = 0.5; // Base width
-                    const randomScaleFactor = 0.5 + Math.random(); // Random scale between 0.5 and 1.5
+                    const baseWidth = 1;
+                    const randomScaleFactor = 0.5 + Math.random();
                     const width = baseWidth * randomScaleFactor;
-                    const height = width * (9 / 16); // Maintain 16:9 aspect ratio
+                    const height = width * (9 / 16);
                     const geometry = new THREE.PlaneGeometry(width, height);
 
-                    // Create canvas for video thumbnail
                     const canvas = document.createElement('canvas');
                     canvas.width = 480;
                     canvas.height = 360;
                     const ctx = canvas.getContext('2d');
-
-                    // Create thumbnail texture
                     const texture = new THREE.CanvasTexture(canvas);
 
-                    // Position on cylinder
                     const angle = index * angleStep;
                     const x = radius * Math.cos(angle);
                     const z = radius * Math.sin(angle);
-
-                    // Randomize initial y position
-                    const randomY = (Math.random() - 0.5) * 2; // Random y between -1 and 1
+                    const randomY = (Math.random() - 0.5) * height_cylinder * 0.5; // Y範囲を狭める
+                    console.log('Plane position:', { x, y: randomY, z });
 
                     const material = new THREE.MeshBasicMaterial({
                         map: texture,
@@ -231,27 +203,19 @@
                     });
                     const plane = new THREE.Mesh(geometry, material);
 
-                    // Create a group to handle individual plane orientation
                     const planeGroup = new THREE.Group();
                     planeGroup.add(plane);
-
-                    // Position plane with randomized y
                     planeGroup.position.set(x, randomY, z);
-
-                    // Rotate plane to always face camera
                     plane.lookAt(this.camera.position);
 
-                    // Add metadata for interaction
                     plane.userData = {
                         videoId: video.id,
                         title: video.title
                     };
 
-                    // Add to center group instead of scene directly
                     this.centerGroup.add(planeGroup);
                     this.videoPlaneMeshes.push(planeGroup);
 
-                    // Fetch and draw thumbnail
                     const img = new Image();
                     img.crossOrigin = 'Anonymous';
                     img.src = `https://img.youtube.com/vi/${video.id}/0.jpg`;
@@ -263,23 +227,54 @@
             }
 
             onMouseClick(event) {
-                // Calculate mouse position
-                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-                // Update the picking ray with the camera and mouse position
+                console.log('Click detected on canvas', event);
+                const canvas = this.renderer.domElement;
+                const rect = canvas.getBoundingClientRect();
+                this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                console.log('Adjusted mouse coords:', this.mouse.x, this.mouse.y);
                 this.raycaster.setFromCamera(this.mouse, this.camera);
 
-                // Calculate intersections
-                const intersects = this.raycaster.intersectObjects(
-                    this.scene.children.flatMap(group => group.children)
-                );
+                const objectsToIntersect = this.videoPlaneMeshes.map(group => group.children[0]);
+                const intersects = this.raycaster.intersectObjects(objectsToIntersect, true);
+                console.log('Intersects:', intersects);
 
                 if (intersects.length > 0) {
                     const selectedObject = intersects[0].object;
+                    console.log('Selected object:', selectedObject.userData);
                     if (selectedObject.userData.videoId) {
-                        // Open video in a new window
-                        window.open(`https://www.youtube.com/watch?v=${selectedObject.userData.videoId}`, '_blank');
+                        const videoId = selectedObject.userData.videoId;
+                        console.log('Playing video:', videoId);
+
+                        if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
+                            this.currentPlayer.stopVideo();
+                            this.currentPlayer.destroy();
+                            this.currentPlayer = null;
+                        }
+
+                        this.currentPlayer = new YT.Player('YouTubePlayer', {
+                            height: '270',
+                            width: '480',
+                            videoId: videoId,
+                            playerVars: {
+                                'autoplay': 1,
+                                'controls': 1,
+                                'rel': 0,
+                                'showinfo': 0
+                            },
+                            events: {
+                                'onReady': (event) => {
+                                    console.log('Player ready for video:', videoId);
+                                    event.target.playVideo();
+                                },
+                                'onStateChange': (event) => {
+                                    if (event.data === YT.PlayerState.ENDED) {
+                                        this.currentPlayer.destroy();
+                                        this.currentPlayer = null;
+                                    }
+                                }
+                            }
+                        });
                     }
                 }
             }
@@ -292,46 +287,38 @@
 
             animate() {
                 requestAnimationFrame(this.animate.bind(this));
-
-                // Rotate the entire group if not being manually dragged
                 if (!this.isMouseDown) {
                     this.centerGroup.rotation.y += this.rotationSpeed;
                 }
-
-                // Ensure each plane always faces the camera
                 this.videoPlaneMeshes.forEach((planeGroup) => {
                     const plane = planeGroup.children[0];
                     plane.lookAt(this.camera.position);
                 });
-
                 this.renderer.render(this.scene, this.camera);
             }
         }
 
-        // Vue initialization remains the same as in the original code
+        window.onYouTubeIframeAPIReady = function() {
+            console.log('YouTube IFrame API is ready');
+        };
+
         let vue = new Vue({
             el: '#App',
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Youtube],
             mounted() {
                 this.$nextTick(() => {
-                    // Reduced number of videos
                     const videos = [
                         { id: 'R53CceEY77Y', title: 'UA' },
                         { id: '8RAEYRRJ8H8', title: 'UA' },
                         { id: 'p_2F2lKV9uA', title: '森山直太朗 - さくら（独唱）' },
                         { id: 's8IkaLm9VHw', title: 'Haru ~spring~ (春~spring~)' }
                     ];
-
-                    // Initialize 3D Video Cylinder
                     this.threeDVideoCylinder = new ThreeDVideoCylinder('ThreeDVideoContainer', videos);
                 });
             }
-        })
-
-        
+        });
     </script>
-
 </body>
 
 </html>
