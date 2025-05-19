@@ -1039,7 +1039,7 @@ Vue.component('main-footer-simple', {
     template: `
     <v-footer color="#CFD8DC80" class="font-weight-black" app>
         <v-spacer />
-        <span style="font-size: 0.8rem;">© 2024 FUM / © 2024 FUM WebSite</span>
+        <span style="font-size: 0.8rem;">© 2025 FUM. All rights reserved.</span>
         <v-spacer />
     </v-footer>
     `,
