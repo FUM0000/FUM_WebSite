@@ -20,7 +20,8 @@
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
     <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+        rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
@@ -50,7 +51,7 @@
         }
 
         #YouTubePlayerContainer.active {
-            z-index: 11;
+            z-index: 5;
         }
 
         #ClosePlayerButton {
@@ -99,7 +100,7 @@
         main-system-bar,
         main-navigation,
         main-footer {
-            pointer-events: none;
+            pointer-events: auto;
         }
 
         v-main>*,
@@ -107,28 +108,6 @@
         main-navigation>*,
         main-footer>* {
             pointer-events: auto;
-        }
-
-        .playlist-dialog {
-            max-width: 600px;
-            margin: auto;
-        }
-
-        .video-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #ccc;
-        }
-
-        .video-item:last-child {
-            border-bottom: none;
-        }
-
-        .error-message {
-            color: red;
-            font-size: 12px;
         }
 
         @media (max-width: 600px) {
@@ -156,10 +135,6 @@
                 font-size: 12px;
                 margin-right: 8px;
             }
-
-            .playlist-dialog {
-                width: 90vw;
-            }
         }
     </style>
 </head>
@@ -172,9 +147,6 @@
             <v-main id="Main">
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
-                        <v-btn color="primary" @click="showPlaylistDialog = true" class="mb-4">
-                            Manage Playlist
-                        </v-btn>
                         <div id="ThreeDVideoContainer"></div>
                         <div id="YouTubePlayerContainer">
                             <button id="ClosePlayerButton" style="display: none;">Close Player</button>
@@ -184,67 +156,12 @@
                             </div>
                             <div id="YouTubePlayer"></div>
                         </div>
-
-                        <!-- Playlist Management Dialog -->
-                        <v-dialog v-model="showPlaylistDialog" max-width="600px" class="playlist-dialog">
-                            <v-card>
-                                <v-card-title>Manage Your Playlist</v-card-title>
-                                <v-card-text>
-                                    <!-- Add Video Form -->
-                                    <v-form @submit.prevent="addVideo">
-                                        <v-text-field
-                                            v-model="newVideo.url"
-                                            label="YouTube URL"
-                                            placeholder="e.g., https://www.youtube.com/watch?v=VIDEO_ID"
-                                            outlined
-                                            dense
-                                        ></v-text-field>
-                                        <v-text-field
-                                            v-model="newVideo.title"
-                                            label="Video Title"
-                                            placeholder="Enter video title"
-                                            outlined
-                                            dense
-                                        ></v-text-field>
-                                        <v-btn color="primary" type="submit" :disabled="!newVideo.url || !newVideo.title">
-                                            Add Video
-                                        </v-btn>
-                                        <div v-if="errorMessage" class="error-message mt-2">
-                                            {{ errorMessage }}
-                                        </div>
-                                    </v-form>
-                                    <!-- Video List -->
-                                    <v-list>
-                                        <v-list-item v-for="(video, index) in videos" :key="video.id" class="video-item">
-                                            <v-list-item-content>
-                                                <v-list-item-title>{{ video.title }}</v-list-item-title>
-                                                <v-list-item-subtitle>{{ video.id }}</v-list-item-subtitle>
-                                            </v-list-item-content>
-                                            <v-list-item-action>
-                                                <v-btn icon color="red" @click="removeVideo(index)">
-                                                    <v-icon>mdi-delete</v-icon>
-                                                </v-btn>
-                                            </v-list-item-action>
-                                        </v-list-item>
-                                        <v-list-item v-if="videos.length === 0">
-                                            <v-list-item-content>
-                                                <v-list-item-title>No videos in playlist</v-list-item-title>
-                                            </v-list-item-content>
-                                        </v-list-item>
-                                    </v-list>
-                                </v-card-text>
-                                <v-card-actions>
-                                    <v-spacer></v-spacer>
-                                    <v-btn color="secondary" text @click="showPlaylistDialog = false">Close</v-btn>
-                                </v-card-actions>
-                            </v-card>
-                        </v-dialog>
                     </v-container>
                 </transition>
             </v-main>
 
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
-            <main-footer></main-footer>
+            <main-footer-simple></main-footer-simple>
         </template>
     </v-app>
 
@@ -325,10 +242,9 @@
 
     <script>
         class ThreeDVideoCylinder {
-            constructor(containerId, videos, onUpdateCallback) {
+            constructor(containerId, videos) {
                 this.containerId = containerId;
                 this.videos = videos;
-                this.onUpdateCallback = onUpdateCallback; // Callback to notify Vue of changes
                 this.videoPlaneMeshes = [];
                 this.centerGroup = new THREE.Group();
                 this.rotationSpeed = 0.001;
@@ -341,6 +257,7 @@
                 this.clickDebounceTimeout = null;
                 this.playMode = 'loop';
                 this.currentVideoIndex = -1;
+                // 追加: エラー処理用のデバウンスフラグ
                 this.isErrorProcessing = false;
                 this.init();
             }
@@ -441,33 +358,15 @@
                     this.playbackOptions.style.display = 'none';
                     this.playerContainer.classList.remove('active');
                     this.currentVideoIndex = -1;
-                    this.isErrorProcessing = false;
+                    this.isErrorProcessing = false; // 追加: エラーフラグをリセット
                 }
             }
 
             setupCustomControls() {
                 this.isMouseDown = false;
                 this.previousMousePosition = { x: 0, y: 0 };
-                this.updateBounds();
-            }
-
-            updateBounds() {
                 this.maxY = this.videos.length * 0.25;
                 this.minY = -this.videos.length * 0.25;
-            }
-
-            updateVideos(videos) {
-                this.videos = videos;
-                this.updateBounds();
-                this.scene.remove(this.centerGroup);
-                this.centerGroup = new THREE.Group();
-                this.videoPlaneMeshes = [];
-                this.createVideoCylinder();
-                this.scene.add(this.centerGroup);
-                this.closePlayer();
-                if (this.onUpdateCallback) {
-                    this.onUpdateCallback(this.videos);
-                }
             }
 
             onMouseDown(event) {
@@ -531,7 +430,7 @@
                 const radius = 3;
                 const videoCount = this.videos.length;
                 const height_cylinder = videoCount;
-                const angleStep = videoCount > 0 ? (Math.PI * 2) / videoCount : 0;
+                const angleStep = (Math.PI * 2) / videoCount;
 
                 this.videos.forEach((video, index) => {
                     const baseWidth = 1.5;
@@ -616,15 +515,18 @@
             playNextVideo() {
                 if (this.currentVideoIndex === -1) return;
 
+                // 次の動画のインデックスを計算
                 const nextIndex = (this.currentVideoIndex + 1) % this.videos.length;
                 const nextVideo = this.videos[nextIndex];
 
+                // 現在のプレーヤーを破棄
                 if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
                     this.currentPlayer.stopVideo();
                     this.currentPlayer.destroy();
                     this.currentPlayer = null;
                 }
 
+                // 新しいプレーヤーを作成
                 this.currentVideoIndex = nextIndex;
                 this.currentPlayer = new YT.Player('YouTubePlayer', {
                     height: '100%',
@@ -644,7 +546,7 @@
                             this.closeButton.style.display = 'block';
                             this.playbackOptions.style.display = 'flex';
                             this.playerContainer.classList.add('active');
-                            this.isErrorProcessing = false;
+                            this.isErrorProcessing = false; // 追加: エラーフラグをリセット
                         },
                         'onStateChange': (event) => {
                             if (event.data === YT.PlayerState.ENDED) {
@@ -655,6 +557,7 @@
                                 }
                             }
                         },
+                        // 追加: エラー時の処理
                         'onError': (event) => {
                             if (this.isErrorProcessing) {
                                 console.log('Error ignored due to debounce');
@@ -666,6 +569,7 @@
                                 console.log('Attempting to play next video due to error');
                                 this.playNextVideo();
                             }
+                            // エラーデバウンス解除（300ms後）
                             setTimeout(() => {
                                 this.isErrorProcessing = false;
                             }, 300);
@@ -721,7 +625,7 @@
                                     this.closeButton.style.display = 'block';
                                     this.playbackOptions.style.display = 'flex';
                                     this.playerContainer.classList.add('active');
-                                    this.isErrorProcessing = false;
+                                    this.isErrorProcessing = false; // 追加: エラーフラグをリセット
                                 },
                                 'onStateChange': (event) => {
                                     if (event.data === YT.PlayerState.ENDED) {
@@ -732,6 +636,7 @@
                                         }
                                     }
                                 },
+                                // 追加: エラー時の処理
                                 'onError': (event) => {
                                     if (this.isErrorProcessing) {
                                         console.log('Error ignored due to debounce');
@@ -806,99 +711,14 @@
             let vue = new Vue({
                 el: '#App',
                 vuetify: new Vuetify(),
-                mixins: [window.Mixins_Youtube],
-                data() {
-                    return {
-                        Drawer: false,
-                        Ready_Page: true,
-                        showPlaylistDialog: false,
-                        videos: [],
-                        newVideo: {
-                            url: '',
-                            title: ''
-                        },
-                        errorMessage: '',
-                        threeDVideoCylinder: null
-                    };
-                },
-                methods: {
-                    ChangeDrawer(value) {
-                        this.Drawer = value;
-                    },
-                    getVideoId(url) {
-                        // Extract YouTube video ID from various URL formats
-                        const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-                        const match = url.match(regex);
-                        return match ? match[1] : null;
-                    },
-                    addVideo() {
-                        const videoId = this.getVideoId(this.newVideo.url);
-                        if (!videoId) {
-                            this.errorMessage = 'Invalid YouTube URL';
-                            return;
-                        }
-                        if (!this.newVideo.title.trim()) {
-                            this.errorMessage = 'Title is required';
-                            return;
-                        }
-                        if (this.videos.some(video => video.id === videoId)) {
-                            this.errorMessage = 'This video is already in the playlist';
-                            return;
-                        }
-
-                        const newVideo = {
-                            id: videoId,
-                            title: this.newVideo.title.trim()
-                        };
-                        this.videos.push(newVideo);
-                        this.savePlaylist();
-                        this.updateThreeDVideoCylinder();
-                        this.newVideo.url = '';
-                        this.newVideo.title = '';
-                        this.errorMessage = '';
-                    },
-                    removeVideo(index) {
-                        this.videos.splice(index, 1);
-                        this.savePlaylist();
-                        this.updateThreeDVideoCylinder();
-                    },
-                    savePlaylist() {
-                        localStorage.setItem('userPlaylist', JSON.stringify(this.videos));
-                    },
-                    loadPlaylist() {
-                        const saved = localStorage.getItem('userPlaylist');
-                        if (saved) {
-                            this.videos = JSON.parse(saved);
-                        } else {
-                            // Default playlist if none saved
-                            this.videos = [
-                                { id: 'R53CceEY77Y', title: 'UA - 情熱' },
-                                { id: '8RAEYRRJ8H8', title: 'UA - 微熱' },
-                                { id: 'p_2F2lKV9uA', title: '森山直太朗 - さくら' },
-                                { id: 's8IkaLm9VHw', title: 'HystericBlue - Haru ~spring~' },
-                                { id: 'z9tECKZ60zk', title: 'Ryuichi Sakamoto - Merry Christmas' },
-                                { id: 'gol5dFrv4Ao', title: '松任谷由実 - 春よ、来い' },
-                                { id: '_me2yfR7Jfk', title: 'X Japan - Rusty Nail ' },
-                                { id: 'gDFQNM9HdP8', title: 'X Japan - 紅' },
-                                { id: 'RHBumUYrap4', title: 'Keno - Ohayou' },
-                            ];
-                            this.savePlaylist();
-                        }
-                    },
-                    updateThreeDVideoCylinder() {
-                        if (this.threeDVideoCylinder) {
-                            this.threeDVideoCylinder.updateVideos([...this.videos]);
-                        }
-                    }
-                },
+                mixins: [window.Mixins_Common],
                 mounted() {
-                    this.loadPlaylist();
                     this.$nextTick(() => {
+                        const videos = [
+                            
+                        ];
                         try {
-                            this.threeDVideoCylinder = new ThreeDVideoCylinder('ThreeDVideoContainer', [...this.videos], (updatedVideos) => {
-                                this.videos = updatedVideos;
-                                this.savePlaylist();
-                            });
+                            this.threeDVideoCylinder = new ThreeDVideoCylinder('ThreeDVideoContainer', videos);
                         } catch (e) {
                             console.error('Failed to initialize ThreeDVideoCylinder:', e);
                         }
