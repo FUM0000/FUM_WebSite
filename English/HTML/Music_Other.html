@@ -275,36 +275,28 @@
                 }
                 // イベントリスナーの設定
                 this.renderer.domElement.addEventListener('mousedown', (e) => {
-                    console.log('Mouse down at:', e.clientX, e.clientY);
                     this.onMouseDown(e);
                 }, false);
                 this.renderer.domElement.addEventListener('mousemove', (e) => {
-                    console.log('Mouse move at:', e.clientX, e.clientY);
                     this.onMouseMove(e);
                 }, false);
-                this.renderer.domElement.addEventListener('mouseup', (e) => {
-                    console.log('Mouse up at:', e.clientX, e.clientY);
+                this.renderer.domElement.addEventListener('mouseup', (e) => {x
                     this.onMouseUp(e);
                 }, false);
                 this.renderer.domElement.addEventListener('click', (e) => {
-                    console.log('Click at:', e.clientX, e.clientY);
                     this.onMouseClick(e);
                 }, false);
                 // ダブルクリックイベントをキャッチして無効化
                 this.renderer.domElement.addEventListener('dblclick', (e) => {
                     e.preventDefault();
-                    console.log('Double click detected and prevented');
                 }, false);
                 this.renderer.domElement.addEventListener('touchstart', (e) => {
-                    console.log('Touch start at:', e.touches[0].clientX, e.touches[0].clientY);
                     this.onTouchStart(e);
                 }, false);
                 this.renderer.domElement.addEventListener('touchmove', (e) => {
-                    console.log('Touch move at:', e.touches[0].clientX, e.touches[0].clientY);
                     this.onTouchMove(e);
                 }, false);
                 this.renderer.domElement.addEventListener('touchend', (e) => {
-                    console.log('Touch end');
                     this.onTouchEnd(e);
                 }, false);
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
@@ -321,7 +313,6 @@
                     this.currentPlayer = null;
                     this.closeButton.style.display = 'none';
                     this.playerContainer.classList.remove('active');
-                    console.log('YouTube player closed, z-index set to -1');
                 }
             }
 
@@ -353,7 +344,6 @@
             onTouchStart(event) {
                 if (event.touches.length === 1) {
                     if (this.isClickProcessing) {
-                        console.log('Touch ignored due to debounce');
                         return;
                     }
                     this.isClickProcessing = true;
@@ -364,7 +354,6 @@
                     // デバウンス解除（300ms後）
                     this.clickDebounceTimeout = setTimeout(() => {
                         this.isClickProcessing = false;
-                        console.log('Touch processing reset');
                     }, 300);
                 }
             }
@@ -482,26 +471,20 @@
                 }
 
                 this.isClickProcessing = true;
-                console.log('Click event received at:', event.clientX, event.clientY);
                 const canvas = this.renderer.domElement;
                 const rect = canvas.getBoundingClientRect();
-                console.log('Canvas rect:', rect);
 
                 this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
                 this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-                console.log('Normalized mouse coords:', this.mouse.x, this.mouse.y);
 
                 this.raycaster.setFromCamera(this.mouse, this.camera);
                 const objectsToIntersect = this.videoPlaneMeshes.map(group => group.children[0]);
                 const intersects = this.raycaster.intersectObjects(objectsToIntersect, true);
-                console.log('Intersects:', intersects);
 
                 if (intersects.length > 0) {
                     const selectedObject = intersects[0].object;
-                    console.log('Selected object:', selectedObject.userData);
                     if (selectedObject.userData.videoId) {
                         const videoId = selectedObject.userData.videoId;
-                        console.log('Playing video:', videoId);
 
                         if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
                             this.currentPlayer.stopVideo();
@@ -527,7 +510,6 @@
                                     event.target.playVideo();
                                     this.closeButton.style.display = 'block';
                                     this.playerContainer.classList.add('active');
-                                    console.log('YouTube player active, z-index set to 11');
                                 },
                                 'onStateChange': (event) => {
                                     if (event.data === YT.PlayerState.ENDED) {
@@ -535,7 +517,6 @@
                                         this.currentPlayer = null;
                                         this.closeButton.style.display = 'none';
                                         this.playerContainer.classList.remove('active');
-                                        console.log('YouTube player ended, z-index set to -1');
                                     }
                                 }
                             }
@@ -548,7 +529,6 @@
                 // デバウンス解除（300ms後）
                 this.clickDebounceTimeout = setTimeout(() => {
                     this.isClickProcessing = false;
-                    console.log('Click processing reset');
                 }, 300);
             }
 
