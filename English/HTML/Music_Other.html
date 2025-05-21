@@ -358,7 +358,7 @@
                     }
                     this.isClickProcessing = true;
                     this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-                    this.onMouseClick(event.touches[0]); // タッチをクリックとして処理
+                    this.onMouseClick(event.touches[0]);
                     event.preventDefault();
 
                     // デバウンス解除（300ms後）
@@ -418,34 +418,34 @@
                             aspect: { value: width / height } // アスペクト比
                         },
                         vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
                         fragmentShader: `
-                uniform sampler2D map;
-                uniform float cornerRadius;
-                uniform float aspect;
-                varying vec2 vUv;
+                            uniform sampler2D map;
+                            uniform float cornerRadius;
+                            uniform float aspect;
+                            varying vec2 vUv;
 
-                float roundedBox(vec2 uv, vec2 size, float radius) {
-                    vec2 d = abs(uv - 0.5) * vec2(aspect, 1.0) - size + radius;
-                    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
-                }
+                            float roundedBox(vec2 uv, vec2 size, float radius) {
+                                vec2 d = abs(uv - 0.5) * vec2(aspect, 1.0) - size + radius;
+                                return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+                            }
 
-                void main() {
-                    vec2 uv = vUv;
-                    vec4 texColor = texture2D(map, uv);
+                            void main() {
+                                vec2 uv = vUv;
+                                vec4 texColor = texture2D(map, uv);
 
-                    // 角を丸めるためのマスク計算
-                    float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
-                    float alpha = smoothstep(0.0, 0.01, -dist);
+                                // 角を丸めるためのマスク計算
+                                float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
+                                float alpha = smoothstep(0.0, 0.01, -dist);
 
-                    gl_FragColor = texColor * alpha;
-                }
-            `,
+                                gl_FragColor = texColor * alpha;
+                            }
+                        `,
                         side: THREE.DoubleSide,
                         transparent: true
                     });
