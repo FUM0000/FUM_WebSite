@@ -243,12 +243,11 @@
     <script>
         class ThreeDVideoCylinder {
             constructor(containerId, videos) {
-                // 既存のコードはそのまま
                 this.containerId = containerId;
                 this.videos = videos;
                 this.videoPlaneMeshes = [];
                 this.centerGroup = new THREE.Group();
-                this.rotationSpeed = 0.001;
+                this.rotationSpeed = 0.001; // Base rotation speed for auto-rotation
                 this.currentPlayer = null;
                 this.closeButton = document.getElementById('ClosePlayerButton');
                 this.playerContainer = document.getElementById('YouTubePlayerContainer');
@@ -259,20 +258,22 @@
                 this.playMode = 'loop';
                 this.currentVideoIndex = -1;
                 this.isErrorProcessing = false;
+                this.isDragging = false; // Changed from isMouseDown for clarity
+                this.previousMousePosition = { x: 0, y: 0 };
+                this.targetRotationY = 0; // For damping
+                this.targetPositionY = 0; // For damping
+                this.dampingFactor = 0.1; // Controls smoothness of damping
                 this.init();
             }
 
             init() {
-                // 既存の初期化コード
-                if (!THREE.EffectComposer) {
-                    console.error('EffectComposer is not defined. Check if postprocessing scripts are loaded.');
-                    this.usePostprocessing = false;
-                }
-                if (!THREE.UnrealBloomPass || !THREE.LuminosityHighPassShader) {
-                    console.error('UnrealBloomPass or LuminosityHighPassShader is not defined.');
+                // Check for postprocessing availability
+                if (!THREE.EffectComposer || !THREE.UnrealBloomPass || !THREE.LuminosityHighPassShader) {
+                    console.warn('Postprocessing not available. Falling back to standard rendering.');
                     this.usePostprocessing = false;
                 }
 
+                // Initialize scene, camera, and renderer
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x111111);
                 this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -283,12 +284,11 @@
                 this.renderer.domElement.style.top = '0';
                 this.renderer.domElement.style.left = '0';
                 document.getElementById(this.containerId).appendChild(this.renderer.domElement);
-                this.setupCustomControls();
-                this.createVideoCylinder();
-                this.scene.add(this.centerGroup);
+
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
 
+                // Set up postprocessing if available
                 if (this.usePostprocessing) {
                     try {
                         this.composer = new THREE.EffectComposer(this.renderer);
@@ -310,40 +310,26 @@
                     }
                 }
 
-                // マウスクリックイベントにデバウンスチェックを追加
-                this.renderer.domElement.addEventListener('click', (e) => {
-                    if (this.isClickProcessing) {
-                        console.log('Mouse click ignored due to debounce');
-                        return;
-                    }
-                    this.onMouseClick(e);
-                }, false);
+                // Create video cylinder
+                this.createVideoCylinder();
+                this.scene.add(this.centerGroup);
 
-                // その他のイベントリスナー
-                this.renderer.domElement.addEventListener('mousedown', (e) => {
-                    this.onMouseDown(e);
-                }, false);
-                this.renderer.domElement.addEventListener('mousemove', (e) => {
-                    this.onMouseMove(e);
-                }, false);
-                this.renderer.domElement.addEventListener('mouseup', (e) => {
-                    this.onMouseUp(e);
-                }, false);
-                this.renderer.domElement.addEventListener('dblclick', (e) => {
-                    e.preventDefault();
-                }, false);
-                this.renderer.domElement.addEventListener('touchstart', (e) => {
-                    this.onTouchStart(e);
-                }, false);
-                this.renderer.domElement.addEventListener('touchmove', (e) => {
-                    this.onTouchMove(e);
-                }, false);
-                this.renderer.domElement.addEventListener('touchend', (e) => {
-                    this.onTouchEnd(e);
-                }, false);
+                // Initialize target rotation and position
+                this.targetRotationY = this.centerGroup.rotation.y;
+                this.targetPositionY = this.centerGroup.position.y;
+
+                // Event listeners
+                this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
+                this.renderer.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
+                this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+                this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
+                this.renderer.domElement.addEventListener('touchstart', this.onTouchStart.bind(this), false);
+                this.renderer.domElement.addEventListener('touchmove', this.onTouchMove.bind(this), false);
+                this.renderer.domElement.addEventListener('touchend', this.onTouchEnd.bind(this), false);
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
                 this.closeButton.addEventListener('click', this.closePlayer.bind(this));
 
+                // Playback options
                 this.playbackOptions.querySelectorAll('input[name="playMode"]').forEach(radio => {
                     radio.addEventListener('change', (e) => {
                         this.playMode = e.target.value;
@@ -355,17 +341,17 @@
                 this.animate();
             }
 
-            // onMouseClick メソッドは既存のデバウンスロジックを保持
             onMouseClick(event) {
                 if (this.isClickProcessing) {
-                    console.log('Click ignored due to debounce');
+                    console.log('Mouse click ignored due to debounce');
                     return;
                 }
 
                 this.isClickProcessing = true;
+                clearTimeout(this.clickDebounceTimeout);
+
                 const canvas = this.renderer.domElement;
                 const rect = canvas.getBoundingClientRect();
-
                 this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
                 this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
@@ -376,61 +362,7 @@
                 if (intersects.length > 0) {
                     const selectedObject = intersects[0].object;
                     if (selectedObject.userData.videoId) {
-                        const videoId = selectedObject.userData.videoId;
-                        this.currentVideoIndex = selectedObject.userData.index;
-
-                        if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
-                            this.currentPlayer.stopVideo();
-                            this.currentPlayer.destroy();
-                            this.currentPlayer = null;
-                        }
-
-                        this.currentPlayer = new YT.Player('YouTubePlayer', {
-                            height: '100%',
-                            width: '100%',
-                            videoId: videoId,
-                            playerVars: {
-                                'autoplay': 1,
-                                'controls': 1,
-                                'rel': 0,
-                                'showinfo': 1,
-                                'modestbranding': 1,
-                                'iv_load_policy': 3
-                            },
-                            events: {
-                                'onReady': (event) => {
-                                    event.target.playVideo();
-                                    this.closeButton.style.display = 'block';
-                                    this.playbackOptions.style.display = 'flex';
-                                    this.playerContainer.classList.add('active');
-                                    this.isErrorProcessing = false;
-                                },
-                                'onStateChange': (event) => {
-                                    if (event.data === YT.PlayerState.ENDED) {
-                                        if (this.playMode === 'loop') {
-                                            event.target.playVideo();
-                                        } else if (this.playMode === 'next') {
-                                            this.playNextVideo();
-                                        }
-                                    }
-                                },
-                                'onError': (event) => {
-                                    if (this.isErrorProcessing) {
-                                        console.log('Error ignored due to debounce');
-                                        return;
-                                    }
-                                    this.isErrorProcessing = true;
-                                    console.error('YouTube Player error:', event.data, 'for video:', videoId);
-                                    if (this.playMode === 'next') {
-                                        console.log('Attempting to play next video due to error');
-                                        this.playNextVideo();
-                                    }
-                                    setTimeout(() => {
-                                        this.isErrorProcessing = false;
-                                    }, 300);
-                                }
-                            }
-                        });
+                        this.playVideo(selectedObject.userData.videoId, selectedObject.userData.index);
                     }
                 } else {
                     console.log('No intersections detected');
@@ -438,7 +370,102 @@
 
                 this.clickDebounceTimeout = setTimeout(() => {
                     this.isClickProcessing = false;
-                }, 1000);
+                }, 300);
+            }
+
+            onTouchStart(event) {
+                if (event.touches.length === 1) {
+                    if (this.isClickProcessing) {
+                        console.log('Touch ignored due to debounce');
+                        return;
+                    }
+
+                    this.isClickProcessing = true;
+                    clearTimeout(this.clickDebounceTimeout);
+
+                    const canvas = this.renderer.domElement;
+                    const rect = canvas.getBoundingClientRect();
+                    this.mouse.x = ((event.touches[0].clientX - rect.left) / rect.width) * 2 - 1;
+                    this.mouse.y = -((event.touches[0].clientY - rect.top) / rect.height) * 2 + 1;
+
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+                    const objectsToIntersect = this.videoPlaneMeshes.map(group => group.children[0]);
+                    const intersects = this.raycaster.intersectObjects(objectsToIntersect, true);
+
+                    if (intersects.length > 0) {
+                        const selectedObject = intersects[0].object;
+                        if (selectedObject.userData.videoId) {
+                            this.playVideo(selectedObject.userData.videoId, selectedObject.userData.index);
+                        }
+                    } else {
+                        console.log('No intersections detected');
+                    }
+
+                    this.clickDebounceTimeout = setTimeout(() => {
+                        this.isClickProcessing = false;
+                    }, 300);
+
+                    this.isDragging = true;
+                    this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+                    event.preventDefault();
+                }
+            }
+
+            playVideo(videoId, index) {
+                this.currentVideoIndex = index;
+
+                if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
+                    this.currentPlayer.stopVideo();
+                    this.currentPlayer.destroy();
+                    this.currentPlayer = null;
+                }
+
+                this.currentPlayer = new YT.Player('YouTubePlayer', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videoId,
+                    playerVars: {
+                        'autoplay': 1,
+                        'controls': 1,
+                        'rel': 0,
+                        'showinfo': 1,
+                        'modestbranding': 1,
+                        'iv_load_policy': 3
+                    },
+                    events: {
+                        'onReady': (event) => {
+                            event.target.playVideo();
+                            this.closeButton.style.display = 'block';
+                            this.playbackOptions.style.display = 'flex';
+                            this.playerContainer.classList.add('active');
+                            this.isErrorProcessing = false;
+                        },
+                        'onStateChange': (event) => {
+                            if (event.data === YT.PlayerState.ENDED) {
+                                if (this.playMode === 'loop') {
+                                    event.target.playVideo();
+                                } else if (this.playMode === 'next') {
+                                    this.playNextVideo();
+                                }
+                            }
+                        },
+                        'onError': (event) => {
+                            if (this.isErrorProcessing) {
+                                console.log('Error ignored due to debounce');
+                                return;
+                            }
+                            this.isErrorProcessing = true;
+                            console.error('YouTube Player error:', event.data, 'for video:', videoId);
+                            if (this.playMode === 'next') {
+                                console.log('Attempting to play next video due to error');
+                                this.playNextVideo();
+                            }
+                            setTimeout(() => {
+                                this.isErrorProcessing = false;
+                            }, 300);
+                        }
+                    }
+                });
             }
 
             closePlayer() {
@@ -447,75 +474,59 @@
                     this.currentPlayer.destroy();
                     this.currentPlayer = null;
                     this.closeButton.style.display = 'none';
-                    // this.playbackOptions.style.display = 'none';
+                    this.playbackOptions.style.display = 'none';
                     this.playerContainer.classList.remove('active');
                     this.currentVideoIndex = -1;
-                    this.isErrorProcessing = false; // 追加: エラーフラグをリセット
+                    this.isErrorProcessing = false;
                 }
             }
 
-            setupCustomControls() {
-                this.isMouseDown = false;
-                this.previousMousePosition = { x: 0, y: 0 };
-                this.maxY = this.videos.length * 0.25;
-                this.minY = -this.videos.length * 0.25;
+            playNextVideo() {
+                if (this.currentVideoIndex === -1) return;
+
+                const nextIndex = (this.currentVideoIndex + 1) % this.videos.length;
+                const nextVideo = this.videos[nextIndex];
+                this.playVideo(nextVideo.id, nextIndex);
             }
 
             onMouseDown(event) {
-                this.isMouseDown = true;
+                this.isDragging = true;
                 this.previousMousePosition = { x: event.clientX, y: event.clientY };
             }
 
             onMouseMove(event) {
-                if (!this.isMouseDown) return;
+                if (!this.isDragging) return;
                 const deltaMove = {
                     x: event.clientX - this.previousMousePosition.x,
                     y: event.clientY - this.previousMousePosition.y
                 };
-                this.centerGroup.rotation.y -= deltaMove.x * 0.005;
-                let newY = this.centerGroup.position.y - deltaMove.y * 0.005;
-                newY = Math.max(this.minY, Math.min(this.maxY, newY));
-                this.centerGroup.position.y = newY;
+                // Update target rotation and position
+                this.targetRotationY -= deltaMove.x * 0.003; // Reduced sensitivity for smoother control
+                let newY = this.targetPositionY - deltaMove.y * 0.003;
+                this.targetPositionY = Math.max(this.minY, Math.min(this.maxY, newY));
                 this.previousMousePosition = { x: event.clientX, y: event.clientY };
             }
 
             onMouseUp() {
-                this.isMouseDown = false;
-            }
-
-            onTouchStart(event) {
-                if (event.touches.length === 1) {
-                    if (this.isClickProcessing) {
-                        return;
-                    }
-                    this.isClickProcessing = true;
-                    this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-                    this.onMouseClick(event.touches[0]);
-                    event.preventDefault();
-
-                    this.clickDebounceTimeout = setTimeout(() => {
-                        this.isClickProcessing = false;
-                    }, 1000);
-                }
+                this.isDragging = false;
             }
 
             onTouchMove(event) {
-                if (this.isMouseDown && event.touches.length === 1) {
+                if (this.isDragging && event.touches.length === 1) {
                     const deltaMove = {
                         x: event.touches[0].clientX - this.previousMousePosition.x,
                         y: event.touches[0].clientY - this.previousMousePosition.y
                     };
-                    this.centerGroup.rotation.y -= deltaMove.x * 0.005;
-                    let newY = this.centerGroup.position.y - deltaMove.y * 0.005;
-                    newY = Math.max(this.minY, Math.min(this.maxY, newY));
-                    this.centerGroup.position.y = newY;
+                    this.targetRotationY -= deltaMove.x * 0.003; // Reduced sensitivity for smoother control
+                    let newY = this.targetPositionY - deltaMove.y * 0.003;
+                    this.targetPositionY = Math.max(this.minY, Math.min(this.maxY, newY));
                     this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
                     event.preventDefault();
                 }
             }
 
             onTouchEnd() {
-                this.isMouseDown = false;
+                this.isDragging = false;
             }
 
             createVideoCylinder() {
@@ -523,6 +534,9 @@
                 const videoCount = this.videos.length;
                 const height_cylinder = videoCount;
                 const angleStep = (Math.PI * 2) / videoCount;
+
+                this.maxY = videoCount * 0.25;
+                this.minY = -videoCount * 0.25;
 
                 this.videos.forEach((video, index) => {
                     const baseWidth = 1.5;
@@ -549,31 +563,31 @@
                             aspect: { value: width / height }
                         },
                         vertexShader: `
-                            varying vec2 vUv;
-                            void main() {
-                                vUv = uv;
-                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                            }
-                        `,
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
                         fragmentShader: `
-                            uniform sampler2D map;
-                            uniform float cornerRadius;
-                            uniform float aspect;
-                            varying vec2 vUv;
+                    uniform sampler2D map;
+                    uniform float cornerRadius;
+                    uniform float aspect;
+                    varying vec2 vUv;
 
-                            float roundedBox(vec2 uv, vec2 size, float radius) {
-                                vec2 d = abs(uv - 0.5) * vec2(aspect, 1.0) - size + radius;
-                                return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
-                            }
+                    float roundedBox(vec2 uv, vec2 size, float radius) {
+                        vec2 d = abs(uv - 0.5) * vec2(aspect, 1.0) - size + radius;
+                        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+                    }
 
-                            void main() {
-                                vec2 uv = vUv;
-                                vec4 texColor = texture2D(map, uv);
-                                float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
-                                float alpha = smoothstep(0.0, 0.01, -dist);
-                                gl_FragColor = texColor * alpha;
-                            }
-                        `,
+                    void main() {
+                        vec2 uv = vUv;
+                        vec4 texColor = texture2D(map, uv);
+                        float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
+                        float alpha = smoothstep(0.0, 0.01, -dist);
+                        gl_FragColor = texColor * alpha;
+                    }
+                `,
                         side: THREE.DoubleSide,
                         transparent: true
                     });
@@ -601,72 +615,9 @@
                         ctx.drawImage(img, 0, 0, 480, 360);
                         texture.needsUpdate = true;
                     };
-                });
-            }
-
-            playNextVideo() {
-                if (this.currentVideoIndex === -1) return;
-
-                // 次の動画のインデックスを計算
-                const nextIndex = (this.currentVideoIndex + 1) % this.videos.length;
-                const nextVideo = this.videos[nextIndex];
-
-                // 現在のプレーヤーを破棄
-                if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
-                    this.currentPlayer.stopVideo();
-                    this.currentPlayer.destroy();
-                    this.currentPlayer = null;
-                }
-
-                // 新しいプレーヤーを作成
-                this.currentVideoIndex = nextIndex;
-                this.currentPlayer = new YT.Player('YouTubePlayer', {
-                    height: '100%',
-                    width: '100%',
-                    videoId: nextVideo.id,
-                    playerVars: {
-                        'autoplay': 1,
-                        'controls': 1,
-                        'rel': 0,
-                        'showinfo': 1,
-                        'modestbranding': 1,
-                        'iv_load_policy': 3
-                    },
-                    events: {
-                        'onReady': (event) => {
-                            event.target.playVideo();
-                            this.closeButton.style.display = 'block';
-                            this.playbackOptions.style.display = 'flex';
-                            this.playerContainer.classList.add('active');
-                            this.isErrorProcessing = false; // 追加: エラーフラグをリセット
-                        },
-                        'onStateChange': (event) => {
-                            if (event.data === YT.PlayerState.ENDED) {
-                                if (this.playMode === 'loop') {
-                                    event.target.playVideo();
-                                } else if (this.playMode === 'next') {
-                                    this.playNextVideo();
-                                }
-                            }
-                        },
-                        // 追加: エラー時の処理
-                        'onError': (event) => {
-                            if (this.isErrorProcessing) {
-                                console.log('Error ignored due to debounce');
-                                return;
-                            }
-                            this.isErrorProcessing = true;
-                            console.error('YouTube Player error:', event.data, 'for video:', nextVideo.id);
-                            if (this.playMode === 'next') {
-                                console.log('Attempting to play next video due to error');
-                                this.playNextVideo();
-                            }
-                            // エラーデバウンス解除（300ms後）
-                            setTimeout(() => {
-                                this.isErrorProcessing = false;
-                            }, 300);
-                        }
-                    }
+                    img.onerror = () => {
+                        console.error(`Failed to load thumbnail for video: ${video.id}`);
+                    };
                 });
             }
 
@@ -684,24 +635,24 @@
             animate() {
                 requestAnimationFrame(this.animate.bind(this));
                 this.time += 0.016;
-                if (!this.isMouseDown) {
-                    this.centerGroup.rotation.y += this.rotationSpeed;
+
+                // Apply damping to rotation and position
+                if (!this.isDragging) {
+                    this.targetRotationY += this.rotationSpeed; // Auto-rotation when not dragging
                 }
+                this.centerGroup.rotation.y += (this.targetRotationY - this.centerGroup.rotation.y) * this.dampingFactor;
+                this.centerGroup.position.y += (this.targetPositionY - this.centerGroup.position.y) * this.dampingFactor;
+
+                // Clamp position
+                this.centerGroup.position.y = Math.max(this.minY, Math.min(this.maxY, this.centerGroup.position.y));
+
                 this.videoPlaneMeshes.forEach((planeGroup) => {
                     const plane = planeGroup.children[0];
                     plane.lookAt(this.camera.position);
                 });
 
-                this.centerGroup.position.y = Math.max(this.minY, Math.min(this.maxY, this.centerGroup.position.y));
-
                 if (this.usePostprocessing && this.composer) {
                     try {
-                        this.composer.passes.forEach(pass => {
-                            if (pass.material && pass.material.uniforms && pass.material.uniforms.time) {
-                                pass.material.uniforms.time.value = this.time;
-                                pass.material.uniforms.rotationSpeed.value = this.rotationSpeed;
-                            }
-                        });
                         this.composer.render();
                     } catch (e) {
                         console.error('Postprocessing render error:', e);
