@@ -46,15 +46,12 @@
             width: 480px;
             height: 270px;
             z-index: -1;
-            /* Initially hidden below canvas */
             pointer-events: auto;
             transition: z-index 0.1s;
-            /* Smooth z-index change */
         }
 
         #YouTubePlayerContainer.active {
-            z-index: 11;
-            /* Active when player is visible */
+            z-index: 5;
         }
 
         #ClosePlayerButton {
@@ -76,12 +73,34 @@
             background-color: rgba(0, 0, 0, 0.9);
         }
 
-        /* Ensure other UI elements don’t block the canvas */
+        #PlaybackOptions {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            z-index: 12;
+        }
+
+        #PlaybackOptions label {
+            margin-right: 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        #PlaybackOptions input[type="radio"] {
+            margin-right: 4px;
+        }
+
         v-main,
         main-system-bar,
         main-navigation,
         main-footer {
-            pointer-events: none;
+            pointer-events: auto;
         }
 
         v-main>*,
@@ -105,6 +124,17 @@
                 padding: 6px 10px;
                 font-size: 12px;
             }
+
+            #PlaybackOptions {
+                top: -36px;
+                left: 5px;
+                padding: 6px;
+            }
+
+            #PlaybackOptions label {
+                font-size: 12px;
+                margin-right: 8px;
+            }
         }
     </style>
 </head>
@@ -120,6 +150,10 @@
                         <div id="ThreeDVideoContainer"></div>
                         <div id="YouTubePlayerContainer">
                             <button id="ClosePlayerButton" style="display: none;">Close Player</button>
+                            <div id="PlaybackOptions" style="display: none;">
+                                <label><input type="radio" name="playMode" value="loop" checked> Loop</label>
+                                <label><input type="radio" name="playMode" value="next"> Next Video</label>
+                            </div>
                             <div id="YouTubePlayer"></div>
                         </div>
                     </v-container>
@@ -127,11 +161,10 @@
             </v-main>
 
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
-            <main-footer></main-footer>
+            <main-footer-simple></main-footer-simple>
         </template>
     </v-app>
 
-    <!-- Three.js and Postprocessing Scripts -->
     <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
@@ -151,22 +184,22 @@
             this.dampingFactor = 0.05;
 
             let isMouseDown = false;
-            let previousMousePosition = { x: 0, y: 0 };
+            this.previousMousePosition = { x: 0, y: 0 };
 
             domElement.addEventListener('mousedown', (e) => {
                 isMouseDown = true;
-                previousMousePosition = { x: e.clientX, y: e.clientY };
+                this.previousMousePosition = { x: e.clientX, y: e.clientY };
             });
 
             domElement.addEventListener('mousemove', (e) => {
                 if (!isMouseDown) return;
                 const deltaMove = {
-                    x: e.clientX - previousMousePosition.x,
-                    y: e.clientY - previousMousePosition.y
+                    x: e.clientX - this.previousMousePosition.x,
+                    y: e.clientY - this.previousMousePosition.y
                 };
                 object.rotation.y += deltaMove.x * 0.001;
                 object.rotation.x += deltaMove.y * 0.001;
-                previousMousePosition = { x: e.clientX, y: e.clientY };
+                this.previousMousePosition = { x: e.clientX, y: e.clientY };
             });
 
             domElement.addEventListener('mouseup', () => {
@@ -176,7 +209,7 @@
             domElement.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 1) {
                     isMouseDown = true;
-                    previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    this.previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                     e.preventDefault();
                 }
             });
@@ -184,12 +217,12 @@
             domElement.addEventListener('touchmove', (e) => {
                 if (isMouseDown && e.touches.length === 1) {
                     const deltaMove = {
-                        x: e.touches[0].clientX - previousMousePosition.x,
-                        y: e.touches[0].clientY - previousMousePosition.y
+                        x: e.touches[0].clientX - this.previousMousePosition.x,
+                        y: e.touches[0].clientY - this.previousMousePosition.y
                     };
                     object.rotation.y += deltaMove.x * 0.001;
                     object.rotation.x += deltaMove.y * 0.001;
-                    previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    this.previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                     e.preventDefault();
                 }
             });
@@ -218,10 +251,14 @@
                 this.currentPlayer = null;
                 this.closeButton = document.getElementById('ClosePlayerButton');
                 this.playerContainer = document.getElementById('YouTubePlayerContainer');
+                this.playbackOptions = document.getElementById('PlaybackOptions');
                 this.usePostprocessing = true;
-                // デバウンス用のフラグとタイマー
                 this.isClickProcessing = false;
                 this.clickDebounceTimeout = null;
+                this.playMode = 'loop';
+                this.currentVideoIndex = -1;
+                // 追加: エラー処理用のデバウンスフラグ
+                this.isErrorProcessing = false;
                 this.init();
             }
 
@@ -273,7 +310,7 @@
                         this.usePostprocessing = false;
                     }
                 }
-                // イベントリスナーの設定
+
                 this.renderer.domElement.addEventListener('mousedown', (e) => {
                     this.onMouseDown(e);
                 }, false);
@@ -286,7 +323,6 @@
                 this.renderer.domElement.addEventListener('click', (e) => {
                     this.onMouseClick(e);
                 }, false);
-                // ダブルクリックイベントをキャッチして無効化
                 this.renderer.domElement.addEventListener('dblclick', (e) => {
                     e.preventDefault();
                 }, false);
@@ -302,6 +338,13 @@
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
                 this.closeButton.addEventListener('click', this.closePlayer.bind(this));
 
+                this.playbackOptions.querySelectorAll('input[name="playMode"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        this.playMode = e.target.value;
+                        console.log('Play mode changed to:', this.playMode);
+                    });
+                });
+
                 this.time = 0;
                 this.animate();
             }
@@ -312,16 +355,18 @@
                     this.currentPlayer.destroy();
                     this.currentPlayer = null;
                     this.closeButton.style.display = 'none';
+                    this.playbackOptions.style.display = 'none';
                     this.playerContainer.classList.remove('active');
+                    this.currentVideoIndex = -1;
+                    this.isErrorProcessing = false; // 追加: エラーフラグをリセット
                 }
             }
 
             setupCustomControls() {
                 this.isMouseDown = false;
                 this.previousMousePosition = { x: 0, y: 0 };
-                // Define vertical movement limits
-                this.maxY = this.videos.length / 2; // Maximum upward movement
-                this.minY = -this.videos.length / 2; // Maximum downward movement
+                this.maxY = this.videos.length * 0.25;
+                this.minY = -this.videos.length * 0.25;
             }
 
             onMouseDown(event) {
@@ -335,11 +380,8 @@
                     x: event.clientX - this.previousMousePosition.x,
                     y: event.clientY - this.previousMousePosition.y
                 };
-                // Rotate left/right
                 this.centerGroup.rotation.y -= deltaMove.x * 0.005;
-                // Move up/down
                 let newY = this.centerGroup.position.y - deltaMove.y * 0.005;
-                // Constrain vertical movement
                 newY = Math.max(this.minY, Math.min(this.maxY, newY));
                 this.centerGroup.position.y = newY;
                 this.previousMousePosition = { x: event.clientX, y: event.clientY };
@@ -359,7 +401,6 @@
                     this.onMouseClick(event.touches[0]);
                     event.preventDefault();
 
-                    // Debounce reset
                     this.clickDebounceTimeout = setTimeout(() => {
                         this.isClickProcessing = false;
                     }, 300);
@@ -372,11 +413,8 @@
                         x: event.touches[0].clientX - this.previousMousePosition.x,
                         y: event.touches[0].clientY - this.previousMousePosition.y
                     };
-                    // Rotate left/right
                     this.centerGroup.rotation.y -= deltaMove.x * 0.005;
-                    // Move up/down
                     let newY = this.centerGroup.position.y - deltaMove.y * 0.005;
-                    // Constrain vertical movement
                     newY = Math.max(this.minY, Math.min(this.maxY, newY));
                     this.centerGroup.position.y = newY;
                     this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
@@ -387,7 +425,6 @@
             onTouchEnd() {
                 this.isMouseDown = false;
             }
-
 
             createVideoCylinder() {
                 const radius = 3;
@@ -412,14 +449,12 @@
                     const x = radius * Math.cos(angle);
                     const z = radius * Math.sin(angle);
                     const randomY = (Math.random() - 0.5) * height_cylinder * 0.5;
-                    console.log('Plane position:', { x, y: randomY, z });
 
-                    // シェーダーマテリアルを定義
                     const material = new THREE.ShaderMaterial({
                         uniforms: {
                             map: { value: texture },
-                            cornerRadius: { value: 0.1 }, // 角の丸め具合（0.0〜0.5程度）
-                            aspect: { value: width / height } // アスペクト比
+                            cornerRadius: { value: 0.1 },
+                            aspect: { value: width / height }
                         },
                         vertexShader: `
                             varying vec2 vUv;
@@ -442,11 +477,8 @@
                             void main() {
                                 vec2 uv = vUv;
                                 vec4 texColor = texture2D(map, uv);
-
-                                // 角を丸めるためのマスク計算
                                 float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
                                 float alpha = smoothstep(0.0, 0.01, -dist);
-
                                 gl_FragColor = texColor * alpha;
                             }
                         `,
@@ -463,7 +495,8 @@
 
                     plane.userData = {
                         videoId: video.id,
-                        title: video.title
+                        title: video.title,
+                        index: index
                     };
 
                     this.centerGroup.add(planeGroup);
@@ -478,7 +511,73 @@
                     };
                 });
             }
-            // デバウンス付きのクリック処理
+
+            playNextVideo() {
+                if (this.currentVideoIndex === -1) return;
+
+                // 次の動画のインデックスを計算
+                const nextIndex = (this.currentVideoIndex + 1) % this.videos.length;
+                const nextVideo = this.videos[nextIndex];
+
+                // 現在のプレーヤーを破棄
+                if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
+                    this.currentPlayer.stopVideo();
+                    this.currentPlayer.destroy();
+                    this.currentPlayer = null;
+                }
+
+                // 新しいプレーヤーを作成
+                this.currentVideoIndex = nextIndex;
+                this.currentPlayer = new YT.Player('YouTubePlayer', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: nextVideo.id,
+                    playerVars: {
+                        'autoplay': 1,
+                        'controls': 1,
+                        'rel': 0,
+                        'showinfo': 1,
+                        'modestbranding': 1,
+                        'iv_load_policy': 3
+                    },
+                    events: {
+                        'onReady': (event) => {
+                            event.target.playVideo();
+                            this.closeButton.style.display = 'block';
+                            this.playbackOptions.style.display = 'flex';
+                            this.playerContainer.classList.add('active');
+                            this.isErrorProcessing = false; // 追加: エラーフラグをリセット
+                        },
+                        'onStateChange': (event) => {
+                            if (event.data === YT.PlayerState.ENDED) {
+                                if (this.playMode === 'loop') {
+                                    event.target.playVideo();
+                                } else if (this.playMode === 'next') {
+                                    this.playNextVideo();
+                                }
+                            }
+                        },
+                        // 追加: エラー時の処理
+                        'onError': (event) => {
+                            if (this.isErrorProcessing) {
+                                console.log('Error ignored due to debounce');
+                                return;
+                            }
+                            this.isErrorProcessing = true;
+                            console.error('YouTube Player error:', event.data, 'for video:', nextVideo.id);
+                            if (this.playMode === 'next') {
+                                console.log('Attempting to play next video due to error');
+                                this.playNextVideo();
+                            }
+                            // エラーデバウンス解除（300ms後）
+                            setTimeout(() => {
+                                this.isErrorProcessing = false;
+                            }, 300);
+                        }
+                    }
+                });
+            }
+
             onMouseClick(event) {
                 if (this.isClickProcessing) {
                     console.log('Click ignored due to debounce');
@@ -500,6 +599,7 @@
                     const selectedObject = intersects[0].object;
                     if (selectedObject.userData.videoId) {
                         const videoId = selectedObject.userData.videoId;
+                        this.currentVideoIndex = selectedObject.userData.index;
 
                         if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
                             this.currentPlayer.stopVideo();
@@ -521,18 +621,36 @@
                             },
                             events: {
                                 'onReady': (event) => {
-                                    console.log('Player ready for video:', videoId);
                                     event.target.playVideo();
                                     this.closeButton.style.display = 'block';
+                                    this.playbackOptions.style.display = 'flex';
                                     this.playerContainer.classList.add('active');
+                                    this.isErrorProcessing = false; // 追加: エラーフラグをリセット
                                 },
                                 'onStateChange': (event) => {
                                     if (event.data === YT.PlayerState.ENDED) {
-                                        this.currentPlayer.destroy();
-                                        this.currentPlayer = null;
-                                        this.closeButton.style.display = 'none';
-                                        this.playerContainer.classList.remove('active');
+                                        if (this.playMode === 'loop') {
+                                            event.target.playVideo();
+                                        } else if (this.playMode === 'next') {
+                                            this.playNextVideo();
+                                        }
                                     }
+                                },
+                                // 追加: エラー時の処理
+                                'onError': (event) => {
+                                    if (this.isErrorProcessing) {
+                                        console.log('Error ignored due to debounce');
+                                        return;
+                                    }
+                                    this.isErrorProcessing = true;
+                                    console.error('YouTube Player error:', event.data, 'for video:', videoId);
+                                    if (this.playMode === 'next') {
+                                        console.log('Attempting to play next video due to error');
+                                        this.playNextVideo();
+                                    }
+                                    setTimeout(() => {
+                                        this.isErrorProcessing = false;
+                                    }, 300);
                                 }
                             }
                         });
@@ -541,12 +659,10 @@
                     console.log('No intersections detected');
                 }
 
-                // デバウンス解除（300ms後）
                 this.clickDebounceTimeout = setTimeout(() => {
                     this.isClickProcessing = false;
                 }, 300);
             }
-
 
             onWindowResize() {
                 this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -559,7 +675,6 @@
                 }
             }
 
-
             animate() {
                 requestAnimationFrame(this.animate.bind(this));
                 this.time += 0.016;
@@ -571,7 +686,6 @@
                     plane.lookAt(this.camera.position);
                 });
 
-                // Ensure the cylinder stays within bounds during animation
                 this.centerGroup.position.y = Math.max(this.minY, Math.min(this.maxY, this.centerGroup.position.y));
 
                 if (this.usePostprocessing && this.composer) {
@@ -597,7 +711,7 @@
             let vue = new Vue({
                 el: '#App',
                 vuetify: new Vuetify(),
-                mixins: [window.Mixins_Youtube],
+                mixins: [window.Mixins_Common],
                 mounted() {
                     this.$nextTick(() => {
                         const videos = [
