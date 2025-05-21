@@ -219,6 +219,9 @@
                 this.closeButton = document.getElementById('ClosePlayerButton');
                 this.playerContainer = document.getElementById('YouTubePlayerContainer');
                 this.usePostprocessing = true;
+                // デバウンス用のフラグとタイマー
+                this.isClickProcessing = false;
+                this.clickDebounceTimeout = null;
                 this.init();
             }
 
@@ -270,8 +273,7 @@
                         this.usePostprocessing = false;
                     }
                 }
-
-                // Event listeners with debug logging
+                // イベントリスナーの設定
                 this.renderer.domElement.addEventListener('mousedown', (e) => {
                     console.log('Mouse down at:', e.clientX, e.clientY);
                     this.onMouseDown(e);
@@ -287,6 +289,11 @@
                 this.renderer.domElement.addEventListener('click', (e) => {
                     console.log('Click at:', e.clientX, e.clientY);
                     this.onMouseClick(e);
+                }, false);
+                // ダブルクリックイベントをキャッチして無効化
+                this.renderer.domElement.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    console.log('Double click detected and prevented');
                 }, false);
                 this.renderer.domElement.addEventListener('touchstart', (e) => {
                     console.log('Touch start at:', e.touches[0].clientX, e.touches[0].clientY);
@@ -342,12 +349,23 @@
                 this.isMouseDown = false;
             }
 
+            // タッチイベントもデバウンス処理を追加
             onTouchStart(event) {
                 if (event.touches.length === 1) {
-                    this.isMouseDown = true;
+                    if (this.isClickProcessing) {
+                        console.log('Touch ignored due to debounce');
+                        return;
+                    }
+                    this.isClickProcessing = true;
                     this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-                    this.onMouseClick(event.touches[0]);
+                    this.onMouseClick(event.touches[0]); // タッチをクリックとして処理
                     event.preventDefault();
+
+                    // デバウンス解除（300ms後）
+                    this.clickDebounceTimeout = setTimeout(() => {
+                        this.isClickProcessing = false;
+                        console.log('Touch processing reset');
+                    }, 300);
                 }
             }
 
@@ -456,8 +474,14 @@
                     };
                 });
             }
-
+            // デバウンス付きのクリック処理
             onMouseClick(event) {
+                if (this.isClickProcessing) {
+                    console.log('Click ignored due to debounce');
+                    return;
+                }
+
+                this.isClickProcessing = true;
                 console.log('Click event received at:', event.clientX, event.clientY);
                 const canvas = this.renderer.domElement;
                 const rect = canvas.getBoundingClientRect();
@@ -520,7 +544,14 @@
                 } else {
                     console.log('No intersections detected');
                 }
+
+                // デバウンス解除（300ms後）
+                this.clickDebounceTimeout = setTimeout(() => {
+                    this.isClickProcessing = false;
+                    console.log('Click processing reset');
+                }, 300);
             }
+
 
             onWindowResize() {
                 this.camera.aspect = window.innerWidth / window.innerHeight;
