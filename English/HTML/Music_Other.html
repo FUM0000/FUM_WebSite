@@ -46,15 +46,12 @@
             width: 480px;
             height: 270px;
             z-index: -1;
-            /* Initially hidden below canvas */
             pointer-events: auto;
             transition: z-index 0.1s;
-            /* Smooth z-index change */
         }
 
         #YouTubePlayerContainer.active {
             z-index: 11;
-            /* Active when player is visible */
         }
 
         #ClosePlayerButton {
@@ -76,7 +73,30 @@
             background-color: rgba(0, 0, 0, 0.9);
         }
 
-        /* Ensure other UI elements don’t block the canvas */
+        /* 追加: ラジオボタンのスタイル */
+        #PlaybackOptions {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            z-index: 12;
+        }
+
+        #PlaybackOptions label {
+            margin-right: 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        #PlaybackOptions input[type="radio"] {
+            margin-right: 4px;
+        }
+
         v-main,
         main-system-bar,
         main-navigation,
@@ -105,6 +125,18 @@
                 padding: 6px 10px;
                 font-size: 12px;
             }
+
+            /* 追加: モバイル向けラジオボタンのスタイル調整 */
+            #PlaybackOptions {
+                top: -36px;
+                left: 5px;
+                padding: 6px;
+            }
+
+            #PlaybackOptions label {
+                font-size: 12px;
+                margin-right: 8px;
+            }
         }
     </style>
 </head>
@@ -120,6 +152,11 @@
                         <div id="ThreeDVideoContainer"></div>
                         <div id="YouTubePlayerContainer">
                             <button id="ClosePlayerButton" style="display: none;">Close Player</button>
+                            <!-- 追加: 再生オプションのラジオボタン -->
+                            <div id="PlaybackOptions" style="display: none;">
+                                <label><input type="radio" name="playMode" value="loop" checked> Loop</label>
+                                <label><input type="radio" name="playMode" value="next"> Next Video</label>
+                            </div>
                             <div id="YouTubePlayer"></div>
                         </div>
                     </v-container>
@@ -164,7 +201,7 @@
                     x: e.clientX - previousMousePosition.x,
                     y: e.clientY - previousMousePosition.y
                 };
-                object.rotation.y += deltaMove.x * 0.001;
+                object.rotation.y +=-objectiveMove.x * 0.001;
                 object.rotation.x += deltaMove.y * 0.001;
                 previousMousePosition = { x: e.clientX, y: e.clientY };
             });
@@ -218,10 +255,13 @@
                 this.currentPlayer = null;
                 this.closeButton = document.getElementById('ClosePlayerButton');
                 this.playerContainer = document.getElementById('YouTubePlayerContainer');
+                this.playbackOptions = document.getElementById('PlaybackOptions');
                 this.usePostprocessing = true;
-                // デバウンス用のフラグとタイマー
                 this.isClickProcessing = false;
                 this.clickDebounceTimeout = null;
+                // 追加: 再生モードの管理（デフォルトはループ）
+                this.playMode = 'loop';
+                this.currentVideoIndex = -1; // 現在再生中の動画のインデックス
                 this.init();
             }
 
@@ -273,6 +313,7 @@
                         this.usePostprocessing = false;
                     }
                 }
+
                 // イベントリスナーの設定
                 this.renderer.domElement.addEventListener('mousedown', (e) => {
                     this.onMouseDown(e);
@@ -286,7 +327,6 @@
                 this.renderer.domElement.addEventListener('click', (e) => {
                     this.onMouseClick(e);
                 }, false);
-                // ダブルクリックイベントをキャッチして無効化
                 this.renderer.domElement.addEventListener('dblclick', (e) => {
                     e.preventDefault();
                 }, false);
@@ -302,6 +342,14 @@
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
                 this.closeButton.addEventListener('click', this.closePlayer.bind(this));
 
+                // 追加: ラジオボタンのイベントリスナー
+                this.playbackOptions.querySelectorAll('input[name="playMode"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        this.playMode = e.target.value;
+                        console.log('Play mode changed to:', this.playMode);
+                    });
+                });
+
                 this.time = 0;
                 this.animate();
             }
@@ -312,13 +360,17 @@
                     this.currentPlayer.destroy();
                     this.currentPlayer = null;
                     this.closeButton.style.display = 'none';
+                    this.playbackOptions.style.display = 'none';
                     this.playerContainer.classList.remove('active');
+                    this.currentVideoIndex = -1; // リセット
                 }
             }
 
             setupCustomControls() {
                 this.isMouseDown = false;
                 this.previousMousePosition = { x: 0, y: 0 };
+                this.maxY = this.videos.length * 0.25;
+                this.minY = -this.videos.length * 0.25;
             }
 
             onMouseDown(event) {
@@ -333,6 +385,9 @@
                     y: event.clientY - this.previousMousePosition.y
                 };
                 this.centerGroup.rotation.y -= deltaMove.x * 0.005;
+                let newY = this.centerGroup.position.y - deltaMove.y * 0.005;
+                newY = Math.max(this.minY, Math.min(this.maxY, newY));
+                this.centerGroup.position.y = newY;
                 this.previousMousePosition = { x: event.clientX, y: event.clientY };
             }
 
@@ -340,7 +395,6 @@
                 this.isMouseDown = false;
             }
 
-            // タッチイベントもデバウンス処理を追加
             onTouchStart(event) {
                 if (event.touches.length === 1) {
                     if (this.isClickProcessing) {
@@ -351,7 +405,6 @@
                     this.onMouseClick(event.touches[0]);
                     event.preventDefault();
 
-                    // デバウンス解除（300ms後）
                     this.clickDebounceTimeout = setTimeout(() => {
                         this.isClickProcessing = false;
                     }, 300);
@@ -365,6 +418,9 @@
                         y: event.touches[0].clientY - this.previousMousePosition.y
                     };
                     this.centerGroup.rotation.y -= deltaMove.x * 0.005;
+                    let newY = this.centerGroup.position.y - deltaMove.y * 0.005;
+                    newY = Math.max(this.minY, Math.min(this.maxY, newY));
+                    this.centerGroup.position.y = newY;
                     this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
                     event.preventDefault();
                 }
@@ -399,12 +455,11 @@
                     const randomY = (Math.random() - 0.5) * height_cylinder * 0.5;
                     console.log('Plane position:', { x, y: randomY, z });
 
-                    // シェーダーマテリアルを定義
                     const material = new THREE.ShaderMaterial({
                         uniforms: {
                             map: { value: texture },
-                            cornerRadius: { value: 0.1 }, // 角の丸め具合（0.0〜0.5程度）
-                            aspect: { value: width / height } // アスペクト比
+                            cornerRadius: { value: 0.1 },
+                            aspect: { value: width / height }
                         },
                         vertexShader: `
                             varying vec2 vUv;
@@ -427,11 +482,8 @@
                             void main() {
                                 vec2 uv = vUv;
                                 vec4 texColor = texture2D(map, uv);
-
-                                // 角を丸めるためのマスク計算
                                 float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
                                 float alpha = smoothstep(0.0, 0.01, -dist);
-
                                 gl_FragColor = texColor * alpha;
                             }
                         `,
@@ -448,7 +500,8 @@
 
                     plane.userData = {
                         videoId: video.id,
-                        title: video.title
+                        title: video.title,
+                        index: index // 追加: 動画のインデックスを保存
                     };
 
                     this.centerGroup.add(planeGroup);
@@ -463,7 +516,57 @@
                     };
                 });
             }
-            // デバウンス付きのクリック処理
+
+            // 追加: 次の動画を再生するメソッド
+            playNextVideo() {
+                if (this.currentVideoIndex === -1) return;
+
+                // 次の動画のインデックスを計算（ループする）
+                const nextIndex = (this.currentVideoIndex + 1) % this.videos.length;
+                const nextVideo = this.videos[nextIndex];
+
+                // 現在のプレーヤーを破棄
+                if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
+                    this.currentPlayer.stopVideo();
+                    this.currentPlayer.destroy();
+                    this.currentPlayer = null;
+                }
+
+                // 新しいプレーヤーを作成
+                this.currentVideoIndex = nextIndex;
+                this.currentPlayer = new YT.Player('YouTubePlayer', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: nextVideo.id,
+                    playerVars: {
+                        'autoplay': 1,
+                        'controls': 1,
+                        'rel': 0,
+                        'showinfo': 1,
+                        'modestbranding': 1,
+                        'iv_load_policy': 3
+                    },
+                    events: {
+                        'onReady': (event) => {
+                            console.log('Player ready for video:', nextVideo.id);
+                            event.target.playVideo();
+                            this.closeButton.style.display = 'block';
+                            this.playbackOptions.style.display = 'flex';
+                            this.playerContainer.classList.add('active');
+                        },
+                        'onStateChange': (event) => {
+                            if (event.data === YT.PlayerState.ENDED) {
+                                if (this.playMode === 'loop') {
+                                    event.target.playVideo(); // ループ再生
+                                } else if (this.playMode === 'next') {
+                                    this.playNextVideo(); // 次の動画を再生
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
             onMouseClick(event) {
                 if (this.isClickProcessing) {
                     console.log('Click ignored due to debounce');
@@ -485,6 +588,7 @@
                     const selectedObject = intersects[0].object;
                     if (selectedObject.userData.videoId) {
                         const videoId = selectedObject.userData.videoId;
+                        this.currentVideoIndex = selectedObject.userData.index; // インデックスを保存
 
                         if (this.currentPlayer && typeof this.currentPlayer.stopVideo === 'function') {
                             this.currentPlayer.stopVideo();
@@ -509,14 +613,16 @@
                                     console.log('Player ready for video:', videoId);
                                     event.target.playVideo();
                                     this.closeButton.style.display = 'block';
+                                    this.playbackOptions.style.display = 'flex'; // 追加: ラジオボタンを表示
                                     this.playerContainer.classList.add('active');
                                 },
                                 'onStateChange': (event) => {
                                     if (event.data === YT.PlayerState.ENDED) {
-                                        this.currentPlayer.destroy();
-                                        this.currentPlayer = null;
-                                        this.closeButton.style.display = 'none';
-                                        this.playerContainer.classList.remove('active');
+                                        if (this.playMode === 'loop') {
+                                            event.target.playVideo(); // ループ再生
+                                        } else if (this.playMode === 'next') {
+                                            this.playNextVideo(); // 次の動画を再生
+                                        }
                                     }
                                 }
                             }
@@ -526,12 +632,10 @@
                     console.log('No intersections detected');
                 }
 
-                // デバウンス解除（300ms後）
                 this.clickDebounceTimeout = setTimeout(() => {
                     this.isClickProcessing = false;
                 }, 300);
             }
-
 
             onWindowResize() {
                 this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -554,6 +658,8 @@
                     const plane = planeGroup.children[0];
                     plane.lookAt(this.camera.position);
                 });
+
+                this.centerGroup.position.y = Math.max(this.minY, Math.min(this.maxY, this.centerGroup.position.y));
 
                 if (this.usePostprocessing && this.composer) {
                     try {
