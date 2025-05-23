@@ -68,24 +68,47 @@
             border-radius: 8px;
         }
 
+        .v-text-field .v-label {
+            top: 0px;
+        }
+
+        .category-select {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
         .category-select .v-select__slot {
             background-color: #FF8A80;
             border-radius: 8px;
             font-family: 'Noto Sans JP', sans-serif;
             color: #333 !important;
+            min-height: 48px;
         }
 
         .category-select .v-label {
             font-family: 'Lobster', cursive !important;
-            color: #333 !important;
+            color: #ff7b70 !important;
+            font-size: 1.2em !important;
+            margin-bottom: 10px !important;
+        }
+
+        .v-select__selection--comma {
+            margin-left: 10px
         }
 
         .category-select .v-select__selection {
             color: #333 !important;
+            font-weight: bold !important;
         }
 
-        .category-select .v-icon {
-            color: #333 !important;
+        /* 選択中の下線色 */
+        .category-select .v-input__control {
+            border-bottom: 2px solid #FF8A80 !important;
+        }
+
+        /* ホバー時のリストアイテム */
+        .v-menu__content .v-list-item:hover {
+            background-color: #FFEAEA !important;
         }
 
         @keyframes fadeIn {
@@ -139,30 +162,18 @@
                                     class="category-select" @change="filterVideos"></v-select>
                             </v-col>
                         </v-row>
-                        <v-row>
+                        <v-row justify="center">
                             <v-col class="Youtube_Col" cols="12" md="3" v-for="(video, index) in filteredVideos"
                                 :key="index">
-                                <v-dialog v-model="dialog[index]" width="90%" max-width="700">
-                                    <template v-slot:activator="{ on, attrs }">
-                                        <div v-bind="attrs" v-on="on">
-                                            <div class="video-title">
-                                                <i :class="getIcon() + ' mr-2'"></i>{{ video.title }}
-                                            </div>
-                                            <iframe class="Youtube"
-                                                :src="'https://www.youtube-nocookie.com/embed/' + video.id"
-                                                frameborder="0" allow="encrypted-media; picture-in-picture"
-                                                allowfullscreen></iframe>
-                                            <div class="video-description">
-                                                <i class="mdi mdi-information mr-2"></i>{{ video.description }}
-                                            </div>
-                                        </div>
-                                    </template>
-                                    <v-card>
-                                        <iframe class="Youtube"
-                                            :src="'https://www.youtube-nocookie.com/embed/' + video.id" frameborder="0"
-                                            allowfullscreen></iframe>
-                                    </v-card>
-                                </v-dialog>
+                                <div class="video-title">
+                                    <v-icon :color="'#FF8A80'" class="mr-2">{{ getIcon(video.category) }}</v-icon>
+                                    {{ video.title }}
+                                </div>
+                                <iframe class="Youtube" :src="'https://www.youtube-nocookie.com/embed/' + video.id"
+                                    frameborder="0" allow="encrypted-media;" allowfullscreen></iframe>
+                                <div class="video-description">
+                                    <i class="mdi mdi-information mr-2"></i>{{ video.description }}
+                                </div>
                             </v-col>
                         </v-row>
                     </v-container>
@@ -208,23 +219,29 @@
                 Drawer: false,
                 Ready_Page: true,
                 selectedCategory: 'All',
-                categories: ['All', 'Pasta', 'Salad'],
+                categories: ['All', 'Cheap', 'Vegetable', 'Meat'],
                 Videos: [
-                    { id: 'Pmhe1VvDm3I', title: 'Easy Pasta Recipe', category: 'Pasta', description: 'A quick and easy pasta recipe for beginners.' },
-                    { id: 'r9kSBTXWeNQ', title: 'Quick Salad Tutorial', category: 'Salad', description: 'Learn how to make a fresh and healthy salad in minutes.' },
+                    { id: 'Ia1hTLsSJlk', title: 'Bean Sprouts', category: 'Cheap', description: 'Stir-fried bean sprouts with a strong Japanese flavor.' },
+                    { id: '__Y_YI7X0co', title: 'Mashed Fish with Aura sauce', category: 'Cheap', description: 'The savory flavor of the fish and the sweetness of the aurora sauce are addictive.' },
+                    { id: 'podBBlEMl3E', title: 'Spinach with Sesame sauce', category: 'Vegetable', description: 'A combination of sesame and spinach flavors.' },
+                    { id: '1F2NS5QNjZw', title: 'Tofu and Chive', category: 'Vegetable', description: 'A refreshing and healthy combination.' },
+                    { id: 'm3tPDTtK8mg', title: 'Pork with Grated Onion', category: 'Meat', description: 'A pork dish that makes use of the umami flavor of onions.' },
+                    { id: '6-WItDF2giI', title: 'Thick Bean Sprouts', category: 'Cheap', description: 'An easy-to-eat bean sprout dish with a thick soy sauce sauce.' },
+                    { id: '', title: '', category: '', description: '' },
                 ],
                 filteredVideos: [],
                 dialog: [],
-                cookingIcons: [
-                    'mdi-silverware-fork',
-                    'mdi-food-apple',
-                    'mdi-knife',
-                    'mdi-chef-hat',
-                    'mdi-pot',
-                    'mdi-bowl',
-                    'mdi-food',
-                    'mdi-carrot'
-                ]
+                categoryIcons: {
+                    'Cheap': 'mdi-currency-usd-off',
+                    'Pasta': 'mdi-silverware-fork',
+                    'Salad': 'mdi-leaf',
+                    'Meat': 'mdi-food-steak',
+                    'Fish': 'mdi-fish',
+                    'Dessert': 'mdi-cake-variant',
+                    'Soup': 'mdi-pot-mix',
+                    'Rice': 'mdi-rice',
+                    'Vegetable': 'mdi-leek'
+                }
             },
             mounted() {
                 this.filteredVideos = this.Videos;
@@ -241,10 +258,8 @@
                         this.filteredVideos = this.Videos.filter(video => video.category === this.selectedCategory);
                     }
                 },
-                getIcon() {
-                    // ランダムに料理関連のアイコンを選択
-                    const randomIndex = Math.floor(Math.random() * this.cookingIcons.length);
-                    return this.cookingIcons[randomIndex];
+                getIcon(category) {
+                    return this.categoryIcons[category] || 'mdi-food'; // デフォルトアイコン
                 }
             }
         });
