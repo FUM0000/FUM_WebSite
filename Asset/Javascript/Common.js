@@ -14,7 +14,7 @@ function RandomNumber_Between(_min, _max) { return Math.random() * (_max - _min 
 //// SystemBar
 Vue.component('main-system-bar', {
     template: `
-    <v-system-bar color="#00000040" class="font-weight-black" style="height: 50px;" app>
+    <v-system-bar color="#FFFFFF40" class="font-weight-black" style="height: 50px;" app>
         <v-row aline="center">
             <v-col cols="9" align-self="center">
                 <audio id="BGM" src="" paused loop></audio>
@@ -1008,7 +1008,7 @@ Vue.component('main-navigation', {
 //// Footer
 Vue.component('main-footer', {
     template: `
-    <v-footer color="#00000040" class="font-weight-black" app>
+    <v-footer color="#FFFFFF40" class="font-weight-black" app>
         <v-btn @click="scrollToBottom" text x-small>
             <v-icon color="blue">mdi-chevron-down</v-icon>
         </v-btn>
@@ -1037,7 +1037,7 @@ Vue.component('main-footer', {
 })
 Vue.component('main-footer-simple', {
     template: `
-    <v-footer color="#00000040" class="font-weight-black" app>
+    <v-footer color="#FFFFFF40" class="font-weight-black" app>
         <v-spacer />
         <span style="font-size: 0.8rem;">© 2025 FUM. All rights reserved.</span>
         <v-spacer />
