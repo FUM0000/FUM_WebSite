@@ -1,0 +1,538 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>Learning > Quantum</title>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Learning > Quantum</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">量子コンピュータ学習ハブ</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="量子コンピュータのトピックを検索" prepend-inner-icon="mdi-magnify"
+                      clearable outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_1">
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1"
+                          class="step-title">量子コンピュータの基礎</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2"
+                          class="step-title">量子アルゴリズム</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 3" step="3" @click="Count_Step_1 = 3"
+                          class="step-title">量子コンピュータの応用</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 4" step="4" @click="Count_Step_1 = 4"
+                          class="step-title">量子コンピュータの倫理と課題</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 5" step="5" @click="Count_Step_1 = 5"
+                          class="step-title">量子コンピュータのツールとプラットフォーム</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">量子コンピュータの基礎</v-card-title>
+                              <v-treeview :items="filteredAIFundamentals" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesAIFundamentals" @update:open="updateOpenNodesAIFundamentals">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">量子アルゴリズム</v-card-title>
+                              <v-treeview :items="filteredMLAlgorithms" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesMLAlgorithms" @update:open="updateOpenNodesMLAlgorithms">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 3">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">量子コンピュータの応用</v-card-title>
+                              <v-treeview :items="filteredAIApplications" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesAIApplications" @update:open="updateOpenNodesAIApplications">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">量子コンピュータの倫理と課題</v-card-title>
+                              <v-treeview :items="filteredAIEthics" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesAIEthics" @update:open="updateOpenNodesAIEthics">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 3">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 5">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="5">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title
+                                class="text-subtitle-2 font-weight-bold">量子コンピュータのツールとプラットフォーム</v-card-title>
+                              <v-treeview :items="filteredToolsFrameworks" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesToolsFrameworks"
+                                @update:open="updateOpenNodesToolsFrameworks">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 4">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredAIFundamentals: [],
+        filteredMLAlgorithms: [],
+        filteredAIApplications: [],
+        filteredAIEthics: [],
+        filteredToolsFrameworks: [],
+        openNodesAIFundamentals: [],
+        openNodesMLAlgorithms: [],
+        openNodesAIApplications: [],
+        openNodesAIEthics: [],
+        openNodesToolsFrameworks: [],
+        AIFundamentals: [
+          {
+            "name": "1. 量子コンピュータの概要",
+            "children": [
+              {
+                "name": "定義",
+                "children": [
+                  { "name": "量子コンピュータ: 量子力学を利用した計算モデル" },
+                  { "name": "主な概念: 量子ビット（キュービット）、重ね合わせ、量子もつれ" }
+                ]
+              },
+              {
+                "name": "歴史",
+                "children": [
+                  { "name": "1980年代: ポール・ベニオフによる量子計算の提案" },
+                  { "name": "1994年: ショアのアルゴリズム発表" },
+                  { "name": "2019年: Googleの量子超越性主張" }
+                ]
+              },
+              {
+                "name": "量子コンピュータの種類",
+                "children": [
+                  { "name": "ゲートベース量子コンピュータ: 量子回路を使用" },
+                  { "name": "断熱量子コンピュータ: 最適化問題に特化" },
+                  { "name": "トポロジカル量子コンピュータ: 理論的、フォールトトレラント" }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "2. 量子力学の基礎",
+            "children": [
+              {
+                "name": "基本原理",
+                "children": [
+                  { "name": "重ね合わせ: 状態の同時存在" },
+                  { "name": "量子もつれ: 粒子間の強い相関" },
+                  { "name": "観測: 状態の崩壊" }
+                ]
+              },
+              {
+                "name": "量子ビット（キュービット）",
+                "children": [
+                  { "name": "0と1の同時状態" },
+                  { "name": "実装例: 超伝導キュービット、トラップドイオン" }
+                ]
+              }
+            ]
+          }
+        ],
+        MLAlgorithms: [
+          {
+            "name": "1. 量子アルゴリズムの基礎",
+            "children": [
+              {
+                "name": "量子ゲート",
+                "children": [
+                  { "name": "ハダマールゲート: 重ね合わせを生成" },
+                  { "name": "CNOTゲート: 量子もつれを生成" }
+                ]
+              },
+              {
+                "name": "量子フーリエ変換",
+                "children": [
+                  { "name": "周期性を見つけるアルゴリズムの基盤" },
+                  { "name": "ショアのアルゴリズムの主要コンポーネント" }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "2. 主要な量子アルゴリズム",
+            "children": [
+              {
+                "name": "ショアのアルゴリズム",
+                "children": [
+                  { "name": "素因数分解を指数関数的に高速化" },
+                  { "name": "暗号解読への影響" }
+                ]
+              },
+              {
+                "name": "グローバーのアルゴリズム",
+                "children": [
+                  { "name": "非構造化検索を二次関数的に高速化" },
+                  { "name": "データベース検索や最適化に適用" }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "3. 量子機械学習",
+            "children": [
+              {
+                "name": "量子データ処理",
+                "children": [
+                  { "name": "量子PCA: 次元削減の高速化" },
+                  { "name": "量子SVM: 分類問題の効率化" }
+                ]
+              },
+              {
+                "name": "ハイブリッドアプローチ",
+                "children": [
+                  { "name": "古典コンピュータと量子コンピュータの統合" },
+                  { "name": "例: 変分量子固有値ソルバー（VQE）" }
+                ]
+              }
+            ]
+          }
+        ],
+        AIApplications: [
+          {
+            "name": "1. 量子コンピュータの産業応用",
+            "children": [
+              {
+                "name": "暗号技術",
+                "children": [
+                  { "name": "量子耐性暗号: ショアのアルゴリズムへの対策" },
+                  { "name": "量子鍵配送（QKD）: 安全な通信" }
+                ]
+              },
+              {
+                "name": "最適化問題",
+                "children": [
+                  { "name": "物流: サプライチェーンの最適化" },
+                  { "name": "金融: ポートフォリオ最適化" }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "2. 科学研究",
+            "children": [
+              {
+                "name": "化学シミュレーション",
+                "children": [
+                  { "name": "分子構造のシミュレーション" },
+                  { "name": "薬物発見の高速化" }
+                ]
+              },
+              {
+                "name": "物理学",
+                "children": [
+                  { "name": "量子多体系の解析" },
+                  { "name": "材料科学: 新素材の設計" }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "3. その他の応用",
+            "children": [
+              { "name": "機械学習: 量子データ処理による効率化" },
+              { "name": "人工知能: 量子ニューラルネットワーク" },
+              { "name": "気候モデリング: 複雑なシステムのシミュレーション" }
+            ]
+          }
+        ],
+        AIEthics: [
+          {
+            "name": "1. 倫理的考慮",
+            "children": [
+              {
+                "name": "セキュリティリスク",
+                "children": [
+                  { "name": "暗号解読: 現在の暗号方式への脅威" },
+                  { "name": "対策: 量子耐性暗号の開発" }
+                ]
+              },
+              {
+                "name": "アクセシビリティ",
+                "children": [
+                  { "name": "技術格差: 高コストによるアクセスの不平等" },
+                  { "name": "公平な利用: オープンソースプラットフォーム" }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "2. 技術的課題",
+            "children": [
+              {
+                "name": "エラー訂正",
+                "children": [
+                  { "name": "量子エラー訂正コード: ノイズ低減" },
+                  { "name": "スケーラビリティ: 大規模量子計算の実現" }
+                ]
+              },
+              {
+                "name": "環境影響",
+                "children": [
+                  { "name": "エネルギー消費: 冷却システムの課題" },
+                  { "name": "持続可能性: 環境に優しい量子技術" }
+                ]
+              }
+            ]
+          }
+        ],
+        ToolsFrameworks: [
+          {
+            "name": "1. 量子プログラミング言語",
+            "children": [
+              {
+                "name": "Qiskit",
+                "children": [
+                  { "name": "IBMのオープンソース量子開発キット" },
+                  { "name": "量子回路の設計とシミュレーション" }
+                ]
+              },
+              {
+                "name": "Cirq",
+                "children": [
+                  { "name": "Googleの量子プログラミングフレームワーク" },
+                  { "name": "ノイズのある量子コンピュータ向け" }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "2. 量子シミュレータ",
+            "children": [
+              {
+                "name": "Qiskit Aer",
+                "children": [
+                  { "name": "量子回路のシミュレーション" },
+                  { "name": "ノイズモデルのサポート" }
+                ]
+              },
+              {
+                "name": "Microsoft Q#",
+                "children": [
+                  { "name": "量子アルゴリズム開発用の言語" },
+                  { "name": "Azure Quantumとの統合" }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "3. 量子クラウドプラットフォーム",
+            "children": [
+              {
+                "name": "IBM Quantum",
+                "children": [
+                  { "name": "クラウドベースの量子コンピュータアクセス" }
+                ]
+              },
+              {
+                "name": "Amazon Braket",
+                "children": [
+                  { "name": "複数の量子ハードウェアへのアクセス" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      created() {
+        this.filteredAIFundamentals = JSON.parse(JSON.stringify(this.AIFundamentals));
+        this.filteredMLAlgorithms = JSON.parse(JSON.stringify(this.MLAlgorithms));
+        this.filteredAIApplications = JSON.parse(JSON.stringify(this.AIApplications));
+        this.filteredAIEthics = JSON.parse(JSON.stringify(this.AIEthics));
+        this.filteredToolsFrameworks = JSON.parse(JSON.stringify(this.ToolsFrameworks));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesAIFundamentals(newOpen) {
+          this.openNodesAIFundamentals = newOpen;
+        },
+        updateOpenNodesMLAlgorithms(newOpen) {
+          this.openNodesMLAlgorithms = newOpen;
+        },
+        updateOpenNodesAIApplications(newOpen) {
+          this.openNodesAIApplications = newOpen;
+        },
+        updateOpenNodesAIEthics(newOpen) {
+          this.openNodesAIEthics = newOpen;
+        },
+        updateOpenNodesToolsFrameworks(newOpen) {
+          this.openNodesToolsFrameworks = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredAIFundamentals = JSON.parse(JSON.stringify(this.AIFundamentals));
+            this.filteredMLAlgorithms = JSON.parse(JSON.stringify(this.MLAlgorithms));
+            this.filteredAIApplications = JSON.parse(JSON.stringify(this.AIApplications));
+            this.filteredAIEthics = JSON.parse(JSON.stringify(this.AIEthics));
+            this.filteredToolsFrameworks = JSON.parse(JSON.stringify(this.ToolsFrameworks));
+            this.openNodesAIFundamentals = [];
+            this.openNodesMLAlgorithms = [];
+            this.openNodesAIApplications = [];
+            this.openNodesAIEthics = [];
+            this.openNodesToolsFrameworks = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredAIFundamentals = filterTree(JSON.parse(JSON.stringify(this.AIFundamentals)));
+          this.filteredMLAlgorithms = filterTree(JSON.parse(JSON.stringify(this.MLAlgorithms)));
+          this.filteredAIApplications = filterTree(JSON.parse(JSON.stringify(this.AIApplications)));
+          this.filteredAIEthics = filterTree(JSON.parse(JSON.stringify(this.AIEthics)));
+          this.filteredToolsFrameworks = filterTree(JSON.parse(JSON.stringify(this.ToolsFrameworks)));
+
+          this.openNodesAIFundamentals = this.collectAllNodeIds(this.filteredAIFundamentals);
+          this.openNodesMLAlgorithms = this.collectAllNodeIds(this.filteredMLAlgorithms);
+          this.openNodesAIApplications = this.collectAllNodeIds(this.filteredAIApplications);
+          this.openNodesAIEthics = this.collectAllNodeIds(this.filteredAIEthics);
+          this.openNodesToolsFrameworks = this.collectAllNodeIds(this.filteredToolsFrameworks);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

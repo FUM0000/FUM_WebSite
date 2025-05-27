@@ -587,6 +587,10 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Image Editor</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Service_ImageLayout.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Image Layout</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Service_JapaneseCalendar.html">
                     <v-list-item-icon />
                     <v-list-item-title>Japanese Calendar</v-list-item-title>
@@ -790,10 +794,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Flower</v-list-item-title>
-                        
-                        <v-list-item-icon>
-                            <v-icon>mdi-flower</v-icon>
-                        </v-list-item-icon>
+                        <v-list-item-icon><v-icon>mdi-flower</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Flower_Rose.html">
@@ -877,58 +878,6 @@ Vue.component('main-navigation', {
             <!-- ▲ Plant ▲ ------------------------------------------------------------------------------------>
 
 
-            <!-- ▼ Learning ▼ --------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-library-outline">
-                <template v-slot:activator>
-                    <v-list-item-title>Learning</v-list-item-title>
-                </template>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Programming</v-list-item-title>
-                        
-                        <v-list-item-icon>
-                            <v-icon>mdi-laptop</v-icon>
-                        </v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Programming_Introduction.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Introduction</v-list-item-title>
-                    </v-list-item>
-                </v-list-group>
-            </v-list-group>
-            <!-- ▲ Learning ▲ --------------------------------------------------------------------------------->
-
-
-            <!-- ▼ Qualification ▼ ---------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-library-outline">
-                <template v-slot:activator>
-                    <v-list-item-title>Qualification</v-list-item-title>
-                </template>
-
-                <v-list-item href="./Learning_AppliedInformation.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>応用情報技術者試験</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-account-tie</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-
-                <v-list-item href="./Learning_Makeup.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>日本化粧品検定１級</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-lipstick</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-
-            </v-list-group>
-            <!-- ▲ Qualification ▲ ---------------------------------------------------------------------------->
-
-
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-stamper">
                 <template v-slot:activator>
@@ -972,22 +921,52 @@ Vue.component('main-navigation', {
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
 
 
-            <!-- ▼ Language ▼ --------------------------------------------------------------------------------->
-            <!--<v-list-group :value="false" prepend-icon="mdi-hand-heart-outline">
+            <!-- ▼ My Note ▼ ---------------------------------------------------------------------------------->
+            <v-list-group :value="false" prepend-icon="mdi-stamper">
                 <template v-slot:activator>
-                    <v-list-item-title>Language</v-list-item-title>
+                    <v-list-item-title>My Memo</v-list-item-title>
                 </template>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Learning</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-library-outline</v-icon></v-list-item-icon>
+                    </template>
+
+
+                    <v-list-item href="./Learning_AI.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>AI</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Learning_Quantum.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>量子コンピュータ</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Learning_AppliedInformation.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>応用情報技術者試験</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Life</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-account-tie</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Learning_Makeup.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>日本化粧品検定１級</v-list-item-title>
+                            
+                        <v-list-item-icon>
+                            <v-icon>mdi-lipstick</v-icon>
+                        </v-list-item-icon>
+                    </v-list-item>
+
+                </v-list-group>
                 
-                <v-list-item href="../../Spanish/HTML/index_spanish.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Español</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="../../Chinese/HTML/index_chinese.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>中文</v-list-item-title>
-                </v-list-item>
-            </v-list-group>-->
-            <!-- ▲ Language ▲ --------------------------------------------------------------------------------->
+            </v-list-group>
+            <!-- ▲ My Note ▲ ---------------------------------------------------------------------------------->
 
 
         </v-list>
