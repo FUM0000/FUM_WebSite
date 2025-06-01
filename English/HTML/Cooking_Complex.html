@@ -22,38 +22,169 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
         rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Lobster&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
     <title>Cooking > Complex</title>
+
+    <style>
+        .Youtube_Col {
+            margin: 10px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            animation: fadeIn 1s ease-in;
+        }
+
+        .Youtube_Col:hover {
+            transform: scale(1.05);
+        }
+
+        .video-title {
+            font-family: 'Noto Sans JP', sans-serif;
+            color: #FF8A80;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .video-description {
+            margin-top: 10px;
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 0.9em;
+            color: #333;
+            background-color: #F0F0F0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .v-text-field .v-label {
+            top: 0px;
+        }
+
+        .category-select {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .category-select .v-select__slot {
+            background-color: #FF8A80;
+            border-radius: 8px;
+            font-family: 'Noto Sans JP', sans-serif;
+            color: #333 !important;
+            min-height: 48px;
+        }
+
+        .category-select .v-label {
+            font-family: 'Lobster', cursive !important;
+            color: #ff7b70 !important;
+            font-size: 1.2em !important;
+            margin-bottom: 10px !important;
+        }
+
+        .v-select__selection--comma {
+            margin-left: 10px
+        }
+
+        .category-select .v-select__selection {
+            color: #333 !important;
+            font-weight: bold !important;
+        }
+
+        /* 選択中の下線色 */
+        .category-select .v-input__control {
+            border-bottom: 2px solid #FF8A80 !important;
+        }
+
+        /* ホバー時のリストアイテム */
+        .v-menu__content .v-list-item:hover {
+            background-color: #FFEAEA !important;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .Youtube_Col {
+                width: calc(100% - 20px);
+                margin: 10px auto;
+                padding: 15px;
+            }
+
+            .v-row {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .v-col {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .category-select .v-select__slot {
+                padding: 8px;
+            }
+        }
+    </style>
 </head>
 
 <body>
-
     <v-app id="App">
         <template>
-            
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Cooking > Complex</main-system-bar>
 
             <v-main id="Main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
-
+                    <v-container v-show="Ready_Page" fluid class="pa-5">
                         <v-row>
-                            <v-col class="Youtube_Col" xs="12" md="3" v-for="(URL, index) in List_URL" :key="index">
-                                <iframe class="Youtube" :src="URL" frameborder="0"
-                                    allow="encrypted-media;" allowfullscreen></iframe>
+                            <v-col cols="12">
+                                <v-select v-model="selectedCategory" :items="categories" label="Category"
+                                    class="category-select" @change="filterVideos">
+                                    <template v-slot:selection="{ item }">
+                                        <v-icon class="ml-2 mr-4">{{ getIcon(item) }}</v-icon>
+                                        {{ item }}
+                                    </template>
+                                    <template v-slot:item="{ item }">
+                                        <v-icon class="mr-4">{{ getIcon(item) }}</v-icon>
+                                        {{ item }}
+                                    </template>
+                                </v-select>
                             </v-col>
                         </v-row>
-
+                        <v-row justify="center">
+                            <v-col class="Youtube_Col" cols="12" md="3" v-for="(video, index) in filteredVideos"
+                                :key="index">
+                                <div class="video-title">
+                                    <v-icon :color="'#FF8A80'" class="mr-2">{{ getIcon(video.category) }}</v-icon>
+                                    {{ video.title }}
+                                </div>
+                                <iframe class="Youtube" :src="'https://www.youtube-nocookie.com/embed/' + video.id"
+                                    frameborder="0" allow="encrypted-media;" allowfullscreen></iframe>
+                                <div class="video-description">
+                                    <i class="mdi mdi-information mr-2"></i>{{ video.description }}
+                                </div>
+                            </v-col>
+                        </v-row>
                     </v-container>
                 </transition>
             </v-main>
 
+
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
             <main-footer></main-footer>
-
         </template>
     </v-app>
 
@@ -63,20 +194,49 @@
     <script src="../../Asset/Javascript/Common.js"></script>
 
     <script>
-
         let vue = new Vue({
             el: '#App',
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Youtube],
             data: {
-                List_URL: [
-                    'https://www.youtube-nocookie.com/embed/Qx48zkAmsh4',
+                Drawer: false,
+                Ready_Page: true,
+                selectedCategory: 'All',
+                categories: ['All', 'Meat', 'Ramen'],
+                Videos: [
+                    { id: 'Qx48zkAmsh4', title: 'Stewed Chicken in White Wine', category: 'Meat', description: 'A dish in which the umami flavor is allowed to soak into the chicken over time.' },
+                    { id: 'I2DaQEDZ3R4', title: 'Handmade Noodles', category: 'Ramen', description: 'Noodles that make the most of the egg flavor.' },
+                    // { id: '', title: '', category: '', description: '' },
+                    // { id: '', title: '', category: '', description: '' },
                 ],
+                filteredVideos: [],
+                dialog: [],
+                categoryIcons: {
+                    'Meat': 'mdi-food-steak',
+                    'Ramen': 'mdi-noodles',
+                }
+            },
+            mounted() {
+                this.filteredVideos = this.Videos;
+                this.dialog = this.Videos.map(() => false);
+            },
+            methods: {
+                ChangeDrawer(value) {
+                    this.Drawer = value;
+                },
+                filterVideos() {
+                    if (this.selectedCategory === 'All') {
+                        this.filteredVideos = this.Videos;
+                    } else {
+                        this.filteredVideos = this.Videos.filter(video => video.category === this.selectedCategory);
+                    }
+                },
+                getIcon(category) {
+                    return this.categoryIcons[category] || 'mdi-silverware-fork-knife';
+                }
             }
-        })
-
+        });
     </script>
-
 </body>
 
 </html>

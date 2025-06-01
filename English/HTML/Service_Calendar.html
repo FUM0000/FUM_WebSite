@@ -1,0 +1,1594 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+
+  <title>Calendar</title>
+
+  <style>
+    .selected-date-info {
+      font-size: 1.2em;
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .date-unit {
+      padding: 5px 15px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+
+    .date-input {
+      width: 80px;
+      text-align: center;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .history-card {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Calendar</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mx-auto mt-5" max-width="600">
+                  <v-card-text>
+                    <v-row class="selected-date-info">
+                      <v-col cols="3">
+                        <v-text-field v-model.number="selectedYear" class="date-input" type="number" min="1924" max="2024" label="Year" hide-details></v-text-field>
+                      </v-col>
+                      <v-col cols="3">
+                        <v-text-field v-model.number="selectedMonth" class="date-input" type="number" min="1" max="12" label="Month" hide-details></v-text-field>
+                      </v-col>
+                      <v-col cols="3">
+                        <v-text-field v-model.number="selectedDay" class="date-input" type="number" min="1" :max="daysInMonth" label="Day" hide-details></v-text-field>
+                      </v-col>
+                    </v-row>
+
+                    <v-date-picker v-model="selectedDate" locale="en-us"
+                      :day-format="(date) => new Date(date).getDate()" :max="new Date().toISOString().substr(0, 10)"
+                      class="mt-4" full-width @input="updateInputs"></v-date-picker>
+                  </v-card-text>
+                </v-card>
+
+                <v-card v-if="selectedDate" class="mx-auto history-card" max-width="600">
+                  <v-card-title>
+                    Events of {{ selectedYear }}
+                  </v-card-title>
+                  <v-card-text>
+                    <v-list dense>
+                      <template v-if="hasEventsForYear">
+                        <v-list-item v-for="(event, index) in yearEvents" :key="index">
+                          <v-list-item-content>
+                            {{ event }}
+                          </v-list-item-content>
+                        </v-list-item>
+                      </template>
+                      <v-list-item v-else>
+                        <v-list-item-content>
+                          Sorry, detailed information for {{ selectedYear }} is currently unavailable.
+                        </v-list-item-content>
+                      </v-list-item>
+                    </v-list>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer-simple></main-footer-simple>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: () => ({
+        selectedDate: new Date().toISOString().substr(0, 10),
+        selectedYear: new Date().getFullYear(),
+        selectedMonth: new Date().getMonth() + 1,
+        selectedDay: new Date().getDate(),
+        events: {
+          "2024": [
+            "[Japan]",
+            "Noto Peninsula Earthquake occurs (M7.6)",
+            "Cancellation of the 2025 Osaka Expo decided",
+            "Bank of Japan ends negative interest rate policy",
+            "JR East implements Shinkansen fare hikes",
+            "Tokyo Metro completes cashless system at all stations",
+            "[World]",
+            "William Lai inaugurated as President of Taiwan",
+            "U.S. Presidential Election held",
+            "Paris Olympics and Paralympics held",
+            "EU enacts AI regulation law",
+            "Mars rover 'Perseverance' makes new discoveries"
+          ],
+          "2023": [
+            "[Japan]",
+            "Ocean release of ALPS-treated water from Fukushima Daiichi begins",
+            "Japan's COVID-19 classification downgraded to Category 5",
+            "Yen weakens to 151 yen per dollar",
+            "Smartphone driver's licenses introduced",
+            "Shohei Ohtani signs record-breaking contract with the Dodgers",
+            "[World]",
+            "ChatGPT-4 released",
+            "Israel-Hamas war breaks out",
+            "OpenAI's Sam Altman CEO fired and reinstated",
+            "India successfully lands on the moon",
+            "Ukraine war continues"
+          ],
+          "2022": [
+            "[Japan]",
+            "Former Prime Minister Shinzo Abe assassinated by gunshot",
+            "Yen weakens to 150 yen per dollar",
+            "Rising prices become a social issue",
+            "Author of 'Hanzawa Naoki,' Jun Ikeido, passes away",
+            "Anime 'SPY×FAMILY' becomes a major hit",
+            "[World]",
+            "Russia invades Ukraine",
+            "Queen Elizabeth passes away, Charles III ascends the throne",
+            "Elon Musk acquires Twitter (now X)",
+            "FTX files for bankruptcy",
+            "Argentina wins the FIFA World Cup in Qatar"
+          ],
+          "2021": [
+            "[Japan]",
+            "Tokyo Olympics and Paralympics held",
+            "Prime Minister Yoshihide Suga resigns, Fumio Kishida becomes new PM",
+            "Shohei Ohtani wins MVP in the U.S.",
+            "Digital Agency established",
+            "'Demon Slayer' movie breaks box office records",
+            "[World]",
+            "Joe Biden inaugurated as U.S. President",
+            "Global semiconductor shortage worsens",
+            "Metaverse concept gains attention",
+            "Taliban takes control of Afghanistan",
+            "COP26 held"
+          ],
+          "2020": [
+            "[Japan]",
+            "COVID-19 pandemic spreads",
+            "Prime Minister Shinzo Abe resigns, Yoshihide Suga becomes new PM",
+            "Tokyo Olympics and Paralympics postponed",
+            "'Demon Slayer' becomes a social phenomenon",
+            "Go To Travel campaign starts and stops",
+            "[World]",
+            "COVID-19 declared a pandemic",
+            "Joe Biden wins U.S. Presidential Election",
+            "Protests erupt over George Floyd's death",
+            "Amazon rainforest fires worsen",
+            "WHO declares pandemic"
+          ],
+          "2019": [
+            "[Japan]",
+            "Era changes to Reiwa",
+            "Consumption tax raised to 10%",
+            "Rugby World Cup held in Japan",
+            "Kyoto Animation arson incident",
+            "Typhoon Hagibis causes widespread damage",
+            "[World]",
+            "Notre-Dame Cathedral suffers major fire",
+            "Large-scale protests in Hong Kong",
+            "First-ever black hole image captured",
+            "Amazon rainforest fires worsen",
+            "IS leader Baghdadi killed"
+          ],
+          "2018": [
+            "[Japan]",
+            "West Japan flood disaster occurs",
+            "Hokkaido Eastern Iburi Earthquake occurs",
+            "Nissan Chairman Carlos Ghosn arrested",
+            "Osaka experiences magnitude 6 earthquake",
+            "Record-breaking heatwave continues",
+            "[World]",
+            "First U.S.-North Korea summit held",
+            "FIFA World Cup held in Russia",
+            "GDPR (EU General Data Protection Regulation) enacted",
+            "China's Chang'e-4 lands on the far side of the moon",
+            "Facebook data breach scandal revealed"
+          ],
+          "2017": [
+            "[Japan]",
+            "Emperor Abdication Special Law enacted",
+            "Shogi player Sota Fujii sets 29-game winning streak record",
+            "Northern Kyushu flood disaster occurs",
+            "Panda born at Ueno Zoo",
+            "Japan's population declines for 8th consecutive year",
+            "[World]",
+            "Donald Trump inaugurated as U.S. President",
+            "North Korea conducts multiple missile tests",
+            "Bitcoin surges in value",
+            "U.S. announces withdrawal from Paris Agreement",
+            "Catalonia declares independence"
+          ],
+          "2016": [
+            "[Japan]",
+            "Kumamoto Earthquake occurs",
+            "Pokémon GO becomes a social phenomenon",
+            "Hokkaido Shinkansen opens",
+            "Voting age lowered to 18",
+            "Tsukiji Market relocation postponed",
+            "[World]",
+            "UK votes for Brexit",
+            "Donald Trump wins U.S. Presidential Election",
+            "Panama Papers leaked",
+            "Rio de Janeiro Olympics held",
+            "Zika virus spreads globally"
+          ],
+          "2015": [
+            "[Japan]",
+            "My Number system introduced",
+            "Security-related laws passed",
+            "Hokuriku Shinkansen opens",
+            "Japan's rugby team defeats South Africa in World Cup",
+            "Mount Ontake eruption kills or leaves 63 missing",
+            "[World]",
+            "Paris terrorist attacks occur",
+            "UN adopts SDGs",
+            "Nepal earthquake occurs",
+            "Greek financial crisis worsens",
+            "Windows 10 released"
+          ],
+          "2014": [
+            "[Japan]",
+            "Consumption tax raised to 8%",
+            "Mount Ontake erupts",
+            "Cabinet approves exercise of collective self-defense",
+            "Blue LED invention wins Nobel Prize in Physics",
+            "Record-breaking snowfall due to extreme weather",
+            "[World]",
+            "Ukraine crisis emerges",
+            "Ebola outbreak spreads in West Africa",
+            "Malaysia Airlines Flight 370 goes missing",
+            "Sochi Winter Olympics held",
+            "ISIS rises to prominence"
+          ],
+          "2013": [
+            "[Japan]",
+            "Tokyo selected to host 2020 Olympics",
+            "Specific Secrets Protection Law passed",
+            "Mount Fuji registered as a World Cultural Heritage site",
+            "Abenomics policy launched",
+            "PM2.5 air pollution becomes a concern",
+            "[World]",
+            "Boston Marathon bombing occurs",
+            "Edward Snowden's whistleblowing",
+            "Pope Benedict XVI replaced by Pope Francis",
+            "Syria chemical weapons issue",
+            "Apple co-founder Steve Jobs passes away"
+          ],
+          "2012": [
+            "[Japan]",
+            "Tokyo Skytree opens",
+            "Noda cabinet replaced by Abe cabinet",
+            "Professor Shinya Yamanaka wins Nobel Prize in Physiology or Medicine",
+            "Senkaku Islands nationalized",
+            "Annular solar eclipse observed in Japan",
+            "[World]",
+            "London Olympics held",
+            "Barack Obama re-elected as U.S. President",
+            "Facebook goes public",
+            "Apple releases iPhone 5",
+            "South Korea elects first female president"
+          ],
+          "2011": [
+            "[Japan]",
+            "Great East Japan Earthquake occurs",
+            "Fukushima Daiichi nuclear accident",
+            "Nadeshiko Japan wins Women's World Cup",
+            "Analog TV broadcasting ends",
+            "Prime Minister Naoto Kan replaced by Yoshihiko Noda",
+            "[World]",
+            "Arab Spring protests spread",
+            "Osama bin Laden killed",
+            "Eurozone debt crisis worsens",
+            "Space Shuttle program ends",
+            "Major floods in Thailand"
+          ],
+          "2010": [
+            "[Japan]",
+            "Hayabusa asteroid probe returns",
+            "Senkaku Islands Chinese fishing boat collision incident",
+            "Prime Minister Yukio Hatoyama replaced by Naoto Kan",
+            "Japan Airlines files for bankruptcy",
+            "Foot-and-mouth disease outbreak in Miyazaki",
+            "[World]",
+            "Apple launches iPad",
+            "Chile mine collapse, 33 rescued",
+            "Haiti earthquake occurs",
+            "Greek financial crisis surfaces",
+            "FIFA World Cup held in South Africa"
+          ],
+          "2009": [
+            "[Japan]",
+            "Democratic Party achieves regime change",
+            "Lay judge system introduced",
+            "Swine flu pandemic spreads",
+            "Michael Jackson passes away",
+            "Japan's unemployment rate hits record high",
+            "[World]",
+            "Barack Obama inaugurated as U.S. President",
+            "Swine flu becomes a global pandemic",
+            "Copenhagen Climate Change Conference held",
+            "Protests erupt after Iran presidential election",
+            "Windows 7 released"
+          ],
+          "2008": [
+            "[Japan]",
+            "Akihabara indiscriminate killing incident occurs",
+            "Prime Minister Yasuo Fukuda replaced by Taro Aso",
+            "Elderly healthcare system introduced",
+            "Iwate-Miyagi Nairiku Earthquake occurs",
+            "Year-end dispatch village established",
+            "[World]",
+            "Lehman Brothers collapse triggers financial crisis",
+            "Beijing Olympics held",
+            "Barack Obama wins U.S. Presidential Election",
+            "Mumbai terrorist attacks occur",
+            "Apple launches iPhone 3G"
+          ],
+          "2007": [
+            "[Japan]",
+            "Prime Minister Shinzo Abe replaced by Yasuo Fukuda",
+            "Pension record issues surface",
+            "Niigata Chuetsu-oki Earthquake occurs",
+            "Postal service privatization begins",
+            "Food mislabeling scandals increase",
+            "[World]",
+            "First iPhone released",
+            "Subprime mortgage crisis emerges",
+            "Virginia Tech shooting occurs",
+            "EU expands with Bulgaria and Romania joining",
+            "Al Gore wins Nobel Peace Prize"
+          ],
+          "2006": [
+            "[Japan]",
+            "Prime Minister Junichiro Koizumi replaced by Shinzo Abe",
+            "Structural strength falsification scandal uncovered",
+            "Livedoor scandal occurs",
+            "Japan wins first WBC",
+            "Prince Hisahito born to Akishino family",
+            "[World]",
+            "Saddam Hussein executed in Iraq",
+            "North Korea conducts first nuclear test",
+            "Turin Winter Olympics held",
+            "FIFA World Cup held in Germany",
+            "Google acquires YouTube"
+          ],
+          "2005": [
+            "[Japan]",
+            "JR Fukuchiyama Line derailment accident occurs",
+            "Postal privatization bill passed",
+            "Aichi Expo held",
+            "Personal Information Protection Law fully enforced",
+            "Japan's population declines for the first time post-war",
+            "[World]",
+            "London terrorist bombings occur",
+            "Hurricane Katrina hits the U.S.",
+            "Kyoto Protocol takes effect",
+            "Pope John Paul II passes away",
+            "YouTube service launched"
+          ],
+          "2004": [
+            "[Japan]",
+            "Niigata Chuetsu Earthquake occurs",
+            "Self-Defense Forces dispatched to Iraq",
+            "Avian flu outbreak in Japan",
+            "Japan wins record medals at Athens Olympics",
+            "Professional baseball players strike",
+            "[World]",
+            "Sumatra earthquake and tsunami occur",
+            "Athens Olympics held",
+            "Madrid train bombings occur",
+            "Facebook service launched",
+            "Water confirmed on Mars"
+          ],
+          "2003": [
+            "[Japan]",
+            "Iraq Special Measures Law passed",
+            "Personal Information Protection Law passed",
+            "Roppongi Hills opens",
+            "Digital terrestrial broadcasting begins",
+            "Emergency legislation passed",
+            "[World]",
+            "Iraq War breaks out",
+            "SARS spreads globally",
+            "Space Shuttle Columbia disintegrates",
+            "WHO issues SARS warning for China",
+            "Claim of first human cloning"
+          ],
+          "2002": [
+            "[Japan]",
+            "Japan-South Korea co-host FIFA World Cup",
+            "Masatoshi Koshiba wins Nobel Prize in Physics",
+            "Koichi Tanaka wins Nobel Prize in Chemistry",
+            "Resident registry network launched",
+            "Five-day school week fully implemented",
+            "[World]",
+            "Euro banknotes and coins enter circulation",
+            "Interim government established in Afghanistan",
+            "Bali bombing occurs",
+            "East Timor gains independence",
+            "Switzerland joins the UN"
+          ],
+          "2001": [
+            "[Japan]",
+            "Junichiro Koizumi cabinet formed",
+            "Universal Studios Japan opens",
+            "Akashi fireworks festival walkway accident occurs",
+            "Anti-Terrorism Special Measures Law passed",
+            "BS digital broadcasting begins",
+            "[World]",
+            "September 11 terrorist attacks occur in the U.S.",
+            "Afghanistan conflict begins",
+            "Apple launches iPod",
+            "China joins the WTO",
+            "First space tourism trip realized"
+          ],
+          "2000": [
+            "[Japan]",
+            "Long-term care insurance system starts",
+            "Miyakejima eruption leads to island-wide evacuation",
+            "Snow Brand food poisoning incident occurs",
+            "Naoko Takahashi wins gold at Sydney Olympics",
+            "Hideki Shirakawa wins Nobel Prize in Chemistry",
+            "[World]",
+            "Sydney Olympics held",
+            "Vladimir Putin becomes President of Russia",
+            "Windows 2000 released",
+            "UN Millennium Summit held",
+            "First crew stationed at the International Space Station"
+          ],
+          "1999": [
+            "[Japan]",
+            "Regional revitalization vouchers distributed",
+            "Tokaimura JCO criticality accident occurs",
+            "i-mode mobile phone service launched",
+            "Shintaro Ishihara becomes Tokyo Governor",
+            "Bank of Japan introduces zero interest rate policy",
+            "[World]",
+            "EU introduces single currency Euro",
+            "NATO bombs Kosovo",
+            "Macao returned to China",
+            "World population surpasses 6 billion",
+            "Y2K problem becomes a global concern"
+          ],
+          "1998": [
+            "[Japan]",
+            "Nagano Winter Olympics held",
+            "Financial Reconstruction Law passed",
+            "Nippon Long-Term Credit Bank collapses",
+            "Wakayama curry poisoning incident occurs",
+            "Bank of Japan Act amended",
+            "[World]",
+            "European Central Bank established",
+            "India and Pakistan conduct nuclear tests",
+            "Google founded",
+            "Clinton impeachment trial over affair scandal",
+            "France wins FIFA World Cup"
+          ],
+          "1997": [
+            "[Japan]",
+            "Consumption tax raised to 5%",
+            "Yamaichi Securities collapses",
+            "Kobe child murders occur",
+            "Hokkaido Takushoku Bank collapses",
+            "Tamagotchi becomes a major trend",
+            "[World]",
+            "Hong Kong returned to China",
+            "Princess Diana dies in accident",
+            "Asian financial crisis occurs",
+            "Mars Pathfinder lands on Mars",
+            "Cloned sheep Dolly announced"
+          ],
+          "1996": [
+            "[Japan]",
+            "Housing loan company resolution law passed",
+            "O-157 food poisoning spreads nationwide",
+            "Pokémon game released",
+            "New Haneda Airport terminal opens",
+            "First general election under single-seat constituency system",
+            "[World]",
+            "Atlanta Olympics held",
+            "Taliban captures Afghanistan's capital",
+            "Clinton re-elected as U.S. President",
+            "Tupac Amaru occupies Japanese embassy in Peru",
+            "Windows 95 becomes a global hit"
+          ],
+          "1995": [
+            "[Japan]",
+            "Great Hanshin-Awaji Earthquake occurs",
+            "Subway sarin attack occurs",
+            "Aum Shinrikyo leader Shoko Asahara arrested",
+            "Windows 95 launched",
+            "Hideo Nomo excels in MLB",
+            "[World]",
+            "WTO established",
+            "Dayton Agreement ends Bosnian War",
+            "Israeli Prime Minister Rabin assassinated",
+            "Internet commercialization accelerates",
+            "EU expands to 15 countries"
+          ],
+          "1994": [
+            "[Japan]",
+            "Tomichi Murayama cabinet formed",
+            "Kansai International Airport opens",
+            "Matsumoto sarin incident occurs",
+            "LDP-Socialist-Sakigake coalition government formed",
+            "Kenzaburo Oe wins Nobel Prize in Literature",
+            "[World]",
+            "Nelson Mandela becomes South African President",
+            "Channel Tunnel opens",
+            "Russia intervenes in Chechnya",
+            "Republicans win U.S. midterm elections",
+            "First World Cup held in the U.S."
+          ],
+          "1993": [
+            "[Japan]",
+            "Crown Prince Naruhito marries Masako",
+            "J.League (Japan Professional Football League) launched",
+            "Environmental Basic Law passed",
+            "Cold summer causes rice crop failure",
+            "Morihiro Hosokawa coalition cabinet formed",
+            "[World]",
+            "EU established",
+            "Clinton administration begins",
+            "PLO and Israel agree on interim autonomy",
+            "Russian constitutional crisis",
+            "North Korea announces NPT withdrawal"
+          ],
+          "1992": [
+            "[Japan]",
+            "Yamagata Shinkansen opens",
+            "Five-day school week begins monthly",
+            "Bubble economy collapse intensifies",
+            "Mamoru Mohri becomes first Japanese astronaut",
+            "Former Prime Minister Noboru Takeshita passes away",
+            "[World]",
+            "Barcelona Olympics held",
+            "Los Angeles riots occur",
+            "Clinton elected U.S. President",
+            "Earth Summit held in Rio de Janeiro",
+            "Bosnia-Herzegovina conflict begins"
+          ],
+          "1991": [
+            "[Japan]",
+            "Bubble economy collapses",
+            "Unzen-Fugen volcanic eruption causes pyroclastic flow",
+            "Shigaraki Kogen Railway accident occurs",
+            "Nomura Securities compensation scandal surfaces",
+            "Keidanren abolishes 1% clause",
+            "[World]",
+            "Gulf War breaks out",
+            "Soviet Union dissolves",
+            "South Africa abolishes apartheid laws",
+            "Indian Prime Minister Rajiv Gandhi assassinated",
+            "World Wide Web becomes publicly available"
+          ],
+          "1990": [
+            "[Japan]",
+            "University Entrance Exam Center Test begins",
+            "Agreement on legal status of Koreans in Japan post-German reunification",
+            "Enthronement ceremony held",
+            "Stock market crashes (start of bubble collapse)",
+            "Toyohiro Akiyama becomes first Japanese astronaut",
+            "[World]",
+            "Germany reunifies",
+            "Iraq invades Kuwait",
+            "Thatcher resigns as UK Prime Minister",
+            "Cold War declared over",
+            "Nelson Mandela released"
+          ],
+          "1989": [
+            "[Japan]",
+            "Emperor Showa passes away, era changes to Heisei",
+            "Consumption tax (3%) introduced",
+            "Nikkei stock average hits all-time high",
+            "Yokohama Bay Bridge opens",
+            "Tokyo Dome opens",
+            "[World]",
+            "Berlin Wall falls",
+            "Tiananmen Square protests occur",
+            "U.S.-Soviet leaders declare Cold War over in Malta",
+            "Eastern European revolutions occur",
+            "First APEC meeting held"
+          ],
+          "1988": [
+            "[Japan]",
+            "Seikan Tunnel opens",
+            "Seto Ohashi Bridge opens",
+            "Recruit scandal surfaces",
+            "Tokyo Metropolitan Government moves to Shinjuku",
+            "Japan's first heart transplant surgery",
+            "[World]",
+            "Seoul Olympics held",
+            "Iran-Iraq War ceasefire",
+            "Soviet troops begin withdrawal from Afghanistan",
+            "Palestinian independence declared",
+            "Bush (Sr.) wins U.S. Presidential Election"
+          ],
+          "1987": [
+            "[Japan]",
+            "Japan National Railways privatized, JR formed",
+            "Susumu Tonegawa wins Nobel Prize in Physiology or Medicine",
+            "NTT privatized",
+            "Korean Air flight bombing incident",
+            "Bubble economy accelerates",
+            "[World]",
+            "U.S. and USSR sign INF Treaty",
+            "World population surpasses 5 billion",
+            "Black Monday stock market crash",
+            "Afghanistan Soviet withdrawal agreement",
+            "Global AIDS crisis awareness increases"
+          ],
+          "1986": [
+            "[Japan]",
+            "Bubble economy begins",
+            "Tokyo Summit held",
+            "Health Insurance Law amended for 10% patient contribution",
+            "Izu Oshima's Miharayama erupts",
+            "Japan Airlines Flight 123 crashes",
+            "[World]",
+            "Space Shuttle Challenger explodes",
+            "Chernobyl nuclear disaster",
+            "People Power Revolution in the Philippines",
+            "Halley's Comet approaches Earth",
+            "U.S. bombs Libya"
+          ],
+          "1985": [
+            "[Japan]",
+            "Japan Telegraph and Telephone Corporation privatized (NTT formed)",
+            "Tsukuba Science Expo held",
+            "Japan Airlines jumbo jet crashes",
+            "Plaza Accord leads to yen appreciation",
+            "Seikan Tunnel completed",
+            "[World]",
+            "Gorbachev becomes Soviet Communist Party General Secretary",
+            "U.S. and UK sign Vienna Convention for ozone layer protection",
+            "Live Aid concert held",
+            "Mexico earthquake",
+            "Reagan-Gorbachev first summit"
+          ],
+          "1984": [
+            "[Japan]",
+            "Glico-Morinaga case occurs",
+            "Japan's first test-tube baby born",
+            "Japan wins gold medal rush at Los Angeles Olympics",
+            "Prime Minister Nakasone officially visits Yasukuni Shrine",
+            "Japan's population surpasses 120 million",
+            "[World]",
+            "Los Angeles Olympics held",
+            "Indian Prime Minister Indira Gandhi assassinated",
+            "Apple launches Macintosh",
+            "Ethiopia faces major famine",
+            "Reagan re-elected U.S. President"
+          ],
+          "1983": [
+            "[Japan]",
+            "Tokyo Disneyland opens",
+            "Korean Air flight shot down",
+            "Miyakejima erupts",
+            "Japan Sea earthquake occurs",
+            "Nintendo releases Family Computer",
+            "[World]",
+            "U.S. announces Strategic Defense Initiative (SDI)",
+            "Soviet Union shoots down Korean Air flight",
+            "PLO withdraws from Lebanon",
+            "TCP/IP adopted as internet standard",
+            "U.S. invades Grenada"
+          ],
+          "1982": [
+            "[Japan]",
+            "Hotel New Japan fire",
+            "500-yen coin issued",
+            "Tohoku Shinkansen opens",
+            "Joetsu Shinkansen opens",
+            "Japan's first artificial heart transplant surgery",
+            "[World]",
+            "Falklands War breaks out",
+            "Israel invades Lebanon",
+            "Mexico faces debt crisis",
+            "China dismantles People's Communes",
+            "CD players commercialized"
+          ],
+          "1981": [
+            "[Japan]",
+            "Kenichi Fukui wins Nobel Prize in Chemistry",
+            "Space Shuttle makes first flight",
+            "Kobe Port Island Expo held",
+            "First domestic Walkman released",
+            "Search for Chinese-Japanese war orphans begins",
+            "[World]",
+            "Reagan inaugurated as U.S. President",
+            "Egyptian President Sadat assassinated",
+            "Space Shuttle Columbia launched",
+            "IBM PC released",
+            "Pope John Paul II assassination attempt"
+          ],
+          "1980": [
+            "[Japan]",
+            "Boycotts Moscow Olympics",
+            "Car production becomes world's largest",
+            "Iran-Iraq War breaks out",
+            "Weather satellite 'Himawari' launched",
+            "Prime Minister Masayoshi Ohira dies, Zenko Suzuki cabinet formed",
+            "[World]",
+            "Moscow Olympics held",
+            "Iran-Iraq War breaks out",
+            "Solidarity union formed in Poland",
+            "Reagan elected U.S. President",
+            "John Lennon assassinated"
+          ],
+          "1979": [
+            "[Japan]",
+            "Second oil shock occurs",
+            "Tokyo Summit held",
+            "Three Mile Island nuclear accident",
+            "Sony launches Walkman",
+            "Japan's car production becomes world's largest",
+            "[World]",
+            "Iranian Revolution breaks out",
+            "Three Mile Island nuclear accident",
+            "Soviet troops invade Afghanistan",
+            "Thatcher becomes UK Prime Minister",
+            "China introduces one-child policy"
+          ],
+          "1978": [
+            "[Japan]",
+            "Narita Airport opens",
+            "Japan-China Peace and Friendship Treaty signed",
+            "Yen strengthens (1 USD = 175 yen)",
+            "Common university entrance exam decided",
+            "New Tokyo International Airport (Narita) opens",
+            "[World]",
+            "Japan-China Peace and Friendship Treaty signed",
+            "Camp David Accords",
+            "World's first test-tube baby born",
+            "Vietnam invades Cambodia",
+            "First World No Tobacco Day"
+          ],
+          "1977": [
+            "[Japan]",
+            "Japan's 200-nautical-mile zone takes effect",
+            "Sadaharu Oh hits 756th home run, a world record",
+            "Usu Volcano erupts",
+            "Japan Red Army hijacks JAL flight in Dhaka",
+            "Yen appreciation recession worsens",
+            "[World]",
+            "Carter inaugurated as U.S. President",
+            "Apple II released",
+            "Egyptian President Sadat visits Israel",
+            "South African anti-apartheid leader Steve Biko dies",
+            "Democratization progresses in Spain"
+          ],
+          "1976": [
+            "[Japan]",
+            "Lockheed scandal leads to arrest of former PM Kakuei Tanaka",
+            "Montreal Olympics sees gymnastics gold medal rush",
+            "Former PM Kakuei Tanaka arrested",
+            "First post-war deficit bonds issued",
+            "Lockheed scandal surfaces",
+            "[World]",
+            "Montreal Olympics held",
+            "Mao Zedong passes away",
+            "Apollo program ends",
+            "Tiananmen Incident in Beijing",
+            "Israel raids Entebbe Airport"
+          ],
+          "1975": [
+            "[Japan]",
+            "Okinawa International Ocean Expo held",
+            "Shinkansen extends to Hakata",
+            "Narita Airport protests intensify",
+            "United Red Army Asama-Sanso incident",
+            "Inflation reaches post-war high",
+            "[World]",
+            "Vietnam War ends",
+            "Pol Pot regime established in Cambodia",
+            "Apollo-Soyuz mission succeeds",
+            "Spanish dictator Franco dies",
+            "Helsinki Declaration adopted"
+          ],
+          "1974": [
+            "[Japan]",
+            "PM Kakuei Tanaka resigns, Takeo Miki cabinet formed",
+            "First 7-Eleven store opens",
+            "Hyperinflation becomes a social issue",
+            "Shigeo Nagashima retires",
+            "Former PM Eisaku Sato wins Nobel Peace Prize",
+            "[World]",
+            "Nixon resigns as U.S. President",
+            "Revolution in Ethiopia",
+            "India conducts underground nuclear test",
+            "Kissinger wins Nobel Peace Prize",
+            "Carnation Revolution in Portugal"
+          ],
+          "1973": [
+            "[Japan]",
+            "First oil shock occurs",
+            "Yen shifts to floating exchange rate",
+            "Reona Esaki wins Nobel Prize in Physics",
+            "Kim Dae-jung incident occurs",
+            "Price hikes lead to hoarding and profiteering",
+            "[World]",
+            "Fourth Middle East War breaks out",
+            "Vietnam Peace Accords signed",
+            "Coup in Chile",
+            "OPEC raises crude oil prices",
+            "Skylab launched"
+          ],
+          "1972": [
+            "[Japan]",
+            "Sapporo Winter Olympics held",
+            "Okinawa returned to Japan",
+            "Japan-China diplomatic relations normalized",
+            "Asama-Sanso incident occurs",
+            "Kakuei Tanaka cabinet formed",
+            "[World]",
+            "Nixon visits China",
+            "Munich Olympics terrorist attack",
+            "North and South Korea issue joint statement",
+            "Apollo 17 lands on the moon",
+            "UN Conference on the Human Environment held"
+          ],
+          "1971": [
+            "[Japan]",
+            "Environmental Agency established",
+            "Nixon Shock leads yen to floating exchange rate",
+            "Isao Aoki achieves top finish at Masters",
+            "Color TV production surpasses black-and-white",
+            "NHK begins full color TV broadcasting",
+            "[World]",
+            "Nixon Shock occurs",
+            "China joins the UN",
+            "India-Pakistan War",
+            "Greenpeace founded",
+            "Apollo 14 lands on the moon"
+          ],
+          "1970": [
+            "[Japan]",
+            "Osaka Expo held",
+            "Yukio Mishima commits seppuku",
+            "Yodo-go hijacking incident",
+            "Pollution Diet convened",
+            "Japan's population surpasses 100 million",
+            "[World]",
+            "Apollo 13 accident",
+            "Brandt advances Ostpolitik in West Germany",
+            "Coup in Cambodia",
+            "The Beatles disband",
+            "First Earth Day"
+          ],
+          "1969": [
+            "[Japan]",
+            "Tomei Expressway fully opens",
+            "University conflicts intensify",
+            "Japan's first heart transplant surgery",
+            "First nuclear-powered ship 'Mutsu' launched",
+            "Japan's GNP ranks second in the free world",
+            "[World]",
+            "Apollo 11 achieves first moon landing",
+            "U.S. begins phased withdrawal from Vietnam",
+            "Concorde test flight succeeds",
+            "Dubček removed as Czechoslovak leader",
+            "ARPANET (internet prototype) begins operation"
+          ],
+          "1968": [
+            "[Japan]",
+            "Ogasawara Islands returned to Japan",
+            "Yasunari Kawabata wins Nobel Prize in Literature",
+            "300 million yen robbery occurs",
+            "Kasumigaseki Building completed",
+            "Air pollution worsens",
+            "[World]",
+            "Prague Spring and Soviet invasion",
+            "Martin Luther King Jr. assassinated",
+            "Robert Kennedy assassinated",
+            "Mexico Olympics held",
+            "Apollo 8 orbits the moon"
+          ],
+          "1967": [
+            "[Japan]",
+            "Basic Law for Pollution Control enacted",
+            "Prime Minister Eisaku Sato re-elected",
+            "First All-Japan High School Ekiden held",
+            "Ryokichi Minobe elected Tokyo Governor",
+            "Yokkaichi asthma lawsuit filed",
+            "[World]",
+            "Third Middle East War (Six-Day War)",
+            "ASEAN formed",
+            "Che Guevara dies",
+            "First heart transplant surgery succeeds",
+            "European Community (EC) established"
+          ],
+          "1966": [
+            "[Japan]",
+            "The Beatles perform in Japan",
+            "Japan's population surpasses 100 million",
+            "First Ultraman broadcast",
+            "Marui Imai department store fully air-conditioned",
+            "Japan's first satellite 'Osumi' launched",
+            "[World]",
+            "Cultural Revolution begins in China",
+            "Suharto regime established in Indonesia",
+            "Miniskirts become popular in the UK",
+            "France withdraws from NATO military structure",
+            "Black Power movement grows in the U.S."
+          ],
+          "1965": [
+            "[Japan]",
+            "Japan-South Korea Basic Treaty signed",
+            "Shinichiro Tomonaga wins Nobel Prize in Physics",
+            "Sanyo Special Steel goes bankrupt",
+            "Meishin Expressway fully opens",
+            "Tokyo's population exceeds 10 million",
+            "[World]",
+            "U.S. begins bombing North Vietnam",
+            "India-Pakistan War",
+            "Singapore gains independence from Malaysia",
+            "Organization of African Unity (OAU) formed",
+            "Spacewalk succeeds"
+          ],
+          "1964": [
+            "[Japan]",
+            "Tokyo Olympics held",
+            "Tokaido Shinkansen opens",
+            "Joins OECD",
+            "Japan becomes IMF Article 8 country",
+            "Metropolitan Expressway opens",
+            "[World]",
+            "China succeeds in first nuclear test",
+            "Gulf of Tonkin incident occurs",
+            "Martin Luther King Jr. wins Nobel Peace Prize",
+            "Khrushchev falls from power",
+            "First African Unity Summit held"
+          ],
+          "1963": [
+            "[Japan]",
+            "Mitsui Miike coal mine explosion",
+            "Shigeo Nagashima wins triple crown in professional baseball",
+            "NTV begins color broadcasting",
+            "Nationwide bus and taxi strike",
+            "Yawata and Fuji Iron & Steel merge",
+            "[World]",
+            "Kennedy assassinated",
+            "Partial Nuclear Test Ban Treaty signed",
+            "Martin Luther King Jr. delivers 'I Have a Dream' speech",
+            "Kennedy speaks at the Berlin Wall",
+            "Vatican Council held"
+          ],
+          "1962": [
+            "[Japan]",
+            "Kenichi Horie crosses Pacific by yacht",
+            "Cuban Missile Crisis prompts Self-Defense Forces alert",
+            "Domestic airliner YS-11 first flight",
+            "Mikawa Island accident occurs",
+            "First Japan Record Awards held",
+            "[World]",
+            "Cuban Missile Crisis occurs",
+            "Algeria gains independence",
+            "Second Vatican Council held",
+            "Marilyn Monroe dies",
+            "First communications satellite Telstar launched"
+          ],
+          "1961": [
+            "[Japan]",
+            "Agricultural Basic Law enacted",
+            "Protests against Soviet nuclear tests",
+            "Hayato Ikeda cabinet announces income-doubling plan",
+            "NHK begins full color TV broadcasting",
+            "First Ham Fair held",
+            "[World]",
+            "Soviet Union achieves manned spaceflight",
+            "Berlin Wall construction begins",
+            "Bay of Pigs invasion in Cuba",
+            "South Africa becomes a republic",
+            "U.S. Peace Corps established"
+          ],
+          "1960": [
+            "[Japan]",
+            "Anpo protests intensify",
+            "Color TV broadcasting begins",
+            "Income-doubling plan announced",
+            "Socialist Party leader Inejiro Asanuma assassinated",
+            "New U.S.-Japan Security Treaty takes effect",
+            "[World]",
+            "17 African countries gain independence",
+            "U-2 spy plane incident occurs",
+            "Eichmann arrested in Israel",
+            "First OPEC meeting held",
+            "Kennedy elected U.S. President"
+          ],
+          "1959": [
+            "[Japan]",
+            "Crown Prince Akihito marries Michiko Shoda",
+            "Ise Bay Typhoon occurs",
+            "Metric system implemented",
+            "Iwato economic boom begins",
+            "First Antarctic observation team departs",
+            "[World]",
+            "Cuban Revolution succeeds",
+            "Tibetan uprising occurs",
+            "Soviet lunar probe photographs far side of the moon",
+            "First Grammy Awards ceremony",
+            "12 countries sign Antarctic Treaty"
+          ],
+          "1958": [
+            "[Japan]",
+            "Tokyo Tower completed",
+            "NTV begins color TV test broadcasts",
+            "Instant ramen launched",
+            "Crown Prince's engagement announced",
+            "Road Traffic Law enacted",
+            "[World]",
+            "NASA established",
+            "European Economic Community (EEC) formed",
+            "Khrushchev becomes Soviet Premier",
+            "Egypt and Syria form United Arab Republic",
+            "First European Football Championship held"
+          ],
+          "1957": [
+            "[Japan]",
+            "Antarctic observation ship 'Soya' departs",
+            "Elected to UN Security Council non-permanent seat",
+            "Yawata Iron & Steel strikes",
+            "High economic growth accelerates",
+            "Nuclear flame lit in Tokai Village",
+            "[World]",
+            "Soviet Union launches Sputnik 1 satellite",
+            "European Economic Community (EEC) formed",
+            "International Atomic Energy Agency (IAEA) established",
+            "Asian flu pandemic spreads",
+            "Ghana gains independence"
+          ],
+          "1956": [
+            "[Japan]",
+            "Japan-Soviet Joint Declaration signed",
+            "Economic White Paper declares 'no longer post-war'",
+            "Joins the UN",
+            "Yujiro Ishihara debuts in 'Rusty Knife'",
+            "Japan Housing Corporation established",
+            "[World]",
+            "Suez Crisis occurs",
+            "Hungarian Revolution occurs",
+            "First Non-Aligned Countries Conference held",
+            "Stalin criticized",
+            "Egypt nationalizes Suez Canal"
+          ],
+          "1955": [
+            "[Japan]",
+            "Liberal Democratic Party formed",
+            "Japan's UN membership rejected",
+            "Morinaga arsenic milk incident occurs",
+            "Toyopet Crown launched",
+            "First Jinmu economic boom begins",
+            "[World]",
+            "Warsaw Pact established",
+            "Bandung Conference held",
+            "Austria regains independence",
+            "Afro-Asian Conference held",
+            "Disneyland opens"
+          ],
+          "1954": [
+            "[Japan]",
+            "Bikini Atoll nuclear test incident occurs",
+            "Self-Defense Forces established",
+            "Toyamaru Typhoon kills or leaves 1,430 missing",
+            "TV broadcasting begins",
+            "First nuclear budget passed",
+            "[World]",
+            "U.S. rules racial segregation in schools unconstitutional",
+            "First Billboard Music Awards",
+            "Geneva Conference on Indochina held",
+            "SEATO (Southeast Asia Treaty Organization) formed",
+            "Algerian War of Independence begins"
+          ],
+          "1953": [
+            "[Japan]",
+            "NHK TV broadcasting begins",
+            "Amami Islands returned to Japan",
+            "Kirishima Volcano erupts",
+            "TV broadcasting officially starts",
+            "First post-war overseas travelers depart",
+            "[World]",
+            "Stalin dies",
+            "Korean War armistice",
+            "Everest first climbed",
+            "DNA double helix structure discovered",
+            "Elizabeth II's coronation"
+          ],
+          "1952": [
+            "[Japan]",
+            "San Francisco Peace Treaty takes effect",
+            "Bloody May Day incident occurs",
+            "Subversive Activities Prevention Law passed",
+            "First pedestrian zone at Imperial Palace plaza",
+            "NHK begins Radio 2 broadcasting",
+            "[World]",
+            "Elizabeth II becomes Queen of the UK",
+            "Hydrogen bomb test succeeds",
+            "European Coal and Steel Community formed",
+            "U.S. conducts first hydrogen bomb test",
+            "Revolution in Egypt"
+          ],
+          "1951": [
+            "[Japan]",
+            "San Francisco Peace Treaty signed",
+            "U.S.-Japan Security Treaty signed",
+            "Private air transport resumes",
+            "First NHK Kohaku Uta Gassen held",
+            "Special procurement boom begins",
+            "[World]",
+            "Korean War reaches stalemate",
+            "European Coal and Steel Community formed",
+            "Iran nationalizes oil industry",
+            "Color TV broadcasting begins (U.S.)",
+            "First Miss World pageant held"
+          ],
+          "1950": [
+            "[Japan]",
+            "Police Reserve Force established",
+            "Korean special procurement boom begins",
+            "JNR strike incident occurs",
+            "Personal Status Law amended",
+            "Radio and Broadcasting Laws enacted",
+            "[World]",
+            "Korean War breaks out",
+            "China invades Tibet",
+            "Truman orders hydrogen bomb development",
+            "NATO forces established",
+            "World population surpasses 2.5 billion"
+          ],
+          "1949": [
+            "[Japan]",
+            "Hideki Yukawa wins Nobel Prize in Physics",
+            "Shimoyama incident occurs",
+            "Mitaka incident occurs",
+            "Matsukawa incident occurs",
+            "Shoup Recommendation issued",
+            "[World]",
+            "People's Republic of China established",
+            "NATO (North Atlantic Treaty Organization) formed",
+            "Germany splits into East and West",
+            "India becomes a republic",
+            "Soviet Union succeeds in nuclear test"
+          ],
+          "1948": [
+            "[Japan]",
+            "Tokyo Trial verdicts issued",
+            "Imperial Bank incident occurs",
+            "Ice candy incident occurs",
+            "Japan National Railways (JNR) established",
+            "Building Standards Law enacted",
+            "[World]",
+            "Israel founded",
+            "Gandhi assassinated",
+            "London Olympics held",
+            "Universal Declaration of Human Rights adopted",
+            "Apartheid policy begins"
+          ],
+          "1947": [
+            "[Japan]",
+            "Constitution of Japan enacted",
+            "Fundamental Law of Education enacted",
+            "Labor Standards Law enacted",
+            "Antimonopoly Law enacted",
+            "First House of Councillors election held",
+            "[World]",
+            "Truman Doctrine announced",
+            "India and Pakistan gain independence",
+            "Marshall Plan announced",
+            "IMF begins operations",
+            "Paris Peace Treaties signed"
+          ],
+          "1946": [
+            "[Japan]",
+            "Constitution of Japan promulgated",
+            "Tokyo Trial begins",
+            "First post-war general election held",
+            "Zaibatsu dissolution begins",
+            "New yen conversion implemented",
+            "[World]",
+            "First UN General Assembly held",
+            "Philippines gains independence",
+            "Nuremberg Trial verdicts",
+            "UNICEF established",
+            "Churchill delivers 'Iron Curtain' speech"
+          ],
+          "1945": [
+            "[Japan]",
+            "Atomic bombs dropped on Hiroshima and Nagasaki",
+            "Potsdam Declaration accepted",
+            "Japan surrenders unconditionally",
+            "GHQ occupation begins",
+            "Land reform begins",
+            "[World]",
+            "Yalta Conference held",
+            "Germany surrenders unconditionally",
+            "United Nations established",
+            "Potsdam Conference held",
+            "World War II ends"
+          ],
+          "1944": [
+            "[Japan]",
+            "Student evacuations intensify",
+            "Tōnankai Earthquake occurs",
+            "Saipan falls",
+            "B-29 air raids on mainland begin",
+            "Student mobilization begins",
+            "[World]",
+            "Normandy landings",
+            "Paris liberated",
+            "Battle of Leyte Gulf",
+            "IMF establishment decided",
+            "World Bank establishment decided"
+          ],
+          "1943": [
+            "[Japan]",
+            "Student mobilization begins",
+            "Admiral Isoroku Yamamoto killed",
+            "Italy surrenders to Allies",
+            "Greater Japan Press Association formed",
+            "School military training strengthened",
+            "[World]",
+            "Tehran Conference held",
+            "Italy surrenders unconditionally",
+            "Soviet victory at Stalingrad",
+            "Allies occupy Rome",
+            "Casablanca Conference held"
+          ],
+          "1942": [
+            "[Japan]",
+            "Defeat at Midway Battle",
+            "Battle of Guadalcanal begins",
+            "Education system reorganized into National Schools",
+            "Food Control Law enacted",
+            "Greater Japan Political Association reorganized",
+            "[World]",
+            "Battle of Stalingrad begins",
+            "Allies counterattack in North Africa",
+            "Manhattan Project begins",
+            "U.S. begins internment of Japanese-Americans",
+            "Allies plan Normandy landings"
+          ],
+          "1941": [
+            "[Japan]",
+            "Pacific War begins",
+            "Pearl Harbor attack executed",
+            "Government-General Liaison Conference established",
+            "National School Ordinance enacted",
+            "Commerce and Industry Economic Association formed",
+            "[World]",
+            "Atlantic Charter signed",
+            "German-Soviet War begins",
+            "Lend-Lease Act passed",
+            "U.S. imposes oil embargo on Japan",
+            "Soviet Union abrogates German-Soviet Non-Aggression Pact"
+          ],
+          "1940": [
+            "[Japan]",
+            "Greater Japan Political Association formed",
+            "Japan-Germany-Italy Tripartite Pact signed",
+            "2600th anniversary of the empire celebrated",
+            "Price Control Ordinance enacted",
+            "Second Konoe cabinet formed",
+            "[World]",
+            "Germany occupies Paris",
+            "Trotsky assassinated",
+            "London Blitz",
+            "Soviet Union annexes Baltic states",
+            "Churchill becomes UK Prime Minister"
+          ],
+          "1939": [
+            "[Japan]",
+            "World War II breaks out",
+            "National Conscription Ordinance enacted",
+            "Nomonhan Incident occurs",
+            "Rationing system begins",
+            "Greater Japan Industry Patriotic Association formed",
+            "[World]",
+            "Germany invades Poland",
+            "German-Soviet Non-Aggression Pact signed",
+            "Einstein urges Roosevelt for nuclear bomb development",
+            "Spanish Civil War ends",
+            "World War II begins"
+          ],
+          "1938": [
+            "[Japan]",
+            "National Mobilization Law enacted",
+            "Tokyo subway opens",
+            "Ministry of Health and Welfare established",
+            "National Health Insurance Law enacted",
+            "Greater Japan Youth Corps formed",
+            "[World]",
+            "Germany annexes Austria",
+            "Munich Conference held",
+            "Kristallnacht (Jewish persecution)",
+            "Nuclear fission discovered",
+            "Czechoslovakia partitioned"
+          ],
+          "1937": [
+            "[Japan]",
+            "Sino-Japanese War breaks out",
+            "Lugou Bridge Incident occurs",
+            "Nanjing Incident occurs",
+            "National Spiritual Mobilization Movement begins",
+            "Fumimaro Konoe cabinet formed",
+            "[World]",
+            "Guernica bombing",
+            "Italy joins Anti-Comintern Pact",
+            "Picasso paints 'Guernica'",
+            "Hindenburg airship explosion",
+            "Nazi Germany withdraws from League of Nations"
+          ],
+          "1936": [
+            "[Japan]",
+            "February 26 Incident occurs",
+            "Anti-Comintern Pact with Germany signed",
+            "Electric power nationalized",
+            "Hideko Maehata wins gold at Berlin Olympics",
+            "Hirota Koki cabinet formed",
+            "[World]",
+            "Spanish Civil War breaks out",
+            "Berlin Olympics held",
+            "Edward VIII abdicates in the UK",
+            "Italy annexes Ethiopia",
+            "Germany reoccupies Rhineland"
+          ],
+          "1935": [
+            "[Japan]",
+            "Emperor Organ Theory Incident occurs",
+            "Electric Power Nationalization Law enacted",
+            "Washington Naval Treaty abrogated",
+            "Manchukuo adopts imperial system",
+            "First Akutagawa and Naoki Awards announced",
+            "[World]",
+            "Italy invades Ethiopia",
+            "Germany declares rearmament",
+            "Nuremberg Laws enacted",
+            "Long March completed in China",
+            "U.S. enacts Social Security Act"
+          ],
+          "1934": [
+            "[Japan]",
+            "Muroto Typhoon strikes",
+            "Teijin Incident occurs",
+            "Washington Naval Treaty termination announced",
+            "Tokyo-Yokohama Railway opens",
+            "Japan Professional Baseball born",
+            "[World]",
+            "Hitler becomes German Führer",
+            "Soviet Union joins League of Nations",
+            "Long March begins in China",
+            "First FIFA World Cup held",
+            "Disney creates Mickey Mouse"
+          ],
+          "1933": [
+            "[Japan]",
+            "Withdraws from League of Nations",
+            "Manchukuo established",
+            "Greater Japan National Defense Women's Association formed",
+            "10th anniversary of Great Kanto Earthquake",
+            "First Hakone Ekiden held",
+            "[World]",
+            "Hitler becomes German Chancellor",
+            "Nazis establish one-party rule",
+            "Roosevelt launches New Deal",
+            "Prohibition repealed in the U.S.",
+            "Einstein emigrates"
+          ],
+          "1932": [
+            "[Japan]",
+            "May 15 Incident occurs",
+            "Manchukuo established",
+            "Shanghai Incident occurs",
+            "Prime Minister Tsuyoshi Inukai assassinated",
+            "Gold standard suspended",
+            "[World]",
+            "Los Angeles Olympics held",
+            "Hoover Dam construction begins",
+            "U.S. launches New Deal",
+            "BBC broadcasting begins",
+            "First Venice International Film Festival held"
+          ],
+          "1931": [
+            "[Japan]",
+            "Manchurian Incident breaks out",
+            "Showa Depression worsens",
+            "Tokyo subway opens",
+            "Manchukuo establishment declared",
+            "Gold exports banned again",
+            "[World]",
+            "Spain establishes republic",
+            "UK abandons gold standard",
+            "Empire State Building completed",
+            "Chinese Soviet Republic established",
+            "Great Depression worsens"
+          ],
+          "1930": [
+            "[Japan]",
+            "London Naval Treaty signed",
+            "Showa Depression begins",
+            "Prime Minister Hamaguchi shot at Tokyo Station",
+            "Gold standard reintroduced",
+            "First Kodansha Manga Award",
+            "[World]",
+            "Great Depression worsens",
+            "Gandhi's Salt March",
+            "First FIFA World Cup held",
+            "British airship R101 crashes",
+            "Pluto discovered"
+          ],
+          "1929": [
+            "[Japan]",
+            "Great Depression impacts Japan",
+            "Prime Minister Giichi Tanaka dies",
+            "First All-Japan Swimming Championships",
+            "Tokyo trams municipalized",
+            "Special Higher Police established",
+            "[World]",
+            "Wall Street Crash triggers Great Depression",
+            "Soviet Union launches first Five-Year Plan",
+            "Lateran Treaty signed",
+            "First Academy Awards ceremony",
+            "Graf Zeppelin completes world circumnavigation"
+          ],
+          "1928": [
+            "[Japan]",
+            "Zhang Zuolin assassination",
+            "First general election with universal suffrage",
+            "First gold medal at Amsterdam Olympics",
+            "March 15 Incident occurs",
+            "Showa Emperor's enthronement ceremony",
+            "[World]",
+            "Amsterdam Olympics held",
+            "Stalin consolidates dictatorship",
+            "Kellogg-Briand Pact signed",
+            "Penicillin discovered",
+            "Mickey Mouse debuts"
+          ],
+          "1927": [
+            "[Japan]",
+            "Financial crisis occurs",
+            "Giichi Tanaka cabinet formed",
+            "First Koshien baseball tournament held",
+            "Japan's first subway opens (Ueno-Asakusa)",
+            "Radio calisthenics begin",
+            "[World]",
+            "Lindbergh completes solo Atlantic flight",
+            "Chinese Nationalist Army begins Northern Expedition",
+            "First talkie film 'The Jazz Singer' released",
+            "BBC broadcasting begins",
+            "Sacco and Vanzetti executed"
+          ],
+          "1926": [
+            "[Japan]",
+            "Emperor Taisho passes away, Showa era begins",
+            "Public Security Preservation Law enacted",
+            "Universal suffrage law passed",
+            "Japan Broadcasting Corporation (NHK) established",
+            "Metric system adopted",
+            "[World]",
+            "First World Table Tennis Championships held",
+            "Germany joins League of Nations",
+            "General strike in the UK",
+            "Ford ends Model T production",
+            "Italy establishes fascist dictatorship"
+          ],
+          "1925": [
+            "[Japan]",
+            "Public Security Preservation Law enacted",
+            "Universal suffrage law passed",
+            "Radio broadcasting begins",
+            "Great Kanto Earthquake reconstruction begins",
+            "Army downsizing implemented",
+            "[World]",
+            "Hitler publishes 'Mein Kampf'",
+            "Locarno Treaties signed",
+            "Scopes Trial (evolution trial)",
+            "Chaplin's 'The Gold Rush' released",
+            "First international film festival held"
+          ],
+          "1924": [
+            "[Japan]",
+            "First May Day held",
+            "Katsudobashi Bridge (Toyo Permanent Bridge) opens",
+            "First Yomiuri Giants team formed",
+            "Baronial election system adopted in the House of Peers",
+            "Meiji Jingu Gaien Stadium completed",
+            "[World]",
+            "First Winter Olympics held",
+            "Paris Olympics held",
+            "Lenin passes away",
+            "U.S. enacts Immigration Restriction Act",
+            "First Labour government formed in the UK"
+          ]
+        }
+      }),
+      watch: {
+        selectedYear(val) {
+          this.updateDateFromInputs();
+        },
+        selectedMonth(val) {
+          if (val > 12) this.selectedMonth = 12;
+          if (val < 1) this.selectedMonth = 1;
+          this.updateDateFromInputs();
+        },
+        selectedDay(val) {
+          if (val > this.daysInMonth) this.selectedDay = this.daysInMonth;
+          if (val < 1) this.selectedDay = 1;
+          this.updateDateFromInputs();
+        }
+      },
+      computed: {
+        daysInMonth() {
+          return new Date(this.selectedYear, this.selectedMonth, 0).getDate();
+        },
+        hasEventsForYear() {
+          return this.events.hasOwnProperty(this.selectedYear.toString());
+        },
+        yearEvents() {
+          const year = this.selectedYear.toString();
+          return this.events[year] || [];
+        }
+      },
+      methods: {
+        updateInputs() {
+          const date = new Date(this.selectedDate);
+          this.selectedYear = date.getFullYear();
+          this.selectedMonth = date.getMonth() + 1;
+          this.selectedDay = date.getDate();
+        },
+        updateDateFromInputs() {
+          const date = new Date(this.selectedYear, this.selectedMonth - 1, this.selectedDay + 1);
+          this.selectedDate = date.toISOString().substr(0, 10);
+        }
+      }
+    })
+  </script>
+</body>
+</html>

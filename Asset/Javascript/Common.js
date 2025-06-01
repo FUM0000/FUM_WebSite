@@ -583,6 +583,10 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
 
+                <v-list-item href="./Service_Calendar.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Calendar</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Service_ImageEditor.html">
                     <v-list-item-icon />
                     <v-list-item-title>Image Editor</v-list-item-title>
@@ -590,10 +594,6 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Service_ImageLayout.html">
                     <v-list-item-icon />
                     <v-list-item-title>Image Layout</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Service_JapaneseCalendar.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Japanese Calendar</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Service_QRCode.html">
                     <v-list-item-icon />
@@ -679,27 +679,11 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Complexity ▲ --------------------------------------------------------------------------->
                 
-                <!-- ▼ Noodle ▼ ------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Noodle</v-list-item-title>
-                    </template>
-
-                    <v-list-item href="./Cooking_Pasta.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Pasta</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Cooking_Ramen.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Ramen</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Noodle ▲ ------------------------------------------------------------------------------->
-
-                <v-list-item href="./Cooking_Chinese.html">
+                <v-list-item href="./Cooking_Science.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Chinese</v-list-item-title>
+                    <v-list-item-title>Science</v-list-item-title>
                 </v-list-item>
+
             </v-list-group>
             <!-- ▲ Cooking ▲ ---------------------------------------------------------------------------------->
 

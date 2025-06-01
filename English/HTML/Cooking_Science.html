@@ -27,14 +27,9 @@
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
-    <title>Cooking > Simple</title>
+    <title>Cooking > Science</title>
 
     <style>
-        body {
-            background-color: #F5F5F5;
-            font-family: 'Noto Sans JP', sans-serif;
-        }
-
         .Youtube_Col {
             margin: 10px;
             padding: 15px;
@@ -72,11 +67,17 @@
             top: 0px;
         }
 
+        .category-select {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
         .category-select .v-select__slot {
             background-color: #FF8A80;
             border-radius: 8px;
             font-family: 'Noto Sans JP', sans-serif;
             color: #333 !important;
+            min-height: 48px;
         }
 
         .category-select .v-label {
@@ -86,8 +87,13 @@
             margin-bottom: 10px !important;
         }
 
+        .v-select__selection--comma {
+            margin-left: 10px
+        }
+
         .category-select .v-select__selection {
             color: #333 !important;
+            font-weight: bold !important;
         }
 
         /* 選択中の下線色 */
@@ -99,7 +105,6 @@
         .v-menu__content .v-list-item:hover {
             background-color: #FFEAEA !important;
         }
-
 
         @keyframes fadeIn {
             from {
@@ -139,9 +144,7 @@
 <body>
     <v-app id="App">
         <template>
-            <main-system-bar class="main-system-bar" :drawer="Drawer" @change-drawer="ChangeDrawer">
-                Cooking > Simple
-            </main-system-bar>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Cooking > Science</main-system-bar>
 
             <v-main id="Main">
                 <transition name="Fade_Page">
@@ -149,10 +152,19 @@
                         <v-row>
                             <v-col cols="12">
                                 <v-select v-model="selectedCategory" :items="categories" label="Category"
-                                    class="category-select" @change="filterVideos"></v-select>
+                                    class="category-select" @change="filterVideos">
+                                    <template v-slot:selection="{ item }">
+                                        <v-icon class="ml-2 mr-4">{{ getIcon(item) }}</v-icon>
+                                        {{ item }}
+                                    </template>
+                                    <template v-slot:item="{ item }">
+                                        <v-icon class="mr-4">{{ getIcon(item) }}</v-icon>
+                                        {{ item }}
+                                    </template>
+                                </v-select>
                             </v-col>
                         </v-row>
-                        <v-row>
+                        <v-row justify="center">
                             <v-col class="Youtube_Col" cols="12" md="3" v-for="(video, index) in filteredVideos"
                                 :key="index">
                                 <div class="video-title">
@@ -170,28 +182,9 @@
                 </transition>
             </v-main>
 
-            <main-footer>
-                <v-container>
-                    <v-row justify="center">
-                        <v-col cols="auto">
-                            <a href="https://twitter.com" target="_blank" class="mx-2">
-                                <i class="mdi mdi-twitter" style="color: #FF8A80;"></i>
-                            </a>
-                            <a href="https://instagram.com" target="_blank" class="mx-2">
-                                <i class="mdi mdi-instagram" style="color: #FF8A80;"></i>
-                            </a>
-                            <a href="mailto:contact@example.com" class="mx-2">
-                                <i class="mdi mdi-email" style="color: #FF8A80;"></i>
-                            </a>
-                        </v-col>
-                    </v-row>
-                    <v-row justify="center">
-                        <v-col cols="auto">
-                            <p>© 2025 Cooking Simple. All rights reserved.</p>
-                        </v-col>
-                    </v-row>
-                </v-container>
-            </main-footer>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
         </template>
     </v-app>
 
@@ -209,28 +202,16 @@
                 Drawer: false,
                 Ready_Page: true,
                 selectedCategory: 'All',
-                categories: ['All', 'Vegetable'],
+                categories: ['All', 'Stir-Fry'],
                 Videos: [
-                    { id: 'V0QM0oOHHt4', title: 'Stir fry Bean sprouts', category: 'Vegetable', description: "Season at the end. Don't use high heat." },
-                    { id: '', title: '', category: '', description: '' },
-                    { id: '', title: '', category: '', description: '' },
-                    { id: '', title: '', category: '', description: '' },
-                    { id: '', title: '', category: '', description: '' },
-                    { id: '', title: '', category: '', description: '' },
-                    { id: '', title: '', category: '', description: '' },
+                    { id: 'V0QM0oOHHt4', title: 'Vegetables General', category: 'Stir-Fry', description: 'Learn how to stir-fry and the process.' },
+                    // { id: '', title: '', category: '', description: '' },
+                    // { id: '', title: '', category: '', description: '' },
                 ],
                 filteredVideos: [],
                 dialog: [],
                 categoryIcons: {
-                    'Cheap': 'mdi-currency-usd-off',
-                    'Pasta': 'mdi-silverware-fork',
-                    'Salad': 'mdi-leaf',
-                    'Meat': 'mdi-food-steak',
-                    'Fish': 'mdi-fish',
-                    'Dessert': 'mdi-cake-variant',
-                    'Soup': 'mdi-pot-mix',
-                    'Rice': 'mdi-rice',
-                    'Vegetable': 'mdi-food-broccoli'
+                    'Stir-Fry': 'mdi-gas-burner',
                 }
             },
             mounted() {
@@ -249,7 +230,7 @@
                     }
                 },
                 getIcon(category) {
-                    return this.categoryIcons[category] || 'mdi-food'; // デフォルトアイコン
+                    return this.categoryIcons[category] || 'mdi-silverware-fork-knife';
                 }
             }
         });
