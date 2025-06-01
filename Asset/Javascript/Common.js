@@ -565,6 +565,14 @@ Vue.component('main-navigation', {
                         <v-icon>mdi-noodles</v-icon>
                     </v-list-item-icon>
                 </v-list-item>
+                <v-list-item href="./Japan_Drink.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Drink</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-beer</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
                 <v-list-item href="./Japan_Snack.html">
                     <v-list-item-icon />
                     <v-list-item-title>Snack</v-list-item-title>
@@ -1091,12 +1099,12 @@ Vue.component('custom-carousel-left', {
 //// Card
 Vue.component('card-explanation-image', {
     template: `
-      <v-card class="pa-2">
+      <v-card class="pa-2" style="height:100%">
         <v-img :src="image" :lazy-src="image">
             <transition name="Card_Fade">
                 <v-card-text v-if="Show_Recommend" class="pa-5 Card_Recommend">
-                <b>Recommend</b><br><br>
-                {{ recommend }}
+                    <b>Recommend</b><br><br>
+                    {{ recommend }}
                 </v-card-text>
             </transition>
         </v-img>
@@ -1110,23 +1118,41 @@ Vue.component('card-explanation-image', {
         </v-card-text>
   
         <v-card-actions v-if="recommend">
-          <v-btn color="primary" block outlined @click="Toggle">
+          <v-btn color="primary" block outlined @click="Toggle_Recommend">
             {{ Show_Recommend ? 'Image' : 'Recommend' }}
           </v-btn>
         </v-card-actions>
+  
+        <v-card-actions v-if="explain" style="margin-top: auto;">
+            <v-btn color="primary" block outlined @click="Show_Explain = true">Explain</v-btn>
+        </v-card-actions>
+
+        <v-dialog v-model="Show_Explain" max-width="600">
+          <v-card>
+            <v-card-title class="text-h5">Explanation</v-card-title>
+            <v-card-text>
+              {{ explain }}
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="primary" text @click="Show_Explain = false">Close</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </v-card>
     `,
     props: {
         image: { type: String, required: true },
         title: { type: String, required: true },
         description: { type: String, required: true },
-        recommend: { type: String, required: false }
+        recommend: { type: String, required: false },
+        explain: { type: String, required: false },
     },
     data() {
-        return { Show_Recommend: false }
+        return { Show_Recommend: false, Show_Explain: false }
     },
     methods: {
-        Toggle() { this.Show_Recommend = !this.Show_Recommend }
+        Toggle_Recommend() { this.Show_Recommend = !this.Show_Recommend },
     }
 });
 Vue.component('card-explanation-image-link', {
