@@ -1099,8 +1099,8 @@ Vue.component('custom-carousel-left', {
 //// Card
 Vue.component('card-explanation-image', {
     template: `
-      <v-card class="pa-2" style="height:100%">
-        <v-img :src="image" :lazy-src="image">
+      <v-card class="pa-2 d-flex flex-column" style="height:100%">
+        <v-img :src="image" :lazy-src="image" style="flex: 0 1 auto;">
             <transition name="Card_Fade">
                 <v-card-text v-if="Show_Recommend" class="pa-5 Card_Recommend">
                     <b>Recommend</b><br><br>
@@ -1108,31 +1108,29 @@ Vue.component('card-explanation-image', {
                 </v-card-text>
             </transition>
         </v-img>
-  
-        <v-card-title class="text-h5 font-weight-medium">
+
+        <v-card-title class="text-h5 font-weight-medium" style="flex: 0 1 auto;">
             {{ title }}
         </v-card-title>
-  
-        <v-card-text class="Card_Description">
+
+        <v-card-text class="Card_Description" style="flex: 0 1 auto;">
             {{ description }}
         </v-card-text>
-  
-        <v-card-actions v-if="recommend">
+
+        <v-card-actions v-if="recommend" style="flex: 0 1 auto;">
           <v-btn color="primary" block outlined @click="Toggle_Recommend">
             {{ Show_Recommend ? 'Image' : 'Recommend' }}
           </v-btn>
         </v-card-actions>
-  
-        <v-card-actions v-if="explain" style="margin-top: auto;">
+
+        <v-card-actions v-if="explain" style="margin-top: auto; flex: 0 1 auto;">
             <v-btn color="primary" block outlined @click="Show_Explain = true">Explain</v-btn>
         </v-card-actions>
 
         <v-dialog v-model="Show_Explain" max-width="600">
           <v-card>
-            <v-card-title class="text-h5">Explanation</v-card-title>
-            <v-card-text>
-              {{ explain }}
-            </v-card-text>
+            <v-card-title class="text-h5">{{ title }}</v-card-title>
+            <v-card-text v-html="explain"></v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
               <v-btn color="primary" text @click="Show_Explain = false">Close</v-btn>
