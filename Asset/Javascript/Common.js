@@ -916,7 +916,7 @@ Vue.component('main-navigation', {
             <!-- ▼ My Note ▼ ---------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-stamper">
                 <template v-slot:activator>
-                    <v-list-item-title>My Memo</v-list-item-title>
+                    <v-list-item-title>My Note</v-list-item-title>
                 </template>
 
                 <v-list-group sub-group :value="false">
