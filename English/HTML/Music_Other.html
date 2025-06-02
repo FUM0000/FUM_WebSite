@@ -20,8 +20,7 @@
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
     <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
@@ -166,16 +165,14 @@
     </v-app>
 
     <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
     <script src="https://www.youtube.com/iframe_api"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
@@ -199,10 +196,9 @@
                 this.playMode = 'loop';
                 this.currentVideoIndex = -1;
                 this.isErrorProcessing = false;
-                this.isDragging = false; // Changed from isMouseDown for clarity
+                this.isDragging = false;
                 this.previousMousePosition = { x: 0, y: 0 };
-                this.targetRotationY = 0; // For damping
-                this.targetPositionY = 0; // For damping
+                this.targetPositionY = 0; // For vertical position damping
                 this.dampingFactor = 0.1; // Controls smoothness of damping
                 this.init();
             }
@@ -225,6 +221,21 @@
                 this.renderer.domElement.style.top = '0';
                 this.renderer.domElement.style.left = '0';
                 document.getElementById(this.containerId).appendChild(this.renderer.domElement);
+
+                // Initialize OrbitControls
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.rotateSpeed = 0.5;
+                this.controls.enableZoom = true; // Allow zooming (distance change)
+                this.controls.enablePan = false; // Disable panning
+                this.controls.minDistance = 8; // Minimum zoom distance
+                this.controls.maxDistance = 20; // Maximum zoom distance
+                this.controls.minPolarAngle = Math.PI / 2; // Lock to horizontal rotation
+                this.controls.maxPolarAngle = Math.PI / 2; // Lock to horizontal rotation
+                this.controls.autoRotate = true; // Enable auto-rotation
+                this.controls.autoRotateSpeed = this.rotationSpeed * 1000; // Adjust speed to match original
+                this.controls.target.set(0, 0, 0); // Look at the center of the scene
 
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
@@ -255,18 +266,17 @@
                 this.createVideoCylinder();
                 this.scene.add(this.centerGroup);
 
-                // Initialize target rotation and position
-                this.targetRotationY = this.centerGroup.rotation.y;
+                // Initialize target position
                 this.targetPositionY = this.centerGroup.position.y;
 
-                // Event listeners
-                this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
+                // Event listeners for Y-axis movement
                 this.renderer.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
                 this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
                 this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
                 this.renderer.domElement.addEventListener('touchstart', this.onTouchStart.bind(this), false);
                 this.renderer.domElement.addEventListener('touchmove', this.onTouchMove.bind(this), false);
                 this.renderer.domElement.addEventListener('touchend', this.onTouchEnd.bind(this), false);
+                this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
                 this.closeButton.addEventListener('click', this.closePlayer.bind(this));
 
@@ -315,6 +325,26 @@
                 }, 1000);
             }
 
+            onMouseDown(event) {
+                this.isDragging = true;
+                this.previousMousePosition = { x: event.clientX, y: event.clientY };
+            }
+
+            onMouseMove(event) {
+                if (!this.isDragging) return;
+                const deltaMove = {
+                    x: event.clientX - this.previousMousePosition.x,
+                    y: event.clientY - this.previousMousePosition.y
+                };
+                let newY = this.targetPositionY - deltaMove.y * 0.003;
+                this.targetPositionY = Math.max(this.minY, Math.min(this.maxY, newY));
+                this.previousMousePosition = { x: event.clientX, y: event.clientY };
+            }
+
+            onMouseUp() {
+                this.isDragging = false;
+            }
+
             onTouchStart(event) {
                 if (event.touches.length === 1) {
                     if (this.isClickProcessing) {
@@ -352,6 +382,23 @@
                     this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
                     event.preventDefault();
                 }
+            }
+
+            onTouchMove(event) {
+                if (this.isDragging && event.touches.length === 1) {
+                    const deltaMove = {
+                        x: event.touches[0].clientX - this.previousMousePosition.x,
+                        y: event.touches[0].clientY - this.previousMousePosition.y
+                    };
+                    let newY = this.targetPositionY - deltaMove.y * 0.003;
+                    this.targetPositionY = Math.max(this.minY, Math.min(this.maxY, newY));
+                    this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+                    event.preventDefault();
+                }
+            }
+
+            onTouchEnd() {
+                this.isDragging = false;
             }
 
             playVideo(videoId, index) {
@@ -432,46 +479,6 @@
                 this.playVideo(nextVideo.id, nextIndex);
             }
 
-            onMouseDown(event) {
-                this.isDragging = true;
-                this.previousMousePosition = { x: event.clientX, y: event.clientY };
-            }
-
-            onMouseMove(event) {
-                if (!this.isDragging) return;
-                const deltaMove = {
-                    x: event.clientX - this.previousMousePosition.x,
-                    y: event.clientY - this.previousMousePosition.y
-                };
-                // Update target rotation and position
-                this.targetRotationY -= deltaMove.x * 0.003; // Reduced sensitivity for smoother control
-                let newY = this.targetPositionY - deltaMove.y * 0.003;
-                this.targetPositionY = Math.max(this.minY, Math.min(this.maxY, newY));
-                this.previousMousePosition = { x: event.clientX, y: event.clientY };
-            }
-
-            onMouseUp() {
-                this.isDragging = false;
-            }
-
-            onTouchMove(event) {
-                if (this.isDragging && event.touches.length === 1) {
-                    const deltaMove = {
-                        x: event.touches[0].clientX - this.previousMousePosition.x,
-                        y: event.touches[0].clientY - this.previousMousePosition.y
-                    };
-                    this.targetRotationY -= deltaMove.x * 0.003; // Reduced sensitivity for smoother control
-                    let newY = this.targetPositionY - deltaMove.y * 0.003;
-                    this.targetPositionY = Math.max(this.minY, Math.min(this.maxY, newY));
-                    this.previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-                    event.preventDefault();
-                }
-            }
-
-            onTouchEnd() {
-                this.isDragging = false;
-            }
-
             createVideoCylinder() {
                 const radius = 3;
                 const videoCount = this.videos.length;
@@ -506,31 +513,31 @@
                             aspect: { value: width / height }
                         },
                         vertexShader: `
-                    varying vec2 vUv;
-                    void main() {
-                        vUv = uv;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
                         fragmentShader: `
-                    uniform sampler2D map;
-                    uniform float cornerRadius;
-                    uniform float aspect;
-                    varying vec2 vUv;
+                            uniform sampler2D map;
+                            uniform float cornerRadius;
+                            uniform float aspect;
+                            varying vec2 vUv;
 
-                    float roundedBox(vec2 uv, vec2 size, float radius) {
-                        vec2 d = abs(uv - 0.5) * vec2(aspect, 1.0) - size + radius;
-                        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
-                    }
+                            float roundedBox(vec2 uv, vec2 size, float radius) {
+                                vec2 d = abs(uv - 0.5) * vec2(aspect, 1.0) - size + radius;
+                                return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+                            }
 
-                    void main() {
-                        vec2 uv = vUv;
-                        vec4 texColor = texture2D(map, uv);
-                        float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
-                        float alpha = smoothstep(0.0, 0.01, -dist);
-                        gl_FragColor = texColor * alpha;
-                    }
-                `,
+                            void main() {
+                                vec2 uv = vUv;
+                                vec4 texColor = texture2D(map, uv);
+                                float dist = roundedBox(uv, vec2(0.5 * aspect, 0.5), cornerRadius);
+                                float alpha = smoothstep(0.0, 0.01, -dist);
+                                gl_FragColor = texColor * alpha;
+                            }
+                        `,
                         side: THREE.DoubleSide,
                         transparent: true
                     });
@@ -579,11 +586,7 @@
                 requestAnimationFrame(this.animate.bind(this));
                 this.time += 0.016;
 
-                // Apply damping to rotation and position
-                if (!this.isDragging) {
-                    this.targetRotationY += this.rotationSpeed; // Auto-rotation when not dragging
-                }
-                this.centerGroup.rotation.y += (this.targetRotationY - this.centerGroup.rotation.y) * this.dampingFactor;
+                // Apply damping to vertical position
                 this.centerGroup.position.y += (this.targetPositionY - this.centerGroup.position.y) * this.dampingFactor;
 
                 // Clamp position
@@ -593,6 +596,9 @@
                     const plane = planeGroup.children[0];
                     plane.lookAt(this.camera.position);
                 });
+
+                // Update OrbitControls
+                this.controls.update();
 
                 if (this.usePostprocessing && this.composer) {
                     try {
