@@ -549,38 +549,38 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Traffic ▲ ------------------------------------------------------------------------------>
 
-                <v-list-item href="./Japan_AsianCuisine.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Asian Cuisine</v-list-item-title>
+                
+                <!-- ▼ Food ▼ --------------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Food</v-list-item-title>
                         
-                    <v-list-item-icon>
-                        <v-icon>mdi-wall-sconce-round-variant</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Japan_Food.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Food</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-noodles</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Japan_Drink.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Drink</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-beer</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Japan_Snack.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Snack</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-french-fries</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
+                        <v-list-item-icon>
+                            <v-icon>mdi-noodles</v-icon>
+                        </v-list-item-icon>
+                    </template>
+
+
+                    <v-list-item href="./Japan_AsianCuisine.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Asian Cuisine</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Japan_Food.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Food</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Japan_Drink.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Drink</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Japan_Snack.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Snack</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Food ▲ --------------------------------------------------------------------------------->
+
             </v-list-group>
             <!-- ▲ Japanese Culture ▲ ------------------------------------------------------------------------->
 
@@ -1117,23 +1117,23 @@ Vue.component('card-explanation-image', {
             {{ description }}
         </v-card-text>
 
+        <v-card-actions v-if="explanation" style="margin-top: auto; flex: 0 1 auto;">
+            <v-btn color="primary" block outlined @click="Show_Explanation = true">Explanation</v-btn>
+        </v-card-actions>
+
         <v-card-actions v-if="recommend" style="flex: 0 1 auto;">
           <v-btn color="primary" block outlined @click="Toggle_Recommend">
             {{ Show_Recommend ? 'Image' : 'Recommend' }}
           </v-btn>
         </v-card-actions>
 
-        <v-card-actions v-if="explain" style="margin-top: auto; flex: 0 1 auto;">
-            <v-btn color="primary" block outlined @click="Show_Explain = true">Explain</v-btn>
-        </v-card-actions>
-
-        <v-dialog v-model="Show_Explain" max-width="600">
+        <v-dialog v-model="Show_Explanation" max-width="600">
           <v-card>
             <v-card-title class="text-h5">{{ title }}</v-card-title>
-            <v-card-text v-html="explain"></v-card-text>
+            <v-card-text v-html="explanation"></v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="primary" text @click="Show_Explain = false">Close</v-btn>
+              <v-btn color="primary" text @click="Show_Explanation = false">Close</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -1144,10 +1144,10 @@ Vue.component('card-explanation-image', {
         title: { type: String, required: true },
         description: { type: String, required: true },
         recommend: { type: String, required: false },
-        explain: { type: String, required: false },
+        explanation: { type: String, required: false },
     },
     data() {
-        return { Show_Recommend: false, Show_Explain: false }
+        return { Show_Recommend: false, Show_Explanation: false }
     },
     methods: {
         Toggle_Recommend() { this.Show_Recommend = !this.Show_Recommend },
