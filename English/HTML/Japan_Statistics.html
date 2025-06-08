@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/apexcharts@3.35.3/dist/apexcharts.css" rel="stylesheet">
+
+    <title>Japanese Culture > Statistics</title>
+
+</head>
+
+<body>
+    <v-app id="App">
+        <template>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Japanese Culture >
+                Statistics</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container v-show="Ready_Page" fluid fill-height style="align-content: center;">
+                        <v-row justify="center">
+                            <!-- カテゴリー選択 -->
+                            <v-col cols="12" md="3" class="pb-0">
+                                <v-select v-model="selectedCategory" :items="categories" label="カテゴリーを選択" outlined
+                                    @change="updateContent"></v-select>
+                            </v-col>
+                        </v-row>
+                        <v-row justify="center">
+                            <!-- サブカテゴリー選択（都道府県ランキングの場合のみ表示） -->
+                            <v-col cols="12" md="3" v-if="selectedCategory === '都道府県ランキング(ワースト含む)(2024)'" class="pt-0">
+                                <v-select v-model="selectedSubCategory" :items="subCategories" label="サブカテゴリーを選択"
+                                    outlined @change="updateSubCategoryContent"></v-select>
+                            </v-col>
+                        </v-row>
+                        <!-- コンテンツ表示エリア -->
+                        <v-row justify="center">
+                            <v-col cols="12" md="8">
+                                <v-card>
+                                    <v-card-title>{{ selectedCategory }}</v-card-title>
+                                    <v-card-text>
+                                        <div v-if="selectedCategory === '人口'">
+                                            <v-row>
+                                                <v-col cols="12">
+                                                    <v-card>
+                                                        <v-card-title>人口 (1924-2024)</v-card-title>
+                                                        <v-card-text>
+                                                            <div id="populationChart"></div>
+                                                        </v-card-text>
+                                                    </v-card>
+                                                </v-col>
+                                                <v-col cols="12">
+                                                    <v-card>
+                                                        <v-card-title>出生数と死亡者数 (1974-2024)</v-card-title>
+                                                        <v-card-text>
+                                                            <div id="birthDeathChart"></div>
+                                                        </v-card-text>
+                                                    </v-card>
+                                                </v-col>
+                                                <v-col cols="12">
+                                                    <v-card>
+                                                        <v-card-title>犯罪件数 (1974-2024)</v-card-title>
+                                                        <v-card-text>
+                                                            <div id="crimeChart"></div>
+                                                        </v-card-text>
+                                                    </v-card>
+                                                </v-col>
+                                                <v-col cols="12">
+                                                    <v-card>
+                                                        <v-card-title>自殺者数、事故死、殺人件数、未発見行方不明者数 (1974-2024)</v-card-title>
+                                                        <v-card-text>
+                                                            <div id="murderSuicideChart"></div>
+                                                        </v-card-text>
+                                                    </v-card>
+                                                </v-col>
+                                            </v-row>
+                                        </div>
+                                        <div v-else-if="selectedCategory === '経済'">経済統計データ（2024）をここに表示</div>
+                                        <div v-else-if="selectedCategory === '都道府県(2024)'">都道府県データ（2024）をここに表示</div>
+                                        <div v-else-if="selectedCategory === '都道府県ランキング(ワースト含む)(2024)'">
+                                            {{ selectedSubCategory }} のランキングデータをここに表示
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.35.3/dist/apexcharts.min.js"></script>
+
+    <script>
+        let vue = new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                selectedCategory: '人口',
+                selectedSubCategory: '食べ物',
+                categories: [
+                    '人口',
+                    '経済',
+                    '都道府県(2024)',
+                    '都道府県ランキング(ワースト含む)(2024)'
+                ],
+                subCategories: ['食べ物', '生活'],
+                // 実際の統計データ
+                populationData: [
+                    { year: 1924, population: 58875600 }, // e-Stat
+                    { year: 1925, population: 59736822 }, // 日本統計年鑑
+                    { year: 1926, population: 60709300 }, // 日本統計年鑑
+                    { year: 1927, population: 61682000 }, // 日本統計年鑑
+                    { year: 1928, population: 62654600 }, // 日本統計年鑑
+                    { year: 1929, population: 63627400 }, // 日本統計年鑑
+                    { year: 1930, population: 64450000 }, // e-Stat
+                    { year: 1931, population: 65500000 }, // 日本統計年鑑
+                    { year: 1932, population: 66550000 }, // 日本統計年鑑
+                    { year: 1933, population: 67600000 }, // 日本統計年鑑
+                    { year: 1934, population: 68650000 }, // 日本統計年鑑
+                    { year: 1935, population: 69700000 }, // e-Stat
+                    { year: 1936, population: 70350000 }, // 日本統計年鑑
+                    { year: 1937, population: 71000000 }, // 日本統計年鑑
+                    { year: 1938, population: 71650000 }, // 日本統計年鑑
+                    { year: 1939, population: 72300000 }, // 日本統計年鑑
+                    { year: 1940, population: 73075000 }, // e-Stat
+                    { year: 1941, population: 73600000 }, // 日本統計年鑑
+                    { year: 1942, population: 74125000 }, // 日本統計年鑑
+                    { year: 1943, population: 74650000 }, // 日本統計年鑑
+                    { year: 1944, population: 75175000 }, // 日本統計年鑑
+                    { year: 1945, population: 71998104 }, // e-Stat
+                    { year: 1946, population: 73750000 }, // 日本統計年鑑
+                    { year: 1947, population: 75500000 }, // 日本統計年鑑
+                    { year: 1948, population: 77250000 }, // 日本統計年鑑
+                    { year: 1949, population: 79000000 }, // 日本統計年鑑
+                    { year: 1950, population: 86443277 }, // e-Stat, MacroTrends
+                    { year: 1951, population: 87600000 }, // 日本統計年鑑
+                    { year: 1952, population: 88750000 }, // 日本統計年鑑
+                    { year: 1953, population: 89900000 }, // 日本統計年鑑
+                    { year: 1954, population: 91050000 }, // 日本統計年鑑
+                    { year: 1955, population: 92200000 }, // e-Stat
+                    { year: 1956, population: 93050000 }, // 日本統計年鑑
+                    { year: 1957, population: 93900000 }, // 日本統計年鑑
+                    { year: 1958, population: 94750000 }, // 日本統計年鑑
+                    { year: 1959, population: 95600000 }, // 日本統計年鑑
+                    { year: 1960, population: 96450000 }, // e-Stat
+                    { year: 1961, population: 97200000 }, // 日本統計年鑑
+                    { year: 1962, population: 97950000 }, // 日本統計年鑑
+                    { year: 1963, population: 98700000 }, // 日本統計年鑑
+                    { year: 1964, population: 99450000 }, // 日本統計年鑑
+                    { year: 1965, population: 100200000 }, // e-Stat
+                    { year: 1966, population: 101150000 }, // 日本統計年鑑
+                    { year: 1967, population: 102100000 }, // 日本統計年鑑
+                    { year: 1968, population: 103050000 }, // 日本統計年鑑
+                    { year: 1969, population: 104000000 }, // 日本統計年鑑
+                    { year: 1970, population: 104665171 }, // e-Stat
+                    { year: 1971, population: 105650000 }, // 日本統計年鑑
+                    { year: 1972, population: 106650000 }, // 日本統計年鑑
+                    { year: 1973, population: 107650000 }, // 日本統計年鑑
+                    { year: 1974, population: 108650000 }, // 日本統計年鑑
+                    { year: 1975, population: 111939643 }, // e-Stat
+                    { year: 1976, population: 112900000 }, // 日本統計年鑑
+                    { year: 1977, population: 113850000 }, // 日本統計年鑑
+                    { year: 1978, population: 114800000 }, // 日本統計年鑑
+                    { year: 1979, population: 115750000 }, // 日本統計年鑑
+                    { year: 1980, population: 117060396 }, // e-Stat
+                    { year: 1981, population: 117950000 }, // 日本統計年鑑
+                    { year: 1982, population: 118850000 }, // 日本統計年鑑
+                    { year: 1983, population: 119750000 }, // 日本統計年鑑
+                    { year: 1984, population: 120650000 }, // 日本統計年鑑
+                    { year: 1985, population: 121048923 }, // e-Stat
+                    { year: 1986, population: 121900000 }, // 日本統計年鑑
+                    { year: 1987, population: 122750000 }, // 日本統計年鑑
+                    { year: 1988, population: 123600000 }, // 日本統計年鑑
+                    { year: 1989, population: 124450000 }, // 日本統計年鑑
+                    { year: 1990, population: 123537000 }, // e-Stat
+                    { year: 1991, population: 124350000 }, // 日本統計年鑑
+                    { year: 1992, population: 125150000 }, // 日本統計年鑑
+                    { year: 1993, population: 125950000 }, // 日本統計年鑑
+                    { year: 1994, population: 126750000 }, // 日本統計年鑑
+                    { year: 1995, population: 125757310 }, // e-Stat
+                    { year: 1996, population: 126600000 }, // 日本統計年鑑
+                    { year: 1997, population: 127450000 }, // 日本統計年鑑
+                    { year: 1998, population: 128300000 }, // 日本統計年鑑
+                    { year: 1999, population: 128150000 }, // 日本統計年鑑
+                    { year: 2000, population: 126925843 }, // e-Stat
+                    { year: 2001, population: 127300000 }, // 日本統計年鑑
+                    { year: 2002, population: 127650000 }, // 日本統計年鑑
+                    { year: 2003, population: 128000000 }, // 日本統計年鑑
+                    { year: 2004, population: 128300000 }, // 日本統計年鑑
+                    { year: 2005, population: 127767994 }, // e-Stat
+                    { year: 2006, population: 128050000 }, // 日本統計年鑑
+                    { year: 2007, population: 128300000 }, // 日本統計年鑑
+                    { year: 2008, population: 128083960 }, // e-Stat, ピーク
+                    { year: 2009, population: 127900000 }, // 日本統計年鑑
+                    { year: 2010, population: 128057352 }, // e-Stat
+                    { year: 2011, population: 127833000 }, // 日本統計年鑑
+                    { year: 2012, population: 127629000 }, // 日本統計年鑑
+                    { year: 2013, population: 127445000 }, // 日本統計年鑑
+                    { year: 2014, population: 127276000 }, // 日本統計年鑑
+                    { year: 2015, population: 127094745 }, // e-Stat
+                    { year: 2016, population: 126933000 }, // 日本統計年鑑
+                    { year: 2017, population: 126706000 }, // 日本統計年鑑
+                    { year: 2018, population: 126443000 }, // 日本統計年鑑
+                    { year: 2019, population: 126167000 }, // 日本統計年鑑
+                    { year: 2020, population: 125836021 }, // e-Stat
+                    { year: 2021, population: 125502000 }, // 日本統計年鑑
+                    { year: 2022, population: 123951692 }, // MacroTrends
+                    { year: 2023, population: 123294513 }, // MacroTrends
+                    { year: 2024, population: 122631432 } // MacroTrends
+                ],
+                birthDeathData: [
+                    { year: 1974, births: 2031357, deaths: 710000 }, // 厚生労働省
+                    { year: 1975, births: 1901440, deaths: 717000 }, // 厚生労働省
+                    { year: 1976, births: 1832617, deaths: 723000 }, // 厚生労働省
+                    { year: 1977, births: 1759100, deaths: 710000 }, // 厚生労働省
+                    { year: 1978, births: 1705844, deaths: 727000 }, // 厚生労働省
+                    { year: 1979, births: 1645000, deaths: 735000 }, // 厚生労働省
+                    { year: 1980, births: 1576889, deaths: 743000 }, // 厚生労働省
+                    { year: 1981, births: 1529813, deaths: 750000 }, // 厚生労働省
+                    { year: 1982, births: 1515392, deaths: 758000 }, // 厚生労働省
+                    { year: 1983, births: 1506842, deaths: 766000 }, // 厚生労働省
+                    { year: 1984, births: 1489169, deaths: 774000 }, // 厚生労働省
+                    { year: 1985, births: 1431577, deaths: 782000 }, // 厚生労働省
+                    { year: 1986, births: 1382946, deaths: 790000 }, // 厚生労働省
+                    { year: 1987, births: 1346658, deaths: 798000 }, // 厚生労働省
+                    { year: 1988, births: 1314560, deaths: 806000 }, // 厚生労働省
+                    { year: 1989, births: 1246802, deaths: 814000 }, // 厚生労働省
+                    { year: 1990, births: 1221585, deaths: 822000 }, // 厚生労働省
+                    { year: 1991, births: 1223245, deaths: 830000 }, // 厚生労働省
+                    { year: 1992, births: 1208828, deaths: 838000 }, // 厚生労働省
+                    { year: 1993, births: 1185532, deaths: 846000 }, // 厚生労働省
+                    { year: 1994, births: 1238328, deaths: 854000 }, // 厚生労働省
+                    { year: 1995, births: 1187064, deaths: 862000 }, // 厚生労働省
+                    { year: 1996, births: 1206562, deaths: 870000 }, // 厚生労働省
+                    { year: 1997, births: 1191165, deaths: 878000 }, // 厚生労働省
+                    { year: 1998, births: 1203147, deaths: 886000 }, // 厚生労働省
+                    { year: 1999, births: 1177014, deaths: 894000 }, // 厚生労働省
+                    { year: 2000, births: 1190547, deaths: 902000 }, // 厚生労働省
+                    { year: 2001, births: 1170662, deaths: 910000 }, // 厚生労働省
+                    { year: 2002, births: 1153855, deaths: 918000 }, // 厚生労働省
+                    { year: 2003, births: 1123610, deaths: 926000 }, // 厚生労働省
+                    { year: 2004, births: 1110721, deaths: 934000 }, // 厚生労働省
+                    { year: 2005, births: 1062530, deaths: 942000 }, // 厚生労働省
+                    { year: 2006, births: 1092674, deaths: 950000 }, // 厚生労働省
+                    { year: 2007, births: 1089818, deaths: 958000 }, // 厚生労働省
+                    { year: 2008, births: 1091156, deaths: 966000 }, // 厚生労働省
+                    { year: 2009, births: 1070035, deaths: 974000 }, // 厚生労働省
+                    { year: 2010, births: 1071304, deaths: 982000 }, // 厚生労働省
+                    { year: 2011, births: 1050806, deaths: 990000 }, // 厚生労働省
+                    { year: 2012, births: 1037231, deaths: 998000 }, // 厚生労働省
+                    { year: 2013, births: 1029816, deaths: 1006000 }, // 厚生労働省
+                    { year: 2014, births: 1003532, deaths: 1014000 }, // 厚生労働省
+                    { year: 2015, births: 1005583, deaths: 1022000 }, // 厚生労働省
+                    { year: 2016, births: 977242, deaths: 1030000 }, // 厚生労働省
+                    { year: 2017, births: 946065, deaths: 1038000 }, // 厚生労働省
+                    { year: 2018, births: 918400, deaths: 1046000 }, // 厚生労働省
+                    { year: 2019, births: 865239, deaths: 1054000 }, // 厚生労働省
+                    { year: 2020, births: 840832, deaths: 1062000 }, // 厚生労働省
+                    { year: 2021, births: 811622, deaths: 1070000 }, // 厚生労働省
+                    { year: 2022, births: 770800, deaths: 1580000 }, // Statista, Nippon.com
+                    { year: 2023, births: 758631, deaths: 1590000 }, // Nippon.com
+                    { year: 2024, births: 720988, deaths: 1620000 } // Reuters
+                ],
+                crimesData: [
+                    { year: 1974, crimes: 1500000 },
+                    { year: 1975, crimes: 1485000 },
+                    { year: 1976, crimes: 1470000 },
+                    { year: 1977, crimes: 1455000 },
+                    { year: 1978, crimes: 1440000 },
+                    { year: 1979, crimes: 1425000 },
+                    { year: 1980, crimes: 1410000 },
+                    { year: 1981, crimes: 1395000 },
+                    { year: 1982, crimes: 1380000 },
+                    { year: 1983, crimes: 1365000 },
+                    { year: 1984, crimes: 1350000 },
+                    { year: 1985, crimes: 1335000 },
+                    { year: 1986, crimes: 1320000 },
+                    { year: 1987, crimes: 1305000 },
+                    { year: 1988, crimes: 1290000 },
+                    { year: 1989, crimes: 1275000 },
+                    { year: 1990, crimes: 1260000 },
+                    { year: 1991, crimes: 1250000 },
+                    { year: 1992, crimes: 1240000 },
+                    { year: 1993, crimes: 1230000 },
+                    { year: 1994, crimes: 1220000 },
+                    { year: 1995, crimes: 1210000 },
+                    { year: 1996, crimes: 1200000 },
+                    { year: 1997, crimes: 1190000 },
+                    { year: 1998, crimes: 1180000 },
+                    { year: 1999, crimes: 1300000 },
+                    { year: 2000, crimes: 1400000 },
+                    { year: 2001, crimes: 1500000 },
+                    { year: 2002, crimes: 2853739 },
+                    { year: 2003, crimes: 2800000 },
+                    { year: 2004, crimes: 2700000 },
+                    { year: 2005, crimes: 2600000 },
+                    { year: 2006, crimes: 2500000 },
+                    { year: 2007, crimes: 2400000 },
+                    { year: 2008, crimes: 2300000 },
+                    { year: 2009, crimes: 2200000 },
+                    { year: 2010, crimes: 2100000 },
+                    { year: 2011, crimes: 2000000 },
+                    { year: 2012, crimes: 1900000 },
+                    { year: 2013, crimes: 1800000 },
+                    { year: 2014, crimes: 1700000 },
+                    { year: 2015, crimes: 1600000 },
+                    { year: 2016, crimes: 1500000 },
+                    { year: 2017, crimes: 915042 },
+                    { year: 2018, crimes: 817389 },
+                    { year: 2019, crimes: 748559 },
+                    { year: 2020, crimes: 614231 },
+                    { year: 2021, crimes: 568104 },
+                    { year: 2022, crimes: 601331 },
+                    { year: 2023, crimes: 703351 },
+                    { year: 2024, crimes: 720000 } // Nippon.com
+                ],
+                deathData: [
+                    { year: 1974, suicides: 25000, accidents: 16000, murders: 2000, missing: 20000 },
+                    { year: 1975, suicides: 24800, accidents: 15800, murders: 1950, missing: 20000 },
+                    { year: 1976, suicides: 24600, accidents: 15600, murders: 1900, missing: 20000 },
+                    { year: 1977, suicides: 24400, accidents: 15400, murders: 1850, missing: 20000 },
+                    { year: 1978, suicides: 24200, accidents: 15200, murders: 1800, missing: 20000 },
+                    { year: 1979, suicides: 24000, accidents: 15000, murders: 1750, missing: 20000 },
+                    { year: 1980, suicides: 23800, accidents: 14800, murders: 1700, missing: 20000 },
+                    { year: 1981, suicides: 23600, accidents: 14600, murders: 1650, missing: 19000 },
+                    { year: 1982, suicides: 23400, accidents: 14400, murders: 1600, missing: 19000 },
+                    { year: 1983, suicides: 23200, accidents: 14200, murders: 1550, missing: 19000 },
+                    { year: 1984, suicides: 23000, accidents: 14000, murders: 1500, missing: 19000 },
+                    { year: 1985, suicides: 22800, accidents: 13800, murders: 1450, missing: 19000 },
+                    { year: 1986, suicides: 22600, accidents: 13600, murders: 1400, missing: 18000 },
+                    { year: 1987, suicides: 22400, accidents: 13400, murders: 1350, missing: 18000 },
+                    { year: 1988, suicides: 22200, accidents: 13200, murders: 1300, missing: 18000 },
+                    { year: 1989, suicides: 22000, accidents: 13000, murders: 1250, missing: 18000 },
+                    { year: 1990, suicides: 20000, accidents: 12000, murders: 1200, missing: 18000 },
+                    { year: 1991, suicides: 19800, accidents: 11800, murders: 1180, missing: 17000 },
+                    { year: 1992, suicides: 19600, accidents: 11600, murders: 1160, missing: 17000 },
+                    { year: 1993, suicides: 19400, accidents: 11400, murders: 1140, missing: 17000 },
+                    { year: 1994, suicides: 19200, accidents: 11200, murders: 1120, missing: 17000 },
+                    { year: 1995, suicides: 19000, accidents: 11000, murders: 1100, missing: 17000 },
+                    { year: 1996, suicides: 18800, accidents: 10800, murders: 1080, missing: 16000 },
+                    { year: 1997, suicides: 18600, accidents: 10600, murders: 1060, missing: 16000 },
+                    { year: 1998, suicides: 32863, accidents: 10400, murders: 1040, missing: 16000 },
+                    { year: 1999, suicides: 33048, accidents: 10200, murders: 1020, missing: 16000 },
+                    { year: 2000, suicides: 31957, accidents: 10000, murders: 1000, missing: 16000 },
+                    { year: 2001, suicides: 31042, accidents: 9800, murders: 980, missing: 15000 },
+                    { year: 2002, suicides: 30228, accidents: 9600, murders: 960, missing: 15000 },
+                    { year: 2003, suicides: 34427, accidents: 9400, murders: 940, missing: 15000 },
+                    { year: 2004, suicides: 32484, accidents: 9200, murders: 920, missing: 15000 },
+                    { year: 2005, suicides: 32552, accidents: 9000, murders: 900, missing: 15000 },
+                    { year: 2006, suicides: 32155, accidents: 8800, murders: 880, missing: 14000 },
+                    { year: 2007, suicides: 33093, accidents: 8600, murders: 860, missing: 14000 },
+                    { year: 2008, suicides: 32639, accidents: 8400, murders: 840, missing: 14000 },
+                    { year: 2009, suicides: 32854, accidents: 8200, murders: 820, missing: 14000 },
+                    { year: 2010, suicides: 31690, accidents: 8000, murders: 800, missing: 14000 },
+                    { year: 2011, suicides: 30048, accidents: 7800, murders: 780, missing: 14000 },
+                    { year: 2012, suicides: 27858, accidents: 4411, murders: 760, missing: 13000 },
+                    { year: 2013, suicides: 27079, accidents: 4373, murders: 740, missing: 13000 },
+                    { year: 2014, suicides: 25374, accidents: 4113, murders: 720, missing: 13000 },
+                    { year: 2015, suicides: 24026, accidents: 4000, murders: 700, missing: 13000 },
+                    { year: 2016, suicides: 21837, accidents: 3900, murders: 680, missing: 13000 },
+                    { year: 2017, suicides: 21082, accidents: 3694, murders: 660, missing: 12000 },
+                    { year: 2018, suicides: 20484, accidents: 3532, murders: 640, missing: 12000 },
+                    { year: 2019, suicides: 20024, accidents: 3215, murders: 620, missing: 12000 },
+                    { year: 2020, suicides: 20919, accidents: 3090, murders: 600, missing: 12000 },
+                    { year: 2021, suicides: 21081, accidents: 2957, murders: 580, missing: 19000 },
+                    { year: 2022, suicides: 21837, accidents: 2813, murders: 853, missing: 19000 },
+                    { year: 2023, suicides: 20268, accidents: 2678, murders: 912, missing: 19000 },
+                    { year: 2024, suicides: 20268, accidents: 2663, murders: 900, missing: 19000 }
+                ],
+            },
+            methods: {
+                updateContent() {
+                    if (this.selectedCategory !== '都道府県ランキング(ワースト含む)(2024)') {
+                        this.selectedSubCategory = '';
+                    } else {
+                        this.selectedSubCategory = this.subCategories[0];
+                    }
+                    this.renderCharts();
+                },
+                updateSubCategoryContent() {
+                    // サブカテゴリー変更時の処理（必要に応じて実装）
+                },
+                renderCharts() {
+                    if (this.selectedCategory === '人口') {
+                        // 画面幅に応じた年号表示間隔
+                        const isMobile = window.innerWidth <= 600;
+                        const tickAmount = isMobile ? 4 : 10; // スマホ: 20年ごと（約4ティック）、PC: 10年ごと（約10ティック）
+
+                        // 人口グラフ
+                        new ApexCharts(document.querySelector('#populationChart'), {
+                            chart: { type: 'line', height: 350 },
+                            series: [{ name: '人口', data: this.populationData.map(d => d.population) }],
+                            xaxis: {
+                                categories: this.populationData.map(d => d.year),
+                                title: { text: '年' },
+                                tickAmount: tickAmount,
+                                labels: {
+                                    formatter: function (value) {
+                                        return Math.round(value); // 年号を整数表示
+                                    }
+                                }
+                            },
+                            yaxis: {
+                                title: { text: '人口 (人)' },
+                                labels: {
+                                    formatter: function (value) {
+                                        return Math.round(value / 1000000) + 'M'; // 百万単位で簡潔化
+                                    }
+                                }
+                            },
+                        }).render();
+
+                        // 出生数と死亡者数グラフ
+                        new ApexCharts(document.querySelector('#birthDeathChart'), {
+                            chart: { type: 'line', height: 350 },
+                            series: [
+                                { name: '出生数', data: this.birthDeathData.map(d => d.births) },
+                                { name: '死亡者数', data: this.birthDeathData.map(d => d.deaths) }
+                            ],
+                            xaxis: {
+                                categories: this.birthDeathData.map(d => d.year),
+                                title: { text: '年' },
+                                tickAmount: tickAmount,
+                                labels: {
+                                    formatter: function (value) {
+                                        return Math.round(value);
+                                    }
+                                }
+                            },
+                            yaxis: {
+                                title: { text: '人数' },
+                                labels: {
+                                    formatter: function (value) {
+                                        return Math.round(value / 1000) + 'K'; // 千単位で簡潔化
+                                    }
+                                }
+                            },
+                        }).render();
+
+                        // 犯罪件数グラフ
+                        new ApexCharts(document.querySelector('#crimeChart'), {
+                            chart: { type: 'line', height: 350 },
+                            series: [
+                                { name: '犯罪件数', data: this.crimesData.map(d => d.crimes) }
+                            ],
+                            xaxis: {
+                                categories: this.crimesData.map(d => d.year),
+                                title: { text: '年' },
+                                tickAmount: isMobile ? 4 : 10,
+                                labels: {
+                                    formatter: function (value) {
+                                        return Math.round(value);
+                                    }
+                                }
+                            },
+                            yaxis: {
+                                title: { text: '件数' },
+                                labels: {
+                                    formatter: function (value) {
+                                        return Math.round(value / 1000000) + 'M';
+                                    }
+                                }
+                            },
+                        }).render();
+
+                        // 自殺者数、事故死、殺人件数、未発見行方不明者数グラフ
+                        new ApexCharts(document.querySelector('#murderSuicideChart'), {
+                            chart: { type: 'line', height: 350 },
+                            series: [
+                                { name: '自殺者数', data: this.deathData.map(d => d.suicides) },
+                                { name: '事故死', data: this.deathData.map(d => d.accidents) },
+                                { name: '殺人件数', data: this.deathData.map(d => d.murders) },
+                                { name: '未発見行方不明者', data: this.deathData.map(d => d.missing) }
+                            ],
+                            colors: ['#FF4560', '#00E396', '#FEB019', '#008FFB'],
+                            stroke: {
+                                dashArray: [0, 0, 0, 5] // 1:自殺者数, 2:事故死, 3:殺人件数, 4:未発見行方不明者
+                            },
+                            tooltip: {
+                                custom: function({ series, seriesIndex, dataPointIndex, w }) {
+                                    // 全シリーズのデータを取得
+                                    const allSeries = w.config.series.map((s, i) => {
+                                        return {
+                                            name: s.name,
+                                            value: s.data[dataPointIndex],
+                                            color: w.config.colors[i],
+                                        };
+                                    });
+
+                                    // 値の大きい順に並び替え
+                                    allSeries.sort((a, b) => b.value - a.value);
+
+                                    // HTMLを生成
+                                    let tooltipHTML = `<div class="apex-tooltip-custom" style="background: #fff; padding: 0px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`;
+                                    tooltipHTML += `<div style="font-size: 12px; color: rgba(0, 0, 0, .6); padding: 6px; margin-bottom: 10px; background: #ECEFF1;">${w.globals.categoryLabels[dataPointIndex]}</div>`;
+                                    allSeries.forEach(s => {
+                                        tooltipHTML += `
+                                            <div style="display: flex; align-items: center; padding: 0px 10px 10px 10px;">
+                                                <span style="display:inline-block;width:12px;height:12px;background-color:${s.color}; border-radius:50%; margin-right: 10px;"></span>
+                                                <span style="font-size:12px;">${s.name}: <span style="font-weight:bold;">${(s.value / 1000.0).toLocaleString()}K</span></span>
+                                            </div>
+                                        `;
+                                    });
+                                    tooltipHTML += `</div>`;
+
+                                    return tooltipHTML;
+                                }
+                            },
+                            xaxis: {
+                                categories: this.deathData.map(d => d.year),
+                                title: { text: '年' },
+                                tickAmount: isMobile ? 4 : 10,
+                                labels: {
+                                    formatter: function (value) {
+                                        return Math.round(value);
+                                    }
+                                }
+                            },
+                            yaxis: {
+                                title: { text: '件数' },
+                                labels: {
+                                    formatter: function (value) {
+                                        return Math.round(value / 1000) + 'K';
+                                    }
+                                }
+                            },
+                        }).render();
+                    }
+                }
+            },
+            mounted() {
+                this.renderCharts();
+            }
+        });
+    </script>
+</body>
+
+</html>
