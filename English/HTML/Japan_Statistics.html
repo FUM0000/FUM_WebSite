@@ -168,7 +168,7 @@
                                                 <v-col cols="12" md="6">
                                                     <v-select v-model="selectedPrefectureData"
                                                         :items="prefectureDataCategories" label="表示するデータを選択" outlined
-                                                        hide-details @change="updateMapColors"></v-select>
+                                                        hide-details></v-select>
                                                 </v-col>
                                             </v-row>
                                             <!-- 画像表示エリア (変更なし) -->
@@ -189,29 +189,30 @@
             </v-main>
 
             <v-dialog v-model="dialog" width="500">
-                <v-card>
-                    <v-card-title class="headline grey lighten-2">
-                        <!-- 英語名を表示 -->
+                <!-- 1. v-cardをflexコンテナにし、高さを制限 -->
+                <v-card class="d-flex flex-column" style="max-height: 80vh;">
+                    <!-- 2. タイトルエリアは縮まないように設定 -->
+                    <v-card-title class="headline grey lighten-2 flex-shrink-0">
                         {{ selectedPrefecture ? selectedPrefecture.id : '' }}
                     </v-card-title>
 
-                    <v-card-text v-if="selectedPrefecture" class="pt-4">
+                    <!-- 3. コンテンツエリアをスクロール可能に設定 -->
+                    <v-card-text v-if="selectedPrefecture" class="pt-4 overflow-y-auto">
                         <v-list dense>
-                            <v-list-item v-for="(item, key) in displayItems" :key="key">
+                            <v-list-item v-for="(details, key) in displayItems" :key="key">
                                 <v-list-item-content v-if="selectedPrefecture.data[key] !== undefined">
-                                    <v-list-item-title>{{ item.label }}</v-list-item-title>
+                                    <v-list-item-title>{{ details.label }}</v-list-item-title>
                                     <v-list-item-subtitle>
-                                        <!-- toLocaleString()で数値をカンマ区切りに -->
-                                        {{ selectedPrefecture.data[key].toLocaleString() }} {{ item.unit }}
+                                        {{ selectedPrefecture.data[key].toLocaleString() }} {{ details.unit }}
                                     </v-list-item-subtitle>
                                 </v-list-item-content>
                             </v-list-item>
                         </v-list>
                     </v-card-text>
 
-                    <v-divider></v-divider>
-
-                    <v-card-actions>
+                    <!-- 4. 区切り線とアクションエリアも縮まないように設定 -->
+                    <v-divider class="flex-shrink-0"></v-divider>
+                    <v-card-actions class="flex-shrink-0">
                         <v-spacer></v-spacer>
                         <v-btn color="primary" text @click="dialog = false">
                             Close
@@ -263,6 +264,7 @@
                 // 都道府県(2024)
                 panzoomInstance: null,
                 dialog: false, // ポップアップの表示状態
+                selectedPrefectureData: '人口',
                 selectedPrefecture: null, // クリックされた都道府県のデータを保持
                 svgContent: '', // 読み込んだSVGのHTML文字列を保持
                 displayItems: {
@@ -274,9 +276,17 @@
                     scams: { label: 'Scams', unit: 'cases' },
                     foreignResidents: { label: 'Foreign Residents', unit: '' },
                     foreignTourists: { label: 'Foreign Tourists (overnight stays)', unit: '' },
-                    birthRate: { label: 'Birth Rate', unit: '(per 1000 people)' },
+                    birthRate: { label: 'Birth Rate', unit: '(per 100 people)' },
                     chainStores: { label: 'Chain Stores', unit: '' },
                 },
+                prefectureDataCategories: [
+                    '人口',
+                    '株式会社数',
+                    '事故件数,犯罪件数,自殺者数,詐欺件数',
+                    '在日外国人数,外国人旅行客数',
+                    '出生率(100人辺り)',
+                    'チェーン店軒数'
+                ],
                 // 都道府県ランキング(2024)
                 subCategories: ['食べ物', '生活'],
 
@@ -1883,6 +1893,10 @@
                         this.$nextTick(() => {
                             const svgElement = this.$el.querySelector('#panzoom-container svg');
                             if (!svgElement) return;
+
+                            // SVGのスタイルを調整
+                            svgElement.style.width = '95%';
+                            svgElement.style.height = 'auto';
 
                             // Panzoomのセットアップ
                             this.setupPanzoom(svgElement);
