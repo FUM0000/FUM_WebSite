@@ -54,7 +54,7 @@
                         </v-row>
                         <v-row justify="center">
                             <!-- サブカテゴリー選択（都道府県ランキングの場合のみ表示） -->
-                            <v-col cols="12" md="3" v-if="selectedCategory === '都道府県ランキング(ワースト含む)(2024)'" class="pt-0">
+                            <v-col cols="12" md="3" v-if="selectedCategory === '都道府県ランキング(2024)'" class="pt-0">
                                 <v-select v-model="selectedSubCategory" :items="subCategories" label="サブカテゴリーを選択"
                                     outlined @change="updateSubCategoryContent"></v-select>
                             </v-col>
@@ -161,11 +161,24 @@
                                                 </v-col>
                                             </v-row>
                                         </div>
+
                                         <div v-else-if="selectedCategory === '都道府県(2024)'">
-                                            <iframe src="../../Asset/Image/Japan_Life/Japan_1.svg" width="100%"
-                                                height="100%"></iframe>
+                                            <!-- 都道府県データ選択用の v-select (追加) -->
+                                            <v-row justify="center" class="mb-2">
+                                                <v-col cols="12" md="6">
+                                                    <v-select v-model="selectedPrefectureData"
+                                                        :items="prefectureDataCategories" label="表示するデータを選択" outlined
+                                                        hide-details></v-select>
+                                                </v-col>
+                                            </v-row>
+                                            <!-- 画像表示エリア (変更なし) -->
+                                            <div style="overflow: hidden; border: 1px solid #ddd; border-radius: 4px;">
+                                                <img id="panzoom-element" src="../../Asset/Image/Japan_Life/Japan_1.svg"
+                                                    style="width: 100%; height: auto; cursor: grab;">
+                                            </div>
                                         </div>
-                                        <div v-else-if="selectedCategory === '都道府県ランキング(ワースト含む)(2024)'">
+
+                                        <div v-else-if="selectedCategory === '都道府県ランキング(2024)'">
                                             {{ selectedSubCategory }} のランキングデータをここに表示
                                         </div>
                                     </v-card-text>
@@ -186,6 +199,7 @@
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="../../Asset/Javascript/Common.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.35.3/dist/apexcharts.min.js"></script>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 
     <script>
         let vue = new Vue({
@@ -193,15 +207,15 @@
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Common],
             data: {
+                // 全般
                 selectedCategory: '人口',
                 selectedSubCategory: '食べ物',
                 categories: [
                     '人口',
                     '経済',
                     '都道府県(2024)',
-                    '都道府県ランキング(ワースト含む)(2024)'
+                    '都道府県ランキング(2024)'
                 ],
-                subCategories: ['食べ物', '生活'],
                 chartInstances: {
                     populationChart: null,
                     birthDeathChart: null,
@@ -215,7 +229,22 @@
                     cpiChart: null,
                     riceProductionChart: null
                 },
+                // 都道府県(2024)
+                panzoomInstance: null,
+                selectedPrefectureData: '人口', // ドロップダウンの選択状態を管理
+                prefectureDataCategories: [      // ドロップダウンの選択肢リスト
+                    '人口',
+                    '株式会社数',
+                    '事故件数,犯罪件数,自殺者数,詐欺件数',
+                    '在日外国人数,外国人旅行客数',
+                    '出生率(100人辺り)',
+                    'チェーン店軒数'
+                ],
+                // 都道府県ランキング(2024)
+                subCategories: ['食べ物', '生活'],
 
+                // データ
+                //// 人口
                 populationData: [
                     { year: 1924, population: 58875600 }, // e-Stat
                     { year: 1925, population: 59736822 }, // 日本統計年鑑
@@ -372,58 +401,58 @@
                     { year: 2023, births: 758631, deaths: 1590000 }, // Nippon.com
                     { year: 2024, births: 720988, deaths: 1620000 } // Reuters
                 ],
-                crimesData: [
-                    { year: 1974, crimes: 1500000 },
-                    { year: 1975, crimes: 1485000 },
-                    { year: 1976, crimes: 1470000 },
-                    { year: 1977, crimes: 1455000 },
-                    { year: 1978, crimes: 1440000 },
-                    { year: 1979, crimes: 1425000 },
-                    { year: 1980, crimes: 1410000 },
-                    { year: 1981, crimes: 1395000 },
-                    { year: 1982, crimes: 1380000 },
-                    { year: 1983, crimes: 1365000 },
-                    { year: 1984, crimes: 1350000 },
-                    { year: 1985, crimes: 1335000 },
-                    { year: 1986, crimes: 1320000 },
-                    { year: 1987, crimes: 1305000 },
-                    { year: 1988, crimes: 1290000 },
-                    { year: 1989, crimes: 1275000 },
-                    { year: 1990, crimes: 1260000 },
-                    { year: 1991, crimes: 1250000 },
-                    { year: 1992, crimes: 1240000 },
-                    { year: 1993, crimes: 1230000 },
-                    { year: 1994, crimes: 1220000 },
-                    { year: 1995, crimes: 1210000 },
-                    { year: 1996, crimes: 1200000 },
-                    { year: 1997, crimes: 1190000 },
-                    { year: 1998, crimes: 1180000 },
-                    { year: 1999, crimes: 1300000 },
-                    { year: 2000, crimes: 1400000 },
-                    { year: 2001, crimes: 1500000 },
-                    { year: 2002, crimes: 2853739 },
-                    { year: 2003, crimes: 2800000 },
-                    { year: 2004, crimes: 2700000 },
-                    { year: 2005, crimes: 2600000 },
-                    { year: 2006, crimes: 2500000 },
-                    { year: 2007, crimes: 2400000 },
-                    { year: 2008, crimes: 2300000 },
-                    { year: 2009, crimes: 2200000 },
-                    { year: 2010, crimes: 2100000 },
-                    { year: 2011, crimes: 2000000 },
-                    { year: 2012, crimes: 1900000 },
-                    { year: 2013, crimes: 1800000 },
-                    { year: 2014, crimes: 1700000 },
-                    { year: 2015, crimes: 1600000 },
-                    { year: 2016, crimes: 1500000 },
-                    { year: 2017, crimes: 915042 },
-                    { year: 2018, crimes: 817389 },
-                    { year: 2019, crimes: 748559 },
-                    { year: 2020, crimes: 614231 },
-                    { year: 2021, crimes: 568104 },
-                    { year: 2022, crimes: 601331 },
-                    { year: 2023, crimes: 703351 },
-                    { year: 2024, crimes: 720000 } // Nippon.com
+                crimeData: [
+                    { year: 1973, total: 1189865, serious: 9926, medium: 215807, light: 964132 },
+                    { year: 1974, total: 1215963, serious: 9871, medium: 224949, light: 981143 },
+                    { year: 1975, total: 1226381, serious: 9219, medium: 223595, light: 993567 },
+                    { year: 1976, total: 1245690, serious: 9077, medium: 224364, light: 1012249 },
+                    { year: 1977, total: 1281959, serious: 8973, medium: 240404, light: 1032582 },
+                    { year: 1978, total: 1328044, serious: 8866, medium: 258223, light: 1060955 },
+                    { year: 1979, total: 1357472, serious: 8821, medium: 277143, light: 1071508 },
+                    { year: 1980, total: 1357597, serious: 8973, medium: 311940, light: 1036684 },
+                    { year: 1981, total: 1438284, serious: 8760, medium: 338837, light: 1090687 },
+                    { year: 1982, total: 1483161, serious: 8362, medium: 358074, light: 1116725 },
+                    { year: 1983, total: 1510729, serious: 8111, medium: 368910, light: 1133708 },
+                    { year: 1984, total: 1563356, serious: 7724, medium: 390929, light: 1164703 },
+                    { year: 1985, total: 1607364, serious: 7558, medium: 412854, light: 1186952 },
+                    { year: 1986, total: 1581165, serious: 7279, medium: 409566, light: 1164320 },
+                    { year: 1987, total: 1555270, serious: 7146, medium: 400283, light: 1147841 },
+                    { year: 1988, total: 1577070, serious: 7429, medium: 408031, light: 1161610 },
+                    { year: 1989, total: 1634819, serious: 7556, medium: 430904, light: 1196359 },
+                    { year: 1990, total: 1636523, serious: 8118, medium: 409248, light: 1219157 },
+                    { year: 1991, total: 1672836, serious: 8241, medium: 412476, light: 1252119 },
+                    { year: 1992, total: 1739715, serious: 8620, medium: 436589, light: 1294506 },
+                    { year: 1993, total: 1798474, serious: 8873, medium: 468767, light: 1320834 },
+                    { year: 1994, total: 1842912, serious: 8918, medium: 496220, light: 1337774 },
+                    { year: 1995, total: 1833674, serious: 9474, medium: 490473, light: 1333727 },
+                    { year: 1996, total: 1902374, serious: 9077, medium: 509926, light: 1383371 },
+                    { year: 1997, total: 2056227, serious: 9489, medium: 572580, light: 1474158 },
+                    { year: 1998, total: 2166419, serious: 10790, medium: 609796, light: 1545833 },
+                    { year: 1999, total: 2284008, serious: 10958, medium: 639586, light: 1633464 },
+                    { year: 2000, total: 2425567, serious: 11940, medium: 664547, light: 1749080 },
+                    { year: 2001, total: 2739760, serious: 12656, medium: 772990, light: 1954114 },
+                    { year: 2002, total: 2853739, serious: 17214, medium: 462050, light: 2374475 },
+                    { year: 2003, total: 2790816, serious: 17208, medium: 487279, light: 2286329 },
+                    { year: 2004, total: 2560944, serious: 16331, medium: 473595, light: 2071018 },
+                    { year: 2005, total: 2269451, serious: 15223, medium: 437452, light: 1816776 },
+                    { year: 2006, total: 2050478, serious: 14357, medium: 400233, light: 1635888 },
+                    { year: 2007, total: 1908836, serious: 13322, medium: 363334, light: 1532180 },
+                    { year: 2008, total: 1818300, serious: 12873, medium: 344813, light: 1460614 },
+                    { year: 2009, total: 1703169, serious: 12143, medium: 321794, light: 1369232 },
+                    { year: 2010, total: 1607370, serious: 8837, medium: 496895, light: 1101638 },
+                    { year: 2011, total: 1480747, serious: 8603, medium: 417445, light: 1054699 },
+                    { year: 2012, total: 1382204, serious: 8247, medium: 390344, light: 983613 },
+                    { year: 2013, total: 1320681, serious: 8206, medium: 373637, light: 938838 },
+                    { year: 2014, total: 1211815, serious: 8171, medium: 350296, light: 853348 },
+                    { year: 2015, total: 1098969, serious: 8020, medium: 324204, light: 766745 },
+                    { year: 2016, total: 996120, serious: 7651, medium: 296281, light: 692188 },
+                    { year: 2017, total: 915042, serious: 7858, medium: 266009, light: 641175 },
+                    { year: 2018, total: 817338, serious: 7801, medium: 229087, light: 580450 },
+                    { year: 2019, total: 748559, serious: 9510, medium: 206463, light: 532586 },
+                    { year: 2020, total: 614231, serious: 8929, medium: 186332, light: 418970 },
+                    { year: 2021, total: 568104, serious: 8822, medium: 177173, light: 382109 },
+                    { year: 2022, total: 601331, serious: 9872, medium: 195349, light: 396110 },
+                    { year: 2023, total: 703351, serious: 11453, medium: 206322, light: 485576 }
                 ],
                 diseaseData: [
                     { year: 1974, disease: 667000 },
@@ -584,7 +613,7 @@
                     { year: 2022, missing: 4257 },
                     { year: 2023, missing: 1674 }
                 ],
-
+                //// 経済
                 corporationData: [
                     { year: 1974, corporations: 1400000 }, // 事業所・企業センサス、ユーザーデータと一致
                     { year: 1975, corporations: 1410000 }, // 推定、経済成長に基づく
@@ -850,6 +879,8 @@
                     { year: 2023, production: 7308000 }, // MAFF[](https://www.maff.go.jp/j/syouan/keikaku/soukatu/r6_kome_ryutu.html)
                     { year: 2024, production: 7250000 } // Projected, based on trend
                 ],
+                //// 都道府県(2024)
+                
             },
             methods: {
                 destroyCharts() {
@@ -859,9 +890,14 @@
                             this.chartInstances[key] = null;
                         }
                     });
+                    // 以下を追加
+                    if (this.panzoomInstance) {
+                        this.panzoomInstance.destroy();
+                        this.panzoomInstance = null;
+                    }
                 },
                 updateContent() {
-                    if (this.selectedCategory !== '都道府県ランキング(ワースト含む)(2024)') {
+                    if (this.selectedCategory !== '都道府県ランキング(2024)') {
                         this.selectedSubCategory = '';
                     } else {
                         this.selectedSubCategory = this.subCategories[0];
@@ -898,7 +934,13 @@
                                     },
                                     yaxis: {
                                         title: { text: '人口 (人)' },
-                                        labels: { formatter: value => Math.round(value / 1000000) + 'M' }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
                                     }
                                 });
                                 this.chartInstances.populationChart.render();
@@ -941,26 +983,66 @@
                                     },
                                     yaxis: {
                                         title: { text: '人数' },
-                                        labels: { formatter: value => Math.round(value / 1000) + 'K' }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
                                     }
                                 });
                                 this.chartInstances.birthDeathChart.render();
                             }
 
+                            // crimeChart の描画ロジックを修正
                             if (crimeChartEl) {
                                 this.chartInstances.crimeChart = new ApexCharts(crimeChartEl, {
                                     chart: { type: 'line', height: 350 },
-                                    series: [{ name: '犯罪件数', data: this.crimesData.map(d => d.crimes) }],
+                                    series: [
+                                        { name: '総犯罪数', data: this.crimeData.map(d => d.total) },
+                                        { name: '軽犯罪数', data: this.crimeData.map(d => d.light) },
+                                        { name: '中犯罪数', data: this.crimeData.map(d => d.medium) },
+                                        { name: '重犯罪数', data: this.crimeData.map(d => d.serious) }
+                                    ],
+                                    colors: ['#008FFB', '#00E396', '#FEB019', '#FF4560'],
+                                    tooltip: {
+                                        custom: ({ series, seriesIndex, dataPointIndex, w }) => {
+                                            const allSeries = w.config.series.map((s, i) => ({
+                                                name: s.name,
+                                                value: s.data[dataPointIndex],
+                                                color: w.config.colors[i]
+                                            }));
+                                            allSeries.sort((a, b) => b.value - a.value);
+                                            let tooltipHTML = `<div class="apex-tooltip-custom" style="background: #fff; padding: 0px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`;
+                                            tooltipHTML += `<div style="font-size: 12px; color: rgba(0, 0, 0, .6); padding: 6px; margin-bottom: 10px; background: #ECEFF1;">${w.globals.categoryLabels[dataPointIndex]}</div>`;
+                                            allSeries.forEach(s => {
+                                                tooltipHTML += `
+                                                    <div style="display: flex; align-items: center; padding: 0px 10px 10px 10px;">
+                                                    <span style="display:inline-block;width:12px;height:12px;background-color:${s.color}; border-radius:50%; margin-right: 10px;"></span>
+                                                    <span style="font-size:12px;">${s.name}: <span style="font-weight:bold;">${s.value.toLocaleString()}</span></span>
+                                                    </div>`;
+                                            });
+                                            tooltipHTML += `</div>`;
+                                            return tooltipHTML;
+                                        }
+                                    },
                                     xaxis: {
-                                        categories: this.crimesData.map(d => d.year),
+                                        categories: this.crimeData.map(d => d.year),
                                         title: { text: '年' },
                                         tickAmount: window.innerWidth <= 600 ? 4 : 10,
                                         labels: { formatter: value => Math.round(value) }
                                     },
                                     yaxis: {
                                         title: { text: '件数' },
-                                        labels: { formatter: value => Math.round(value / 1000000) + 'M' }
-                                    }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
+                                    },
                                 });
                                 this.chartInstances.crimeChart.render();
                             }
@@ -977,7 +1059,13 @@
                                     },
                                     yaxis: {
                                         title: { text: '人数' },
-                                        labels: { formatter: value => Math.round(value / 1000) + 'K' }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
                                     }
                                 });
                                 this.chartInstances.diseaseChart.render();
@@ -1021,7 +1109,13 @@
                                     },
                                     yaxis: {
                                         title: { text: '人数' },
-                                        labels: { formatter: value => Math.round(value / 1000) + 'K' }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
                                     }
                                 });
                                 this.chartInstances.murderSuicideChart.render();
@@ -1039,7 +1133,13 @@
                                     },
                                     yaxis: {
                                         title: { text: '人数' },
-                                        labels: { formatter: value => Math.round(value / 1000) + 'K' }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
                                     }
                                 });
                                 this.chartInstances.missingPersonsChart.render();
@@ -1064,7 +1164,13 @@
                                     },
                                     yaxis: {
                                         title: { text: '法人数' },
-                                        labels: { formatter: value => Math.round(value / 1000000) + 'M' }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
                                     }
                                 });
                                 this.chartInstances.corporationChart.render();
@@ -1100,7 +1206,13 @@
                                     },
                                     yaxis: {
                                         title: { text: '平均賃金 (円/月)' },
-                                        labels: { formatter: value => Math.round(value / 1000) + 'K' }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
                                     }
                                 });
                                 this.chartInstances.averageWageChart.render();
@@ -1136,14 +1248,32 @@
                                     },
                                     yaxis: {
                                         title: { text: 'お米生産量 (トン)' },
-                                        labels: { formatter: value => Math.round(value / 1000000) + 'M' }
+                                        labels: {
+                                            formatter: value => {
+                                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                                if (value >= 1000) return Math.round(value / 1000) + 'K';
+                                                return value;
+                                            }
+                                        }
                                     }
                                 });
                                 this.chartInstances.riceProductionChart.render();
                             }
                         }
+                        else if (this.selectedCategory === '都道府県(2024)') {
+                            const elem = document.getElementById('panzoom-element');
+                            if (elem) {
+                                this.panzoomInstance = Panzoom(elem, {
+                                    maxScale: 5,      // 最大ズーム倍率
+                                    minScale: 0.5,    // 最小ズーム倍率
+                                    contain: 'outside' // 親要素からはみ出さないようにする
+                                });
+                                // マウスホイールでのズームを有効にする
+                                elem.parentElement.addEventListener('wheel', this.panzoomInstance.zoomWithWheel);
+                            }
+                        }
                     });
-                }
+                },
             },
             mounted() {
                 this.renderCharts();
