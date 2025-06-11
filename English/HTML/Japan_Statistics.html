@@ -168,13 +168,12 @@
                                                 <v-col cols="12" md="6">
                                                     <v-select v-model="selectedPrefectureData"
                                                         :items="prefectureDataCategories" label="表示するデータを選択" outlined
-                                                        hide-details></v-select>
+                                                        hide-details @change="updateMapColors"></v-select>
                                                 </v-col>
                                             </v-row>
                                             <!-- 画像表示エリア (変更なし) -->
-                                            <div style="overflow: hidden; border: 1px solid #ddd; border-radius: 4px;">
-                                                <img id="panzoom-element" src="../../Asset/Image/Japan_Life/Japan_1.svg"
-                                                    style="width: 100%; height: auto; cursor: grab;">
+                                            <div id="panzoom-container" v-html="svgContent"
+                                                style="overflow: hidden; border: 1px solid #ddd; border-radius: 4px; cursor: grab;">
                                             </div>
                                         </div>
 
@@ -188,6 +187,38 @@
                     </v-container>
                 </transition>
             </v-main>
+
+            <v-dialog v-model="dialog" width="500">
+                <v-card>
+                    <v-card-title class="headline grey lighten-2">
+                        <!-- 英語名を表示 -->
+                        {{ selectedPrefecture ? selectedPrefecture.id : '' }}
+                    </v-card-title>
+
+                    <v-card-text v-if="selectedPrefecture" class="pt-4">
+                        <v-list dense>
+                            <v-list-item v-for="(item, key) in displayItems" :key="key">
+                                <v-list-item-content v-if="selectedPrefecture.data[key] !== undefined">
+                                    <v-list-item-title>{{ item.label }}</v-list-item-title>
+                                    <v-list-item-subtitle>
+                                        <!-- toLocaleString()で数値をカンマ区切りに -->
+                                        {{ selectedPrefecture.data[key].toLocaleString() }} {{ item.unit }}
+                                    </v-list-item-subtitle>
+                                </v-list-item-content>
+                            </v-list-item>
+                        </v-list>
+                    </v-card-text>
+
+                    <v-divider></v-divider>
+
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn color="primary" text @click="dialog = false">
+                            Close
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
 
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
             <main-footer></main-footer>
@@ -231,15 +262,21 @@
                 },
                 // 都道府県(2024)
                 panzoomInstance: null,
-                selectedPrefectureData: '人口', // ドロップダウンの選択状態を管理
-                prefectureDataCategories: [      // ドロップダウンの選択肢リスト
-                    '人口',
-                    '株式会社数',
-                    '事故件数,犯罪件数,自殺者数,詐欺件数',
-                    '在日外国人数,外国人旅行客数',
-                    '出生率(100人辺り)',
-                    'チェーン店軒数'
-                ],
+                dialog: false, // ポップアップの表示状態
+                selectedPrefecture: null, // クリックされた都道府県のデータを保持
+                svgContent: '', // 読み込んだSVGのHTML文字列を保持
+                displayItems: {
+                    population: { label: 'Population', unit: '' },
+                    companies: { label: 'Companies', unit: '' },
+                    accidents: { label: 'Accidents', unit: 'cases' },
+                    crimes: { label: 'Crimes', unit: 'cases' },
+                    suicides: { label: 'Suicides', unit: 'people' },
+                    scams: { label: 'Scams', unit: 'cases' },
+                    foreignResidents: { label: 'Foreign Residents', unit: '' },
+                    foreignTourists: { label: 'Foreign Tourists (overnight stays)', unit: '' },
+                    birthRate: { label: 'Birth Rate', unit: '(per 1000 people)' },
+                    chainStores: { label: 'Chain Stores', unit: '' },
+                },
                 // 都道府県ランキング(2024)
                 subCategories: ['食べ物', '生活'],
 
@@ -880,7 +917,575 @@
                     { year: 2024, production: 7250000 } // Projected, based on trend
                 ],
                 //// 都道府県(2024)
-                
+                "prefectureStats": {
+                    // データに関する注釈:
+                    // 2025年現在で入手可能な最新の公的統計データを基に作成しています。
+                    // そのため、データの基準時点は項目により2023年または2024年となっています。
+                    "Hokkaido": {
+                        "population": 5078979,
+                        "companies": 147575,
+                        "accidents": 26233,
+                        "crimes": 26978,
+                        "suicides": 1045,
+                        "scams": 1095,
+                        "foreignResidents": 49419,
+                        "foreignTourists": 5396650,
+                        "birthRate": 0.55,
+                        "chainStores": 2322
+                    },
+                    "Aomori": {
+                        "population": 1178655,
+                        "companies": 34107,
+                        "accidents": 4065,
+                        "crimes": 4331,
+                        "suicides": 284,
+                        "scams": 184,
+                        "foreignResidents": 9140,
+                        "foreignTourists": 310570,
+                        "birthRate": 0.54,
+                        "chainStores": 539
+                    },
+                    "Iwate": {
+                        "population": 1157106,
+                        "companies": 33719,
+                        "accidents": 2801,
+                        "crimes": 3822,
+                        "suicides": 279,
+                        "scams": 107,
+                        "foreignResidents": 8325,
+                        "foreignTourists": 263920,
+                        "birthRate": 0.53,
+                        "chainStores": 541
+                    },
+                    "Miyagi": {
+                        "population": 2261793,
+                        "companies": 63148,
+                        "accidents": 5851,
+                        "crimes": 9385,
+                        "suicides": 404,
+                        "scams": 421,
+                        "foreignResidents": 29993,
+                        "foreignTourists": 802710,
+                        "birthRate": 0.61,
+                        "chainStores": 1024
+                    },
+                    "Akita": {
+                        "population": 894165,
+                        "companies": 26490,
+                        "accidents": 2472,
+                        "crimes": 2855,
+                        "suicides": 245,
+                        "scams": 84,
+                        "foreignResidents": 6386,
+                        "foreignTourists": 223940,
+                        "birthRate": 0.49,
+                        "chainStores": 424
+                    },
+                    "Yamagata": {
+                        "population": 1012920,
+                        "companies": 31131,
+                        "accidents": 3009,
+                        "crimes": 3672,
+                        "suicides": 221,
+                        "scams": 147,
+                        "foreignResidents": 8182,
+                        "foreignTourists": 304600,
+                        "birthRate": 0.54,
+                        "chainStores": 479
+                    },
+                    "Fukushima": {
+                        "population": 1755142,
+                        "companies": 51221,
+                        "accidents": 5764,
+                        "crimes": 6699,
+                        "suicides": 404,
+                        "scams": 423,
+                        "foreignResidents": 20040,
+                        "foreignTourists": 432320,
+                        "birthRate": 0.59,
+                        "chainStores": 832
+                    },
+                    "Ibaraki": {
+                        "population": 2821677,
+                        "companies": 79192,
+                        "accidents": 10186,
+                        "crimes": 14931,
+                        "suicides": 512,
+                        "scams": 651,
+                        "foreignResidents": 53975,
+                        "foreignTourists": 597250,
+                        "birthRate": 0.60,
+                        "chainStores": 1290
+                    },
+                    "Tochigi": {
+                        "population": 1893110,
+                        "companies": 54930,
+                        "accidents": 6712,
+                        "crimes": 9046,
+                        "suicides": 388,
+                        "scams": 369,
+                        "foreignResidents": 43292,
+                        "foreignTourists": 535130,
+                        "birthRate": 0.60,
+                        "chainStores": 901
+                    },
+                    "Gunma": {
+                        "population": 1894034,
+                        "companies": 55209,
+                        "accidents": 7268,
+                        "crimes": 10283,
+                        "suicides": 360,
+                        "scams": 454,
+                        "foreignResidents": 65163,
+                        "foreignTourists": 561260,
+                        "birthRate": 0.58,
+                        "chainStores": 887
+                    },
+                    "Saitama": {
+                        "population": 7328131,
+                        "companies": 203893,
+                        "accidents": 23145,
+                        "crimes": 40010,
+                        "suicides": 1172,
+                        "scams": 1894,
+                        "foreignResidents": 230737,
+                        "foreignTourists": 1515900,
+                        "birthRate": 0.64,
+                        "chainStores": 3103
+                    },
+                    "Chiba": {
+                        "population": 6271295,
+                        "companies": 169826,
+                        "accidents": 18366,
+                        "crimes": 31846,
+                        "suicides": 1004,
+                        "scams": 1845,
+                        "foreignResidents": 171485,
+                        "foreignTourists": 4181410,
+                        "birthRate": 0.65,
+                        "chainStores": 2715
+                    },
+                    "Tokyo": {
+                        "population": 14134547,
+                        "companies": 429384,
+                        "accidents": 26365,
+                        "crimes": 88373,
+                        "suicides": 2289,
+                        "scams": 3894,
+                        "foreignResidents": 663344,
+                        "foreignTourists": 33405310,
+                        "birthRate": 0.72,
+                        "chainStores": 7462
+                    },
+                    "Kanagawa": {
+                        "population": 9235087,
+                        "companies": 251644,
+                        "accidents": 23904,
+                        "crimes": 43218,
+                        "suicides": 1391,
+                        "scams": 2146,
+                        "foreignResidents": 257523,
+                        "foreignTourists": 4110900,
+                        "birthRate": 0.63,
+                        "chainStores": 3791
+                    },
+                    "Niigata": {
+                        "population": 2120610,
+                        "companies": 63605,
+                        "accidents": 7578,
+                        "crimes": 7128,
+                        "suicides": 442,
+                        "scams": 242,
+                        "foreignResidents": 23414,
+                        "foreignTourists": 489370,
+                        "birthRate": 0.55,
+                        "chainStores": 969
+                    },
+                    "Toyama": {
+                        "population": 991666,
+                        "companies": 32363,
+                        "accidents": 3169,
+                        "crimes": 3505,
+                        "suicides": 177,
+                        "scams": 114,
+                        "foreignResidents": 16930,
+                        "foreignTourists": 607140,
+                        "birthRate": 0.61,
+                        "chainStores": 462
+                    },
+                    "Ishikawa": {
+                        "population": 1102927,
+                        "companies": 35246,
+                        "accidents": 3277,
+                        "crimes": 4130,
+                        "suicides": 176,
+                        "scams": 147,
+                        "foreignResidents": 15462,
+                        "foreignTourists": 864980,
+                        "birthRate": 0.67,
+                        "chainStores": 504
+                    },
+                    "Fukui": {
+                        "population": 736787,
+                        "companies": 24250,
+                        "accidents": 2779,
+                        "crimes": 2496,
+                        "suicides": 130,
+                        "scams": 60,
+                        "foreignResidents": 12561,
+                        "foreignTourists": 247290,
+                        "birthRate": 0.69,
+                        "chainStores": 341
+                    },
+                    "Yamanashi": {
+                        "population": 794300,
+                        "companies": 23828,
+                        "accidents": 2883,
+                        "crimes": 3816,
+                        "suicides": 169,
+                        "scams": 147,
+                        "foreignResidents": 18128,
+                        "foreignTourists": 1438200,
+                        "birthRate": 0.62,
+                        "chainStores": 409
+                    },
+                    "Nagano": {
+                        "population": 1990422,
+                        "companies": 61163,
+                        "accidents": 6414,
+                        "crimes": 7367,
+                        "suicides": 372,
+                        "scams": 295,
+                        "foreignResidents": 39537,
+                        "foreignTourists": 1479830,
+                        "birthRate": 0.60,
+                        "chainStores": 914
+                    },
+                    "Gifu": {
+                        "population": 1912822,
+                        "companies": 58213,
+                        "accidents": 8186,
+                        "crimes": 8629,
+                        "suicides": 307,
+                        "scams": 409,
+                        "foreignResidents": 65005,
+                        "foreignTourists": 1040510,
+                        "birthRate": 0.63,
+                        "chainStores": 887
+                    },
+                    "Shizuoka": {
+                        "population": 3543160,
+                        "companies": 109597,
+                        "accidents": 14619,
+                        "crimes": 15154,
+                        "suicides": 604,
+                        "scams": 531,
+                        "foreignResidents": 110191,
+                        "foreignTourists": 1980830,
+                        "birthRate": 0.61,
+                        "chainStores": 1695
+                    },
+                    "Aichi": {
+                        "population": 7480579,
+                        "companies": 232677,
+                        "accidents": 32314,
+                        "crimes": 41819,
+                        "suicides": 1133,
+                        "scams": 1307,
+                        "foreignResidents": 304273,
+                        "foreignTourists": 4363230,
+                        "birthRate": 0.71,
+                        "chainStores": 3290
+                    },
+                    "Mie": {
+                        "population": 1691136,
+                        "companies": 49451,
+                        "accidents": 6516,
+                        "crimes": 7474,
+                        "suicides": 289,
+                        "scams": 251,
+                        "foreignResidents": 59714,
+                        "foreignTourists": 636380,
+                        "birthRate": 0.64,
+                        "chainStores": 832
+                    },
+                    "Shiga": {
+                        "population": 1406606,
+                        "companies": 37494,
+                        "accidents": 4725,
+                        "crimes": 5419,
+                        "suicides": 188,
+                        "scams": 247,
+                        "foreignResidents": 35147,
+                        "foreignTourists": 668910,
+                        "birthRate": 0.74,
+                        "chainStores": 618
+                    },
+                    "Kyoto": {
+                        "population": 2521568,
+                        "companies": 79298,
+                        "accidents": 8202,
+                        "crimes": 12590,
+                        "suicides": 396,
+                        "scams": 436,
+                        "foreignResidents": 116248,
+                        "foreignTourists": 8696880,
+                        "birthRate": 0.63,
+                        "chainStores": 1252
+                    },
+                    "Osaka": {
+                        "population": 8762744,
+                        "companies": 285499,
+                        "accidents": 27170,
+                        "crimes": 73385,
+                        "suicides": 1282,
+                        "scams": 2473,
+                        "foreignResidents": 290176,
+                        "foreignTourists": 14949240,
+                        "birthRate": 0.68,
+                        "chainStores": 4220
+                    },
+                    "Hyogo": {
+                        "population": 5360980,
+                        "companies": 153093,
+                        "accidents": 19283,
+                        "crimes": 29775,
+                        "suicides": 864,
+                        "scams": 1544,
+                        "foreignResidents": 122240,
+                        "foreignTourists": 2796240,
+                        "birthRate": 0.64,
+                        "chainStores": 2420
+                    },
+                    "Nara": {
+                        "population": 1286955,
+                        "companies": 33267,
+                        "accidents": 4337,
+                        "crimes": 5046,
+                        "suicides": 210,
+                        "scams": 201,
+                        "foreignResidents": 24391,
+                        "foreignTourists": 694030,
+                        "birthRate": 0.61,
+                        "chainStores": 531
+                    },
+                    "Wakayama": {
+                        "population": 883015,
+                        "companies": 25150,
+                        "accidents": 3012,
+                        "crimes": 3922,
+                        "suicides": 189,
+                        "scams": 104,
+                        "foreignResidents": 11210,
+                        "foreignTourists": 388700,
+                        "birthRate": 0.59,
+                        "chainStores": 440
+                    },
+                    "Tottori": {
+                        "population": 532353,
+                        "companies": 14751,
+                        "accidents": 1729,
+                        "crimes": 1809,
+                        "suicides": 98,
+                        "scams": 27,
+                        "foreignResidents": 4940,
+                        "foreignTourists": 219710,
+                        "birthRate": 0.72,
+                        "chainStores": 258
+                    },
+                    "Shimane": {
+                        "population": 636306,
+                        "companies": 18788,
+                        "accidents": 1851,
+                        "crimes": 1921,
+                        "suicides": 119,
+                        "scams": 47,
+                        "foreignResidents": 6696,
+                        "foreignTourists": 305410,
+                        "birthRate": 0.70,
+                        "chainStores": 302
+                    },
+                    "Okayama": {
+                        "population": 1837422,
+                        "companies": 51227,
+                        "accidents": 7288,
+                        "crimes": 7924,
+                        "suicides": 288,
+                        "scams": 236,
+                        "foreignResidents": 35052,
+                        "foreignTourists": 902100,
+                        "birthRate": 0.69,
+                        "chainStores": 881
+                    },
+                    "Hiroshima": {
+                        "population": 2731872,
+                        "companies": 79574,
+                        "accidents": 8527,
+                        "crimes": 11624,
+                        "suicides": 429,
+                        "scams": 380,
+                        "foreignResidents": 66827,
+                        "foreignTourists": 1713430,
+                        "birthRate": 0.69,
+                        "chainStores": 1282
+                    },
+                    "Yamaguchi": {
+                        "population": 1285223,
+                        "companies": 37785,
+                        "accidents": 4768,
+                        "crimes": 5240,
+                        "suicides": 270,
+                        "scams": 176,
+                        "foreignResidents": 20188,
+                        "foreignTourists": 436320,
+                        "birthRate": 0.61,
+                        "chainStores": 616
+                    },
+                    "Tokushima": {
+                        "population": 688176,
+                        "companies": 20436,
+                        "accidents": 2321,
+                        "crimes": 2838,
+                        "suicides": 139,
+                        "scams": 71,
+                        "foreignResidents": 7266,
+                        "foreignTourists": 268950,
+                        "birthRate": 0.62,
+                        "chainStores": 326
+                    },
+                    "Kagawa": {
+                        "population": 914713,
+                        "companies": 27806,
+                        "accidents": 4212,
+                        "crimes": 4125,
+                        "suicides": 161,
+                        "scams": 108,
+                        "foreignResidents": 14758,
+                        "foreignTourists": 714900,
+                        "birthRate": 0.66,
+                        "chainStores": 462
+                    },
+                    "Ehime": {
+                        "population": 1270929,
+                        "companies": 39599,
+                        "accidents": 5313,
+                        "crimes": 5358,
+                        "suicides": 235,
+                        "scams": 182,
+                        "foreignResidents": 15510,
+                        "foreignTourists": 624170,
+                        "birthRate": 0.60,
+                        "chainStores": 618
+                    },
+                    "Kochi": {
+                        "population": 657805,
+                        "companies": 20286,
+                        "accidents": 2269,
+                        "crimes": 2826,
+                        "suicides": 137,
+                        "scams": 65,
+                        "foreignResidents": 5373,
+                        "foreignTourists": 297530,
+                        "birthRate": 0.58,
+                        "chainStores": 337
+                    },
+                    "Fukuoka": {
+                        "population": 5104921,
+                        "companies": 149377,
+                        "accidents": 19137,
+                        "crimes": 29281,
+                        "suicides": 760,
+                        "scams": 984,
+                        "foreignResidents": 99426,
+                        "foreignTourists": 4579160,
+                        "birthRate": 0.75,
+                        "chainStores": 2383
+                    },
+                    "Saga": {
+                        "population": 790409,
+                        "companies": 22123,
+                        "accidents": 3378,
+                        "crimes": 3302,
+                        "suicides": 137,
+                        "scams": 104,
+                        "foreignResidents": 11048,
+                        "foreignTourists": 387340,
+                        "birthRate": 0.77,
+                        "chainStores": 387
+                    },
+                    "Nagasaki": {
+                        "population": 1251842,
+                        "companies": 34966,
+                        "accidents": 3986,
+                        "crimes": 4339,
+                        "suicides": 234,
+                        "scams": 132,
+                        "foreignResidents": 17294,
+                        "foreignTourists": 735280,
+                        "birthRate": 0.69,
+                        "chainStores": 569
+                    },
+                    "Kumamoto": {
+                        "population": 1691147,
+                        "companies": 47683,
+                        "accidents": 6496,
+                        "crimes": 6578,
+                        "suicides": 310,
+                        "scams": 254,
+                        "foreignResidents": 28913,
+                        "foreignTourists": 864550,
+                        "birthRate": 0.77,
+                        "chainStores": 808
+                    },
+                    "Oita": {
+                        "population": 1077741,
+                        "companies": 31336,
+                        "accidents": 4296,
+                        "crimes": 4310,
+                        "suicides": 213,
+                        "scams": 145,
+                        "foreignResidents": 18055,
+                        "foreignTourists": 1016890,
+                        "birthRate": 0.70,
+                        "chainStores": 512
+                    },
+                    "Miyazaki": {
+                        "population": 1034079,
+                        "companies": 28557,
+                        "accidents": 3757,
+                        "crimes": 4192,
+                        "suicides": 231,
+                        "scams": 111,
+                        "foreignResidents": 13024,
+                        "foreignTourists": 407000,
+                        "birthRate": 0.78,
+                        "chainStores": 489
+                    },
+                    "Kagoshima": {
+                        "population": 1532070,
+                        "companies": 43900,
+                        "accidents": 6185,
+                        "crimes": 6698,
+                        "suicides": 313,
+                        "scams": 176,
+                        "foreignResidents": 17826,
+                        "foreignTourists": 717200,
+                        "birthRate": 0.81,
+                        "chainStores": 746
+                    },
+                    "Okinawa": {
+                        "population": 1471373,
+                        "companies": 38385,
+                        "accidents": 4578,
+                        "crimes": 6710,
+                        "suicides": 226,
+                        "scams": 158,
+                        "foreignResidents": 24040,
+                        "foreignTourists": 3834600,
+                        "birthRate": 0.95,
+                        "chainStores": 722
+                    }
+                }
             },
             methods: {
                 destroyCharts() {
@@ -1261,19 +1866,66 @@
                             }
                         }
                         else if (this.selectedCategory === '都道府県(2024)') {
-                            const elem = document.getElementById('panzoom-element');
-                            if (elem) {
-                                this.panzoomInstance = Panzoom(elem, {
-                                    maxScale: 5,      // 最大ズーム倍率
-                                    minScale: 0.5,    // 最小ズーム倍率
-                                    contain: 'outside' // 親要素からはみ出さないようにする
-                                });
-                                // マウスホイールでのズームを有効にする
-                                elem.parentElement.addEventListener('wheel', this.panzoomInstance.zoomWithWheel);
-                            }
+                            // SVGの読み込みとセットアップを実行
+                            this.loadAndSetupSVG();
                         }
                     });
                 },
+                // 都道府県(2024)
+                async loadAndSetupSVG() {
+                    try {
+                        // SVGファイルをテキストとして取得
+                        const response = await fetch('../../Asset/Image/Japan_Life/Japan_1.svg');
+                        if (!response.ok) throw new Error('SVG file not found.');
+                        this.svgContent = await response.text();
+
+                        // DOMが更新されるのを待つ
+                        this.$nextTick(() => {
+                            const svgElement = this.$el.querySelector('#panzoom-container svg');
+                            if (!svgElement) return;
+
+                            // Panzoomのセットアップ
+                            this.setupPanzoom(svgElement);
+
+                            // 全ての都道府県グループにクリックイベントを追加
+                            Object.keys(this.prefectureStats).forEach(prefectureId => {
+                                const group = svgElement.querySelector(`#${prefectureId}_group`);
+                                if (group) {
+                                    group.style.cursor = 'pointer'; // カーソルをポインターに変更
+                                    group.addEventListener('click', () => {
+                                        this.showPrefectureData(prefectureId);
+                                    });
+                                }
+                            });
+                        });
+                    } catch (error) {
+                        console.error('Failed to load SVG:', error);
+                        this.svgContent = '<p>Could not load map.</p>';
+                    }
+                },
+
+                setupPanzoom(svgElement) {
+                    if (this.panzoomInstance) {
+                        this.panzoomInstance.destroy();
+                    }
+                    const container = document.getElementById('panzoom-container');
+                    if (svgElement && container) {
+                        this.panzoomInstance = Panzoom(svgElement, {
+                            maxScale: 5,
+                            minScale: 0.5,
+                            contain: 'outside'
+                        });
+                        container.addEventListener('wheel', this.panzoomInstance.zoomWithWheel);
+                    }
+                },
+
+                showPrefectureData(prefectureId) {
+                    const data = this.prefectureStats[prefectureId];
+                    if (data) {
+                        this.selectedPrefecture = { id: prefectureId, data: data };
+                        this.dialog = true;
+                    }
+                }
             },
             mounted() {
                 this.renderCharts();
