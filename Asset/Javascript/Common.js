@@ -581,6 +581,15 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Food ▲ --------------------------------------------------------------------------------->
 
+                <v-list-item href="./Japan_Statistics.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Statistics</v-list-item-title>
+
+                    <v-list-item-icon>
+                        <v-icon>mdi-finance</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+
             </v-list-group>
             <!-- ▲ Japanese Culture ▲ ------------------------------------------------------------------------->
 

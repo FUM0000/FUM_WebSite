@@ -282,11 +282,27 @@
                 prefectureDataCategories: [
                     '人口',
                     '株式会社数',
-                    '事故件数,犯罪件数,自殺者数,詐欺件数',
-                    '在日外国人数,外国人旅行客数',
+                    '事故件数',
+                    '犯罪件数',
+                    '自殺者数',
+                    '詐欺件数',
+                    '在日外国人数',
+                    '外国人旅行客数',
                     '出生率(100人辺り)',
                     'チェーン店軒数'
                 ],
+                dataKeyMap: {
+                    '人口': 'population',
+                    '株式会社数': 'companies',
+                    '事故件数': 'accidents',
+                    '犯罪件数': 'crimes',
+                    '自殺者数': 'suicides',
+                    '詐欺件数': 'scams',
+                    '在日外国人数': 'foreignResidents',
+                    '外国人旅行客数': 'foreignTourists',
+                    '出生率(100人辺り)': 'birthRate',
+                    'チェーン店軒数': 'chainStores'
+                },
                 // 都道府県ランキング(2024)
                 subCategories: ['食べ物', '生活'],
 
@@ -2018,10 +2034,121 @@
                         this.selectedPrefecture = { id: prefectureId, data: data };
                         this.dialog = true;
                     }
-                }
+                },
+
+                async loadAndSetupSVG() {
+                    try {
+                        const response = await fetch('../../Asset/Image/Japan_Life/Japan_1.svg');
+                        if (!response.ok) throw new Error('SVG file not found.');
+                        this.svgContent = await response.text();
+
+                        this.$nextTick(() => {
+                            const svgElement = this.$el.querySelector('#panzoom-container svg');
+                            if (!svgElement) return;
+
+                            svgElement.style.width = '95%';
+                            svgElement.style.height = 'auto';
+
+                            this.setupPanzoom(svgElement);
+
+                            Object.keys(this.prefectureStats).forEach(prefectureId => {
+                                const group = svgElement.querySelector(`#${prefectureId}_group`);
+                                if (group) {
+                                    group.style.cursor = 'pointer';
+                                    group.addEventListener('click', () => {
+                                        this.showPrefectureData(prefectureId);
+                                    });
+                                }
+                            });
+
+                            // ★★★★★ 変更点: SVG読み込み後に地図の初期色付けを実行 ★★★★★
+                            this.updateMapColors();
+                        });
+                    } catch (error) {
+                        console.error('Failed to load SVG:', error);
+                        this.svgContent = '<p>Could not load map.</p>';
+                    }
+                },
+
+                updateMapColors() {
+                    const svgElement = this.$el.querySelector('#panzoom-container svg');
+                    if (!svgElement) return;
+
+                    const dataKey = this.dataKeyMap[this.selectedPrefectureData];
+                    if (!dataKey) return;
+
+                    const values = Object.values(this.prefectureStats).map(p => p[dataKey]);
+                    const minValue = Math.min(...values);
+                    const maxValue = Math.max(...values);
+                    // ★★★★★ 変更点: 平均値を計算 ★★★★★
+                    const averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+
+                    Object.entries(this.prefectureStats).forEach(([prefectureId, stats]) => {
+                        const pathElement = svgElement.querySelector(`#${prefectureId}`);
+                        if (pathElement) {
+                            const value = stats[dataKey];
+                            // ★★★★★ 変更点: 平均値を色計算メソッドに渡す ★★★★★
+                            const color = this.getGradientColor(value, minValue, maxValue, averageValue);
+                            pathElement.style.fill = color;
+                        }
+                    });
+                },
+
+                // ★★★★★ 追加: 値に基づいてグラデーションカラーを計算するメソッド ★★★★★
+                getGradientColor(value, min, max, avg) {
+                    const startColor = { r: 17, g: 17, b: 212 };    // #1111D4 (青)
+                    const endColor = { r: 212, g: 17, b: 17 };     // #D41111 (赤)
+
+                    // ★★★★★ 変更点: 平均値を基準としたロジックに変更 ★★★★★
+
+                    // 中間色 (開始色と終了色の中間の紫系の色) を計算
+                    const midColor = {
+                        r: Math.round((startColor.r + endColor.r) / 2),
+                        g: Math.round((startColor.g + endColor.g) / 2),
+                        b: Math.round((startColor.b + endColor.b) / 2)
+                    };
+
+                    // データがすべて同じ値の場合のハンドリング
+                    if (max === min) {
+                        return `rgb(${startColor.r}, ${startColor.g}, ${startColor.b})`;
+                    }
+
+                    let ratio;
+                    let c1, c2;
+
+                    if (value <= avg) {
+                        // 値が平均以下の場合、開始色(青)から中間色(紫)へのグラデーション
+                        c1 = startColor;
+                        c2 = midColor;
+                        const range = avg - min;
+                        // 0除算を避ける (最小値と平均値が同じ場合)
+                        ratio = range === 0 ? 1 : (value - min) / range;
+                    } else {
+                        // 値が平均より大きい場合、中間色(紫)から終了色(赤)へのグラデーション
+                        c1 = midColor;
+                        c2 = endColor;
+                        const range = max - avg;
+                        // 0除算を避ける (最大値と平均値が同じ場合)
+                        ratio = range === 0 ? 1 : (value - avg) / range;
+                    }
+
+                    // ratioが0から1の範囲に収まるように調整
+                    ratio = Math.max(0, Math.min(1, ratio));
+
+                    const r = Math.round(c1.r + (c2.r - c1.r) * ratio);
+                    const g = Math.round(c1.g + (c2.g - c1.g) * ratio);
+                    const b = Math.round(c1.b + (c2.b - c1.b) * ratio);
+
+                    return `rgb(${r}, ${g}, ${b})`;
+                },
             },
             mounted() {
                 this.renderCharts();
+            },
+            watch: {
+                selectedPrefectureData() {
+                    this.updateMapColors();
+                }
             },
         });
     </script>
