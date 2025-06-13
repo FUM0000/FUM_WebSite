@@ -284,7 +284,8 @@
                                         </v-row>
 
                                         <v-row>
-                                            <v-col class="pt-0 pb-0" cols="12" md="6" v-for="(color, index) in colors" :key="index">
+                                            <v-col class="pt-0 pb-0" cols="12" md="6" v-for="(color, index) in colors"
+                                                :key="index">
                                                 <v-color-picker v-model="colors[index]" mode="hexa"
                                                     hide-mode-switch></v-color-picker>
                                             </v-col>
@@ -353,10 +354,15 @@
                                                 <v-card>
                                                     <v-card-text class="pt-5">
                                                         <v-row justify="center">
-                                                            <v-col v-for="(gradient, index) in savedGradients" :key="index" cols="12" class="pt-0 pb-0 ma-0 mb-1">
-                                                                <v-chip class="gradient-chip" close @click="loadGradient(gradient)" @click:close="removeGradient(index)"
-                                                                    style="height: 32px;" :style="{ background: gradient.css }">
-                                                                    <span :style="{ color: '#FFFFFF', textShadow: '1px 1px 2px rgba(0,0,0,0.4)', fontSize: '0.8em' }">
+                                                            <v-col v-for="(gradient, index) in savedGradients"
+                                                                :key="index" cols="12" class="pt-0 pb-0 ma-0 mb-1">
+                                                                <v-chip class="gradient-chip" close
+                                                                    @click="loadGradient(gradient)"
+                                                                    @click:close="removeGradient(index)"
+                                                                    style="height: 32px;"
+                                                                    :style="{ background: gradient.css }">
+                                                                    <span
+                                                                        :style="{ color: '#FFFFFF', textShadow: '1px 1px 2px rgba(0,0,0,0.4)', fontSize: '0.8em' }">
                                                                         {{ gradient.colors.join(' → ') }}
                                                                     </span>
                                                                 </v-chip>
@@ -545,17 +551,39 @@
                     // Validate hex color format
                     if (/^#[0-9A-F]{6}$/i.test(value)) {
                         const hex = value.replace('#', '');
+                        const r_val = parseInt(hex.substr(0, 2), 16);
+                        const g_val = parseInt(hex.substr(2, 2), 16);
+                        const b_val = parseInt(hex.substr(4, 2), 16);
+
                         if (this.colorMode === 'rgb') {
-                            this.red = parseInt(hex.substr(0, 2), 16);
-                            this.green = parseInt(hex.substr(2, 2), 16);
-                            this.blue = parseInt(hex.substr(4, 2), 16);
-                        } else {
-                            const currentMode = this.colorMode;
-                            this.colorMode = 'rgb';
-                            this.red = parseInt(hex.substr(0, 2), 16);
-                            this.green = parseInt(hex.substr(2, 2), 16);
-                            this.blue = parseInt(hex.substr(4, 2), 16);
-                            this.colorMode = currentMode;
+                            this.red = r_val;
+                            this.green = g_val;
+                            this.blue = b_val;
+                        } else { // HSLモードの場合
+                            // Hexから取得したRGB値をHSLに変換
+                            const rNorm = r_val / 255;
+                            const gNorm = g_val / 255;
+                            const bNorm = b_val / 255;
+
+                            const max = Math.max(rNorm, gNorm, bNorm);
+                            const min = Math.min(rNorm, gNorm, bNorm);
+                            const d = max - min;
+
+                            let h = 0;
+                            if (d === 0) h = 0;
+                            else if (max === rNorm) h = 60 * (((gNorm - bNorm) / d) % 6);
+                            else if (max === gNorm) h = 60 * ((bNorm - rNorm) / d + 2);
+                            else if (max === bNorm) h = 60 * ((rNorm - gNorm) / d + 4);
+
+                            if (h < 0) h += 360;
+
+                            const l = (max + min) / 2;
+                            const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+
+                            // HSLスライダーの値を更新
+                            this.hue = Math.round(h);
+                            this.saturation = Math.round(s * 100);
+                            this.lightness = Math.round(l * 100);
                         }
                     }
                 },
@@ -652,26 +680,26 @@
                         colors: [...this.colors],
                         css: this.gradientCSS
                     };
-                    
+
                     // 重複チェック
-                    const isDuplicate = this.savedGradients.some(g => 
+                    const isDuplicate = this.savedGradients.some(g =>
                         g.type === gradientData.type &&
                         g.angle === gradientData.angle &&
                         JSON.stringify(g.colors) === JSON.stringify(gradientData.colors)
                     );
-                    
+
                     if (!isDuplicate) {
                         this.savedGradients.push(gradientData);
                         localStorage.setItem('savedGradients', JSON.stringify(this.savedGradients));
                     }
                 },
-                
+
                 loadGradient(gradient) {
                     this.gradientType = gradient.type;
                     this.angle = gradient.angle;
                     this.colors = [...gradient.colors];
                 },
-                
+
                 removeGradient(index) {
                     this.savedGradients.splice(index, 1);
                     localStorage.setItem('savedGradients', JSON.stringify(this.savedGradients));
