@@ -178,8 +178,20 @@
                                         </div>
 
                                         <div v-else-if="selectedCategory === '都道府県ランキング(2024)'">
-                                            {{ selectedSubCategory }} のランキングデータをここに表示
+                                            <!-- ランキングデータ選択用の v-select -->
+                                            <v-row justify="center" class="mb-2">
+                                                <v-col cols="12" md="6">
+                                                    <v-select v-model="selectedRankingData"
+                                                        :items="Object.values(displayRankingItems[selectedSubCategory]).map(item => item.label)"
+                                                        label="表示するランキングデータを選択" outlined hide-details></v-select>
+                                                </v-col>
+                                            </v-row>
+                                            <!-- 地図表示エリア -->
+                                            <div id="panzoom-container" v-html="svgContent"
+                                                style="overflow: hidden; border: 1px solid #ddd; border-radius: 4px; cursor: grab;">
+                                            </div>
                                         </div>
+
                                     </v-card-text>
                                 </v-card>
                             </v-col>
@@ -188,33 +200,60 @@
                 </transition>
             </v-main>
 
-            <v-dialog v-model="dialog" width="500">
-                <!-- 1. v-cardをflexコンテナにし、高さを制限 -->
+            <v-dialog v-model="statsDialog" width="500">
                 <v-card class="d-flex flex-column" style="max-height: 80vh;">
-                    <!-- 2. タイトルエリアは縮まないように設定 -->
                     <v-card-title class="headline grey lighten-2 flex-shrink-0">
-                        {{ selectedPrefecture ? selectedPrefecture.id : '' }}
+                        {{ selectedStatPrefecture ? selectedStatPrefecture.id : '' }}
                     </v-card-title>
 
-                    <!-- 3. コンテンツエリアをスクロール可能に設定 -->
-                    <v-card-text v-if="selectedPrefecture" class="pt-4 overflow-y-auto">
+                    <v-card-text v-if="selectedStatPrefecture" class="pt-4 overflow-y-auto">
                         <v-list dense>
                             <v-list-item v-for="(details, key) in displayItems" :key="key">
-                                <v-list-item-content v-if="selectedPrefecture.data[key] !== undefined">
+                                <v-list-item-content v-if="selectedStatPrefecture.data[key] !== undefined">
                                     <v-list-item-title>{{ details.label }}</v-list-item-title>
                                     <v-list-item-subtitle>
-                                        {{ selectedPrefecture.data[key].toLocaleString() }} {{ details.unit }}
+                                        {{ selectedStatPrefecture.data[key].toLocaleString() }} {{ details.unit }}
                                     </v-list-item-subtitle>
                                 </v-list-item-content>
                             </v-list-item>
                         </v-list>
                     </v-card-text>
 
-                    <!-- 4. 区切り線とアクションエリアも縮まないように設定 -->
                     <v-divider class="flex-shrink-0"></v-divider>
                     <v-card-actions class="flex-shrink-0">
                         <v-spacer></v-spacer>
-                        <v-btn color="primary" text @click="dialog = false">
+                        <v-btn color="primary" text @click="statsDialog = false">
+                            Close
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <v-dialog v-model="rankingDialog" width="500">
+                <v-card class="d-flex flex-column" style="max-height: 80vh;">
+                    <v-card-title class="headline grey lighten-2 flex-shrink-0">
+                        {{ selectedRankingPrefecture ? selectedRankingPrefecture.id : '' }}
+                    </v-card-title>
+
+                    <v-card-text v-if="selectedRankingPrefecture && subCategoryKey" class="pt-4 overflow-y-auto">
+                        <v-list dense>
+                            <v-list-item v-for="(details, key) in currentDisplayRankingItems" :key="key">
+                                <v-list-item-content>
+                                    <v-list-item-title>{{ details.label }}</v-list-item-title>
+                                    <v-list-item-subtitle>
+                                        {{ selectedRankingPrefecture.data[subCategoryKey] &&
+                                        selectedRankingPrefecture.data[subCategoryKey][key] ?
+                                        selectedRankingPrefecture.data[subCategoryKey][key] + '位' : 'ランキング外' }}
+                                    </v-list-item-subtitle>
+                                </v-list-item-content>
+                            </v-list-item>
+                        </v-list>
+                    </v-card-text>
+
+                    <v-divider class="flex-shrink-0"></v-divider>
+                    <v-card-actions class="flex-shrink-0">
+                        <v-spacer></v-spacer>
+                        <v-btn color="primary" text @click="rankingDialog = false">
                             Close
                         </v-btn>
                     </v-card-actions>
@@ -263,9 +302,9 @@
                 },
                 // 都道府県(2024)
                 panzoomInstance: null,
-                dialog: false, // ポップアップの表示状態
+                statsDialog: false, // ポップアップの表示状態
                 selectedPrefectureData: '人口',
-                selectedPrefecture: null, // クリックされた都道府県のデータを保持
+                selectedStatPrefecture: null, // クリックされた都道府県のデータを保持
                 svgContent: '', // 読み込んだSVGのHTML文字列を保持
                 displayItems: {
                     population: { label: 'Population', unit: '' },
@@ -304,6 +343,28 @@
                     'チェーン店軒数': 'chainStores'
                 },
                 // 都道府県ランキング(2024)
+                rankingDialog: false, // ランキング用ポップアップの表示状態
+                selectedRankingData: '寿司消費額', // 表示するランキング項目の初期値
+                selectedRankingPrefecture: null, // クリックされた都道府県のランキングデータを保持
+                displayRankingItems: {
+                    '食べ物': {
+                        sushiConsumption: { label: '寿司消費額' },
+                        ramenConsumption: { label: 'ラーメン消費額' },
+                        gyozaConsumption: { label: '餃子消費額' },
+                        octopusConsumption: { label: 'たこ焼き消費額(タコ)' },
+                        alcoholConsumption: { label: 'アルコール消費額' },
+                        spiceConsumption: { label: '唐辛子消費額(香辛料)' },
+                        vegetableProduction: { label: '野菜生産量' },
+                        fishCatch: { label: '魚介捕獲量' },
+                        livestockProduction: { label: '家畜生産量' }
+                    },
+                    '生活': {
+                        averageRent: { label: '家賃平均' },
+                        festivalCount: { label: 'お祭り数' },
+                        pachinkoParlors: { label: 'パチンコ屋軒数' },
+                        tobaccoConsumption: { label: 'タバコ消費額' }
+                    }
+                },
                 subCategories: ['食べ物', '生活'],
 
                 // データ
@@ -1565,6 +1626,935 @@
                         "birthRate": 0.95,
                         "chainStores": 722
                     }
+                },
+                //// 都道府県ランキング(2024)
+                prefectureRanking: {
+                    // 北海道・東北
+                    'Hokkaido': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: 45,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: 1,
+                            fishCatch: 1,
+                            livestockProduction: 3
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: 2,
+                            tobaccoConsumption: 1
+                        }
+                    },
+                    'Aomori': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: 47,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: 2
+                        }
+                    },
+                    'Iwate': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: 47,
+                            alcoholConsumption: 2,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Miyagi': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: 3,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Akita': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Yamagata': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: 1,
+                            gyozaConsumption: null,
+                            octopusConsumption: 45,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Fukushima': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    // 関東
+                    'Ibaraki': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: 2,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Tochigi': {
+                        Food: {
+                            sushiConsumption: 1,
+                            ramenConsumption: null,
+                            gyozaConsumption: 2,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 47,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Gunma': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 47,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Saitama': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: 1,
+                            vegetableProduction: null,
+                            fishCatch: 47,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Chiba': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: 2,
+                            vegetableProduction: 3,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Tokyo': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: 1,
+                            spiceConsumption: null,
+                            vegetableProduction: 47,
+                            fishCatch: null,
+                            livestockProduction: 46
+                        },
+                        Life: {
+                            averageRent: 1,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Kanagawa': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: 45
+                        },
+                        Life: {
+                            averageRent: 2,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    // 中部
+                    'Niigata': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: 2,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Toyama': {
+                        Food: {
+                            sushiConsumption: 2,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 45,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Ishikawa': {
+                        Food: {
+                            sushiConsumption: 3,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Fukui': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: 45,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: 45,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Yamanashi': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 47,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Nagano': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 47,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Gifu': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 47,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Shizuoka': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: 3,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 3,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Aichi': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: 45,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: 3,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    // 近畿
+                    'Mie': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Shiga': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: 45,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 47,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: 46
+                        }
+                    },
+                    'Kyoto': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: 2,
+                            alcoholConsumption: null,
+                            spiceConsumption: 3,
+                            vegetableProduction: null,
+                            fishCatch: 46,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: 45
+                        }
+                    },
+                    'Osaka': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: 1,
+                            alcoholConsumption: 46,
+                            spiceConsumption: null,
+                            vegetableProduction: 46,
+                            fishCatch: null,
+                            livestockProduction: 47
+                        },
+                        Life: {
+                            averageRent: 3,
+                            festivalCount: null,
+                            pachinkoParlors: 1,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Hyogo': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: 46,
+                            octopusConsumption: 3,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Nara': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: 46,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: 47,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 47,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: 47
+                        }
+                    },
+                    'Wakayama': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: 47,
+                            gyozaConsumption: 47,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: 45,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    // 中国
+                    'Tottori': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: 47,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Shimane': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: 46,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Okayama': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Hiroshima': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Yamaguchi': {
+                        Food: {
+                            sushiConsumption: 46,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    // 四国
+                    'Tokushima': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Kagawa': {
+                        Food: {
+                            sushiConsumption: 47,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Ehime': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Kochi': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: 3,
+                            spiceConsumption: 47,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    // 九州・沖縄
+                    'Fukuoka': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Saga': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Nagasaki': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: 2,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: 3
+                        }
+                    },
+                    'Kumamoto': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: 46,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Oita': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Miyazaki': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: 1,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: 2
+                        },
+                        Life: {
+                            averageRent: 46,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Kagoshima': {
+                        Food: {
+                            sushiConsumption: null,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: null,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: 1
+                        },
+                        Life: {
+                            averageRent: 45,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    },
+                    'Okinawa': {
+                        Food: {
+                            sushiConsumption: 45,
+                            ramenConsumption: null,
+                            gyozaConsumption: null,
+                            octopusConsumption: 46,
+                            alcoholConsumption: null,
+                            spiceConsumption: null,
+                            vegetableProduction: null,
+                            fishCatch: null,
+                            livestockProduction: null
+                        },
+                        Life: {
+                            averageRent: null,
+                            festivalCount: null,
+                            pachinkoParlors: null,
+                            tobaccoConsumption: null
+                        }
+                    }
+                },
+            },
+            computed: {
+                rankingDataKeyMap() {
+                    const map = {};
+                    if (this.displayRankingItems) {
+                        Object.values(this.displayRankingItems).forEach(categoryItems => {
+                            for (const key in categoryItems) {
+                                map[categoryItems[key].label] = key;
+                            }
+                        });
+                    }
+                    return map;
+                },
+                // '食べ物' -> 'Food', '生活' -> 'Life' に変換するヘルパー
+                subCategoryKey() {
+                    if (this.selectedSubCategory === '食べ物') return 'Food';
+                    if (this.selectedSubCategory === '生活') return 'Life';
+                    return null;
+                },
+                currentDisplayRankingItems() {
+                    // 念のため displayRankingItems の存在をチェック
+                    if (this.selectedCategory === '都道府県ランキング(2024)' && this.displayRankingItems && this.displayRankingItems[this.selectedSubCategory]) {
+                        return this.displayRankingItems[this.selectedSubCategory];
+                    }
+                    return {};
                 }
             },
             methods: {
@@ -1575,11 +2565,12 @@
                             this.chartInstances[key] = null;
                         }
                     });
-                    // 以下を追加
                     if (this.panzoomInstance) {
                         this.panzoomInstance.destroy();
                         this.panzoomInstance = null;
                     }
+                    // SVGコンテンツをクリアして、イベントリスナーごと削除
+                    this.svgContent = '';
                 },
                 updateContent() {
                     if (this.selectedCategory !== '都道府県ランキング(2024)') {
@@ -1590,7 +2581,12 @@
                     this.renderCharts();
                 },
                 updateSubCategoryContent() {
-                    // サブカテゴリー変更時の処理（必要に応じて実装）
+                    // サブカテゴリー変更時に、ランキング選択をカテゴリーの先頭項目にリセット
+                    if (this.displayRankingItems.length > 0) {
+                        this.selectedRankingData = this.displayRankingItems[0];
+                    } else {
+                        this.selectedRankingData = null;
+                    }
                     this.renderCharts();
                 },
                 renderCharts() {
@@ -1972,40 +2968,40 @@
                         }
                         else if (this.selectedCategory === '都道府県(2024)') {
                             // SVGの読み込みとセットアップを実行
-                            this.loadAndSetupSVG();
+                            this.loadAndSetupSVG('stats');
+                        }
+                        else if (this.selectedCategory === '都道府県ランキング(2024)') {
+                            this.loadAndSetupSVG('ranking');
                         }
                     });
                 },
                 // 都道府県(2024)
-                async loadAndSetupSVG() {
+                async loadAndSetupSVG(type) {
                     try {
-                        // SVGファイルをテキストとして取得
                         const response = await fetch('../../Asset/Image/Japan_Life/Japan_1.svg');
                         if (!response.ok) throw new Error('SVG file not found.');
                         this.svgContent = await response.text();
 
-                        // DOMが更新されるのを待つ
                         this.$nextTick(() => {
                             const svgElement = this.$el.querySelector('#panzoom-container svg');
                             if (!svgElement) return;
 
-                            // SVGのスタイルを調整
                             svgElement.style.width = '95%';
                             svgElement.style.height = 'auto';
 
-                            // Panzoomのセットアップ
                             this.setupPanzoom(svgElement);
 
-                            // 全ての都道府県グループにクリックイベントを追加
                             Object.keys(this.prefectureStats).forEach(prefectureId => {
                                 const group = svgElement.querySelector(`#${prefectureId}_group`);
                                 if (group) {
-                                    group.style.cursor = 'pointer'; // カーソルをポインターに変更
+                                    group.style.cursor = 'pointer';
                                     group.addEventListener('click', () => {
-                                        this.showPrefectureData(prefectureId);
+                                        this.showPrefectureData(prefectureId, type); // 引数 type を渡す
                                     });
                                 }
                             });
+
+                            this.updateMapColors();
                         });
                     } catch (error) {
                         console.error('Failed to load SVG:', error);
@@ -2028,87 +3024,80 @@
                     }
                 },
 
-                showPrefectureData(prefectureId) {
-                    const data = this.prefectureStats[prefectureId];
-                    if (data) {
-                        this.selectedPrefecture = { id: prefectureId, data: data };
-                        this.dialog = true;
+                showPrefectureData(prefectureId, type) {
+                    if (type === 'stats') {
+                        const data = this.prefectureStats[prefectureId];
+                        if (data) {
+                            this.selectedStatPrefecture = { id: prefectureId, data: data };
+                            this.statsDialog = true;
+                        }
+                    } else if (type === 'ranking') {
+                        // prefectureRankingから該当都道府県の全ランキングデータを取得
+                        const rankData = this.prefectureRanking[prefectureId];
+                        // データが存在しなくてもダイアログは開く
+                        this.selectedRankingPrefecture = { id: prefectureId, data: rankData || {} };
+                        this.rankingDialog = true;
                     }
                 },
 
-                async loadAndSetupSVG() {
-                    try {
-                        const response = await fetch('../../Asset/Image/Japan_Life/Japan_1.svg');
-                        if (!response.ok) throw new Error('SVG file not found.');
-                        this.svgContent = await response.text();
-
-                        this.$nextTick(() => {
-                            const svgElement = this.$el.querySelector('#panzoom-container svg');
-                            if (!svgElement) return;
-
-                            svgElement.style.width = '95%';
-                            svgElement.style.height = 'auto';
-
-                            this.setupPanzoom(svgElement);
-
-                            Object.keys(this.prefectureStats).forEach(prefectureId => {
-                                const group = svgElement.querySelector(`#${prefectureId}_group`);
-                                if (group) {
-                                    group.style.cursor = 'pointer';
-                                    group.addEventListener('click', () => {
-                                        this.showPrefectureData(prefectureId);
-                                    });
-                                }
-                            });
-
-                            // ★★★★★ 変更点: SVG読み込み後に地図の初期色付けを実行 ★★★★★
-                            this.updateMapColors();
-                        });
-                    } catch (error) {
-                        console.error('Failed to load SVG:', error);
-                        this.svgContent = '<p>Could not load map.</p>';
-                    }
-                },
-
+                // 既存の updateMapColors メソッドを以下のように変更（ランキング対応を追加）
                 updateMapColors() {
                     const svgElement = this.$el.querySelector('#panzoom-container svg');
                     if (!svgElement) return;
 
-                    const dataKey = this.dataKeyMap[this.selectedPrefectureData];
-                    if (!dataKey) return;
+                    let dataKey, dataObject;
+                    if (this.selectedCategory === '都道府県(2024)') {
+                        dataKey = this.dataKeyMap[this.selectedPrefectureData];
+                        dataObject = this.prefectureStats;
 
-                    const values = Object.values(this.prefectureStats).map(p => p[dataKey]);
-                    const minValue = Math.min(...values);
-                    const maxValue = Math.max(...values);
-                    // ★★★★★ 変更点: 平均値を計算 ★★★★★
-                    const averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+                        const values = Object.values(dataObject).map(p => p[dataKey]).filter(v => v !== undefined);
+                        if (values.length === 0) return;
+                        const minValue = Math.min(...values);
+                        const maxValue = Math.max(...values);
+                        const averageValue = values.reduce((sum, val) => sum + val, 0) / values.length;
 
-                    Object.entries(this.prefectureStats).forEach(([prefectureId, stats]) => {
-                        const pathElement = svgElement.querySelector(`#${prefectureId}`);
-                        if (pathElement) {
-                            const value = stats[dataKey];
-                            // ★★★★★ 変更点: 平均値を色計算メソッドに渡す ★★★★★
-                            const color = this.getGradientColor(value, minValue, maxValue, averageValue);
-                            pathElement.style.fill = color;
-                        }
-                    });
+                        Object.entries(dataObject).forEach(([prefectureId, stats]) => {
+                            const pathElement = svgElement.querySelector(`#${prefectureId}`);
+                            if (pathElement) {
+                                const value = stats[dataKey];
+                                const color = this.getGradientColor(value, minValue, maxValue, averageValue);
+                                pathElement.style.fill = color;
+                            }
+                        });
+
+                    } else if (this.selectedCategory === '都道府県ランキング(2024)') {
+                        const dataKey = this.rankingDataKeyMap[this.selectedRankingData];
+                        // subCategoryKey ('Food' または 'Life') もチェック
+                        if (!dataKey || !this.subCategoryKey) return;
+
+                        // 全ての都道府県をループする
+                        Object.keys(this.prefectureStats).forEach(prefectureId => {
+                            const pathElement = svgElement.querySelector(`#${prefectureId}`);
+                            if (pathElement) {
+                                // prefectureRankingの正しい階層からデータを取得
+                                const rankData = this.prefectureRanking[prefectureId];
+                                const subRankData = rankData ? rankData[this.subCategoryKey] : null;
+                                const rank = subRankData ? subRankData[dataKey] : null;
+
+                                const color = this.getRankingColor(rank);
+                                pathElement.style.fill = color;
+                            }
+                        });
+                    }
                 },
 
                 // ★★★★★ 追加: 値に基づいてグラデーションカラーを計算するメソッド ★★★★★
                 getGradientColor(value, min, max, avg) {
-                    const startColor = { r: 17, g: 17, b: 212 };    // #1111D4 (青)
-                    const endColor = { r: 212, g: 17, b: 17 };     // #D41111 (赤)
+                    const startColor = { r: 17, g: 17, b: 212 };    // #1111D4 (青) - 良い
+                    const endColor = { r: 212, g: 17, b: 17 };      // #D41111 (赤) - 悪い
 
-                    // ★★★★★ 変更点: 平均値を基準としたロジックに変更 ★★★★★
-
-                    // 中間色 (開始色と終了色の中間の紫系の色) を計算
+                    // 中間色 (紫) を計算
                     const midColor = {
                         r: Math.round((startColor.r + endColor.r) / 2),
                         g: Math.round((startColor.g + endColor.g) / 2),
                         b: Math.round((startColor.b + endColor.b) / 2)
                     };
 
-                    // データがすべて同じ値の場合のハンドリング
                     if (max === min) {
                         return `rgb(${startColor.r}, ${startColor.g}, ${startColor.b})`;
                     }
@@ -2116,6 +3105,7 @@
                     let ratio;
                     let c1, c2;
 
+                    // 順位データの場合、値が小さいほど「良い」ので、平均より小さい値は赤側に、大きい値は青側にマッピングする
                     if (value <= avg) {
                         // 値が平均以下の場合、開始色(青)から中間色(紫)へのグラデーション
                         c1 = startColor;
@@ -2132,7 +3122,6 @@
                         ratio = range === 0 ? 1 : (value - avg) / range;
                     }
 
-                    // ratioが0から1の範囲に収まるように調整
                     ratio = Math.max(0, Math.min(1, ratio));
 
                     const r = Math.round(c1.r + (c2.r - c1.r) * ratio);
@@ -2141,12 +3130,32 @@
 
                     return `rgb(${r}, ${g}, ${b})`;
                 },
+
+                getRankingColor(rank) {
+                    // rank が null または undefined の場合は「その他」の色を返す
+                    if (rank === null || rank === undefined) {
+                        return '#E0E0E0';
+                    }
+
+                    if (rank === 1) return '#D41111'; // 1位: 赤
+                    if (rank === 2) return '#E35D5D'; // 2位
+                    if (rank === 3) return '#F1AAAA'; // 3位
+
+                    if (rank === 47) return '#1111D4'; // ワースト1位: 青
+                    if (rank === 46) return '#5D5DE3'; // ワースト2位
+                    if (rank === 45) return '#AAAAF1'; // ワースト3位
+
+                    return '#E0E0E0'; // それ以外
+                },
             },
             mounted() {
                 this.renderCharts();
             },
             watch: {
                 selectedPrefectureData() {
+                    this.updateMapColors();
+                },
+                selectedRankingData() {
                     this.updateMapColors();
                 }
             },
