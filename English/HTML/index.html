@@ -22,13 +22,48 @@
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
     <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+        rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
     <link href="../../Asset/CSS/Index.css" rel="stylesheet" />
 
     <title>F U M</title>
+
+    <style>
+        .speech-bubble {
+            position: absolute;
+            background: rgba(30, 30, 30, 0.85);
+            border: 1px solid #00ffcc;
+            border-radius: 10px;
+            padding: 10px 15px;
+            color: #00ffcc;
+            font-family: 'Noto Sans JP', sans-serif;
+            font-weight: 500;
+            z-index: 5;
+            pointer-events: none;
+            transform: translate(-50%, -130%);
+            white-space: nowrap;
+            transition: opacity 0.3s ease-in-out, top 0.1s linear, left 0.1s linear;
+            opacity: 0;
+        }
+
+        .speech-bubble.show {
+            opacity: 1;
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid rgba(30, 30, 30, 0.85);
+        }
+    </style>
 </head>
 
 <body>
@@ -51,6 +86,10 @@
                     </v-container>
                 </transition>
             </v-main>
+
+            <div :class="['speech-bubble', { 'show': ShowMessage }]" :style="MessageStyle">
+                {{ CurrentMessage }}
+            </div>
 
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
             <main-footer-simple></main-footer-simple>
@@ -77,6 +116,11 @@
             el: '#App',
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Common, window.Mixins_Index],
+            data: {
+                ShowMessage: false,
+                CurrentMessage: '',
+                MessageStyle: { top: '0px', left: '0px' }
+            },
         })
     </script>
 
@@ -813,6 +857,74 @@
         let countTheata = Math.PI;
         let time = 0.0;
 
+        const messages = ["Hi!", "Welcome to FUM Website!", "How are you?", "May I help you?", "Space is vast…", "Let's explore!", "It's fun to learn something new, …isn't it?", "I wonder if SpaceX will take me to space…", "What is that flying around me…?", "I'm FUM. Nice to meet you.", "…", "He may well be bored…"];
+        const MESSAGE_DISTANCE_THRESHOLD = 35; // この距離より近づくとメッセージ表示
+        let messageVisible = false;
+        let messageCooldown = false;
+
+        function updateSpeechBubble() {
+            // liquidSphereが生成されるまで何もしない
+            if (!liquidSphere) return;
+
+            const distance = camera.position.distanceTo(liquidSphere.position);
+
+            // 条件を満たしたらメッセージを表示する
+            if (distance < MESSAGE_DISTANCE_THRESHOLD && !messageVisible && !messageCooldown) {
+                messageVisible = true;
+                messageCooldown = true; // クールダウン開始
+                vue.ShowMessage = true;
+
+                // メッセージをランダムに選択
+                const randomIndex = Math.floor(Math.random() * messages.length);
+                vue.CurrentMessage = messages[randomIndex];
+
+                // 4秒後にメッセージを非表示にする
+                setTimeout(() => {
+                    messageVisible = false;
+                    vue.ShowMessage = false;
+                    // メッセージが消えてから3秒間は再表示しない
+                    setTimeout(() => {
+                        messageCooldown = false;
+                    }, 3000);
+                }, 4000);
+            }
+
+            // メッセージが表示されている間、位置を更新し続ける
+            if (vue.ShowMessage) {
+                // 3D座標を2Dスクリーン座標に変換
+                const screenPosition = liquidSphere.position.clone().project(camera);
+                const x = (screenPosition.x * 0.5 + 0.5) * window.innerWidth;
+
+                // --- ▼ ここからが距離に応じた位置調整ロジックです ▼ ---
+
+                // メッセージが表示される距離の範囲を定義します
+                const MAX_DISTANCE = MESSAGE_DISTANCE_THRESHOLD; // 遠い方の基準 (現在 35)
+                const MIN_DISTANCE = 15; // 近い方の基準（この値はお好みで調整してください）
+
+                // 現在の距離を取得し、0(遠い)～1(近い)の間の値に正規化します
+                const currentDistance = camera.position.distanceTo(liquidSphere.position);
+                let proximityFactor = (MAX_DISTANCE - currentDistance) / (MAX_DISTANCE - MIN_DISTANCE);
+                proximityFactor = Math.max(0, Math.min(1, proximityFactor)); // 0～1の範囲に収める
+
+                // 吹き出しのY位置を定義します
+                const yOffsetFar = 0.45;   // カメラが遠い時の位置（球体に近い）
+                const yOffsetClose = 0.38; // カメラが近い時の位置（球体から離す）
+
+                // 正規化した値を使って、現在の距離に最適なY位置を計算します
+                const dynamicOffsetY = yOffsetFar + (yOffsetClose - yOffsetFar) * proximityFactor;
+
+                const y = (-screenPosition.y * 0.5 + dynamicOffsetY) * window.innerHeight;
+
+                // --- ▲ ここまでが調整ロジックです ▲ ---
+
+                // Vueのdataを更新してCSSを適用
+                vue.MessageStyle = {
+                    top: `${y}px`,
+                    left: `${x}px`
+                };
+            }
+        }
+
         function animate() {
             const currentTime = performance.now();
             const deltaTime = (currentTime - lastTime) / 1000;
@@ -876,6 +988,7 @@
             controls.update();
             composer.render();
             updateGlitch();
+            updateSpeechBubble();
 
             requestAnimationFrame(animate);
         }
@@ -1222,4 +1335,5 @@
         createUniverseDetail();
     </script>
 </body>
+
 </html>
