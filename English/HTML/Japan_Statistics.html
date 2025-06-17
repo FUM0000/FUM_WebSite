@@ -308,9 +308,19 @@
                                 <v-list-item-content>
                                     <v-list-item-title>{{ details.label }}</v-list-item-title>
                                     <v-list-item-subtitle>
-                                        {{ selectedRankingPrefecture.data[subCategoryKey] &&
-                                        selectedRankingPrefecture.data[subCategoryKey][key] ?
-                                        selectedRankingPrefecture.data[subCategoryKey][key] + ' place' : 'Not Ranked' }}
+                                        <template
+                                            v-if="selectedRankingPrefecture.data[subCategoryKey] && selectedRankingPrefecture.data[subCategoryKey][key]">
+                                            {{ selectedRankingPrefecture.data[subCategoryKey][key].ranking }}位
+                                            <span
+                                                v-if="prefectureRanking[selectedRankingPrefecture.id] && prefectureRanking[selectedRankingPrefecture.id][subCategoryKey] && prefectureRanking[selectedRankingPrefecture.id][subCategoryKey][key] !== undefined">
+                                                ({{
+                                                prefectureRanking[selectedRankingPrefecture.id][subCategoryKey][key].value.toLocaleString()
+                                                }}{{ details.unit || '' }})
+                                            </span>
+                                        </template>
+                                        <template v-else>
+                                            Not Ranked
+                                        </template>
                                     </v-list-item-subtitle>
                                 </v-list-item-content>
                             </v-list-item>
@@ -415,22 +425,22 @@
                 selectedRankingPrefecture: null, // Holds ranking data for the clicked prefecture
                 displayRankingItems: {
                     'Food': {
-                        sushiConsumption: { label: 'Sushi Spending (per Household)' },
-                        ramenConsumption: { label: 'Ramen Spending (per Household)' },
-                        gyozaConsumption: { label: 'Gyoza Spending (per Household)' },
-                        octopusConsumption: { label: 'Octopus Spending (per Household)' },
-                        alcoholConsumption: { label: 'Alcohol Consumption (per Capita)' },
-                        spiceConsumption: { label: 'Spice Spending (per Household)' },
-                        vegetableProduction: { label: 'Vegetable Production (Total Value)' },
-                        fishCatch: { label: 'Fish Catch (Total Volume)' },
-                        livestockProduction: { label: 'Livestock Production (Total Value)' }
+                        sushiConsumption: { label: 'Sushi Spending (per Household)', unit: 'JPY' },
+                        ramenConsumption: { label: 'Ramen Spending (per Household)', unit: 'JPY' },
+                        gyozaConsumption: { label: 'Gyoza Spending (per Household)', unit: 'JPY' },
+                        octopusConsumption: { label: 'Octopus Spending (per Household)', unit: 'JPY' },
+                        alcoholConsumption: { label: 'Alcohol Consumption (per Capita)', unit: 'L' },
+                        spiceConsumption: { label: 'Spice Spending (per Household)', unit: 'g' },
+                        vegetableProduction: { label: 'Vegetable Production (Total)', unit: 'JPY(hundred million)' },
+                        fishCatch: { label: 'Fish Catch (Total)', unit: 'tons' },
+                        livestockProduction: { label: 'Livestock Production (Total)', unit: 'JPY(hundred million)' }
                     },
                     'Life': {
-                        averageRent: { label: 'Average Rent' },
-                        festivalCount: { label: 'Total Number of Festivals' },
-                        pachinkoParlors: { label: 'Total Number of Pachinko Parlors' },
-                        tobaccoConsumption: { label: 'Tobacco Consumption (per Capita)' },
-                        strayCatCount: { label: 'Total Number of Stray Cats' },
+                        averageRent: { label: 'Rent Rooms (Average)', unit: 'JPY/month' },
+                        festivalCount: { label: 'Festivals (Total)', unit: 'times' },
+                        pachinkoParlors: { label: 'Pachinko (Total)', unit: 'stores' },
+                        tobaccoConsumption: { label: 'Tobacco Consumption (per Capita)', unit: 'cigarettes' },
+                        strayCatCount: { label: 'Rescued Stray Cat (Total)', unit: 'cats' }
                     }
                 },
                 subCategories: ['Food', 'Life'],
@@ -1700,902 +1710,256 @@
                     // Hokkaido & Tohoku
                     'Hokkaido': {
                         Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: 45,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: 1,
-                            fishCatch: 1,
-                            livestockProduction: 3
+                            gyozaConsumption: { ranking: 45, value: 2000 },
+                            vegetableProduction: { ranking: 1, value: 4200 },
+                            fishCatch: { ranking: 1, value: 1200000 },
+                            livestockProduction: { ranking: 3, value: 9000 }
                         },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: 2,
-                            tobaccoConsumption: 1
+                            pachinkoParlors: { ranking: 2, value: 300 },
+                            tobaccoConsumption: { ranking: 1, value: 2200 },
+                            strayCatCount: { ranking: 9, value: 1045 }
                         }
                     },
                     'Aomori': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
                         Life: {
-                            averageRent: 47,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: 2
+                            averageRent: { ranking: 47, value: 35000 },
+                            tobaccoConsumption: { ranking: 2, value: 2150 },
+                            strayCatCount: { ranking: 28, value: 411 }
                         }
                     },
                     'Iwate': {
                         Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: 47,
-                            alcoholConsumption: 2,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
+                            octopusConsumption: { ranking: 47, value: 500 },
+                            alcoholConsumption: { ranking: 2, value: 8.5 }
                         },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 37, value: 289 } }
                     },
                     'Miyagi': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: 3,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { ramenConsumption: { ranking: 3, value: 12487 } },
+                        Life: { strayCatCount: { ranking: 14, value: 752 } }
                     },
                     'Akita': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 42, value: 215 } }
                     },
                     'Yamagata': {
                         Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: 1,
-                            gyozaConsumption: null,
-                            octopusConsumption: 45,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
+                            ramenConsumption: { ranking: 1, value: 13196 },
+                            octopusConsumption: { ranking: 45, value: 600 }
                         },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 43, value: 198 } }
                     },
                     'Fukushima': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 15, value: 711 } }
                     },
                     // Kanto
                     'Ibaraki': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: 2,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { vegetableProduction: { ranking: 2, value: 2500 } },
+                        Life: { strayCatCount: { ranking: 10, value: 987 } }
                     },
                     'Tochigi': {
                         Food: {
-                            sushiConsumption: 1,
-                            ramenConsumption: null,
-                            gyozaConsumption: 2,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 47,
-                            livestockProduction: null
+                            sushiConsumption: { ranking: 1, value: 5234 },
+                            gyozaConsumption: { ranking: 2, value: 4193 },
+                            fishCatch: { ranking: 47, value: 0 }
                         },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 26, value: 440 } }
                     },
                     'Gunma': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 47,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { fishCatch: { ranking: 47, value: 0 } },
+                        Life: { strayCatCount: { ranking: 23, value: 499 } }
                     },
                     'Saitama': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: 1,
-                            vegetableProduction: null,
-                            fishCatch: 47,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { spiceConsumption: { ranking: 1, value: 500 }, fishCatch: { ranking: 47, value: 0 } },
+                        Life: { strayCatCount: { ranking: 6, value: 1421 } }
                     },
                     'Chiba': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: 2,
-                            vegetableProduction: 3,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { spiceConsumption: { ranking: 2, value: 480 }, vegetableProduction: { ranking: 3, value: 2000 } },
+                        Life: { strayCatCount: { ranking: 7, value: 1358 } }
                     },
                     'Tokyo': {
                         Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: 1,
-                            spiceConsumption: null,
-                            vegetableProduction: 47,
-                            fishCatch: null,
-                            livestockProduction: 46
+                            alcoholConsumption: { ranking: 1, value: 9.0 },
+                            vegetableProduction: { ranking: 47, value: 10 },
+                            livestockProduction: { ranking: 46, value: 20 }
                         },
                         Life: {
-                            averageRent: 1,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
+                            averageRent: { ranking: 1, value: 85000 },
+                            strayCatCount: { ranking: 1, value: 2347 }
                         }
                     },
                     'Kanagawa': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: 45
-                        },
+                        Food: { livestockProduction: { ranking: 45, value: 30 } },
                         Life: {
-                            averageRent: 2,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
+                            averageRent: { ranking: 2, value: 70000 },
+                            strayCatCount: { ranking: 5, value: 1598 }
                         }
                     },
                     // Chubu
                     'Niigata': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: 2,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { ramenConsumption: { ranking: 2, value: 12534 } },
+                        Life: { strayCatCount: { ranking: 25, value: 452 } }
                     },
                     'Toyama': {
-                        Food: {
-                            sushiConsumption: 2,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 45,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { sushiConsumption: { ranking: 2, value: 5123 }, fishCatch: { ranking: 45, value: 500 } },
+                        Life: { strayCatCount: { ranking: 45, value: 174 } }
                     },
                     'Ishikawa': {
-                        Food: {
-                            sushiConsumption: 3,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { sushiConsumption: { ranking: 3, value: 5012 } },
+                        Life: { strayCatCount: { ranking: 41, value: 230 } }
                     },
                     'Fukui': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: 45,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
+                        Food: { vegetableProduction: { ranking: 45, value: 50 } },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: 45,
-                            tobaccoConsumption: null
+                            pachinkoParlors: { ranking: 45, value: 20 },
+                            strayCatCount: { ranking: 46, value: 169 }
                         }
                     },
                     'Yamanashi': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 47,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { fishCatch: { ranking: 47, value: 0 } },
+                        Life: { strayCatCount: { ranking: 40, value: 234 } }
                     },
                     'Nagano': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 47,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { fishCatch: { ranking: 47, value: 0 } },
+                        Life: { strayCatCount: { ranking: 27, value: 433 } }
                     },
                     'Gifu': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 47,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { fishCatch: { ranking: 47, value: 0 } },
+                        Life: { strayCatCount: { ranking: 22, value: 510 } }
                     },
                     'Shizuoka': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: 3,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 3,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { gyozaConsumption: { ranking: 3, value: 4056 }, fishCatch: { ranking: 3, value: 80000 } },
+                        Life: { strayCatCount: { ranking: 11, value: 955 } }
                     },
                     'Aichi': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: 45,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
+                        Food: { alcoholConsumption: { ranking: 45, value: 6.0 } },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: 3,
-                            tobaccoConsumption: null
+                            pachinkoParlors: { ranking: 3, value: 280 },
+                            strayCatCount: { ranking: 4, value: 1655 }
                         }
                     },
                     // Kansai
                     'Mie': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 18, value: 601 } }
                     },
                     'Shiga': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: 45,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 47,
-                            livestockProduction: null
-                        },
+                        Food: { ramenConsumption: { ranking: 45, value: 6000 }, fishCatch: { ranking: 47, value: 0 } },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: 46
+                            tobaccoConsumption: { ranking: 46, value: 1500 },
+                            strayCatCount: { ranking: 31, value: 349 }
                         }
                     },
                     'Kyoto': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: 2,
-                            alcoholConsumption: null,
-                            spiceConsumption: 3,
-                            vegetableProduction: null,
-                            fishCatch: 46,
-                            livestockProduction: null
-                        },
+                        Food: { octopusConsumption: { ranking: 2, value: 1500 }, spiceConsumption: { ranking: 3, value: 450 }, fishCatch: { ranking: 46, value: 100 } },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: 45
+                            tobaccoConsumption: { ranking: 45, value: 1550 },
+                            strayCatCount: { ranking: 16, value: 672 }
                         }
                     },
                     'Osaka': {
                         Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: 1,
-                            alcoholConsumption: 46,
-                            spiceConsumption: null,
-                            vegetableProduction: 46,
-                            fishCatch: null,
-                            livestockProduction: 47
+                            octopusConsumption: { ranking: 1, value: 1600 },
+                            alcoholConsumption: { ranking: 46, value: 5.8 },
+                            vegetableProduction: { ranking: 46, value: 20 },
+                            livestockProduction: { ranking: 47, value: 10 }
                         },
                         Life: {
-                            averageRent: 3,
-                            festivalCount: null,
-                            pachinkoParlors: 1,
-                            tobaccoConsumption: null
+                            averageRent: { ranking: 3, value: 65000 },
+                            pachinkoParlors: { ranking: 1, value: 400 },
+                            strayCatCount: { ranking: 2, value: 1878 }
                         }
                     },
                     'Hyogo': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: 46,
-                            octopusConsumption: 3,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { gyozaConsumption: { ranking: 46, value: 1900 }, octopusConsumption: { ranking: 3, value: 1450 } },
+                        Life: { strayCatCount: { ranking: 8, value: 1290 } }
                     },
                     'Nara': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: 46,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: 47,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 47,
-                            livestockProduction: null
-                        },
+                        Food: { ramenConsumption: { ranking: 46, value: 5800 }, alcoholConsumption: { ranking: 47, value: 5.5 }, fishCatch: { ranking: 47, value: 0 } },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: 47
+                            tobaccoConsumption: { ranking: 47, value: 1400 },
+                            strayCatCount: { ranking: 34, value: 321 }
                         }
                     },
                     'Wakayama': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: 47,
-                            gyozaConsumption: 47,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: 45,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { ramenConsumption: { ranking: 47, value: 5700 }, gyozaConsumption: { ranking: 47, value: 1800 }, spiceConsumption: { ranking: 45, value: 200 } },
+                        Life: { strayCatCount: { ranking: 24, value: 473 } }
                     },
                     // Chugoku
                     'Tottori': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: 47,
-                            tobaccoConsumption: null
+                            pachinkoParlors: { ranking: 47, value: 15 },
+                            strayCatCount: { ranking: 47, value: 135 }
                         }
                     },
                     'Shimane': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: 46,
-                            tobaccoConsumption: null
+                            pachinkoParlors: { ranking: 46, value: 18 },
+                            strayCatCount: { ranking: 44, value: 183 }
                         }
                     },
                     'Okayama': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 17, value: 649 } }
                     },
                     'Hiroshima': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 12, value: 855 } }
                     },
                     'Yamaguchi': {
-                        Food: {
-                            sushiConsumption: 46,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { sushiConsumption: { ranking: 46, value: 3000 } },
+                        Life: { strayCatCount: { ranking: 19, value: 589 } }
                     },
                     // Shikoku
                     'Tokushima': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 38, value: 266 } }
                     },
                     'Kagawa': {
-                        Food: {
-                            sushiConsumption: 47,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { sushiConsumption: { ranking: 47, value: 2900 } },
+                        Life: { strayCatCount: { ranking: 21, value: 541 } }
                     },
                     'Ehime': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 13, value: 768 } }
                     },
                     'Kochi': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: 3,
-                            spiceConsumption: 47,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { alcoholConsumption: { ranking: 3, value: 8.4 }, spiceConsumption: { ranking: 47, value: 180 } },
+                        Life: { strayCatCount: { ranking: 30, value: 367 } }
                     },
                     // Kyushu & Okinawa
                     'Fukuoka': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 3, value: 1733 } }
                     },
                     'Saga': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 33, value: 329 } }
                     },
                     'Nagasaki': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: 2,
-                            livestockProduction: null
-                        },
+                        Food: { fishCatch: { ranking: 2, value: 90000 } },
                         Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: 3
+                            tobaccoConsumption: { ranking: 3, value: 2100 },
+                            strayCatCount: { ranking: 20, value: 566 }
                         }
                     },
                     'Kumamoto': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: 46,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { spiceConsumption: { ranking: 46, value: 190 } },
+                        Life: { strayCatCount: { ranking: 29, value: 399 } }
                     },
                     'Oita': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Life: { strayCatCount: { ranking: 32, value: 333 } }
                     },
                     'Miyazaki': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: 1,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: 2
-                        },
+                        Food: { gyozaConsumption: { ranking: 1, value: 4358 }, livestockProduction: { ranking: 2, value: 9500 } },
                         Life: {
-                            averageRent: 46,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
+                            averageRent: { ranking: 46, value: 38000 },
+                            strayCatCount: { ranking: 36, value: 298 }
                         }
                     },
                     'Kagoshima': {
-                        Food: {
-                            sushiConsumption: null,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: null,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: 1
-                        },
+                        Food: { livestockProduction: { ranking: 1, value: 10000 } },
                         Life: {
-                            averageRent: 45,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
+                            averageRent: { ranking: 45, value: 40000 },
+                            strayCatCount: { ranking: 35, value: 311 }
                         }
                     },
                     'Okinawa': {
-                        Food: {
-                            sushiConsumption: 45,
-                            ramenConsumption: null,
-                            gyozaConsumption: null,
-                            octopusConsumption: 46,
-                            alcoholConsumption: null,
-                            spiceConsumption: null,
-                            vegetableProduction: null,
-                            fishCatch: null,
-                            livestockProduction: null
-                        },
-                        Life: {
-                            averageRent: null,
-                            festivalCount: null,
-                            pachinkoParlors: null,
-                            tobaccoConsumption: null
-                        }
+                        Food: { sushiConsumption: { ranking: 45, value: 3100 }, octopusConsumption: { ranking: 46, value: 550 } },
+                        Life: { strayCatCount: { ranking: 39, value: 254 } }
                     }
                 },
             },
@@ -3151,7 +2515,7 @@
                                 // Get data from the correct level of prefectureRanking
                                 const rankData = this.prefectureRanking[prefectureId];
                                 const subRankData = rankData ? rankData[this.subCategoryKey] : null;
-                                const rank = subRankData ? subRankData[dataKey] : null;
+                                const rank = subRankData && subRankData[dataKey] ? subRankData[dataKey].ranking : null;
 
                                 const color = this.getRankingColor(rank);
                                 pathElement.style.fill = color;
