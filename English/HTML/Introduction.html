@@ -25,6 +25,7 @@
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
 
     <title>Introduction</title>
 
@@ -38,6 +39,154 @@
             pointer-events: none;
             /* Canvasがクリック等の操作を妨げないようにする */
         }
+
+        #interactive-space {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .theme-bubble {
+            position: absolute;
+            padding: 20px 30px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease-out, background-color 0.3s;
+            font-family: 'Roboto', 'Noto Sans JP', sans-serif;
+            font-weight: 500;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            will-change: transform;
+            /* アニメーションのパフォーマンスを最適化 */
+        }
+
+        .theme-bubble:hover {
+            background-color: rgba(255, 255, 255, 1);
+        }
+
+        .theme-bubble.is-dragging {
+            cursor: grabbing;
+            z-index: 10;
+            /* ドラッグ中は他のバブルより手前に来る */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            transform-origin: center center;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .close-button:hover {
+            color: #333;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #3f51b5;
+            /* Vuetify Primary Color */
+        }
+
+        .content-body {
+            min-height: 120px;
+            /* タイプライター表示中の高さのがたつきを防ぐ */
+            line-height: 1.8;
+        }
+
+        .content-body .Selectable,
+        .content-body .Button_LikeVue {
+            opacity: 0;
+            animation: fadeIn 0.5s forwards 0.5s;
+            /* ボタンは少し遅れて表示 */
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-nav {
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        .modal-nav button {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin: 0 15px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.2s;
+        }
+
+        .modal-nav button:hover:not(:disabled) {
+            background-color: #e0e0e0;
+        }
+
+        .modal-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Vueのトランジション用 */
+        .Fade_Page-enter-active,
+        .Fade_Page-leave-active {
+            transition: opacity .5s;
+        }
+
+        .Fade_Page-enter,
+        .Fade_Page-leave-to {
+            opacity: 0;
+        }
+
+        /* ▲▲▲ ここまで追記 ▲▲▲ */
     </style>
 </head>
 
@@ -52,38 +201,39 @@
 
             <v-main id="Main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5"
-                        style="display: flex; align-content: center;">
+                    <v-container v-show="Ready_Page" fluid fill-height class="pa-0" style="background-color: #f5f5f5;">
+                        <div id="interactive-space">
+                            <div v-for="bubble in bubbles" :key="bubble.theme" class="theme-bubble"
+                                :class="{ 'is-dragging': bubble.isDragging }" :style="bubble.style"
+                                @click="handleBubbleClick(bubble)" @mousedown.prevent="dragStart(bubble, $event)">
+                                {{ bubble.theme }}
+                            </div>
+                        </div>
 
-                        <custom-carousel v-if="SelectedTheme" :title="SelectedTheme"
-                            :items="Get_ThemeContent(SelectedTheme)" :height="512" :outpagenumber="PageNumber"
-                            @update:outpagenumber="PageNumber = $event">
-                        </custom-carousel>
-
-                        <v-row justify="center">
-                            <v-col xs="12" md="6">
-                                <v-card>
-                                    <v-system-bar class="font-weight-medium" style="background-color: #BFC8CC99;">Select
-                                        Theme</v-system-bar>
-                                    <v-card-text>
-                                        <v-chip-group v-model="SelectedTheme" column mandatory
-                                            active-class="primary--text">
-                                            <v-chip v-for="theme in Themes" :key="theme" :value="theme"
-                                                @click="ResetNumber">
-                                                {{ theme }}
-                                            </v-chip>
-                                        </v-chip-group>
-                                    </v-card-text>
-                                </v-card>
-                            </v-col>
-                        </v-row>
-
+                        <transition name="Fade_Page">
+                            <div v-if="modal.visible" class="modal-overlay" @click.self="closeModal">
+                                <div class="modal-content" @click.stop>
+                                    <button class="close-button" @click="closeModal" title="Close">×</button>
+                                    <h2>{{ modal.theme }}</h2>
+                                    <div class="content-body" v-html="modal.currentText"></div>
+                                    <div v-if="ThemeContents[modal.theme] && ThemeContents[modal.theme].length > 1"
+                                        class="modal-nav">
+                                        <button @click="changeModalPage(-1)"
+                                            :disabled="modal.pageIndex === 0">◀</button>
+                                        <span>{{ modal.pageIndex + 1 }} / {{ ThemeContents[modal.theme].length }}</span>
+                                        <button @click="changeModalPage(1)"
+                                            :disabled="modal.pageIndex >= ThemeContents[modal.theme].length - 1">▶</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </transition>
+                        <!-- ▲▲▲ ここまで変更 ▲▲▲ -->
                     </v-container>
                 </transition>
             </v-main>
 
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
-            <main-footer></main-footer>
+            <main-footer-simple></main-footer-simple>
 
         </template>
     </v-app>
@@ -192,10 +342,257 @@
                         `,
                     ],
                 },
+
+                bubbles: [],
+                modal: {
+                    visible: false,
+                    theme: null,
+                    pageIndex: 0,
+                    currentText: ''
+                },
+                typewriterTimer: null,
+                draggedBubble: null,
+                dragInfo: { lastX: 0, lastY: 0, lastTime: 0, vx: 0, vy: 0 },
+                didDrag: false, // ドラッグ操作とクリックを区別するためのフラグ
+            },
+            mounted() {
+                setTimeout(() => {
+                    this.setupBubbles();
+                    this.animateBubbles();
+                }, 150);
+                window.addEventListener('mousemove', this.updateMousePosition);
+            },
+            beforeDestroy() {
+                // コンポーネントが破棄される際にイベントリスナーを削除
+                window.removeEventListener('mousemove', this.updateMousePosition);
             },
             methods: {
-                Get_ThemeContent(_theme) { return this.ThemeContents[_theme] },
-                ResetNumber() { this.PageNumber = 0; },
+
+                setupBubbles() {
+                    const container = document.getElementById('interactive-space');
+                    if (!container) return;
+                    const containerRect = container.getBoundingClientRect();
+                    const centerX = containerRect.width / 2;
+                    const centerY = containerRect.height / 2;
+
+                    this.bubbles = this.Themes.map(theme => {
+                        const size = 120 + Math.random() * 40; // バブルの大きさをランダムに
+                        const angle = Math.random() * 2 * Math.PI;
+                        const radius = Math.min(centerX, centerY) * (0.4 + Math.random() * 0.4);
+
+                        // ▼▼▼ 以下のように変更 ▼▼▼
+                        const initialX = centerX + Math.cos(angle) * radius;
+                        const initialY = centerY + Math.sin(angle) * radius;
+
+                        return {
+                            theme: theme,
+                            x: initialX,
+                            y: initialY,
+                            vx: (Math.random() - 0.5) * 1, // X方向の速度
+                            vy: (Math.random() - 0.5) * 1, // Y方向の速度
+                            isDragging: false,
+                            size: size,
+                            style: {
+                                width: `${size}px`,
+                                height: `${size}px`,
+                                // 正しい初期位置を設定
+                                transform: `translate(-50%, -50%) translate(${initialX}px, ${initialY}px)`
+                            }
+                        };
+                    });
+                },
+                animateBubbles() {
+                    const container = document.getElementById('interactive-space');
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect();
+
+                    // バブル同士の衝突判定と物理計算
+                    for (let i = 0; i < this.bubbles.length; i++) {
+                        const b1 = this.bubbles[i];
+
+                        // ドラッグ中のバブルは物理計算をスキップ
+                        if (b1.isDragging) continue;
+
+                        // 摩擦で速度を減衰
+                        b1.vx *= 0.99;
+                        b1.vy *= 0.99;
+
+                        b1.x += b1.vx;
+                        b1.y += b1.vy;
+
+                        // 壁での反射
+                        if (b1.x - b1.size / 2 < 0 && b1.vx < 0) { b1.x = b1.size / 2; b1.vx *= -0.9; }
+                        if (b1.x + b1.size / 2 > rect.width && b1.vx > 0) { b1.x = rect.width - b1.size / 2; b1.vx *= -0.9; }
+                        if (b1.y - b1.size / 2 < 0 && b1.vy < 0) { b1.y = b1.size / 2; b1.vy *= -0.9; }
+                        if (b1.y + b1.size / 2 > rect.height && b1.vy > 0) { b1.y = rect.height - b1.size / 2; b1.vy *= -0.9; }
+
+                        // 他のバブルとの衝突
+                        for (let j = i + 1; j < this.bubbles.length; j++) {
+                            const b2 = this.bubbles[j];
+                            const dx = b2.x - b1.x;
+                            const dy = b2.y - b1.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const minDist = (b1.size / 2) + (b2.size / 2);
+
+                            if (dist < minDist) {
+                                this.resolveCollision(b1, b2, dx, dy, dist, minDist);
+                            }
+                        }
+                    }
+
+                    // 全てのバブルのスタイルを更新
+                    this.bubbles.forEach(b => {
+                        b.style.transform = `translate(-50%, -50%) translate(${b.x}px, ${b.y}px)`;
+                    });
+
+                    requestAnimationFrame(this.animateBubbles);
+                },
+                dragStart(bubble, event) {
+                    if (this.modal.visible) return; // モーダル表示中は操作不可
+
+                    this.didDrag = false;
+                    this.draggedBubble = bubble;
+                    bubble.isDragging = true;
+
+                    // 速度計算のための初期情報を記録
+                    const rect = event.target.closest('#interactive-space').getBoundingClientRect();
+                    this.dragInfo.lastX = event.clientX - rect.left;
+                    this.dragInfo.lastY = event.clientY - rect.top;
+                    this.dragInfo.lastTime = Date.now();
+                    this.dragInfo.vx = 0;
+                    this.dragInfo.vy = 0;
+
+                    // ドラッグ中は物理的な速度をリセット
+                    bubble.vx = 0;
+                    bubble.vy = 0;
+
+                    window.addEventListener('mousemove', this.dragMove);
+                    window.addEventListener('mouseup', this.dragEnd, { once: true }); // 1回で解除
+                },
+
+                dragMove(event) {
+                    if (!this.draggedBubble) return;
+                    this.didDrag = true;
+
+                    const rect = document.getElementById('interactive-space').getBoundingClientRect();
+                    const newX = event.clientX - rect.left;
+                    const newY = event.clientY - rect.top;
+
+                    const now = Date.now();
+                    const dt = now - this.dragInfo.lastTime;
+                    if (dt > 1) { // 頻繁すぎないように更新
+                        // 指を離したときの勢いを計算 (移動平均で滑らかに)
+                        this.dragInfo.vx = this.dragInfo.vx * 0.7 + ((newX - this.draggedBubble.x) / dt) * 0.3;
+                        this.dragInfo.vy = this.dragInfo.vy * 0.7 + ((newY - this.draggedBubble.y) / dt) * 0.3;
+                        this.dragInfo.lastTime = now;
+                    }
+
+                    this.draggedBubble.x = newX;
+                    this.draggedBubble.y = newY;
+                },
+
+                dragEnd() {
+                    if (!this.draggedBubble) return;
+
+                    // 離した瞬間の勢いをバブルに与える
+                    this.draggedBubble.vx = this.dragInfo.vx * 20; // 勢いを調整
+                    this.draggedBubble.vy = this.dragInfo.vy * 20;
+
+                    this.draggedBubble.isDragging = false;
+                    this.draggedBubble = null;
+
+                    window.removeEventListener('mousemove', this.dragMove);
+
+                    // クリックイベントを発火させないように少し待つ
+                    setTimeout(() => { this.didDrag = false; }, 50);
+                },
+
+                handleBubbleClick(bubble) {
+                    // ドラッグ操作によるクリックでなければモーダルを開く
+                    if (!this.didDrag) {
+                        this.openModal(bubble.theme);
+                    }
+                },
+
+                resolveCollision(b1, b2, dx, dy, dist, minDist) {
+                    // 1. 位置の補正 (重なりを解消)
+                    const overlap = (minDist - dist) / 2;
+                    const offsetX = (dx / dist) * overlap;
+                    const offsetY = (dy / dist) * overlap;
+
+                    b1.x -= offsetX; b1.y -= offsetY;
+                    b2.x += offsetX; b2.y += offsetY;
+
+                    // 2. 速度の交換 (運動量保存則の簡易版)
+                    const angle = Math.atan2(dy, dx);
+                    const sin = Math.sin(angle);
+                    const cos = Math.cos(angle);
+
+                    // 速度を衝突軸に沿った座標系に回転
+                    const v1 = { x: b1.vx * cos + b1.vy * sin, y: b1.vy * cos - b1.vx * sin };
+                    const v2 = { x: b2.vx * cos + b2.vy * sin, y: b2.vy * cos - b2.vx * sin };
+
+                    // 衝突軸方向の速度を交換
+                    [v1.x, v2.x] = [v2.x, v1.x];
+
+                    // 速度を元の座標系に戻す
+                    b1.vx = v1.x * cos - v1.y * sin;
+                    b1.vy = v1.y * cos + v1.x * sin;
+                    b2.vx = v2.x * cos - v2.y * sin;
+                    b2.vy = v2.y * cos + v2.x * sin;
+                },
+                openModal(theme) {
+                    this.modal.visible = true;
+                    this.modal.theme = theme;
+                    this.modal.pageIndex = 0;
+                    this.updateModalContent();
+                },
+                closeModal() {
+                    this.modal.visible = false;
+                    clearTimeout(this.typewriterTimer); // タイプライターを停止
+                },
+                changeModalPage(direction) {
+                    const newIndex = this.modal.pageIndex + direction;
+                    const contents = this.ThemeContents[this.modal.theme];
+                    if (newIndex >= 0 && newIndex < contents.length) {
+                        this.modal.pageIndex = newIndex;
+                        this.updateModalContent();
+                    }
+                },
+                updateModalContent() {
+                    clearTimeout(this.typewriterTimer);
+                    const text = this.ThemeContents[this.modal.theme][this.modal.pageIndex];
+                    this.startTypewriter(text);
+                },
+                startTypewriter(fullText) {
+                    let i = 0;
+                    this.modal.currentText = '';
+                    const speed = 20; // ミリ秒
+
+                    const type = () => {
+                        if (i < fullText.length) {
+                            // HTMLタグを一度に処理する
+                            if (fullText.charAt(i) === '<') {
+                                const tagEnd = fullText.indexOf('>', i);
+                                this.modal.currentText += fullText.substring(i, tagEnd + 1);
+                                i = tagEnd;
+                            } else {
+                                this.modal.currentText += fullText.charAt(i);
+                            }
+                            i++;
+                            this.typewriterTimer = setTimeout(type, speed);
+                        }
+                    };
+                    type();
+                },
+                updateMousePosition(event) {
+                    const container = document.getElementById('interactive-space');
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect();
+                    this.mouse.x = event.clientX - rect.left;
+                    this.mouse.y = event.clientY - rect.top;
+                },
+                Get_ThemeContent(_theme) { return this.ThemeContents[_theme] }, // 互換性のために残す
             }
         })
 
@@ -205,6 +602,7 @@
             const ctx = canvas.getContext('2d');
 
             let width, height;
+            let currentFontSize;
             const mouse = { x: 0, y: 0, radius: 150 };
 
             function resize() {
@@ -212,6 +610,8 @@
                 height = canvas.height = window.innerHeight;
                 mouse.x = width / 2;
                 mouse.y = height / 2;
+                const idealFontSize = width * 0.025;
+                currentFontSize = Math.max(18, Math.min(idealFontSize, 50));
             }
 
             window.addEventListener('resize', resize);
@@ -229,6 +629,35 @@
             function animate() {
                 requestAnimationFrame(animate);
                 ctx.clearRect(0, 0, width, height);
+
+                // テキストのスタイル設定
+                ctx.font = `600 ${currentFontSize}px "Poppins", sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const isMobile = width < 768; // スマホかどうかを判定するブレークポイント
+
+                if (isMobile) {
+                    // スマホ用の表示：シンプルな塗りつぶし
+                    ctx.shadowColor = 'transparent'; // 影を無効化
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = 'rgba(63, 81, 181, 0.8)'; // リングの色に近い、視認性の高い色
+                    ctx.fillText('Thanks for coming!', width / 2, height / 2);
+                } else {
+                    // PC用の表示：ネオンエフェクト
+                    ctx.shadowColor = 'rgba(121, 134, 203, 0.7)';
+                    ctx.shadowBlur = 20;
+                    ctx.fillStyle = 'rgba(232, 234, 246, 0.9)';
+
+                    // 2回描画してグロー効果を強調
+                    ctx.fillText('Thanks for coming!', width / 2, height / 2);
+                    ctx.fillText('Thanks for coming!', width / 2, height / 2);
+                }
+
+                // 後続のリング描画に影響しないよう影をリセット
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+
                 ctx.beginPath();
 
                 for (let i = 0; i <= numPoints; i++) {
