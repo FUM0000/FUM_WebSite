@@ -1,0 +1,368 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>Note > Programming > DesignPattern</title>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > Programming >
+        DesignPattern</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">デザインパターン</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="デザインパターンのトピックを検索" prepend-inner-icon="mdi-magnify"
+                      clearable outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_1">
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1"
+                          @click="Count_Step_1 = 1"></v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2"
+                          @click="Count_Step_1 = 2"></v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 3" step="3"
+                          @click="Count_Step_1 = 3"></v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 4" step="4"
+                          @click="Count_Step_1 = 4"></v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 5" step="5"
+                          @click="Count_Step_1 = 5"></v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">デザインパターンの基礎</v-card-title>
+                              <v-treeview :items="filteredDPFundamentals" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesDPFundamentals" @update:open="updateOpenNodesDPFundamentals">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">生成に関するパターン
+                                (Creational)</v-card-title>
+                              <v-treeview :items="filteredCreationalPatterns" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesCreationalPatterns"
+                                @update:open="updateOpenNodesCreationalPatterns">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 3">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">構造に関するパターン
+                                (Structural)</v-card-title>
+                              <v-treeview :items="filteredStructuralPatterns" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesStructuralPatterns"
+                                @update:open="updateOpenNodesStructuralPatterns">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">振る舞いに関するパターン
+                                (Behavioral)</v-card-title>
+                              <v-treeview :items="filteredBehavioralPatterns" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesBehavioralPatterns"
+                                @update:open="updateOpenNodesBehavioralPatterns">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 3">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 5">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="5">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">パターンの実践と応用</v-card-title>
+                              <v-treeview :items="filteredPracticalApplication" item-key="name" activatable
+                                open-on-click dense :open.sync="openNodesPracticalApplication"
+                                @update:open="updateOpenNodesPracticalApplication">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 4">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredDPFundamentals: [],
+        filteredCreationalPatterns: [],
+        filteredStructuralPatterns: [],
+        filteredBehavioralPatterns: [],
+        filteredPracticalApplication: [],
+        openNodesDPFundamentals: [],
+        openNodesCreationalPatterns: [],
+        openNodesStructuralPatterns: [],
+        openNodesBehavioralPatterns: [],
+        openNodesPracticalApplication: [],
+        DPFundamentals: [
+          {
+            "name": "1. オブジェクト指向の設計原則 (SOLID)",
+            "children": [
+              { "name": "S: 役割を一つ単位で分ける(単一責任の原則)" },
+              { "name": "O: 親を変更しない(オープン・クローズドの原則)" },
+              { "name": "L: ポリモーフィズムの信頼性(リスコフの置換原則)" },
+              { "name": "I: まとめインターフェースを作らない(インターフェース分離の原則)" },
+              { "name": "D: 抽象(親)に依存(依存性逆転の原則)" }
+            ]
+          },
+          {
+            "name": "2. 用語",
+            "children": [
+              { "name": "GoF (Gang of Four): デザインパターンの原典" },
+              { "name": 'インターフェース: オブジェクトとは違い実体がない機能をまとめたクラス' },
+            ]
+          },
+        ],
+        CreationalPatterns: [
+          {
+            "name": "インスタンスの生成を体系化",
+            "children": [
+              { "name": "Factory Method: 生成処理をサブクラスに委譲" },
+              { "name": "Abstract Factory: 関連するオブジェクト群をまとめて生成" },
+              { "name": "Builder: 複雑なオブジェクトを段階的に構築" },
+              { "name": "Prototype: コピーによってインスタンスを生成" },
+              { "name": "Singleton: インスタンスが唯一であることを保証" }
+            ]
+          }
+        ],
+        StructuralPatterns: [
+          {
+            "name": "クラスやオブジェクトの組み合わせ方を体系化",
+            "children": [
+              { "name": "Adapter: インターフェースの互換性がないクラスを協調させる" },
+              { "name": "Bridge: 実装とインターフェースを分離" },
+              { "name": "Composite: 木構造を表現し、全体と部分を同様に扱う" },
+              { "name": "Decorator: オブジェクトに動的に機能を追加" },
+              { "name": "Facade: 複雑なサブシステムへのシンプルな窓口を提供" },
+              { "name": "Flyweight: 共有によってオブジェクトを効率的に扱う" },
+              { "name": "Proxy: オブジェクトへのアクセスを制御する代理を配置" }
+            ]
+          }
+        ],
+        BehavioralPatterns: [
+          {
+            "name": "オブジェクト間の責務の割り当てやアルゴリズムを体系化",
+            "children": [
+              { "name": "Chain of Responsibility: 要求を複数のオブジェクトで処理" },
+              { "name": "Command: 要求をオブジェクトとしてカプセル化" },
+              { "name": "Iterator: 集合体の要素に順番にアクセスする方法を提供" },
+              { "name": "Mediator: オブジェクト間の相互作用を集中管理" },
+              { "name": "Memento: オブジェクトの状態を保存し、復元可能にする" },
+              { "name": "Observer: 状態変化を監視し、依存オブジェクトに通知" },
+              { "name": "State: オブジェクトの状態に応じて振る舞いを変更" },
+              { "name": "Strategy: アルゴリズムをカプセル化し、交換可能にする" },
+              { "name": "Template Method: アルゴリズムの骨格を定義し、一部をサブクラスに委譲" },
+              { "name": "Visitor: オブジェクト構造から処理を分離" }
+            ]
+          }
+        ],
+        PracticalApplication: [
+          {
+            "name": "1. パターンの選び方",
+            "children": [
+              { "name": "問題の特定" },
+              { "name": "パターンの意図との照合" },
+              { "name": "トレードオフの考慮" }
+            ]
+          },
+          {
+            "name": "2. 軌道修正",
+            "children": [
+              { "name": "リファクタリングによる設計改善" }
+            ]
+          }
+        ]
+      },
+      created() {
+        this.filteredDPFundamentals = JSON.parse(JSON.stringify(this.DPFundamentals));
+        this.filteredCreationalPatterns = JSON.parse(JSON.stringify(this.CreationalPatterns));
+        this.filteredStructuralPatterns = JSON.parse(JSON.stringify(this.StructuralPatterns));
+        this.filteredBehavioralPatterns = JSON.parse(JSON.stringify(this.BehavioralPatterns));
+        this.filteredPracticalApplication = JSON.parse(JSON.stringify(this.PracticalApplication));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesDPFundamentals(newOpen) {
+          this.openNodesDPFundamentals = newOpen;
+        },
+        updateOpenNodesCreationalPatterns(newOpen) {
+          this.openNodesCreationalPatterns = newOpen;
+        },
+        updateOpenNodesStructuralPatterns(newOpen) {
+          this.openNodesStructuralPatterns = newOpen;
+        },
+        updateOpenNodesBehavioralPatterns(newOpen) {
+          this.openNodesBehavioralPatterns = newOpen;
+        },
+        updateOpenNodesPracticalApplication(newOpen) {
+          this.openNodesPracticalApplication = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredDPFundamentals = JSON.parse(JSON.stringify(this.DPFundamentals));
+            this.filteredCreationalPatterns = JSON.parse(JSON.stringify(this.CreationalPatterns));
+            this.filteredStructuralPatterns = JSON.parse(JSON.stringify(this.StructuralPatterns));
+            this.filteredBehavioralPatterns = JSON.parse(JSON.stringify(this.BehavioralPatterns));
+            this.filteredPracticalApplication = JSON.parse(JSON.stringify(this.PracticalApplication));
+            this.openNodesDPFundamentals = [];
+            this.openNodesCreationalPatterns = [];
+            this.openNodesStructuralPatterns = [];
+            this.openNodesBehavioralPatterns = [];
+            this.openNodesPracticalApplication = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredDPFundamentals = filterTree(JSON.parse(JSON.stringify(this.DPFundamentals)));
+          this.filteredCreationalPatterns = filterTree(JSON.parse(JSON.stringify(this.CreationalPatterns)));
+          this.filteredStructuralPatterns = filterTree(JSON.parse(JSON.stringify(this.StructuralPatterns)));
+          this.filteredBehavioralPatterns = filterTree(JSON.parse(JSON.stringify(this.BehavioralPatterns)));
+          this.filteredPracticalApplication = filterTree(JSON.parse(JSON.stringify(this.PracticalApplication)));
+
+          this.openNodesDPFundamentals = this.collectAllNodeIds(this.filteredDPFundamentals);
+          this.openNodesCreationalPatterns = this.collectAllNodeIds(this.filteredCreationalPatterns);
+          this.openNodesStructuralPatterns = this.collectAllNodeIds(this.filteredStructuralPatterns);
+          this.openNodesBehavioralPatterns = this.collectAllNodeIds(this.filteredBehavioralPatterns);
+          this.openNodesPracticalApplication = this.collectAllNodeIds(this.filteredPracticalApplication);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

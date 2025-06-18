@@ -930,22 +930,13 @@ Vue.component('main-navigation', {
 
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
-                        <v-list-item-title>Learning</v-list-item-title>
+                        <v-list-item-title>Programming</v-list-item-title>
                         <v-list-item-icon><v-icon>mdi-library-outline</v-icon></v-list-item-icon>
                     </template>
 
-
-                    <v-list-item href="./Learning_AI.html">
+                    <v-list-item href="./Note_Programming_DesignPattern.html">
                         <v-list-item-icon />
-                        <v-list-item-title>AI</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Learning_Quantum.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>量子コンピュータ</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Learning_AppliedInformation.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>応用情報技術者試験</v-list-item-title>
+                        <v-list-item-title>デザインパターン</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
 
@@ -963,8 +954,20 @@ Vue.component('main-navigation', {
                             <v-icon>mdi-lipstick</v-icon>
                         </v-list-item-icon>
                     </v-list-item>
-
                 </v-list-group>
+
+                <v-list-item href="./Note_AI.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>AI</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Note_Quantum.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>量子コンピュータ</v-list-item-title>
+                </v-list-item>
+                <v-list-item href="./Note_AppliedInformation.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>応用情報技術者試験</v-list-item-title>
+                </v-list-item>
                 
             </v-list-group>
             <!-- ▲ My Note ▲ ---------------------------------------------------------------------------------->
