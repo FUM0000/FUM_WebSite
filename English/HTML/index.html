@@ -10,7 +10,6 @@
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -68,7 +67,6 @@
 
 <body>
     <canvas id="ElectronShell"></canvas>
-
     <v-app id="App">
         <template>
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Home</main-system-bar>
@@ -77,7 +75,7 @@
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="align-content: flex-start;">
                         <v-container id="TextFlow">
-                            <span style="color: red"> &lt;NEWS&gt; </span> 
+                            <span style="color: red"> &lt;NEWS&gt; </span>
                             <span style="color: rgb(200, 200, 200)">
                                 June to July is the rainy season! Humid air sweeps across Japan. Umbrellas and raincoats
                                 are a must! Watch out for food poisoning and flooding.
@@ -102,17 +100,17 @@
     <script src="../../Asset/Javascript/Common.js"></script>
     <script src="../../Asset/Javascript/Index.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js" defer></script>
 
     <script>
-        let vue = new Vue({
+        window.vue = new Vue({
             el: '#App',
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Common, window.Mixins_Index],
@@ -125,6 +123,8 @@
     </script>
 
     <script type="module">
+        const vue = window.vue;
+
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x020202, 0, 5000);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
@@ -133,6 +133,7 @@
             antialias: true
         });
         renderer.setClearColor(0x010104, 1);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.toneMapping = THREE.ReinhardToneMapping;
         renderer.toneMappingExposure = 1.5;
@@ -157,7 +158,7 @@
 
         const voidTexture = generateNoiseTexture();
         const voidBackground = new THREE.Mesh(
-            new THREE.SphereGeometry(3000, 32, 32),
+            new THREE.SphereGeometry(3000, 16, 16),
             new THREE.MeshBasicMaterial({
                 map: voidTexture,
                 side: THREE.BackSide,
@@ -225,7 +226,7 @@
 
         const envMap = createProceduralCubeMap();
 
-        const liquidSphereGeometry = new THREE.SphereGeometry(3, 256, 256);
+        const liquidSphereGeometry = new THREE.SphereGeometry(3, 128, 128);
         const liquidShaderMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 time: { value: 0.0 },
@@ -247,147 +248,147 @@
                 rimColor: { value: new THREE.Color(0x00ccff) }
             },
             vertexShader: `
-                varying vec3 vNormal;
-                varying vec3 vWorldPosition;
-                varying vec3 vViewPosition;
-                uniform float time;
-                uniform float noiseScale;
-                uniform float noiseStrength;
-                uniform float flowSpeed;
+            varying vec3 vNormal;
+            varying vec3 vWorldPosition;
+            varying vec3 vViewPosition;
+            uniform float time;
+            uniform float noiseScale;
+            uniform float noiseStrength;
+            uniform float flowSpeed;
 
-                vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-                vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-                vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-                vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
 
-                float snoise(vec3 v) {
-                    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-                    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-                    vec3 i = floor(v + dot(v, C.yyy));
-                    vec3 x0 = v - i + dot(i, C.xxx);
-                    vec3 g = step(x0.yzx, x0.xyz);
-                    vec3 l = 1.0 - g;
-                    vec3 i1 = min(g.xyz, l.zxy);
-                    vec3 i2 = max(g.xyz, l.zxy);
-                    vec3 x1 = x0 - i1 + C.xxx;
-                    vec3 x2 = x0 - i2 + C.yyy;
-                    vec3 x3 = x0 - D.yyy;
-                    i = mod289(i);
-                    vec4 p = permute(permute(permute(
-                              i.z + vec4(0.0, i1.z, i2.z, 1.0))
-                            + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-                            + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-                    float n_ = 0.142857142857;
-                    vec3 ns = n_ * D.wyz - D.xzx;
-                    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-                    vec4 x_ = floor(j * ns.z);
-                    vec4 y_ = floor(j - 7.0 * x_);
-                    vec4 x = x_ * ns.x + ns.yyyy;
-                    vec4 y = y_ * ns.x + ns.yyyy;
-                    vec4 h = 1.0 - abs(x) - abs(y);
-                    vec4 b0 = vec4(x.xy, y.xy);
-                    vec4 b1 = vec4(x.zw, y.zw);
-                    vec4 s0 = floor(b0)*2.0 + 1.0;
-                    vec4 s1 = floor(b1)*2.0 + 1.0;
-                    vec4 sh = -step(h, vec4(0.0));
-                    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-                    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-                    vec3 p0 = vec3(a0.xy, h.x);
-                    vec3 p1 = vec3(a0.zw, h.y);
-                    vec3 p2 = vec3(a1.xy, h.z);
-                    vec3 p3 = vec3(a1.zw, h.w);
-                    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-                    p0 *= norm.x;
-                    p1 *= norm.y;
-                    p2 *= norm.z;
-                    p3 *= norm.w;
-                    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-                    m = m * m;
-                    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
-                }
+            float snoise(vec3 v) {
+                const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+                const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i = floor(v + dot(v, C.yyy));
+                vec3 x0 = v - i + dot(i, C.xxx);
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min(g.xyz, l.zxy);
+                vec3 i2 = max(g.xyz, l.zxy);
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i);
+                vec4 p = permute(permute(permute(
+                          i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+                float n_ = 0.142857142857;
+                vec3 ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_);
+                vec4 x = x_ * ns.x + ns.yyyy;
+                vec4 y = y_ * ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4(x.xy, y.xy);
+                vec4 b1 = vec4(x.zw, y.zw);
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+                vec3 p0 = vec3(a0.xy, h.x);
+                vec3 p1 = vec3(a0.zw, h.y);
+                vec3 p2 = vec3(a1.xy, h.z);
+                vec3 p3 = vec3(a1.zw, h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                p0 *= norm.x;
+                p1 *= norm.y;
+                p2 *= norm.z;
+                p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+            }
 
-                vec3 curlNoise(vec3 p) {
-                    const float e = 0.1;
-                    vec3 dx = vec3(e, 0.0, 0.0);
-                    vec3 dy = vec3(0.0, e, 0.0);
-                    vec3 dz = vec3(0.0, 0.0, e);
+            vec3 curlNoise(vec3 p) {
+                const float e = 0.1;
+                vec3 dx = vec3(e, 0.0, 0.0);
+                vec3 dy = vec3(0.0, e, 0.0);
+                vec3 dz = vec3(0.0, 0.0, e);
 
-                    float n0 = snoise(p);
-                    float n1 = snoise(p + dx);
-                    float n2 = snoise(p - dx);
-                    float n3 = snoise(p + dy);
-                    float n4 = snoise(p - dy);
-                    float n5 = snoise(p + dz);
-                    float n6 = snoise(p - dz);
+                float n0 = snoise(p);
+                float n1 = snoise(p + dx);
+                float n2 = snoise(p - dx);
+                float n3 = snoise(p + dy);
+                float n4 = snoise(p - dy);
+                float n5 = snoise(p + dz);
+                float n6 = snoise(p - dz);
 
-                    float dNdx = (n1 - n2) / (2.0 * e);
-                    float dNdy = (n3 - n4) / (2.0 * e);
-                    float dNdz = (n5 - n6) / (2.0 * e);
+                float dNdx = (n1 - n2) / (2.0 * e);
+                float dNdy = (n3 - n4) / (2.0 * e);
+                float dNdz = (n5 - n6) / (2.0 * e);
 
-                    vec3 curl;
-                    curl.x = dNdy - dNdz;
-                    curl.y = dNdz - dNdx;
-                    curl.z = dNdx - dNdy;
+                vec3 curl;
+                curl.x = dNdy - dNdz;
+                curl.y = dNdz - dNdx;
+                curl.z = dNdx - dNdy;
 
-                    return normalize(curl);
-                }
+                return normalize(curl);
+            }
 
-                void main() {
-                    vec3 pos = position;
-                    vec3 noisePos = pos * noiseScale + time * flowSpeed;
-                    vec3 curl = curlNoise(noisePos);
-                    pos += curl * noiseStrength;
-                    vNormal = normalize(normalMatrix * (normal + curl * noiseStrength));
-                    vec4 worldPosition = modelMatrix * vec4(pos, 1.0);
-                    vWorldPosition = worldPosition.xyz;
-                    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-                    vViewPosition = -mvPosition.xyz;
-                    gl_Position = projectionMatrix * mvPosition;
-                }
-            `,
+            void main() {
+                vec3 pos = position;
+                vec3 noisePos = pos * noiseScale + time * flowSpeed;
+                vec3 curl = curlNoise(noisePos);
+                pos += curl * noiseStrength;
+                vNormal = normalize(normalMatrix * (normal + curl * noiseStrength));
+                vec4 worldPosition = modelMatrix * vec4(pos, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                vViewPosition = -mvPosition.xyz;
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `,
             fragmentShader: `
-                uniform float time;
-                uniform vec3 baseColor;
-                uniform samplerCube envMap;
-                uniform vec3 viewPos;
-                uniform float cameraDistance;
-                uniform float fresnelPower;
-                uniform float fresnelScale;
-                uniform float fresnelBias;
-                uniform float specularStrength;
-                uniform float shininess;
-                uniform float scatteringStrength;
-                uniform float rimPower;
-                uniform float rimStrength;
-                uniform vec3 rimColor;
-                varying vec3 vNormal;
-                varying vec3 vWorldPosition;
-                varying vec3 vViewPosition;
+            uniform float time;
+            uniform vec3 baseColor;
+            uniform samplerCube envMap;
+            uniform vec3 viewPos;
+            uniform float cameraDistance;
+            uniform float fresnelPower;
+            uniform float fresnelScale;
+            uniform float fresnelBias;
+            uniform float specularStrength;
+            uniform float shininess;
+            uniform float scatteringStrength;
+            uniform float rimPower;
+            uniform float rimStrength;
+            uniform vec3 rimColor;
+            varying vec3 vNormal;
+            varying vec3 vWorldPosition;
+            varying vec3 vViewPosition;
 
-                void main() {
-                    vec3 normal = normalize(vNormal);
-                    vec3 viewDir = normalize(viewPos - vWorldPosition);
-                    float distanceFactor = clamp(8.0 / cameraDistance, 0.3, 1.0);
-                    float fresnel = fresnelBias + fresnelScale * pow(1.0 - max(dot(normal, viewDir), 0.0), fresnelPower);
-                    fresnel *= distanceFactor;
-                    float rim = rimStrength * pow(1.0 - max(dot(normal, viewDir), 0.0), rimPower);
-                    rim *= distanceFactor;
-                    vec3 reflectDir = reflect(-viewDir, normal);
-                    vec3 reflection = textureCube(envMap, reflectDir).rgb;
-                    reflection *= distanceFactor;
-                    vec3 lightDir = normalize(vec3(5.0, 5.0, 5.0));
-                    vec3 halfwayDir = normalize(lightDir + viewDir);
-                    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
-                    vec3 specular = specularStrength * spec * vec3(1.0);
-                    specular *= distanceFactor;
-                    float scatter = scatteringStrength * (1.0 - max(dot(normal, viewDir), 0.0));
-                    vec3 color = baseColor + reflection * fresnel + specular;
-                    color += vec3(0.1, 0.2, 0.3) * scatter;
-                    color += rim * rimColor;
-                    float alpha = 0.25;
-                    gl_FragColor = vec4(color, alpha);
-                }
-            `,
+            void main() {
+                vec3 normal = normalize(vNormal);
+                vec3 viewDir = normalize(viewPos - vWorldPosition);
+                float distanceFactor = clamp(8.0 / cameraDistance, 0.3, 1.0);
+                float fresnel = fresnelBias + fresnelScale * pow(1.0 - max(dot(normal, viewDir), 0.0), fresnelPower);
+                fresnel *= distanceFactor;
+                float rim = rimStrength * pow(1.0 - max(dot(normal, viewDir), 0.0), rimPower);
+                rim *= distanceFactor;
+                vec3 reflectDir = reflect(-viewDir, normal);
+                vec3 reflection = textureCube(envMap, reflectDir).rgb;
+                reflection *= distanceFactor;
+                vec3 lightDir = normalize(vec3(5.0, 5.0, 5.0));
+                vec3 halfwayDir = normalize(lightDir + viewDir);
+                float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
+                vec3 specular = specularStrength * spec * vec3(1.0);
+                specular *= distanceFactor;
+                float scatter = scatteringStrength * (1.0 - max(dot(normal, viewDir), 0.0));
+                vec3 color = baseColor + reflection * fresnel + specular;
+                color += vec3(0.1, 0.2, 0.3) * scatter;
+                color += rim * rimColor;
+                float alpha = 0.25;
+                gl_FragColor = vec4(color, alpha);
+            }
+        `,
             transparent: true,
             side: THREE.DoubleSide,
             depthWrite: false
@@ -420,16 +421,16 @@
 
         const mouse = new THREE.Vector2();
         const raycaster = new THREE.Raycaster();
+        const intersectionPoint = new THREE.Vector3();
 
         const cursorParticles = [];
         const cursorParticleGeometry = new THREE.BufferGeometry();
+        // 修正: emissiveとemissiveIntensityを削除
         const cursorParticleMaterial = new THREE.PointsMaterial({
             color: 0x00ffcc,
             size: isMobile ? 0.1 : 0.05,
             transparent: true,
             opacity: 0.8,
-            emissive: 0x00ffcc,
-            emissiveIntensity: 2.0
         });
 
         const electronShells = [
@@ -441,17 +442,16 @@
         ];
 
         const totalElectrons = electronShells.reduce((sum, shell) => sum + shell.electrons, 0);
-        const pointSize = isMobile ? 0.3 : 0.15;
-        const connectionDistance = Math.PI * 2;
+        const pointSize = isMobile ? 0.25 : 0.12;
+        const connectionDistance = 4.5;
         const avoidanceDistance = 1.2;
         const repulsionStrength = 0.02;
 
+        // 修正: emissiveとemissiveIntensityを削除
         const pointMaterial = new THREE.PointsMaterial({
             color: 0x00ffcc,
             size: pointSize,
             sizeAttenuation: true,
-            emissive: 0x00ffcc,
-            emissiveIntensity: 2.0,
             fog: true
         });
 
@@ -495,17 +495,15 @@
         const pointCloud = new THREE.Points(pointGeometry, pointMaterial);
         scene.add(pointCloud);
 
+        // 修正: emissiveとemissiveIntensityを削除
         const lineMaterial = new THREE.LineBasicMaterial({
             color: 0x00ffff,
             transparent: true,
             opacity: isMobile ? 0.2 : 0.1,
-            emissive: 0x00ffff,
-            emissiveIntensity: 1.5,
             fog: true
         });
 
         let lineSegments;
-        // モバイルでない場合のみ線描画オブジェクトを生成
         if (!isMobile) {
             const lineGeometry = new THREE.BufferGeometry();
             lineSegments = new THREE.LineSegments(lineGeometry, lineMaterial);
@@ -518,13 +516,13 @@
 
         const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight));
         bloomPass.threshold = 0;
-        // モバイルではBloom効果を弱める
+        // パフォーマンス向上のためBloom効果をさらに調整
         if (isMobile) {
-            bloomPass.strength = 0.6;
-            bloomPass.radius = 0.5;
+            bloomPass.strength = 0.4;
+            bloomPass.radius = 0.3;
         } else {
-            bloomPass.strength = 1.2;
-            bloomPass.radius = 1.0;
+            bloomPass.strength = 0.9;
+            bloomPass.radius = 0.7;
         }
         composer.addPass(bloomPass);
 
@@ -543,66 +541,66 @@
                 'col_s': { value: 0.05 }
             },
             vertexShader: `
-            varying vec2 vUv;
-            void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `,
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
             fragmentShader: `
-            uniform int byp;
-            uniform sampler2D tDiffuse;
-            uniform sampler2D tDisp;
-            uniform float amount;
-            uniform float angle;
-            uniform float seed;
-            float seed_x;
-            uniform float seed_y;
-            uniform float distortion_x;
-            uniform float distortion_y;
-            uniform float col_s;
-            varying vec2 vUv;
+        uniform int byp;
+        uniform sampler2D tDiffuse;
+        uniform sampler2D tDisp;
+        uniform float amount;
+        uniform float angle;
+        uniform float seed;
+        float seed_x;
+        uniform float seed_y;
+        uniform float distortion_x;
+        uniform float distortion_y;
+        uniform float col_s;
+        varying vec2 vUv;
 
-            float rand(vec2 co) {
-                return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
-            }
+        float rand(vec2 co) {
+            return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        }
 
-            void main() {
-                if (byp < 1) {
-                    vec2 p = vUv;
-                    if (amount > 0.0) {
-                        float xs = floor(gl_FragCoord.x / 0.5);
-                        float ys = floor(gl_FragCoord.y / 0.5);
-                        vec4 normal = texture2D(tDisp, p * seed * seed);
-                        if (p.y < distortion_x + col_s && p.y > distortion_x - col_s * seed) {
-                            if (seed_x > 0.0) {
-                                p.y = 1.0 - (p.y + distortion_y);
-                            } else {
-                                p.y = distortion_y;
-                            }
+        void main() {
+            if (byp < 1) {
+                vec2 p = vUv;
+                if (amount > 0.0) {
+                    float xs = floor(gl_FragCoord.x / 0.5);
+                    float ys = floor(gl_FragCoord.y / 0.5);
+                    vec4 normal = texture2D(tDisp, p * seed * seed);
+                    if (p.y < distortion_x + col_s && p.y > distortion_x - col_s * seed) {
+                        if (seed_x > 0.0) {
+                            p.y = 1.0 - (p.y + distortion_y);
+                        } else {
+                            p.y = distortion_y;
                         }
-                        if (p.x < distortion_y + col_s && p.x > distortion_y - col_s * seed) {
-                            if (seed_y > 0.0) {
-                                p.x = distortion_x;
-                            } else {
-                                p.x = 1.0 - (p.x + distortion_x);
-                            }
-                        }
-                        p.x += normal.x * seed_x * (seed / 5.0);
-                        p.y += normal.y * seed_y * (seed / 5.0);
-                        vec2 offset = amount * vec2(cos(angle), sin(angle));
-                        vec4 cr = texture2D(tDiffuse, p + offset);
-                        vec4 cga = texture2D(tDiffuse, p);
-                        vec4 cb = texture2D(tDiffuse, p - offset);
-                        gl_FragColor = vec4(cr.r, cga.g, cb.b, 1.0);
-                    } else {
-                        gl_FragColor = texture2D(tDiffuse, p);
                     }
+                    if (p.x < distortion_y + col_s && p.x > distortion_y - col_s * seed) {
+                        if (seed_y > 0.0) {
+                            p.x = distortion_x;
+                        } else {
+                            p.x = 1.0 - (p.x + distortion_x);
+                        }
+                    }
+                    p.x += normal.x * seed_x * (seed / 5.0);
+                    p.y += normal.y * seed_y * (seed / 5.0);
+                    vec2 offset = amount * vec2(cos(angle), sin(angle));
+                    vec4 cr = texture2D(tDiffuse, p + offset);
+                    vec4 cga = texture2D(tDiffuse, p);
+                    vec4 cb = texture2D(tDiffuse, p - offset);
+                    gl_FragColor = vec4(cr.r, cga.g, cb.b, 1.0);
                 } else {
-                    gl_FragColor = texture2D(tDiffuse, vUv);
+                    gl_FragColor = texture2D(tDiffuse, p);
                 }
+            } else {
+                gl_FragColor = texture2D(tDiffuse, vUv);
             }
-        `
+        }
+    `
         };
 
         function generateNoiseTextureForGlitch(size = 64) {
@@ -622,7 +620,6 @@
             glitchPass.renderToScreen = true;
             composer.addPass(glitchPass);
         } else {
-            // Glitchがない場合、Bloomが最後の描画パスになる
             bloomPass.renderToScreen = true;
         }
 
@@ -765,7 +762,7 @@
             lineSegments.geometry.computeBoundingSphere();
         }
 
-        const galaxyCount = isMobile ? 10 : 50;
+        const galaxyCount = isMobile ? 8 : 40;
         const galaxyPositions = new Float32Array(galaxyCount * 3);
         const galaxyColors = new Float32Array(galaxyCount * 3);
         for (let i = 0; i < galaxyCount; i++) {
@@ -877,68 +874,48 @@
         let countDistance = Math.PI;
         let countTheata = Math.PI;
         let time = 0.0;
+        let frameCount = 0;
 
         const messages = ["Hi!", "Welcome to FUM Website!", "How are you?", "May I help you?", "Space is vast…", "Let's explore!", "It's fun to learn something new, …isn't it?", "I wonder if SpaceX will take me to space…", "What is that flying around me…?", "I'm FUM. Nice to meet you.", "…", "He may well be bored…"];
-        const MESSAGE_DISTANCE_THRESHOLD = 35; // この距離より近づくとメッセージ表示
+        const MESSAGE_DISTANCE_THRESHOLD = 35;
         let messageVisible = false;
         let messageCooldown = false;
 
         function updateSpeechBubble() {
-            // liquidSphereが生成されるまで何もしない
-            if (!liquidSphere) return;
+            if (!liquidSphere || !vue) return;
 
             const distance = camera.position.distanceTo(liquidSphere.position);
 
-            // 条件を満たしたらメッセージを表示する
             if (distance < MESSAGE_DISTANCE_THRESHOLD && !messageVisible && !messageCooldown) {
                 messageVisible = true;
-                messageCooldown = true; // クールダウン開始
+                messageCooldown = true;
                 vue.ShowMessage = true;
 
-                // メッセージをランダムに選択
                 const randomIndex = Math.floor(Math.random() * messages.length);
                 vue.CurrentMessage = messages[randomIndex];
 
-                // 4秒後にメッセージを非表示にする
                 setTimeout(() => {
                     messageVisible = false;
                     vue.ShowMessage = false;
-                    // メッセージが消えてから3秒間は再表示しない
                     setTimeout(() => {
                         messageCooldown = false;
                     }, 3000);
                 }, 4000);
             }
 
-            // メッセージが表示されている間、位置を更新し続ける
             if (vue.ShowMessage) {
-                // 3D座標を2Dスクリーン座標に変換
                 const screenPosition = liquidSphere.position.clone().project(camera);
                 const x = (screenPosition.x * 0.5 + 0.5) * window.innerWidth;
-
-                // --- ▼ ここからが距離に応じた位置調整ロジックです ▼ ---
-
-                // メッセージが表示される距離の範囲を定義します
-                const MAX_DISTANCE = MESSAGE_DISTANCE_THRESHOLD; // 遠い方の基準 (現在 35)
-                const MIN_DISTANCE = 15; // 近い方の基準（この値はお好みで調整してください）
-
-                // 現在の距離を取得し、0(遠い)～1(近い)の間の値に正規化します
+                const MAX_DISTANCE = MESSAGE_DISTANCE_THRESHOLD;
+                const MIN_DISTANCE = 15;
                 const currentDistance = camera.position.distanceTo(liquidSphere.position);
                 let proximityFactor = (MAX_DISTANCE - currentDistance) / (MAX_DISTANCE - MIN_DISTANCE);
-                proximityFactor = Math.max(0, Math.min(1, proximityFactor)); // 0～1の範囲に収める
-
-                // 吹き出しのY位置を定義します
-                const yOffsetFar = 0.45;   // カメラが遠い時の位置（球体に近い）
-                const yOffsetClose = 0.38; // カメラが近い時の位置（球体から離す）
-
-                // 正規化した値を使って、現在の距離に最適なY位置を計算します
+                proximityFactor = Math.max(0, Math.min(1, proximityFactor));
+                const yOffsetFar = 0.45;
+                const yOffsetClose = 0.38;
                 const dynamicOffsetY = yOffsetFar + (yOffsetClose - yOffsetFar) * proximityFactor;
-
                 const y = (-screenPosition.y * 0.5 + dynamicOffsetY) * window.innerHeight;
 
-                // --- ▲ ここまでが調整ロジックです ▲ ---
-
-                // Vueのdataを更新してCSSを適用
                 vue.MessageStyle = {
                     top: `${y}px`,
                     left: `${x}px`
@@ -947,6 +924,8 @@
         }
 
         function animate() {
+            requestAnimationFrame(animate);
+
             const currentTime = performance.now();
             const deltaTime = (currentTime - lastTime) / 1000;
             lastTime = currentTime;
@@ -1004,8 +983,12 @@
             }
 
             animatePoints();
+            // 修正: 負荷の高い処理の実行頻度をさらに落とす (4フレームに1回)
             if (!isMobile) {
-                updateLines();
+                frameCount++;
+                if (frameCount % 4 === 0) {
+                    updateLines();
+                }
             }
             updateCursorParticles();
             controls.update();
@@ -1014,17 +997,15 @@
                 updateGlitch();
             }
             updateSpeechBubble();
-
-            requestAnimationFrame(animate);
         }
 
         function onMouseMove(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
-            const intersection = raycaster.ray.at(20);
+            raycaster.ray.at(20, intersectionPoint);
             if (Math.random() < 0.5) {
-                createCursorParticle(intersection.x, intersection.y, intersection.z);
+                createCursorParticle(intersectionPoint.x, intersectionPoint.y, intersectionPoint.z);
             }
         }
 
@@ -1075,7 +1056,8 @@
         };
 
         function createUniverseDetail() {
-            const starCount = isMobile ? 2000 : 10000;
+            // パフォーマンス向上のためパーティクル数をさらに削減
+            const starCount = isMobile ? 500 : 4000;
             const starPositions = new Float32Array(starCount * 3);
             const starColors = new Float32Array(starCount * 3);
             for (let i = 0; i < starCount; i++) {
@@ -1106,7 +1088,7 @@
             const starField = new THREE.Points(starGeometry, starMaterial);
             scene.add(starField);
 
-            const galaxyStars = isMobile ? 500 : 3000;
+            const galaxyStars = isMobile ? 500 : 1000;
             const galaxyPositions = new Float32Array(galaxyStars * 3);
             const galaxyColors = new Float32Array(galaxyStars * 3);
             const spiralArms = 4;
@@ -1155,10 +1137,10 @@
             galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
             const galaxyMaterial = new THREE.PointsMaterial({
                 vertexColors: true,
-                size: isMobile ? 0.2 : 0.1,
+                size: isMobile ? 0.4 : 0.1,
                 sizeAttenuation: true,
                 transparent: true,
-                opacity: 0.3,
+                opacity: isMobile ? 0.5 : 0.3,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false,
                 fog: true
@@ -1166,7 +1148,7 @@
             const galaxyField = new THREE.Points(galaxyGeometry, galaxyMaterial);
             scene.add(galaxyField);
 
-            const nebulaCount = isMobile ? 300 : 2000;
+            const nebulaCount = isMobile ? 100 : 800;
             const nebulaPositions = new Float32Array(nebulaCount * 3);
             const nebulaColors = new Float32Array(nebulaCount * 3);
             const nebulaMinRadius = 100;
@@ -1221,7 +1203,7 @@
             }
 
             const sparkleTexture = createSparkleTexture();
-            const sparkleCount = isMobile ? 100 : 500;
+            const sparkleCount = isMobile ? 30 : 150;
             for (let i = 0; i < sparkleCount; i++) {
                 const r = 3000 + Math.random() * 1000;
                 const theta = Math.acos(2 * Math.random() - 1);
@@ -1246,7 +1228,7 @@
                 scene.add(sprite);
             }
 
-            const clusterCount = isMobile ? 3 : 10;
+            const clusterCount = isMobile ? 1 : 4;
             for (let c = 0; c < clusterCount; c++) {
                 const clusterRadius = 3000 + Math.random() * 2000;
                 const clusterTheta = Math.acos(2 * Math.random() - 1);
@@ -1296,7 +1278,7 @@
                 }
             }
 
-            const distantGalaxyCount = isMobile ? 200 : 1000;
+            const distantGalaxyCount = isMobile ? 50 : 300;
             for (let g = 0; g < distantGalaxyCount; g++) {
                 const particleCount = 200 + Math.floor(Math.random() * 600);
                 const galaxyRadius = 1500 + Math.random() * 2000;
@@ -1333,8 +1315,7 @@
                 scene.add(distantField);
             }
 
-            // Adding 10 black holes
-            const blackHoleCount = isMobile ? 3 : 10;
+            const blackHoleCount = isMobile ? 1 : 3;
             const blackHoleMaterial = new THREE.MeshBasicMaterial({
                 color: 0x000000,
                 fog: false
