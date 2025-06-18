@@ -27,9 +27,23 @@
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
     <title>Introduction</title>
+
+    <style>
+        #interactive-ring {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            /* コンテンツの前面、UI要素の背面に表示 */
+            pointer-events: none;
+            /* Canvasがクリック等の操作を妨げないようにする */
+        }
+    </style>
 </head>
 
 <body>
+
+    <canvas id="interactive-ring"></canvas>
 
     <v-app id="App">
         <template>
@@ -101,7 +115,7 @@
                 ThemeContents: {
                     'Greeting': [
                         `
-                            Hello!<br>Welcome to "FUM Website"!
+                            Hello!<br>Welcome to "FUM_Website"!
                         `,
                         `
                             This Website is created to pack everything about my idea.<br><br>
@@ -184,6 +198,74 @@
                 ResetNumber() { this.PageNumber = 0; },
             }
         })
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('interactive-ring');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let width, height;
+            const mouse = { x: 0, y: 0, radius: 150 };
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                mouse.x = width / 2;
+                mouse.y = height / 2;
+            }
+
+            window.addEventListener('resize', resize);
+            window.addEventListener('mousemove', e => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+            resize();
+
+            const numPoints = 150;
+            const baseRadius = Math.min(width, height) * 0.3;
+            const waveAmplitude = 25;
+            let angle = 0;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                ctx.clearRect(0, 0, width, height);
+                ctx.beginPath();
+
+                for (let i = 0; i <= numPoints; i++) {
+                    const t = (i / numPoints) * Math.PI * 2;
+                    const wave = Math.sin(t * 6 + angle) * waveAmplitude;
+                    let r = baseRadius + wave;
+
+                    const pointX = width / 2 + Math.cos(t) * r;
+                    const pointY = height / 2 + Math.sin(t) * r;
+
+                    const dx = pointX - mouse.x;
+                    const dy = pointY - mouse.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < mouse.radius) {
+                        const force = (mouse.radius - dist) / mouse.radius;
+                        r += force * 60;
+                    }
+
+                    const finalX = width / 2 + Math.cos(t) * r;
+                    const finalY = height / 2 + Math.sin(t) * r;
+
+                    if (i === 0) {
+                        ctx.moveTo(finalX, finalY);
+                    } else {
+                        ctx.lineTo(finalX, finalY);
+                    }
+                }
+
+                ctx.strokeStyle = 'rgba(63, 81, 181, 0.4)'; // Vuetifyのprimaryカラーに似せた半透明の色
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                angle += 0.02;
+            }
+            animate();
+        });
 
     </script>
 
