@@ -125,6 +125,7 @@
 
     <script type="module">
         const vue = window.vue;
+        let textMeshMouthClosed, textMeshMouthOpen;
 
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x020202, 0, 5000);
@@ -173,9 +174,33 @@
 
         const loader = new THREE.FontLoader();
         loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-            const textGeometry = new THREE.TextGeometry('^._.^', {
+            const textGeometry1 = new THREE.TextGeometry('^. .^', {
                 font: font,
                 size: 2,
+                height: 0.25,
+                curveSegments: 2,
+                bevelEnabled: true,
+                bevelThickness: 0,
+                bevelSize: 0.02,
+                bevelOffset: 0,
+                bevelSegments: 0
+            });
+
+            const textGeometryMouthClosed = new THREE.TextGeometry('-', {
+                font: font,
+                size: 1,
+                height: 0.25,
+                curveSegments: 2,
+                bevelEnabled: true,
+                bevelThickness: 0,
+                bevelSize: 0.02,
+                bevelOffset: 0,
+                bevelSegments: 0
+            });
+
+            const textGeometryMouthOpen = new THREE.TextGeometry('o', {
+                font: font,
+                size: 1,
                 height: 0.25,
                 curveSegments: 2,
                 bevelEnabled: true,
@@ -193,11 +218,27 @@
                 fog: true
             });
 
-            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-            textGeometry.computeBoundingBox();
-            const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x;
-            textMesh.position.set(-textWidth / 2 - 0.35, 0, 0);
-            scene.add(textMesh);
+            const textMesh1 = new THREE.Mesh(textGeometry1, textMaterial);
+            textMeshMouthClosed = new THREE.Mesh(textGeometryMouthClosed, textMaterial);
+            textMeshMouthOpen = new THREE.Mesh(textGeometryMouthOpen, textMaterial);
+
+            textGeometry1.computeBoundingBox();
+            const textWidth1 = textGeometry1.boundingBox.max.x - textGeometry1.boundingBox.min.x;
+            textMesh1.position.set(-textWidth1 / 2 - 0.35, 0, 0);
+
+            textGeometryMouthClosed.computeBoundingBox();
+            const textWidthClosed = textGeometryMouthClosed.boundingBox.max.x - textGeometryMouthClosed.boundingBox.min.x;
+            textMeshMouthClosed.position.set(-textWidthClosed / 2 - 0.1, -1, 0);
+
+            textGeometryMouthOpen.computeBoundingBox();
+            const textWidthOpen = textGeometryMouthOpen.boundingBox.max.x - textGeometryMouthOpen.boundingBox.min.x;
+            textMeshMouthOpen.position.set(-textWidthOpen / 2 - 0.025, -0.5, 0); // 口を開いたように少し下に配置
+
+            textMeshMouthOpen.visible = false; // 初期状態は非表示
+
+            scene.add(textMesh1);
+            scene.add(textMeshMouthClosed);
+            scene.add(textMeshMouthOpen);
 
             const light = new THREE.PointLight(0x00ffcc, 1);
             light.position.set(0, 0, 5);
@@ -996,6 +1037,17 @@
             composer.render();
             if (!isMobile) {
                 updateGlitch();
+            }
+            // 口パクアニメーション
+            if (vue && vue.ShowMessage && textMeshMouthClosed && textMeshMouthOpen) {
+                // 0.25秒ごとに切り替え
+                const isMouthOpen = Math.floor(time * 2) % 2 === 0;
+                textMeshMouthClosed.visible = !isMouthOpen;
+                textMeshMouthOpen.visible = isMouthOpen;
+            } else if (textMeshMouthClosed && textMeshMouthOpen) {
+                // 吹き出しが非表示のときは口を閉じる
+                textMeshMouthClosed.visible = true;
+                textMeshMouthOpen.visible = false;
             }
             updateSpeechBubble();
         }
