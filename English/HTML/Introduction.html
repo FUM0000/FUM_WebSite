@@ -59,7 +59,11 @@
             font-weight: 500;
             color: #333;
             display: flex;
+            /* ▼▼▼ 以下2行を変更 ▼▼▼ */
+            font-size: 15px;
+            /* フォントサイズの基準を指定 */
             align-items: center;
+            /* ▲▲▲ ここまで変更 ▲▲▲ */
             justify-content: center;
             text-align: center;
             backdrop-filter: blur(5px);
@@ -186,7 +190,14 @@
             opacity: 0;
         }
 
-        /* ▲▲▲ ここまで追記 ▲▲▲ */
+        @media (max-width: 768px) {
+            .theme-bubble {
+                font-size: 12px;
+                /* スマホ用にフォントを小さく */
+                padding: 10px;
+                /* パディングも調整 */
+            }
+        }
     </style>
 </head>
 
@@ -205,7 +216,8 @@
                         <div id="interactive-space">
                             <div v-for="bubble in bubbles" :key="bubble.theme" class="theme-bubble"
                                 :class="{ 'is-dragging': bubble.isDragging }" :style="bubble.style"
-                                @click="handleBubbleClick(bubble)" @mousedown.prevent="dragStart(bubble, $event)">
+                                @click="handleBubbleClick(bubble)" @mousedown.prevent="dragStart(bubble, $event)"
+                                @touchstart.prevent="dragStart(bubble, $event)">
                                 {{ bubble.theme }}
                             </div>
                         </div>
@@ -352,7 +364,7 @@
                 },
                 typewriterTimer: null,
                 draggedBubble: null,
-                dragInfo: { lastX: 0, lastY: 0, lastTime: 0, vx: 0, vy: 0 },
+                dragInfo: { lastX: 0, lastY: 0, lastTime: 0, vx: 0, vy: 0, moveEvent: null, upEvent: null },
                 didDrag: false, // ドラッグ操作とクリックを区別するためのフラグ
             },
             mounted() {
@@ -376,9 +388,14 @@
                     const centerY = containerRect.height / 2;
 
                     this.bubbles = this.Themes.map(theme => {
-                        const size = 120 + Math.random() * 40; // バブルの大きさをランダムに
+
+                        const isMobile = window.innerWidth < 768;
+                        const baseSize = isMobile ? 80 : 120;
+                        const randomFactor = isMobile ? 30 : 40;
+
+                        const size = baseSize + Math.random() * randomFactor;
                         const angle = Math.random() * 2 * Math.PI;
-                        const radius = Math.min(centerX, centerY) * (0.4 + Math.random() * 0.4);
+                        const radius = Math.min(centerX, centerY) * (isMobile ? 0.35 : (0.4 + Math.random() * 0.4));
 
                         // ▼▼▼ 以下のように変更 ▼▼▼
                         const initialX = centerX + Math.cos(angle) * radius;
@@ -412,6 +429,15 @@
 
                         // ドラッグ中のバブルは物理計算をスキップ
                         if (b1.isDragging) continue;
+
+                        // 常に微小なランダムな力を加えて動きを維持
+                        b1.vx += (Math.random() - 0.5) * 0.02;
+                        b1.vy += (Math.random() - 0.5) * 0.02;
+
+                        // 速度に上限を設ける
+                        const maxSpeed = 10;
+                        b1.vx = Math.max(-maxSpeed, Math.min(maxSpeed, b1.vx));
+                        b1.vy = Math.max(-maxSpeed, Math.min(maxSpeed, b1.vy));
 
                         // 摩擦で速度を減衰
                         b1.vx *= 0.99;
@@ -452,12 +478,20 @@
 
                     this.didDrag = false;
                     this.draggedBubble = bubble;
+
+                    const isTouchEvent = event.type === 'touchstart';
+                    const moveEvent = isTouchEvent ? 'touchmove' : 'mousemove';
+                    const upEvent = isTouchEvent ? 'touchend' : 'mouseup';
+                    this.dragInfo.moveEvent = moveEvent;
+                    this.dragInfo.upEvent = upEvent;
+
                     bubble.isDragging = true;
 
                     // 速度計算のための初期情報を記録
+                    const point = isTouchEvent ? event.touches[0] : event;
                     const rect = event.target.closest('#interactive-space').getBoundingClientRect();
-                    this.dragInfo.lastX = event.clientX - rect.left;
-                    this.dragInfo.lastY = event.clientY - rect.top;
+                    this.dragInfo.lastX = point.clientX - rect.left;
+                    this.dragInfo.lastY = point.clientY - rect.top;
                     this.dragInfo.lastTime = Date.now();
                     this.dragInfo.vx = 0;
                     this.dragInfo.vy = 0;
@@ -466,17 +500,19 @@
                     bubble.vx = 0;
                     bubble.vy = 0;
 
-                    window.addEventListener('mousemove', this.dragMove);
-                    window.addEventListener('mouseup', this.dragEnd, { once: true }); // 1回で解除
+                    window.addEventListener(moveEvent, this.dragMove, { passive: false });
+                    window.addEventListener(upEvent, this.dragEnd, { once: true });
                 },
 
                 dragMove(event) {
+                    if (event.cancelable) event.preventDefault(); // スマホでのスクロールを防止
                     if (!this.draggedBubble) return;
                     this.didDrag = true;
 
+                    const point = event.touches ? event.touches[0] : event;
                     const rect = document.getElementById('interactive-space').getBoundingClientRect();
-                    const newX = event.clientX - rect.left;
-                    const newY = event.clientY - rect.top;
+                    const newX = point.clientX - rect.left;
+                    const newY = point.clientY - rect.top;
 
                     const now = Date.now();
                     const dt = now - this.dragInfo.lastTime;
@@ -501,7 +537,7 @@
                     this.draggedBubble.isDragging = false;
                     this.draggedBubble = null;
 
-                    window.removeEventListener('mousemove', this.dragMove);
+                    window.removeEventListener(this.dragInfo.moveEvent, this.dragMove);
 
                     // クリックイベントを発火させないように少し待つ
                     setTimeout(() => { this.didDrag = false; }, 50);
