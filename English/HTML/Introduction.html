@@ -530,16 +530,24 @@
                 dragEnd() {
                     if (!this.draggedBubble) return;
 
-                    // 離した瞬間の勢いをバブルに与える
-                    this.draggedBubble.vx = this.dragInfo.vx * 20; // 勢いを調整
-                    this.draggedBubble.vy = this.dragInfo.vy * 20;
+                    window.removeEventListener(this.dragInfo.moveEvent, this.dragMove);
+
+                    // didDragフラグが false の場合、それはドラッグではなくタップ操作とみなす
+                    if (!this.didDrag) {
+                        // タップなのでモーダルを開く
+                        this.openModal(this.draggedBubble.theme);
+                        // 後続で click イベントが発火してもモーダルが二重に開かないよう、一時的にフラグを立てる
+                        this.didDrag = true;
+                    } else {
+                        // ドラッグ操作の場合、離した瞬間の勢いをバブルに与える
+                        this.draggedBubble.vx = this.dragInfo.vx * 20;
+                        this.draggedBubble.vy = this.dragInfo.vy * 20;
+                    }
 
                     this.draggedBubble.isDragging = false;
                     this.draggedBubble = null;
 
-                    window.removeEventListener(this.dragInfo.moveEvent, this.dragMove);
-
-                    // クリックイベントを発火させないように少し待つ
+                    // 次の操作に備えて、didDrag フラグを少し遅れてリセットする
                     setTimeout(() => { this.didDrag = false; }, 50);
                 },
 
