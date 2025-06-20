@@ -26,7 +26,96 @@
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
 
-    <title></title>
+    <title>Music > Show-Go</title>
+    <style>
+        #YouTubePlayerContainer {
+            position: fixed;
+            bottom: 52px;
+            right: 20px;
+            width: 480px;
+            height: 270px;
+            z-index: -1;
+            pointer-events: auto;
+            transition: z-index 0.1s;
+        }
+
+        #YouTubePlayerContainer.active {
+            z-index: 5;
+        }
+
+        #ClosePlayerButton {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 12;
+            transition: background-color 0.3s;
+        }
+
+        #ClosePlayerButton:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        #PlaybackOptions {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            z-index: 12;
+        }
+
+        #PlaybackOptions label {
+            margin-right: 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        #PlaybackOptions input[type="radio"] {
+            margin-right: 4px;
+        }
+
+        .timeline-item-clickable {
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            #YouTubePlayerContainer {
+                width: 90vw;
+                height: calc(90vw * 9 / 16);
+                bottom: 52px;
+                right: 10px;
+            }
+
+            #ClosePlayerButton {
+                top: -36px;
+                right: 5px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            #PlaybackOptions {
+                top: -36px;
+                left: 5px;
+                padding: 6px;
+            }
+
+            #PlaybackOptions label {
+                font-size: 12px;
+                margin-right: 8px;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -39,6 +128,15 @@
             <v-main id="Main">
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
+
+                        <div id="YouTubePlayerContainer">
+                            <button id="ClosePlayerButton" @click="closePlayer" style="display: none;">Close Player</button>
+                            <div id="PlaybackOptions" style="display: none;">
+                                <label><input type="radio" name="playMode" value="loop" v-model="playMode"> Loop</label>
+                                <label><input type="radio" name="playMode" value="next" v-model="playMode"> Next Video</label>
+                            </div>
+                            <div id="YouTubePlayer"></div>
+                        </div>
 
                         <div class="year-navigation-minimal" style="z-index: 1;">
                             <v-btn @click="Toggle_PageNavigation" class="toggle-btn"
@@ -120,9 +218,15 @@
                                                     :class="`timeline-title font-weight-light mb-4`">
                                                     {{ content.title }}
                                                 </h2>
-                                                <iframe class="Youtube_Animation" :src="content.url" frameborder="0"
-                                                    allow="encrypted-media;"
-                                                    permissions="compute-pressure" allowfullscreen></iframe>
+                                                <v-img :src="getThumbnailUrl(content.url)"
+                                                    class="Youtube_Animation timeline-item-clickable"
+                                                    @click="playVideo(content, i)" aspect-ratio="1.77"
+                                                    gradient="to top right, rgba(100,115,201,.1), rgba(25,32,72,.4)">
+                                                    <v-row class="fill-height ma-0" align="center" justify="center">
+                                                        <v-icon size="32" color="rgba(255, 255, 255, 0.7)">
+                                                            mdi-play-circle-outline</v-icon>
+                                                    </v-row>
+                                                </v-img>
                                             </v-col>
                                         </v-row>
                                     </v-timeline-item>
@@ -140,13 +244,13 @@
         </template>
     </v-app>
 
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="../../Asset/Javascript/Common.js"></script>
 
     <script>
-
         let vue = new Vue({
             el: '#App',
             vuetify: new Vuetify(),
@@ -168,8 +272,95 @@
                     { year: '2024/03', color: 'hsl(20, 75%, 65%)', title: 'Shine Bright!', url: 'https://www.youtube-nocookie.com/embed/VYB0dwezfdk' },
                     { year: '2025/03', color: 'hsl(60, 75%, 65%)', title: 'Freesia', url: 'https://www.youtube-nocookie.com/embed/x5nJy2Lot8U' },
                 ],
+                currentPlayer: null,
+                playerContainer: null,
+                closeButton: null,
+                playbackOptions: null,
+                playMode: 'loop',
+                currentVideoIndex: -1,
+                isErrorProcessing: false,
+            },
+            mounted() {
+                this.playerContainer = document.getElementById('YouTubePlayerContainer');
+                this.closeButton = document.getElementById('ClosePlayerButton');
+                this.playbackOptions = document.getElementById('PlaybackOptions');
+            },
+            methods: {
+                getThumbnailUrl(youtubeUrl) {
+                    const videoId = this.getVideoId(youtubeUrl);
+                    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '';
+                },
+                getVideoId(url) {
+                    if (!url) return null;
+                    const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube-nocookie\.com\/embed\/|youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/;
+                    const match = url.match(regex);
+                    return match ? match[1] : null;
+                },
+                playVideo(content, index) {
+                    this.currentVideoIndex = index;
+                    const videoId = this.getVideoId(content.url);
+                    if (!videoId) return;
+
+                    if (this.currentPlayer) {
+                        this.currentPlayer.destroy();
+                    }
+
+                    this.currentPlayer = new YT.Player('YouTubePlayer', {
+                        height: '100%',
+                        width: '100%',
+                        videoId: videoId,
+                        playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0 },
+                        events: {
+                            'onReady': this.onPlayerReady,
+                            'onStateChange': this.onPlayerStateChange,
+                            'onError': this.onPlayerError
+                        }
+                    });
+                },
+                onPlayerReady(event) {
+                    event.target.playVideo();
+                    this.playerContainer.classList.add('active');
+                    this.closeButton.style.display = 'block';
+                    this.playbackOptions.style.display = 'flex';
+                    this.isErrorProcessing = false;
+                },
+                onPlayerStateChange(event) {
+                    if (event.data === YT.PlayerState.ENDED) {
+                        if (this.playMode === 'loop') {
+                            event.target.playVideo();
+                        } else if (this.playMode === 'next') {
+                            this.playNextVideo();
+                        }
+                    }
+                },
+                onPlayerError(event) {
+                    if (this.isErrorProcessing) return;
+                    this.isErrorProcessing = true;
+                    console.error('YouTube Player error:', event.data);
+                    if (this.playMode === 'next') {
+                        this.playNextVideo();
+                    }
+                    setTimeout(() => { this.isErrorProcessing = false; }, 300);
+                },
+                closePlayer() {
+                    if (this.currentPlayer) {
+                        this.currentPlayer.destroy();
+                        this.currentPlayer = null;
+                        this.playerContainer.classList.remove('active');
+                        this.closeButton.style.display = 'none';
+                        this.playbackOptions.style.display = 'none';
+                        this.currentVideoIndex = -1;
+                        this.isErrorProcessing = false;
+                    }
+                },
+                playNextVideo() {
+                    if (this.currentVideoIndex === -1) return;
+                    const nextIndex = (this.currentVideoIndex + 1) % this.Contents.length;
+                    const nextContent = this.Contents[nextIndex];
+                    this.playVideo(nextContent, nextIndex);
+                }
             }
-        })
+        });
 
     </script>
 
