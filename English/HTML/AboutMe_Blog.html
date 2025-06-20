@@ -104,9 +104,27 @@
                                             </v-card-actions>
                                             <v-card-text class="text-body-1 pb-4">
                                                 <transition-group name="fade-slide" mode="out-in">
-                                                    <div v-if="expandedPost === post.id" :key="'expanded'"
-                                                        v-html="post.content"></div>
-                                                    <div v-else :key="'collapsed'">{{ post.excerpt }}</div>
+                                                    <div v-if="expandedPost === post.id" :key="'expanded'">
+                                                        <!-- 投稿ID=3 (大量絶滅) の場合、本文を分割してグラフを挿入 -->
+                                                        <template v-if="post.id === 3">
+                                                            <div v-html="post.content_part1"></div>
+                                                            <div class="my-6">
+                                                                <apexchart type="bar" height="350"
+                                                                    :options="chartOptions" :series="chartSeries">
+                                                                </apexchart>
+                                                                <p class="caption text-right mt-1"><em>Source: Various
+                                                                        scientific sources</em></p>
+                                                            </div>
+                                                            <div v-html="post.content_part2"></div>
+                                                        </template>
+                                                        <!-- それ以外の記事は従来通り表示 -->
+                                                        <template v-else>
+                                                            <div v-html="post.content"></div>
+                                                        </template>
+                                                    </div>
+                                                    <div v-else :key="'collapsed'">
+                                                        {{ post.excerpt }}
+                                                    </div>
                                                 </transition-group>
                                             </v-card-text>
                                             <v-card-actions class="pt-0">
@@ -213,12 +231,17 @@
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="../../Asset/Javascript/Common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-apexcharts"></script>
 
 
     <script>
         new Vue({
             el: '#App',
             vuetify: new Vuetify(),
+            components: {
+                apexchart: VueApexCharts,
+            },
             mixins: [window.Mixins_Common],
             data: {
                 drawer: false,
@@ -232,6 +255,7 @@
                     'Culture',
                     'Greeting',
                     'Japan',
+                    'Science',
                 ],
                 blogPosts: [
                     {
@@ -274,9 +298,95 @@
                         `,
                         themes: ['Cooking', 'Japan', 'Culture']
                     },
-                ]
+                    {
+                        id: 3,
+                        title: 'A Glimpse into Mass Extinctions',
+                        date: '2024-07-14',
+                        image: 'https://picsum.photos/id/10/1000/600',
+                        excerpt: 'Did you know Earth has experienced five major mass extinctions? Scientists now warn we might be in the midst of the sixth, driven by human activity.',
+                        content_part1: `
+                            <p>
+                                　The history of life on Earth is a dramatic story of evolution and extinction. Among these events, five stand out as "The Big Five," catastrophic moments that wiped out a significant portion of species. The chart below illustrates the staggering scale of these events.
+                            </p>
+                        `,
+                        content_part2: `
+                            <p>
+                                　Many of us know about the extinction that wiped out the dinosaurs at the end of the Cretaceous period, likely caused by an asteroid impact. However, the most severe was the Permian-Triassic extinction, also known as "The Great Dying." It eliminated about 96% of marine species and 70% of terrestrial vertebrate species. The leading theory points to massive volcanic eruptions in Siberia.
+                            </p>
+                            <p>
+                                　Now, many scientists are sounding the alarm about a "Sixth Mass Extinction." This time, the cause isn't a natural cataclysm but human activities: habitat destruction, climate change, and pollution. The current rate of extinction is estimated to be tens to hundreds of times higher than the natural background rate.
+                            </p>
+                            <p>　Understanding these past events gives us a crucial perspective on our current impact on the planet. It's a stark reminder of our responsibility to protect the rich tapestry of life we share the Earth with.</p>
+                        `,
+                        themes: ['Science']
+                    },
+                ],
+                chartSeries: [{ name: 'Species Lost', data: [96, 85, 80, 76, 75] }],
             },
             computed: {
+                isMobile() {
+                    // Vuetify's breakpoint utility to check for mobile screens
+                    return this.$vuetify.breakpoint.smAndDown;
+                },
+                chartOptions() {
+                    // Return different options based on screen size
+                    if (this.isMobile) {
+                        // Options for Mobile (Vertical Bar Chart)
+                        return {
+                            chart: { type: 'bar', height: 400, toolbar: { show: false }, foreColor: '#333' },
+                            plotOptions: { bar: { borderRadius: 4, horizontal: false } },
+                            dataLabels: { enabled: false }, // Labels inside bars can be cluttered on mobile
+                            xaxis: {
+                                categories: [
+                                    'Permian-Triassic', // Shortened for mobile
+                                    'Ordovician-Silurian',
+                                    'Triassic-Jurassic',
+                                    'Cretaceous-Paleogene', // Shortened for mobile
+                                    'Late Devonian',
+                                ],
+                                labels: {
+                                    rotate: -45,
+                                    rotateAlways: true,
+                                    trim: true,
+                                    style: { fontSize: '10px' }
+                                },
+                            },
+                            yaxis: {
+                                title: { text: 'Estimated Species Lost (%)' }
+                            },
+                            tooltip: { y: { formatter: (val) => val + "% of all species" } },
+                            fill: { opacity: 1 },
+                            colors: ['#c0392b'],
+                            title: { text: 'Severity of Mass Extinctions', align: 'center', style: { fontSize: '14px', color: '#263238' } },
+                        };
+                    } else {
+                        // Options for Desktop (Horizontal Bar Chart)
+                        return {
+                            chart: { type: 'bar', height: 350, toolbar: { show: false }, foreColor: '#333' },
+                            plotOptions: { bar: { borderRadius: 4, horizontal: true, } },
+                            dataLabels: {
+                                enabled: true,
+                                formatter: (val) => val + "%",
+                                offsetX: -10,
+                                style: { fontSize: '12px', colors: ["#fff"] }
+                            },
+                            xaxis: {
+                                categories: [
+                                    'Permian-Triassic ("The Great Dying")',
+                                    'Ordovician-Silurian',
+                                    'Triassic-Jurassic',
+                                    'Cretaceous-Paleogene (Dinosaur Extinction)',
+                                    'Late Devonian',
+                                ],
+                                title: { text: 'Estimated Percentage of Species Lost', style: { color: '#666' } }
+                            },
+                            tooltip: { y: { formatter: (val) => val + "% of all species" } },
+                            fill: { opacity: 1 },
+                            colors: ['#c0392b'],
+                            title: { text: 'Severity of The "Big Five" Mass Extinctions', align: 'center', style: { fontSize: '16px', color: '#263238' } },
+                        };
+                    }
+                },
                 filteredPosts() {
                     let filtered = this.blogPosts.filter(post => {
                         const dateMatch = this.selectedDate ?
@@ -291,8 +401,6 @@
 
                         return dateMatch && themeMatch;
                     });
-
-                    // idの降順でソート
                     return filtered.sort((a, b) => b.id - a.id);
                 },
                 pageTitle() {
@@ -312,7 +420,6 @@
                 postDates() {
                     return this.blogPosts.map(post => post.date);
                 },
-
                 filteredThemesText() {
                     const count = this.selectedThemes.length;
                     if (count === 0) return 'All Themes';
