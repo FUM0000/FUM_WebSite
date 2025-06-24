@@ -27,6 +27,24 @@
   <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
 
   <title>Note > Programming > DesignPattern</title>
+
+  <style>
+    .code-block pre {
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 1em;
+      overflow-x: auto;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      font-size: 0.85em;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .code-block code {
+      color: #333;
+    }
+  </style>
 </head>
 
 <body>
@@ -91,7 +109,8 @@
                                 dense :open.sync="openNodesCreationalPatterns"
                                 @update:open="updateOpenNodesCreationalPatterns">
                                 <template v-slot:label="{ item }">
-                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                  <div v-if="item.isCode" v-html="item.name" class="code-block"></div>
+                                  <span v-else :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
                                 </template>
                               </v-treeview>
                             </v-card-text>
@@ -111,7 +130,8 @@
                                 dense :open.sync="openNodesStructuralPatterns"
                                 @update:open="updateOpenNodesStructuralPatterns">
                                 <template v-slot:label="{ item }">
-                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                  <div v-if="item.isCode" v-html="item.name" class="code-block"></div>
+                                  <span v-else :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
                                 </template>
                               </v-treeview>
                             </v-card-text>
@@ -131,7 +151,8 @@
                                 dense :open.sync="openNodesBehavioralPatterns"
                                 @update:open="updateOpenNodesBehavioralPatterns">
                                 <template v-slot:label="{ item }">
-                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                  <div v-if="item.isCode" v-html="item.name" class="code-block"></div>
+                                  <span v-else :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
                                 </template>
                               </v-treeview>
                             </v-card-text>
@@ -221,42 +242,825 @@
           {
             "name": "インスタンスの生成を体系化",
             "children": [
-              { "name": "Factory Method: 生成処理をサブクラスに委譲" },
-              { "name": "Abstract Factory: 関連するオブジェクト群をまとめて生成" },
-              { "name": "Builder: 複雑なオブジェクトを段階的に構築" },
-              { "name": "Prototype: コピーによってインスタンスを生成" },
-              { "name": "Singleton: インスタンスが唯一であることを保証" }
+              {
+                "name": "Factory Method: 生成処理をサブクラスに委譲",
+                "children": [{
+                  "name": `<pre><code>// Product interface
+class Product {
+public:
+    virtual ~Product() {}
+    virtual std::string Operation() const = 0;
+};
+// Concrete Product
+class ConcreteProduct1 : public Product {
+public:
+    std::string Operation() const override { return "{Result of ConcreteProduct1}"; }
+};
+// Creator (Factory)
+class Creator {
+public:
+    virtual ~Creator(){};
+    virtual Product* FactoryMethod() const = 0;
+    std::string SomeOperation() const {
+        Product* product = this->FactoryMethod();
+        std::string result = "Creator: The same creator's code has just worked with " + product->Operation();
+        delete product;
+        return result;
+    }
+};
+// Concrete Creator
+class ConcreteCreator1 : public Creator {
+public:
+    Product* FactoryMethod() const override { return new ConcreteProduct1(); }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Abstract Factory: 関連するオブジェクト群をまとめて生成",
+                "children": [{
+                  "name": `<pre><code>// Abstract Product A
+class AbstractProductA {
+public:
+    virtual ~AbstractProductA(){};
+    virtual std::string UsefulFunctionA() const = 0;
+};
+// Concrete Product A1
+class ConcreteProductA1 : public AbstractProductA {
+public:
+    std::string UsefulFunctionA() const override { return "The result of the product A1."; }
+};
+// Abstract Product B
+class AbstractProductB {
+public:
+    virtual ~AbstractProductB(){};
+    virtual std::string UsefulFunctionB() const = 0;
+};
+// Concrete Product B1
+class ConcreteProductB1 : public AbstractProductB {
+public:
+    std::string UsefulFunctionB() const override { return "The result of the product B1."; }
+};
+// Abstract Factory
+class AbstractFactory {
+public:
+    virtual AbstractProductA *CreateProductA() const = 0;
+    virtual AbstractProductB *CreateProductB() const = 0;
+};
+// Concrete Factory 1
+class ConcreteFactory1 : public AbstractFactory {
+public:
+    AbstractProductA *CreateProductA() const override { return new ConcreteProductA1(); }
+    AbstractProductB *CreateProductB() const override { return new ConcreteProductB1(); }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Builder: 複雑なオブジェクトを段階的に構築",
+                "children": [{
+                  "name": `<pre><code>// Product
+class Product1 {
+public:
+    std::vector<std::string> parts_;
+    void ListParts() const {
+        std::cout << "Product parts: ";
+        for (size_t i=0; i < parts_.size(); i++){
+            if(parts_[i]== parts_.back()){ std::cout << parts_[i]; }
+            else { std::cout << parts_[i] << ", "; }
+        }
+        std::cout << "\\n\\n";
+    }
+};
+// Builder interface
+class Builder {
+public:
+    virtual ~Builder() {}
+    virtual void ProducePartA() const = 0;
+    virtual void ProducePartB() const = 0;
+};
+// Concrete Builder
+class ConcreteBuilder1 : public Builder {
+private:
+    Product1* product;
+public:
+    ConcreteBuilder1() { this->Reset(); }
+    ~ConcreteBuilder1() { delete product; }
+    void Reset() { this->product = new Product1(); }
+    void ProducePartA() const override { this->product->parts_.push_back("PartA1"); }
+    void ProducePartB() const override { this->product->parts_.push_back("PartB1"); }
+    Product1* GetProduct() {
+        Product1* result = this->product;
+        this->Reset();
+        return result;
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Prototype: コピーによってインスタンスを生成",
+                "children": [{
+                  "name": `<pre><code>// Prototype
+class Prototype {
+public:
+    virtual ~Prototype() {}
+    virtual Prototype *clone() const = 0;
+    virtual std::string who() const = 0;
+};
+// Concrete Prototype
+class ConcretePrototype1 : public Prototype {
+private:
+    std::string name;
+public:
+    ConcretePrototype1(std::string name) : name(name) {}
+    Prototype *clone() const override { return new ConcretePrototype1(*this); }
+    std::string who() const override { return "Prototype: " + name; }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Singleton: インスタンスが唯一であることを保証",
+                "children": [{
+                  "name": `<pre><code>// Singleton
+class Singleton {
+protected:
+    Singleton(const std::string value): value_(value) {}
+    static Singleton* singleton_;
+    std::string value_;
+public:
+    Singleton(Singleton &other) = delete;
+    void operator=(const Singleton &) = delete;
+    static Singleton *GetInstance(const std::string& value);
+    std::string value() const { return value_; }
+};
+Singleton* Singleton::singleton_ = nullptr;
+Singleton *Singleton::GetInstance(const std::string& value) {
+    if(singleton_ == nullptr){
+        singleton_ = new Singleton(value);
+    }
+    return singleton_;
+}</code></pre>`, "isCode": true
+                }]
+              }
             ]
           }
+          // ▲▲▲ ここまで置き換え ▲▲▲
         ],
         StructuralPatterns: [
+          // ▼▼▼ 以下をすべて置き換え ▼▼▼
           {
             "name": "クラスやオブジェクトの組み合わせ方を体系化",
             "children": [
-              { "name": "Adapter: インターフェースの互換性がないクラスを協調させる" },
-              { "name": "Bridge: 実装とインターフェースを分離" },
-              { "name": "Composite: 木構造を表現し、全体と部分を同様に扱う" },
-              { "name": "Decorator: オブジェクトに動的に機能を追加" },
-              { "name": "Facade: 複雑なサブシステムへのシンプルな窓口を提供" },
-              { "name": "Flyweight: 共有によってオブジェクトを効率的に扱う" },
-              { "name": "Proxy: オブジェクトへのアクセスを制御する代理を配置" }
+              {
+                "name": "Adapter: インターフェースの互換性がないクラスを協調させる",
+                "children": [{
+                  "name": `<pre><code>// Target interface
+class Target {
+public:
+    virtual ~Target() = default;
+    virtual std::string Request() const { return "Target: The default target's behavior."; }
+};
+// Adaptee (the class to be adapted)
+class Adaptee {
+public:
+    std::string SpecificRequest() const { return ".eetpadA eht fo roivaheb cificepS"; }
+};
+// Adapter
+class Adapter : public Target {
+private:
+    Adaptee *adaptee_;
+public:
+    Adapter(Adaptee *adaptee) : adaptee_(adaptee) {}
+    std::string Request() const override {
+        std::string to_reverse = this->adaptee_->SpecificRequest();
+        std::reverse(to_reverse.begin(), to_reverse.end());
+        return "Adapter: (TRANSLATED) " + to_reverse;
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Bridge: 実装とインターフェースを分離",
+                "children": [{
+                  "name": `<pre><code>// Implementation interface
+class Implementation {
+public:
+    virtual ~Implementation() {}
+    virtual std::string OperationImplementation() const = 0;
+};
+// Concrete Implementation A
+class ConcreteImplementationA : public Implementation {
+public:
+    std::string OperationImplementation() const override { return "ConcreteImplementationA: Here's the result on platform A."; }
+};
+// Abstraction
+class Abstraction {
+protected:
+    Implementation* implementation_;
+public:
+    Abstraction(Implementation* implementation) : implementation_(implementation) {}
+    virtual ~Abstraction() {}
+    virtual std::string Operation() const {
+        return "Abstraction: Base operation with:\\n" + this->implementation_->OperationImplementation();
+    }
+};
+// Extended Abstraction
+class ExtendedAbstraction : public Abstraction {
+public:
+    ExtendedAbstraction(Implementation* implementation) : Abstraction(implementation) {}
+    std::string Operation() const override {
+        return "ExtendedAbstraction: Extended operation with:\\n" + this->implementation_->OperationImplementation();
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Composite: 木構造を表現し、全体と部分を同様に扱う",
+                "children": [{
+                  "name": `<pre><code>// Component (base class)
+class Component {
+public:
+    virtual ~Component() {}
+    virtual std::string Operation() = 0;
+};
+// Leaf (primitive object)
+class Leaf : public Component {
+public:
+    std::string Operation() override { return "Leaf"; }
+};
+// Composite (container)
+class Composite : public Component {
+protected:
+    std::list<Component*> children_;
+public:
+    void Add(Component* component) { this->children_.push_back(component); }
+    std::string Operation() override {
+        std::string result;
+        for (Component* c : children_) {
+            if (c == children_.back()) { result += c->Operation(); }
+            else { result += c->Operation() + "+"; }
+        }
+        return "Branch(" + result + ")";
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Decorator: オブジェクトに動的に機能を追加",
+                "children": [{
+                  "name": `<pre><code>// Component interface
+class IComponent {
+public:
+    virtual ~IComponent() {}
+    virtual std::string Operation() const = 0;
+};
+// Concrete Component
+class ConcreteComponent : public IComponent {
+public:
+    std::string Operation() const override { return "ConcreteComponent"; }
+};
+// Base Decorator
+class Decorator : public IComponent {
+protected:
+    IComponent* component_;
+public:
+    Decorator(IComponent* component) : component_(component) {}
+    std::string Operation() const override { return this->component_->Operation(); }
+};
+// Concrete Decorator A
+class ConcreteDecoratorA : public Decorator {
+public:
+    ConcreteDecoratorA(IComponent* component) : Decorator(component) {}
+    std::string Operation() const override { return "ConcreteDecoratorA(" + Decorator::Operation() + ")"; }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Facade: 複雑なサブシステムへのシンプルな窓口を提供",
+                "children": [{
+                  "name": `<pre><code>// Subsystem parts
+class Subsystem1 {
+public:
+    std::string Operation1() const { return "Subsystem1: Ready!\\n"; }
+};
+class Subsystem2 {
+public:
+    std::string OperationN() const { return "Subsystem2: Go!\\n"; }
+};
+// Facade
+class Facade {
+protected:
+    Subsystem1 *subsystem1_;
+    Subsystem2 *subsystem2_;
+public:
+    Facade(Subsystem1 *sub1 = nullptr, Subsystem2 *sub2 = nullptr) {
+        this->subsystem1_ = sub1 ?: new Subsystem1;
+        this->subsystem2_ = sub2 ?: new Subsystem2;
+    }
+    ~Facade() {
+        delete subsystem1_;
+        delete subsystem2_;
+    }
+    std::string Operation() {
+        std::string result = "Facade initializes subsystems:\\n";
+        result += this->subsystem1_->Operation1();
+        result += this->subsystem2_->OperationN();
+        return result;
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Flyweight: 共有によってオブジェクトを効率的に扱う",
+                "children": [{
+                  "name": `<pre><code>// Flyweight (shared state)
+struct SharedState {
+    std::string brand_;
+    std::string model_;
+    SharedState(const std::string &brand, const std::string &model) : brand_(brand), model_(model) {}
+};
+// Flyweight
+class Flyweight {
+private:
+    SharedState *shared_state_;
+public:
+    Flyweight(const SharedState *shared_state) : shared_state_(new SharedState(*shared_state)) {}
+    ~Flyweight() { delete shared_state_; }
+    void Operation(const std::string &owner) const {
+        std::cout << "Flyweight: Displaying shared (" << shared_state_->brand_ << "_" << shared_state_->model_ << ") and unique (" << owner << ") state.\\n";
+    }
+};
+// Flyweight Factory
+class FlyweightFactory {
+private:
+    std::map<std::string, Flyweight> flyweights_;
+public:
+    Flyweight GetFlyweight(const SharedState &shared_state) {
+        std::string key = shared_state.brand_ + "_" + shared_state.model_;
+        if (flyweights_.find(key) == flyweights_.end()) {
+            std::cout << "FlyweightFactory: Can't find a flyweight, creating new one.\\n";
+            flyweights_.insert(std::make_pair(key, Flyweight(&shared_state)));
+        }
+        return flyweights_.at(key);
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Proxy: オブジェクトへのアクセスを制御する代理を配置",
+                "children": [{
+                  "name": `<pre><code>// Subject interface
+class Subject {
+public:
+    virtual void Request() const = 0;
+};
+// Real Subject
+class RealSubject : public Subject {
+public:
+    void Request() const override { std::cout << "RealSubject: Handling request.\\n"; }
+};
+// Proxy
+class Proxy : public Subject {
+private:
+    RealSubject *real_subject_;
+    bool CheckAccess() const {
+        std::cout << "Proxy: Checking access prior to firing a real request.\\n";
+        return true;
+    }
+public:
+    Proxy(RealSubject *real_subject) : real_subject_(new RealSubject(*real_subject)) {}
+    ~Proxy() { delete real_subject_; }
+    void Request() const override {
+        if (this->CheckAccess()) {
+            this->real_subject_->Request();
+        }
+    }
+};</code></pre>`, "isCode": true
+                }]
+              }
             ]
           }
+          // ▲▲▲ ここまで置き換え ▲▲▲
         ],
         BehavioralPatterns: [
+          // ▼▼▼ 以下をすべて置き換え ▼▼▼
           {
             "name": "オブジェクト間の責務の割り当てやアルゴリズムを体系化",
             "children": [
-              { "name": "Chain of Responsibility: 要求を複数のオブジェクトで処理" },
-              { "name": "Command: 要求をオブジェクトとしてカプセル化" },
-              { "name": "Iterator: 集合体の要素に順番にアクセスする方法を提供" },
-              { "name": "Mediator: オブジェクト間の相互作用を集中管理" },
-              { "name": "Memento: オブジェクトの状態を保存し、復元可能にする" },
-              { "name": "Observer: 状態変化を監視し、依存オブジェクトに通知" },
-              { "name": "State: オブジェクトの状態に応じて振る舞いを変更" },
-              { "name": "Strategy: アルゴリズムをカプセル化し、交換可能にする" },
-              { "name": "Template Method: アルゴリズムの骨格を定義し、一部をサブクラスに委譲" },
-              { "name": "Visitor: オブジェクト構造から処理を分離" }
+              {
+                "name": "Chain of Responsibility: 要求を複数のオブジェクトで処理",
+                "children": [{
+                  "name": `<pre><code>// Handler interface
+class Handler {
+public:
+    virtual Handler *SetNext(Handler *handler) = 0;
+    virtual std::string Handle(std::string request) = 0;
+};
+// Abstract Handler (base)
+class AbstractHandler : public Handler {
+private:
+    Handler *next_handler_;
+public:
+    AbstractHandler() : next_handler_(nullptr) {}
+    Handler *SetNext(Handler *handler) override {
+        this->next_handler_ = handler;
+        return handler;
+    }
+    std::string Handle(std::string request) override {
+        if (this->next_handler_) { return this->next_handler_->Handle(request); }
+        return {};
+    }
+};
+// Concrete Handlers
+class MonkeyHandler : public AbstractHandler {
+public:
+    std::string Handle(std::string request) override {
+        if (request == "Banana") { return "Monkey: I'll eat the " + request + ".\\n"; }
+        else { return AbstractHandler::Handle(request); }
+    }
+};
+class SquirrelHandler : public AbstractHandler {
+public:
+    std::string Handle(std::string request) override {
+        if (request == "Nut") { return "Squirrel: I'll eat the " + request + ".\\n"; }
+        else { return AbstractHandler::Handle(request); }
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Command: 要求をオブジェクトとしてカプセル化",
+                "children": [{
+                  "name": `<pre><code>// Command interface
+class Command {
+public:
+    virtual ~Command() {}
+    virtual void Execute() const = 0;
+};
+// Simple Command
+class SimpleCommand : public Command {
+private:
+    std::string pay_load_;
+public:
+    explicit SimpleCommand(std::string pay_load) : pay_load_(pay_load) {}
+    void Execute() const override { std::cout << "SimpleCommand: " << this->pay_load_; }
+};
+// Receiver
+class Receiver {
+public:
+    void DoSomething(const std::string &a) { std::cout << "Receiver: Working on (" << a << ".)\\n"; }
+};
+// Complex Command
+class ComplexCommand : public Command {
+private:
+    Receiver *receiver_;
+    std::string a_;
+public:
+    ComplexCommand(Receiver *receiver, std::string a) : receiver_(receiver), a_(a) {}
+    void Execute() const override { this->receiver_->DoSomething(this->a_); }
+};
+// Invoker
+class Invoker {
+private:
+    Command *on_start_;
+public:
+    ~Invoker() { delete on_start_; }
+    void SetOnStart(Command *command) { this->on_start_ = command; }
+    void DoSomethingImportant() {
+        if (this->on_start_) { this->on_start_->Execute(); }
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Iterator: 集合体の要素に順番にアクセスする方法を提供",
+                "children": [{
+                  "name": `<pre><code>// Iterator and Aggregate interfaces would be here
+// (Using standard library for simplicity)
+#include <vector>
+#include <iostream>
+
+// Concrete Aggregate
+class WordsCollection {
+private:
+    std::vector<std::string> m_collection;
+public:
+    void addItem(const std::string& s) { m_collection.push_back(s); }
+    std::vector<std::string>::iterator begin() { return m_collection.begin(); }
+    std::vector<std::string>::iterator end() { return m_collection.end(); }
+};
+
+// Client code
+void clientCode() {
+    WordsCollection collection;
+    collection.addItem("First");
+    collection.addItem("Second");
+    collection.addItem("Third");
+
+    for (auto it = collection.begin(); it != collection.end(); ++it) {
+        std::cout << *it << std::endl;
+    }
+}
+</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Mediator: オブジェクト間の相互作用を集中管理",
+                "children": [{
+                  "name": `<pre><code>// Forward declaration
+class BaseComponent;
+// Mediator interface
+class Mediator {
+public:
+    virtual void Notify(BaseComponent *sender, std::string event) const = 0;
+};
+// Base Component (Colleague)
+class BaseComponent {
+protected:
+    Mediator *mediator_;
+public:
+    BaseComponent(Mediator *mediator = nullptr) : mediator_(mediator) {}
+    void set_mediator(Mediator *mediator) { this->mediator_ = mediator; }
+};
+// Concrete Components
+class Component1 : public BaseComponent {
+public:
+    void DoA() { this->mediator_->Notify(this, "A"); }
+};
+class Component2 : public BaseComponent {
+public:
+    void DoC() { this->mediator_->Notify(this, "C"); }
+};
+// Concrete Mediator
+class ConcreteMediator : public Mediator {
+private:
+    Component1 *component1_;
+    Component2 *component2_;
+public:
+    ConcreteMediator(Component1 *c1, Component2 *c2) : component1_(c1), component2_(c2) {
+        this->component1_->set_mediator(this);
+        this->component2_->set_mediator(this);
+    }
+    void Notify(BaseComponent *sender, std::string event) const override {
+        if (event == "A") { this->component2_->DoC(); }
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Memento: オブジェクトの状態を保存し、復元可能にする",
+                "children": [{
+                  "name": `<pre><code>// Memento
+class Memento {
+public:
+    virtual std::string state() const = 0;
+};
+// Concrete Memento
+class ConcreteMemento : public Memento {
+private:
+    std::string state_;
+    std::string date_;
+public:
+    ConcreteMemento(std::string state) : state_(state) {
+        std::time_t now = std::time(0);
+        this->date_ = std::ctime(&now);
+    }
+    std::string state() const override { return this->state_; }
+};
+// Originator
+class Originator {
+private:
+    std::string state_;
+    std::string GenerateRandomString(int length = 10) { /* ... */ return "RandomState"; }
+public:
+    Originator(std::string state) : state_(state) {}
+    void DoSomething() { this->state_ = this->GenerateRandomString(10); }
+    Memento *Save() { return new ConcreteMemento(this->state_); }
+    void Restore(Memento *memento) { this->state_ = memento->state(); }
+};
+// Caretaker
+class Caretaker {
+private:
+    std::vector<Memento *> mementos_;
+    Originator *originator_;
+public:
+    Caretaker(Originator *originator) : originator_(originator) {}
+    void Backup() { this->mementos_.push_back(this->originator_->Save()); }
+    void Undo() {
+        if (!this->mementos_.size()) { return; }
+        Memento *memento = this->mementos_.back();
+        this->mementos_.pop_back();
+        this->originator_->Restore(memento);
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Observer: 状態変化を監視し、依存オブジェクトに通知",
+                "children": [{
+                  "name": `<pre><code>// Observer interface
+class IObserver {
+public:
+    virtual ~IObserver(){};
+    virtual void Update(const std::string &message_from_subject) = 0;
+};
+// Subject (Observable)
+class Subject {
+private:
+    std::list<IObserver *> list_observer_;
+    std::string message_;
+public:
+    virtual ~Subject() {}
+    void Attach(IObserver *observer) { list_observer_.push_back(observer); }
+    void Detach(IObserver *observer) { list_observer_.remove(observer); }
+    void Notify() {
+        for (IObserver *observer : list_observer_) {
+            observer->Update(message_);
+        }
+    }
+    void CreateMessage(std::string message = "Empty") {
+        this->message_ = message;
+        Notify();
+    }
+};
+// Concrete Observer
+class Observer : public IObserver {
+private:
+    std::string message_from_subject_;
+    Subject &subject_;
+    static int static_number_;
+    int number_;
+public:
+    Observer(Subject &subject) : subject_(subject) {
+        this->subject_.Attach(this);
+        this->number_ = ++Observer::static_number_;
+    }
+    void Update(const std::string &message_from_subject) override {
+        message_from_subject_ = message_from_subject;
+    }
+};
+int Observer::static_number_ = 0;
+</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "State: オブジェクトの状態に応じて振る舞いを変更",
+                "children": [{
+                  "name": `<pre><code>// Forward declaration
+class Context;
+// State interface
+class State {
+protected:
+    Context *context_;
+public:
+    virtual ~State() {}
+    void set_context(Context *context) { this->context_ = context; }
+    virtual void Handle1() = 0;
+};
+// Context
+class Context {
+private:
+    State *state_;
+public:
+    Context(State *state) : state_(nullptr) { this->TransitionTo(state); }
+    ~Context() { delete state_; }
+    void TransitionTo(State *state) {
+        if (this->state_ != nullptr) delete this->state_;
+        this->state_ = state;
+        this->state_->set_context(this);
+    }
+    void Request1() { this->state_->Handle1(); }
+};
+// Concrete States
+class ConcreteStateA : public State {
+public:
+    void Handle1() override; // Must be implemented
+};
+class ConcreteStateB : public State {
+public:
+    void Handle1() override { std::cout << "ConcreteStateB handles request1.\\n"; }
+};
+void ConcreteStateA::Handle1() {
+    std::cout << "ConcreteStateA handles request1.\\n";
+    this->context_->TransitionTo(new ConcreteStateB);
+}
+</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Strategy: アルゴリズムをカプセル化し、交換可能にする",
+                "children": [{
+                  "name": `<pre><code>// Strategy interface
+class Strategy {
+public:
+    virtual ~Strategy() {}
+    virtual std::string DoAlgorithm(const std::vector<std::string> &data) const = 0;
+};
+// Context
+class Context {
+private:
+    Strategy *strategy_;
+public:
+    Context(Strategy *strategy = nullptr) : strategy_(strategy) {}
+    ~Context() { delete this->strategy_; }
+    void set_strategy(Strategy *strategy) {
+        delete this->strategy_;
+        this->strategy_ = strategy;
+    }
+    void DoSomeBusinessLogic() const {
+        std::string result = this->strategy_->DoAlgorithm({"a", "e", "c", "b", "d"});
+        std::cout << result << "\\n";
+    }
+};
+// Concrete Strategies
+class ConcreteStrategyA : public Strategy {
+public:
+    std::string DoAlgorithm(const std::vector<std::string> &data) const override {
+        std::string result;
+        for (const std::string &letter : data) { result += letter; }
+        std::sort(std::begin(result), std::end(result));
+        return result;
+    }
+};
+class ConcreteStrategyB : public Strategy {
+    std::string DoAlgorithm(const std::vector<std::string> &data) const override {
+        std::string result;
+        for (const std::string &letter : data) { result += letter; }
+        std::sort(std::begin(result), std::end(result), std::greater<>());
+        return result;
+    }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Template Method: アルゴリズムの骨格を定義し、一部をサブクラスに委譲",
+                "children": [{
+                  "name": `<pre><code>// Abstract Class
+class AbstractClass {
+protected:
+    virtual void RequiredOperations1() const = 0;
+    virtual void RequiredOperations2() const = 0;
+    void Hook1() const {} // Hook
+public:
+    void TemplateMethod() const {
+        this->RequiredOperations1();
+        this->Hook1();
+        this->RequiredOperations2();
+    }
+};
+// Concrete Class
+class ConcreteClass1 : public AbstractClass {
+protected:
+    void RequiredOperations1() const override { std::cout << "ConcreteClass1 says: Implemented Operation1\\n"; }
+    void RequiredOperations2() const override { std::cout << "ConcreteClass1 says: Implemented Operation2\\n"; }
+};
+class ConcreteClass2 : public AbstractClass {
+protected:
+    void RequiredOperations1() const override { std::cout << "ConcreteClass2 says: Implemented Operation1\\n"; }
+    void RequiredOperations2() const override { std::cout << "ConcreteClass2 says: Implemented Operation2\\n"; }
+    void Hook1() const override { std::cout << "ConcreteClass2 says: Overridden Hook1\\n"; }
+};</code></pre>`, "isCode": true
+                }]
+              },
+              {
+                "name": "Visitor: オブジェクト構造から処理を分離",
+                "children": [{
+                  "name": `<pre><code>// Forward declarations
+class ConcreteComponentA;
+class ConcreteComponentB;
+// Visitor interface
+class Visitor {
+public:
+    virtual void VisitConcreteComponentA(const ConcreteComponentA *element) const = 0;
+    virtual void VisitConcreteComponentB(const ConcreteComponentB *element) const = 0;
+};
+// Component interface
+class Component {
+public:
+    virtual ~Component() {}
+    virtual void Accept(Visitor *visitor) const = 0;
+};
+// Concrete Components
+class ConcreteComponentA : public Component {
+public:
+    void Accept(Visitor *visitor) const override { visitor->VisitConcreteComponentA(this); }
+    std::string ExclusiveMethodOfConcreteComponentA() const { return "A"; }
+};
+class ConcreteComponentB : public Component {
+public:
+    void Accept(Visitor *visitor) const override { visitor->VisitConcreteComponentB(this); }
+    std::string SpecialMethodOfConcreteComponentB() const { return "B"; }
+};
+// Concrete Visitor
+class ConcreteVisitor1 : public Visitor {
+public:
+    void VisitConcreteComponentA(const ConcreteComponentA *element) const override {
+        std::cout << element->ExclusiveMethodOfConcreteComponentA() << " + ConcreteVisitor1\\n";
+    }
+    void VisitConcreteComponentB(const ConcreteComponentB *element) const override {
+        std::cout << element->SpecialMethodOfConcreteComponentB() << " + ConcreteVisitor1\\n";
+    }
+};</code></pre>`, "isCode": true
+                }]
+              }
             ]
           }
         ],
