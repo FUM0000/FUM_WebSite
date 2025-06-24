@@ -106,7 +106,8 @@
                                         </v-chip>
                                     </v-card-title>
                                     <template v-if="filteredPosts.length > 0">
-                                        <v-card v-for="post in filteredPosts" :key="post.id" class="mb-6 blog-card">
+                                        <v-card v-for="post in filteredPosts" :key="post.id" class="mb-6 blog-card"
+                                            :id="'post-card-' + post.id">
                                             <v-img :src="post.image" height="250px"></v-img>
                                             <v-card-title class="text-h6 pt-4">{{ post.title }}</v-card-title>
                                             <v-card-subtitle class="pb-2">{{ post.date }}</v-card-subtitle>
@@ -120,12 +121,12 @@
                                             </v-card-text>
                                             <v-card-actions class="pt-0 mb-2">
                                                 <v-btn text color="primary" @click="togglePost(post.id)">
-                                                    {{ expandedPost === post.id ? 'Close' : 'Read More' }}
+                                                    {{ expandedPosts.includes(post.id) ? 'Close' : 'Read More' }}
                                                 </v-btn>
                                             </v-card-actions>
                                             <v-card-text class="text-body-1 pb-4">
                                                 <transition-group name="fade-slide" mode="out-in">
-                                                    <div v-if="expandedPost === post.id" :key="'expanded'">
+                                                    <div v-if="expandedPosts.includes(post.id)" :key="'expanded'">
                                                         <!-- 投稿ID=3 (大量絶滅) の場合、本文を分割してグラフを挿入 -->
                                                         <template v-if="post.id === 3">
                                                             <div v-html="post.content_part1"></div>
@@ -138,10 +139,16 @@
                                                             </div>
                                                             <div v-html="post.content_part2"></div>
                                                         </template>
-                                                        <!-- それ以外の記事は従来通り表示 -->
                                                         <template v-else>
                                                             <div v-html="post.content"></div>
                                                         </template>
+                                                        <div class="text-right mt-4 mb-4 mr-2">
+                                                            <v-btn icon color="primary"
+                                                                @click="scrollToCardTop(post.id)"
+                                                                title="Scroll to top of card">
+                                                                <v-icon>mdi-arrow-up</v-icon>
+                                                            </v-btn>
+                                                        </div>
                                                     </div>
                                                 </transition-group>
                                             </v-card-text>
@@ -261,7 +268,7 @@
                 selectedDate: null,
                 showCurrentMonth: false,
                 pickerDate: new Date(),
-                expandedPost: null,
+                expandedPosts: [],
                 selectedThemes: [],
                 themes: [
                     'Cooking',
@@ -278,35 +285,55 @@
                         image: 'https://picsum.photos/id/1018/1000/600',
                         excerpt: 'This is my first blog post. I\'m excited to share my thoughts with you!',
                         content: `
+                            <h3>Welcome to My Blog!</h3>
                             <p>
-                                　Hello everyone, I'm <b>FUM</b>.<br><br>
-                                　In this blog, I will be sharing <b>various information</b> about the world and Japan.<br><br>
-                                　I will be writing articles from <b>my own perspective</b>, so please come and check them out.<br><br>
-                                　<b>Thank you for your support</b>.
+                                Hello everyone, I'm <b>FUM</b>.
+                            </p>
+                            <p>
+                                In this blog, I will be sharing <b>various information</b> about the world and Japan.
+                            </p>
+                            <p>
+                                I will be writing articles from <b>my own perspective</b>, so please come and check them out.
+                            </p>
+                            <p>
+                                <b>Thank you for your support</b>.
                             </p>
                         `,
                         themes: ['Greeting']
                     },
                     {
                         id: 2,
-                        title: 'Cooking Ramen',
+                        title: 'Homemade Ramen',
                         date: '2024-08-31',
                         image: '../../Asset/Image/Blog/20240831_1.jpg',
-                        excerpt: 'I made ramen soup for the first time. It went well!',
+                        excerpt: 'I tackled making ramen from scratch for the first time, from the slow-simmered broth to custom noodles. It was a delicious success! Here\'s how it went.',
                         content: `
-                            <p>　The <b>chicken legs</b> and garlic are simmered for a long time while the noodles are made.</p>
-                            <img src="../../Asset/Image/Blog/20240831_3.jpg" class="blog-content-image" alt="Soup">
                             <p>
-                                　The <b>soup</b> for ramen is prepared separately from the broth and seasoning and combined just before eating.
-                                In this case, I used <b>soy sauce</b> with soaked kelp.
+                                <h3>My Ramen Challenge: From Scratch</h3>
+                                I've always wanted to try making authentic ramen, and this time I went all in—crafting everything from the broth to the noodles myself. Here is the story of my culinary journey to create this special bowl.
                             </p>
-                            <img src="../../Asset/Image/Blog/20240831_2.jpg" class="blog-content-image" alt="Noodle">
-                            <p>　The noodles are kneaded with a mixture of <b>chives, garlic and eggs</b>, adjusted with water.</p>
-                            <img src="../../Asset/Image/Blog/20240831_1.jpg" class="blog-content-image" alt="Ramen">
+                            <br>
                             <p>
-                                　The more time and effort it takes, the more original the taste becomes, which makes me very happy.
-                                The seasoning can be anything delicious in your country,
-                                so if you like, please look up the recipe and try to make it.
+                                <h3>The Broth: Soul of the Ramen</h3>
+                                The foundation of any good ramen is its broth. I let <b>chicken bones</b> and garlic simmer for hours, carefully drawing out the rich, deep flavors. The wonderful aroma filled the house and built up the anticipation.
+                                <br><img src="../../Asset/Image/Blog/20240831_3.jpg" class="blog-content-image">
+                            </p>
+                            <br>
+                            <p>
+                                <h3>Custom Noodles and "Tare" Seasoning</h3>
+                                For the noodles, I wanted a personal touch, kneading a special dough with <b>chives, garlic, and egg</b>. The "tare" (the seasoning base) that defines the soup's final character was made from <b>soy sauce</b> infused with kombu (kelp). Combining this with the broth right before serving is the key to a fragrant and flavorful result.
+                                <br><img src="../../Asset/Image/Blog/20240831_2.jpg" class="blog-content-image">
+                            </p>
+                            <br>
+                            <p>
+                                <h3>The Final Bowl: A Taste of Accomplishment</h3>
+                                Finally, all the elements came together into my very own, unique bowl of ramen. The more time and effort you invest, the more personal and special the flavor becomes. I believe this sense of accomplishment is the best spice for any homemade dish.
+                                <br><img src="../../Asset/Image/Blog/20240831_1.jpg" class="blog-content-image">
+                            </p>
+                            <br>
+                            <p>
+                                <h3>Epilogue: Now It's Your Turn!</h3>
+                                You can adapt the toppings and seasonings using delicious ingredients from your own country. If this inspires you, I highly recommend giving it a try—the process itself is just as rewarding as the meal! For detailed instructions on how to make the noodles from scratch, please see the recipe on the <a href="./Cooking_Complex.html">Cooking page</a>.
                             </p>
                         `,
                         themes: ['Cooking', 'Japan', 'Culture']
@@ -319,62 +346,70 @@
                         excerpt: 'Did you know Earth has experienced five major mass extinctions? Scientists now warn we might be in the midst of the sixth, driven by human activity.',
                         content_part1: `
                             <p>
-                                　The history of life on Earth is a dramatic story of evolution and extinction. Among these events, five stand out as "The Big Five," catastrophic moments that wiped out a significant portion of species. The chart below illustrates the staggering scale of these events.
+                                <h3>Earth's Dramatic History: The "Big Five"</h3>
+                                The history of life on Earth is a dramatic story of evolution and extinction. Among these events, five stand out as "The Big Five," catastrophic moments that wiped out a significant portion of species. The chart below illustrates the staggering scale of these events.
                             </p>
                         `,
                         content_part2: `
                             <p>
-                                　Many of us know about the extinction that wiped out the dinosaurs at the end of the Cretaceous period, likely caused by an asteroid impact. However, the most severe was the Permian-Triassic extinction, also known as "The Great Dying." It eliminated about 96% of marine species and 70% of terrestrial vertebrate species. The leading theory points to massive volcanic eruptions in Siberia.
+                                <h3>From Dinosaurs to "The Great Dying"</h3>
+                                Many of us know about the extinction that wiped out the dinosaurs at the end of the Cretaceous period, likely caused by an asteroid impact. However, the most severe was the Permian-Triassic extinction, also known as "The Great Dying." It eliminated about 96% of marine species and 70% of terrestrial vertebrate species. The leading theory points to massive volcanic eruptions in Siberia.
                             </p>
+                            <br>
                             <p>
-                                　Now, many scientists are sounding the alarm about a "Sixth Mass Extinction." This time, the cause isn't a natural cataclysm but human activities: habitat destruction, climate change, and pollution. The current rate of extinction is estimated to be tens to hundreds of times higher than the natural background rate.
+                                <h3>The Sixth Mass Extinction: A Human-Made Crisis</h3>
+                                Now, many scientists are sounding the alarm about a "Sixth Mass Extinction." This time, the cause isn't a natural cataclysm but human activities: habitat destruction, climate change, and pollution. The current rate of extinction is estimated to be tens to hundreds of times higher than the natural background rate.
                             </p>
-                            <p>　Understanding these past events gives us a crucial perspective on our current impact on the planet. It's a stark reminder of our responsibility to protect the rich tapestry of life we share the Earth with.</p>
+                            <br>
+                            <p>
+                                <h3>A Lesson for Our Time</h3>
+                                Understanding these past events gives us a crucial perspective on our current impact on the planet. It's a stark reminder of our responsibility to protect the rich tapestry of life we share the Earth with.
+                            </p>
                         `,
                         themes: ['Science']
                     },
                     {
                         id: 4,
-                        title: '静かなる生存戦略「植物の会話」と化学戦争「アレロパシー」の世界',
+                        title: 'The Silent Survival Strategy: Plant "Conversation" and the Chemical Warfare of "Allelopathy"',
                         date: '2025-06-24',
                         image: '../../Asset/Image/Blog/20250624_1.png',
-                        excerpt: '害虫の襲来を仲間に知らせ、地下の根で栄養を分け合う。植物の驚異の能力と、家庭菜園にも活かせる「ちょっと怖い」知識を解説します。',
+                        excerpt: 'Plants warn their neighbors of pest attacks and share nutrients through their roots. Discover their amazing abilities and some "slightly scary" knowledge you can use in your own garden.',
                         content: `
                             <p>
-                                <h3>導入：植物のイメージを覆す科学</h5>
-                                静的で受動的な存在に見える植物。しかし、近年の研究は、彼らが極めて高度なコミュニケーション能力を持つことを明らかにしています。植物は音こそ発しませんが、化学物質を介して情報を交換し、生存競争を繰り広げているのです。この記事では、科学的に解明されつつある植物の3つの能力を紹介します。
+                                <h3>Introduction: Science That Changes How We See Plants</h3>
+                                Plants may seem static and passive, but recent research reveals they possess highly advanced communication abilities. While they don't use sound, plants exchange information and compete for survival through chemical substances. This article introduces three plant abilities that science is beginning to unravel.
                             </p>
                             <br>
                             <p>
-                                <h3>1. 空中の化学信号：香りで伝える警告と援軍要請</h5>
-                                植物が害虫に攻撃されると、特定の揮発性有機化合物（VOCs）、つまり「香り」を放出します。この化学信号には、明確な目的があります。
-                                周囲の個体への警告:
-                                この信号を受信した周囲の植物は、事前に防御システムを起動させます。例えば、葉に害虫が嫌うタンニンなどの物質を蓄積し、捕食されにくくするのです。
-                                天敵の誘引:
-                                放出される化学物質の中には、害虫の天敵（寄生バチなど）を誘引するものもあります。これは、自らの捕食者の天敵を呼び寄せることで、間接的に身を守る高度な防衛戦略です。
+                                <h3>1. Aerial Chemical Signals: Warnings and Calls for Reinforcements Through Scent</h3>
+                                When a plant is attacked by pests, it releases specific volatile organic compounds (VOCs), essentially "scents." This chemical signal has clear purposes.
+                                <br><b>Warning to Nearby Individuals:</b>
+                                Upon receiving this signal, neighboring plants activate their defense systems in advance. For example, they accumulate substances like tannins, which pests dislike, in their leaves, making them less likely to be eaten.
+                                <br><b>Attracting Natural Enemies:</b>
+                                Some of the released chemicals attract the pests' natural enemies (like parasitic wasps). This is a sophisticated defense strategy to indirectly protect themselves by summoning the predators of their predators.
                                 <br><img src="../../Asset/Image/Blog/20250624_2.png" class="blog-content-image">
                             </p>
                             <br>
                             <p>
-                                <h3>2. 地下の菌類ネットワーク：「ウッド・ワイド・ウェブ」</h5>
-                                植物のコミュニケーションは地下でも活発です。多くの樹木の根は、「菌根菌（きんこんきん）」と呼ばれる菌類の菌糸によって相互に接続されており、広大な地下ネットワークを形成しています。
-                                このネットワークは**「ウッド・ワイド・ウェブ」**とも呼ばれ、炭素や窒素といった栄養分の交換を可能にします。例えば、日当たりの良い親木から、日陰にいる若い苗木へ炭素が送られるなど、森全体でリソースを再分配する機能を持っています。これは、森の生態系全体の安定性に寄与する重要な仕組みです。
+                                <h3>2. The Underground Fungal Network: The "Wood-Wide Web"</h3>
+                                Plant communication is also active underground. The roots of many trees are interconnected by the mycelia of "mycorrhizal fungi," forming a vast underground network.
+                                This network, also known as the **"Wood-Wide Web,"** enables the exchange of nutrients like carbon and nitrogen. For instance, carbon can be sent from a parent tree in a sunny spot to a young sapling in the shade, a function that redistributes resources throughout the forest. This is a crucial mechanism contributing to the overall stability of the forest ecosystem.
                                 <br><img src="../../Asset/Image/Blog/20250624_3.png" class="blog-content-image">
                             </p>
                             <br>
                             <p>
-                                <h3>3. アレロパシー：化学物質による静かなる縄張り争い</h5>
-                                協力だけでなく、植物は生存競争のために他の植物を攻撃することもあります。その手段が**「アレロパシー（他感作用）」**です。
-                                これは、ある植物が放出する化学物質によって、周辺の他の植物の生育が阻害される現象を指します。
-                                セイタカアワダチソウ: 根から他の植物の発芽を抑制する化学物質を放出し、自身の群落を拡大させます。
-                                クルミ: 葉や根から「ユグロン」という強力な生育阻害物質を放出し、他の植物が根付くのを防ぎます。
-                                このアレロパシーは、農業や園芸における「コンパニオンプランツ（共栄作物）」や、植え合わせの悪い組み合わせを理解する上で重要な知見となります。
+                                <h3>3. Allelopathy: The Silent Turf War Waged with Chemicals</h3>
+                                Beyond cooperation, plants also attack other plants to compete for survival. Their weapon of choice is **"allelopathy."**
+                                This is a phenomenon where chemical substances released by one plant inhibit the growth of other plants nearby.
+                                <br><b>Goldenrod:</b> Releases chemicals from its roots that suppress the germination of other plants, allowing it to expand its own colony.
+                                <br><b>Walnut Trees:</b> Release a potent growth inhibitor called "juglone" from their leaves and roots, preventing other plants from taking root nearby.
+                                This knowledge of allelopathy is crucial for understanding "companion planting" in agriculture and gardening, as well as identifying plants that do not grow well together.
                                 <br><img src="../../Asset/Image/Blog/20250624_4.png" class="blog-content-image">
                             </p>
                             <br>
                             <p>
-                                <h3>まとめ：植物を見る新たな視点</h5>
-                                植物は、私たちが認識できない方法で、絶えず環境と相互作用しています。化学物質による情報伝達、ネットワークを介した協力、そして生存をかけた競争。これらの科学的知見は、植物が単なる静的な存在ではなく、非常にダイナミックな生命体であることを示しています。次に植物に目を向けるとき、その見えない活動に思いを馳せてみてはいかがでしょうか。
+                                <h3>Conclusion: A New Perspective on Plants</h3>
+                                Plants are constantly interacting with their environment in ways we cannot perceive. Communication through chemical signals, cooperation via networks, and competition for survival. These scientific findings show that plants are not merely static beings but highly dynamic life forms. The next time you look at a plant, perhaps you'll ponder its unseen activities.
                             </p>
                         `,
                         themes: ['Science']
@@ -503,10 +538,19 @@
                     this.showCurrentMonth = true;
                 },
                 togglePost(postId) {
-                    if (this.expandedPost === postId) {
-                        this.expandedPost = null;
+                    const index = this.expandedPosts.indexOf(postId);
+                    if (index > -1) {
+                        // 既に配列にあれば削除 (閉じる)
+                        this.expandedPosts.splice(index, 1);
                     } else {
-                        this.expandedPost = postId;
+                        // なければ追加 (開く)
+                        this.expandedPosts.push(postId);
+                    }
+                },
+                scrollToCardTop(postId) {
+                    const cardElement = document.getElementById(`post-card-${postId}`);
+                    if (cardElement) {
+                        cardElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 },
             }
