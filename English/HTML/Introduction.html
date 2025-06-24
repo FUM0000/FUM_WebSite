@@ -56,11 +56,9 @@
             font-weight: 500;
             color: #333;
             display: flex;
-            /* ▼▼▼ 以下2行を変更 ▼▼▼ */
             font-size: 15px;
             /* フォントサイズの基準を指定 */
             align-items: center;
-            /* ▲▲▲ ここまで変更 ▲▲▲ */
             justify-content: center;
             text-align: center;
             backdrop-filter: blur(5px);
@@ -195,6 +193,78 @@
                 /* パディングも調整 */
             }
         }
+
+        @keyframes fast-flap {
+            0% {
+                transform: scaleY(1);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scaleY(0.1);
+                opacity: 0.2;
+            }
+
+            100% {
+                transform: scaleY(1);
+                opacity: 0.5;
+            }
+        }
+
+        #bug {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 5;
+            will-change: transform;
+        }
+
+        /* 胴体 (Body) */
+        #bug::before {
+            content: '';
+            position: absolute;
+            width: 15px;
+            /* 胴体の長さ */
+            height: 2px;
+            /* 胴体の太さ */
+            background: #333;
+            border-radius: 2px;
+            top: 9px;
+            left: 0;
+            /* 少し斜めに傾ける */
+            transform: rotate(40deg);
+        }
+
+        /* 脚 (Legs) */
+        #bug::after {
+            content: '';
+            position: absolute;
+            width: 1px;
+            height: 5px;
+            /* 脚の長さ */
+            background: #333;
+            top: 3px;
+            left: -2px;
+            /* 2本の脚を表現 */
+            box-shadow: 2px 0px 0 0 #333;
+            transform: rotate(60deg);
+        }
+
+        /* 羽 (Wing) */
+        .bug-wing {
+            position: absolute;
+            width: 10px;
+            /* 羽の幅 */
+            height: 30px;
+            /* 羽の高さ */
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            top: -15px;
+            left: 0px;
+            transform-origin: bottom center;
+            animation: fast-flap 0.06s linear infinite;
+        }
     </style>
 </head>
 
@@ -217,6 +287,9 @@
                                 @touchstart.prevent="dragStart(bubble, $event)">
                                 {{ bubble.theme }}
                             </div>
+                            <div v-if="!isMobile && bug.state !== 'inactive'" id="bug" :style="bug.style">
+                                <div class="bug-wing"></div>
+                            </div>
                         </div>
 
                         <transition name="Fade_Page">
@@ -236,7 +309,6 @@
                                 </div>
                             </div>
                         </transition>
-                        <!-- ▲▲▲ ここまで変更 ▲▲▲ -->
                     </v-container>
                 </transition>
             </v-main>
@@ -359,6 +431,20 @@
                     pageIndex: 0,
                     currentText: ''
                 },
+                isMobile: false,
+                bug: {
+                    x: -100, y: -100,
+                    vx: 0, vy: 0,
+                    ax: 0, ay: 0,
+                    size: 20,
+                    state: 'inactive',
+                    style: {},
+                    targetX: 0,
+                    targetY: 0,
+                    spawnTimer: null,
+                    rotation: 0,
+                    wanderAngle: 0, // ランダムな動きを制御する角度
+                },
                 typewriterTimer: null,
                 draggedBubble: null,
                 dragInfo: { lastX: 0, lastY: 0, lastTime: 0, vx: 0, vy: 0, moveEvent: null, upEvent: null },
@@ -366,8 +452,14 @@
             },
             mounted() {
                 setTimeout(() => {
+                    // ▼▼▼ 以下を変更 ▼▼▼
+                    this.isMobile = window.innerWidth < 768;
                     this.setupBubbles();
-                    this.animateBubbles();
+                    this.animateScene(); // animateBubblesから変更
+                    if (!this.isMobile) {
+                        this.spawnBug();
+                    }
+                    // ▲▲▲ ここまで変更 ▲▲▲
                 }, 150);
                 window.addEventListener('mousemove', this.updateMousePosition);
             },
@@ -394,7 +486,6 @@
                         const angle = Math.random() * 2 * Math.PI;
                         const radius = Math.min(centerX, centerY) * (isMobile ? 0.35 : (0.4 + Math.random() * 0.4));
 
-                        // ▼▼▼ 以下のように変更 ▼▼▼
                         const initialX = centerX + Math.cos(angle) * radius;
                         const initialY = centerY + Math.sin(angle) * radius;
 
@@ -415,7 +506,16 @@
                         };
                     });
                 },
-                animateBubbles() {
+                // ▼▼▼ animateBubbles を animateScene と updateBubbles に分割・変更 ▼▼▼
+                animateScene() {
+                    this.updateBubbles();
+                    if (!this.isMobile) {
+                        this.updateBug();
+                    }
+                    requestAnimationFrame(this.animateScene);
+                },
+
+                updateBubbles() {
                     const container = document.getElementById('interactive-space');
                     if (!container) return;
                     const rect = container.getBoundingClientRect();
@@ -467,9 +567,130 @@
                     this.bubbles.forEach(b => {
                         b.style.transform = `translate(-50%, -50%) translate(${b.x}px, ${b.y}px)`;
                     });
-
-                    requestAnimationFrame(this.animateBubbles);
                 },
+
+                updateBug() {
+                    const bug = this.bug;
+                    if (bug.state === 'inactive') return;
+
+                    const container = document.getElementById('interactive-space');
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect();
+
+                    if (bug.state === 'flying') {
+                        // === 力の計算 ===
+                        // 1. さまよう力 (Wander) - 蚊のようなランダムな動き
+                        bug.wanderAngle += (Math.random() - 0.5) * 0.8; // 角度をランダムに変化
+                        const wanderForceMagnitude = 0.1; // さまよう力の強さ
+                        const wanderForceX = Math.cos(bug.wanderAngle) * wanderForceMagnitude;
+                        const wanderForceY = Math.sin(bug.wanderAngle) * wanderForceMagnitude;
+
+                        // 2. 目標への引力 (Seek)
+                        const seekForceMagnitude = 0.0005; // 引力の強さ
+                        const seekForceX = (bug.targetX - bug.x) * seekForceMagnitude;
+                        const seekForceY = (bug.targetY - bug.y) * seekForceMagnitude;
+
+                        // 3. バブルからの斥力 (Avoidance)
+                        let avoidanceForceX = 0;
+                        let avoidanceForceY = 0;
+                        const avoidanceRadius = 180; // 避ける範囲を広げる
+                        const avoidanceForceMagnitude = 0.8; // 避ける力を強くする
+
+                        this.bubbles.forEach(bubble => {
+                            const dx = bug.x - bubble.x;
+                            const dy = bug.y - bubble.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const minDist = avoidanceRadius + bubble.size / 2; // バブルのサイズも考慮
+
+                            if (dist < minDist) {
+                                // 距離が近いほど強く反発
+                                const force = (minDist - dist) / minDist;
+                                avoidanceForceX += (dx / dist) * force * avoidanceForceMagnitude;
+                                avoidanceForceY += (dy / dist) * force * avoidanceForceMagnitude;
+                            }
+                        });
+
+                        // === 力の合成 ===
+                        bug.ax = wanderForceX + seekForceX + avoidanceForceX;
+                        bug.ay = wanderForceY + seekForceY + avoidanceForceY;
+
+                        // === 速度と位置の更新 ===
+                        bug.vx += bug.ax;
+                        bug.vy += bug.ay;
+
+                        // 速度制限と摩擦
+                        const maxSpeed = 3; // 最高速度を少し上げる
+                        const speed = Math.sqrt(bug.vx * bug.vx + bug.vy * bug.vy);
+                        if (speed > maxSpeed) {
+                            bug.vx = (bug.vx / speed) * maxSpeed;
+                            bug.vy = (bug.vy / speed) * maxSpeed;
+                        }
+                        bug.vx *= 0.97; // 摩擦を弱めて機敏に
+                        bug.vy *= 0.97;
+
+                        // 目標に到達したら新しい目標を設定
+                        const distToTarget = Math.sqrt(Math.pow(bug.targetX - bug.x, 2) + Math.pow(bug.targetY - bug.y, 2));
+                        if (distToTarget < 80) { // 到達判定を広げる
+                            this.setNewBugTarget(rect);
+                        }
+
+                        // 壁を避ける力
+                        const margin = 50;
+                        if (bug.x < margin) bug.vx += 0.1;
+                        if (bug.x > rect.width - margin) bug.vx -= 0.1;
+                        if (bug.y < margin) bug.vy += 0.1;
+                        if (bug.y > rect.height - margin) bug.vy -= 0.1;
+
+
+                        // 衝突判定
+                        this.bubbles.forEach(bubble => {
+                            const dx = bug.x - bubble.x;
+                            const dy = bug.y - bubble.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const minDist = bug.size / 2 + bubble.size / 2;
+                            if (dist < minDist) {
+                                bug.state = 'falling';
+                                bug.vx = bubble.vx * 0.5;
+                                bug.vy = bubble.vy * 0.5 + 2;
+                            }
+                        });
+
+                    } else if (bug.state === 'falling') {
+                        bug.vy += 0.2; // 重力
+                        bug.vx *= 0.99; // 空気抵抗
+
+                        // 画面下に落ちたら再スポーン
+                        if (bug.y > rect.height + bug.size) {
+                            bug.state = 'inactive';
+                            clearTimeout(bug.spawnTimer);
+                            bug.spawnTimer = setTimeout(() => this.spawnBug(), 2000); // 2秒後に再出現
+                        }
+                    }
+
+                    bug.x += bug.vx;
+                    bug.y += bug.vy;
+
+                    bug.style = {
+                        transform: `translate(-50%, -50%) translate(${bug.x}px, ${bug.y}px) rotate(${bug.rotation}deg)`
+                    };
+                },
+
+                spawnBug() {
+                    const container = document.getElementById('interactive-space');
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect();
+                    this.bug.x = Math.random() * rect.width;
+                    this.bug.y = -this.bug.size * 2; // 画面上部から出現
+                    this.bug.state = 'flying';
+                    this.setNewBugTarget(rect);
+                },
+
+                setNewBugTarget(rect) {
+                    this.bug.targetX = Math.random() * rect.width;
+                    this.bug.targetY = Math.random() * rect.height;
+                },
+                // ▲▲▲ ここまで追加 ▲▲▲
+
                 dragStart(bubble, event) {
                     if (this.modal.visible) return; // モーダル表示中は操作不可
 
