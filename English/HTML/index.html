@@ -175,6 +175,24 @@
         );
         scene.add(voidBackground);
 
+        // パーティクル用のテクスチャ
+        function createCircleTexture() {
+            const size = 16; // 解像度を最低限に
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d');
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2;
+            context.beginPath();
+            context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+            context.fillStyle = '#FFFFFF';
+            context.fill();
+            return new THREE.CanvasTexture(canvas);
+        }
+        const particleTexture = createCircleTexture();
+
         const loader = new THREE.FontLoader();
         loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
             const textGeometry1 = new THREE.TextGeometry('^. .^', {
@@ -579,8 +597,8 @@
         bloomPass.threshold = 0;
         // パフォーマンス向上のためBloom効果をさらに調整
         if (isMobile) {
-            bloomPass.strength = 0.3; // 負荷軽減のため少し下げる
-            bloomPass.radius = 0.2;
+            bloomPass.strength = 0.6; // ぼやけを軽減
+            bloomPass.radius = 0.1;   // ぼやけを軽減
         } else {
             bloomPass.strength = 0.8; // 負荷軽減のため少し下げる
             bloomPass.radius = 0.6;
@@ -841,6 +859,7 @@
         const galaxyGeometry = new THREE.BufferGeometry();
         galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
         galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
+
         const galaxyMaterial = new THREE.PointsMaterial({
             vertexColors: true,
             size: isMobile ? 0.2 : 0.1,
@@ -1193,7 +1212,7 @@
             const galaxyColors = new Float32Array(galaxyStars * 3);
             const spiralArms = 4;
             const spiralSpread = 10;
-            const minGalaxyRadius = 20;
+            const minGalaxyRadius = 40;
             const maxGalaxyRadius = 200;
 
             const armWeights = [1, 1.5, 1, 1.5];
@@ -1235,17 +1254,16 @@
             const galaxyGeometry = new THREE.BufferGeometry();
             galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
             galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
-            const galaxyMaterial = new THREE.PointsMaterial({
+            const galaxyFieldMaterial = new THREE.PointsMaterial({
+                map: particleTexture,
                 vertexColors: true,
-                size: isMobile ? 0.4 : 0.1,
+                size: isMobile ? 0.5 : 0.3, // 不透明なのでサイズを小さく調整
                 sizeAttenuation: true,
-                transparent: true,
-                opacity: isMobile ? 0.5 : 0.3,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
+                transparent: false,         // 透明度を無効化
+                depthWrite: true,           // 深度情報を書き込む
                 fog: true
             });
-            const galaxyField = new THREE.Points(galaxyGeometry, galaxyMaterial);
+            const galaxyField = new THREE.Points(galaxyGeometry, galaxyFieldMaterial);
             scene.add(galaxyField);
 
             const nebulaCount = isMobile ? 100 : 800;
@@ -1287,22 +1305,8 @@
             const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
             scene.add(nebulaField);
 
-            function createSparkleTexture() {
-                const canvas = document.createElement('canvas');
-                canvas.width = 128;
-                canvas.height = 128;
-                const context = canvas.getContext('2d');
-                const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
-                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.7)');
-                gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
-                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                context.fillStyle = gradient;
-                context.fillRect(0, 0, 128, 128);
-                return new THREE.CanvasTexture(canvas);
-            }
+            const sparkleTexture = particleTexture;
 
-            const sparkleTexture = createSparkleTexture();
             const sparkleCount = isMobile ? 30 : 150;
             for (let i = 0; i < sparkleCount; i++) {
                 const r = 3000 + Math.random() * 1000;
@@ -1437,24 +1441,6 @@
                 scene.add(blackHole);
             }
         }
-
-
-        // パーティクル用のテクスチャ
-        function createSparkleTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 128;
-            const context = canvas.getContext('2d');
-            const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
-            gradient.addColorStop(0, 'rgba(255,255,255,1)');
-            gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
-            gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
-            gradient.addColorStop(1, 'rgba(255,255,255,0)');
-            context.fillStyle = gradient;
-            context.fillRect(0, 0, 128, 128);
-            return new THREE.CanvasTexture(canvas);
-        }
-        const particleTexture = createSparkleTexture();
 
         // 図形花火用の頂点データ
         function getShapePoints(shape) {
@@ -1629,19 +1615,21 @@
                     const geometry = new THREE.BufferGeometry();
                     const material = new THREE.ShaderMaterial({
                         uniforms: {
-                            pointTexture: { value: particleTexture }
+                            pointTexture: { value: particleTexture },
+                            sizeScale: { value: isMobile ? 0.6 : 1.2 }
                         },
                         vertexShader: `
                             attribute float aLifetime;
                             attribute float aAge;
                             varying vec3 vColor;
                             varying float vAgeRatio;
+                            uniform float sizeScale;
 
                             void main() {
                                 vColor = color;
                                 vAgeRatio = aAge / aLifetime;
                                 vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                                gl_PointSize = (1.0 - vAgeRatio) * (vAgeRatio < 0.5 ? 10.0 : 20.0);
+                                gl_PointSize = (1.0 - vAgeRatio) * (vAgeRatio < 0.5 ? 10.0 : 20.0) * sizeScale;
                                 gl_Position = projectionMatrix * mvPosition;
                             }
                         `,
