@@ -7,9 +7,6 @@
     <meta name="description" content="FUM_Website">
     <meta name="robots" content="index, follow">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -26,8 +23,8 @@
         rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
-    <link href="../../Asset/CSS/Common.css" rel="stylesheet" />
-    <link href="../../Asset/CSS/Index.css" rel="stylesheet" />
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+    <link href="../../Asset/CSS/Index.css?v=1.0" rel="stylesheet" />
 
     <title>FUM_Website</title>
 
@@ -98,8 +95,8 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-    <script src="../../Asset/Javascript/Common.js"></script>
-    <script src="../../Asset/Javascript/Index.js"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.0"></script>
+    <script src="../../Asset/Javascript/Index.js?v=1.0"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js" defer></script>
@@ -130,7 +127,7 @@
 
         const fireworks = [];
         const gravity = new THREE.Vector3(0, -0.02, 0);
-        const fireworkTypes = ['peony', 'chrysanthemum', 'crown', 'thousand-wheels', 'shape-heart', 'shape-star', 'shape-smiley', 'willow', 'bouquet'];
+        const fireworkTypes = ['peony', 'chrysanthemum', 'crown', 'thousand-wheels', 'shape-heart', 'shape-star', 'shape-saturn', 'willow', 'bouquet', 'nishaku-dama', 'bun-pou'];
         let fireworksEnabled = false; // カメラアニメーション後に花火を有効にするフラグ
         const MAX_FIREWORKS = isMobile ? 5 : 10; // 花火の最大同時表示数
 
@@ -142,7 +139,7 @@
             antialias: true
         });
         renderer.setClearColor(0x010104, 1);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 1.5));
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.toneMapping = THREE.ReinhardToneMapping;
         renderer.toneMappingExposure = 1.5;
@@ -1061,7 +1058,7 @@
             if (!isMobile) {
                 // updateLinesは計算量が非常に大きいため、15フレームに1回に減らす
                 // もしくは、線を引く必要がなければこのブロックごとコメントアウトすると最も効果的です
-                if (frameCount % 15 === 0) {
+                if (frameCount % 30 === 0) {
                     updateLines();
                 }
             }
@@ -1484,19 +1481,40 @@
                         points.push(new THREE.Vector3(finalRadius * Math.cos(angle), finalRadius * Math.sin(angle), 0));
                     }
                     break;
-                case 'smiley':
-                    // 輪郭 (60%)
-                    for (let i = 0; i < numPoints * 0.6; i++) {
-                        const angle = (i / (numPoints * 0.6)) * 2 * Math.PI;
-                        points.push(new THREE.Vector3(scale * Math.cos(angle), scale * Math.sin(angle), 0));
+                case 'saturn':
+                    const bodyPoints = Math.floor(numPoints * 0.4);
+                    const ringPoints = numPoints - bodyPoints;
+                    const bodyRadius = scale * 0.7;
+                    const ringInnerRadius = scale * 1.0;
+                    const ringOuterRadius = scale * 1.6;
+                    const tilt = 0.2; // 環の傾き（ラジアン）
+
+                    // 本体の生成 (フィボナッチ格子を使って球状に配置)
+                    const phi = Math.PI * (3. - Math.sqrt(5.)); // 黄金角
+                    for (let i = 0; i < bodyPoints; i++) {
+                        const y = 0.25 - (i / (bodyPoints - 0.25)) * 2; // y座標を-1から1に
+                        const radius = Math.sqrt(0.25 - y * y);
+                        const theta = phi * i;
+                        const x = Math.cos(theta) * radius;
+                        const z = Math.sin(theta) * radius;
+                        points.push(new THREE.Vector3(x, y, z).multiplyScalar(bodyRadius));
                     }
-                    // 目 (2つ)
-                    points.push(new THREE.Vector3(-scale * 0.4, scale * 0.4, 0));
-                    points.push(new THREE.Vector3(scale * 0.4, scale * 0.4, 0));
-                    // 口 (40%)
-                    for (let i = 0; i < numPoints * 0.4; i++) {
-                        const angle = Math.PI + (i / (numPoints * 0.4 - 1)) * Math.PI;
-                        points.push(new THREE.Vector3(scale * 0.6 * Math.cos(angle), scale * 0.6 * Math.sin(angle) - scale * 0.2, 0));
+
+                    // 環の生成
+                    for (let i = 0; i < ringPoints; i++) {
+                        // 円環内にランダムな点を生成
+                        const angle = Math.random() * Math.PI * 2;
+                        // Math.sqrt(Math.random()) を使い、中心部に点が偏らないようにする
+                        const radius = Math.sqrt(Math.random()) * (ringOuterRadius - ringInnerRadius) + ringInnerRadius;
+
+                        const x = Math.cos(angle) * radius;
+                        const z = Math.sin(angle) * radius;
+
+                        // 環を傾けるための回転計算
+                        const rotatedY = z * Math.sin(tilt);
+                        const rotatedZ = z * Math.cos(tilt);
+
+                        points.push(new THREE.Vector3(x, rotatedY, rotatedZ));
                     }
                     break;
             }
@@ -1526,9 +1544,12 @@
 
                 this.velocity = new THREE.Vector3(
                     (Math.random() - 0.5) * 4,
-                    subFirework ? Math.random() * 5 + 4 : Math.random() * 8 + 18,
+                    subFirework ? Math.random() * 5 + 10 : Math.random() * 5 + 20,
                     (Math.random() - 0.5) * 4
                 );
+                if (type === 'nishaku-dama' && !subFirework) {
+                    this.velocity.y *= 1.5; // より高く打ち上げる
+                }
                 this.life = 0;
                 this.exploded = false;
                 scene.add(this.rocket);
@@ -1538,122 +1559,161 @@
                 this.exploded = true;
                 scene.remove(this.rocket);
 
-                const particleCount = isMobile ? 60 : (this.type.includes('willow') || this.type.includes('crown') ? 200 : 120);
-                const positions = new Float32Array(particleCount * 3);
-                const colors = new Float32Array(particleCount * 3);
-                const velocities = [];
-                const lifetimes = new Float32Array(particleCount);
-
-                const geometry = new THREE.BufferGeometry();
-                const material = new THREE.ShaderMaterial({
-                    uniforms: {
-                        pointTexture: { value: particleTexture }
-                    },
-                    vertexShader: `
-                attribute float aLifetime;
-                attribute float aAge;
-                varying vec3 vColor;
-                varying float vAgeRatio;
-
-                void main() {
-                    vColor = color;
-                    vAgeRatio = aAge / aLifetime;
-                    
-                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                    
-                    // 寿命に応じてサイズを小さくする
-                    gl_PointSize = (1.0 - vAgeRatio) * (vAgeRatio < 0.5 ? 10.0 : 20.0);
-                    gl_Position = projectionMatrix * mvPosition;
-                }
-            `,
-                    fragmentShader: `
-                uniform sampler2D pointTexture;
-                varying vec3 vColor;
-                varying float vAgeRatio;
-
-                void main() {
-                    // 寿命に応じてアルファ（透明度）を滑らかに下げる
-                    float alpha = (1.0 - pow(vAgeRatio, 2.0));
-                    gl_FragColor = texture2D(pointTexture, gl_PointCoord);
-                    gl_FragColor.rgb *= vColor;
-                    gl_FragColor.a *= alpha;
-                }
-            `,
-                    blending: THREE.AdditiveBlending,
-                    transparent: true,
-                    depthWrite: false,
-                    fog: false,
-                    vertexColors: true // 頂点カラー属性を有効にする
-                });
-
-                this.particles = new THREE.Points(geometry, material);
-                this.particles.position.copy(this.rocket.position);
-                scene.add(this.particles);
-
+                // 図形花火の頂点データを取得
                 let shapePoints = null;
-                // 【ここを修正】図形タイプの判定を汎用的に
                 if (this.type.startsWith('shape-')) {
-                    const shapeName = this.type.substring(6); // "shape-" の後ろの名前を取得
+                    const shapeName = this.type.substring(6);
                     shapePoints = getShapePoints(shapeName);
                 }
 
-
-                for (let i = 0; i < particleCount; i++) {
-                    const vec = new THREE.Vector3();
-                    if (shapePoints && shapePoints.length > 0) {
-                        // 【ここを修正】図形花火の大きさを調整
-                        vec.copy(shapePoints[i % shapePoints.length]).multiplyScalar(0.5 + Math.random() * 0.3);
-                    } else {
-                        vec.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
-                        // 【ここを修正】通常花火にのみspeedを適用
-                        let speed = Math.random() * 8 + 4;
-                        if (this.type === 'crown' || this.type === 'willow') speed *= 0.7;
-                        vec.multiplyScalar(speed);
+                // 花火の種類に応じて親玉のパーティクル数を決定
+                let particleCount;
+                if (shapePoints) {
+                    particleCount = shapePoints.length;
+                } else {
+                    switch (this.type) {
+                        case 'nishaku-dama':
+                            particleCount = isMobile ? 150 : 350; // 削減
+                            break;
+                        case 'willow':
+                        case 'crown':
+                            particleCount = isMobile ? 100 : 200; // 削減
+                            break;
+                        case 'bun-pou': // 分砲の親玉は光らず、子玉のみで表現
+                            particleCount = 0;
+                            break;
+                        default: // peony, chrysanthemumなど
+                            particleCount = isMobile ? 60 : 120; // 削減
                     }
-
-                    velocities.push(vec);
-                    lifetimes[i] = Math.random() * 1.5 + 1.5;
-
-                    let baseColor = this.color;
-                    if (this.type === 'chrysanthemum') lifetimes[i] *= 1.5;
-                    if (this.type === 'willow') {
-                        baseColor = new THREE.Color(0xffd700);
-                        lifetimes[i] *= 2.0;
-                    }
-
-                    const finalColor = baseColor.clone().lerp(new THREE.Color(0xffffff), 0.5);
-                    finalColor.toArray(colors, i * 3);
                 }
 
-                this.particles.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                this.particles.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-                this.particleVelocities = velocities;
-                this.particleLifetimes = lifetimes;
-                this.particleAges = new Float32Array(particleCount).fill(0);
+                // 分砲や千輪の子玉を生成
+                if (this.type === 'thousand-wheels' || this.type === 'bun-pou') {
+                    const isBunpou = this.type === 'bun-pou';
+                    const subCount = isMobile ? (isBunpou ? 8 : 4) : (isBunpou ? 20 : 6); // 削減
+                    const launchDelay = isBunpou ? 0 : 200; // 千輪は親玉から少し遅れて開く
 
-                // 【ここから追記】シェーダーに渡すためのカスタム属性を追加
-                this.particles.geometry.setAttribute('aLifetime', new THREE.BufferAttribute(lifetimes, 1));
-                this.particles.geometry.setAttribute('aAge', new THREE.BufferAttribute(this.particleAges, 1));
-
-                if (this.type === 'thousand-wheels') {
-                    const subCount = isMobile ? 3 : 5;
                     for (let i = 0; i < subCount; i++) {
                         setTimeout(() => {
                             if (fireworks.length >= MAX_FIREWORKS) return;
+
+                            // 分砲は放射状に、千輪はよりランダムに広がる
+                            const subVelocity = isBunpou
+                                ? new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).normalize().multiplyScalar(Math.random() * 10 + 15)
+                                : new THREE.Vector3((Math.random() - 0.5) * 8, Math.random() * 8 + 4, (Math.random() - 0.5) * 8);
+
                             const fw = new Firework({
-                                x: this.rocket.position.x, y: this.rocket.position.y, z: this.rocket.position.z,
-                                type: 'peony',
+                                x: this.rocket.position.x,
+                                y: this.rocket.position.y,
+                                z: this.rocket.position.z,
+                                type: ['peony', 'chrysanthemum'][Math.floor(Math.random() * 2)],
                                 color: new THREE.Color().setHSL(Math.random(), 1, 0.7),
                                 subFirework: true
                             });
-                            fw.velocity.set((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);
-                            fw.life = 0.5;
+
+                            fw.velocity.copy(subVelocity);
+                            // 子玉が飛んでから開くまでの時間
+                            fw.life = isBunpou ? 0.3 + Math.random() * 0.3 : 0.4;
                             fireworks.push(fw);
-                        }, Math.random() * 500);
+                        }, launchDelay + (isBunpou ? i * 20 : Math.random() * 200)); // 分砲は等間隔、千輪はランダムに射出
                     }
                 }
 
-                const flash = new THREE.PointLight(this.color, 5, 300, 2);
+                // 親玉のパーティクルを生成
+                if (particleCount > 0) {
+                    const positions = new Float32Array(particleCount * 3);
+                    const colors = new Float32Array(particleCount * 3);
+                    const velocities = [];
+                    const lifetimes = new Float32Array(particleCount);
+
+                    const geometry = new THREE.BufferGeometry();
+                    const material = new THREE.ShaderMaterial({
+                        uniforms: {
+                            pointTexture: { value: particleTexture }
+                        },
+                        vertexShader: `
+                            attribute float aLifetime;
+                            attribute float aAge;
+                            varying vec3 vColor;
+                            varying float vAgeRatio;
+
+                            void main() {
+                                vColor = color;
+                                vAgeRatio = aAge / aLifetime;
+                                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                                gl_PointSize = (1.0 - vAgeRatio) * (vAgeRatio < 0.5 ? 10.0 : 20.0);
+                                gl_Position = projectionMatrix * mvPosition;
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform sampler2D pointTexture;
+                            varying vec3 vColor;
+                            varying float vAgeRatio;
+
+                            void main() {
+                                float alpha = (1.0 - pow(vAgeRatio, 2.0));
+                                gl_FragColor = texture2D(pointTexture, gl_PointCoord);
+                                gl_FragColor.rgb *= vColor;
+                                gl_FragColor.a *= alpha;
+                            }
+                        `,
+                        blending: THREE.AdditiveBlending,
+                        transparent: true,
+                        depthWrite: false,
+                        fog: false,
+                        vertexColors: true
+                    });
+
+                    this.particles = new THREE.Points(geometry, material);
+                    this.particles.position.copy(this.rocket.position);
+                    scene.add(this.particles);
+
+                    for (let i = 0; i < particleCount; i++) {
+                        const vec = new THREE.Vector3();
+                        if (shapePoints) {
+                            vec.copy(shapePoints[i % shapePoints.length]).multiplyScalar(0.5 + Math.random() * 0.3);
+                        } else {
+                            vec.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+                            let speed = Math.random() * 8 + 4;
+                            if (this.type === 'crown' || this.type === 'willow') speed *= 0.7;
+                            if (this.type === 'nishaku-dama') speed *= 1.3; // 二尺玉はより大きく広がる
+                            vec.multiplyScalar(speed);
+                        }
+
+                        velocities.push(vec);
+                        lifetimes[i] = Math.random() * 1.5 + 2.0; // 全体的に寿命を少し延ばす
+
+                        let baseColor = this.color;
+                        if (this.type === 'chrysanthemum') lifetimes[i] *= 1.5;
+                        if (this.type === 'willow') {
+                            baseColor = new THREE.Color(0xffd700);
+                            lifetimes[i] *= 2.0;
+                        }
+                        if (this.type === 'nishaku-dama') {
+                            lifetimes[i] *= 1.8; // 二尺玉はさらに長く輝く
+                        }
+
+                        const finalColor = baseColor.clone().lerp(new THREE.Color(0xffffff), 0.5);
+                        finalColor.toArray(colors, i * 3);
+                    }
+
+                    this.particles.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    this.particles.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                    this.particleVelocities = velocities;
+                    this.particleLifetimes = lifetimes;
+                    this.particleAges = new Float32Array(particleCount).fill(0);
+                    this.particles.geometry.setAttribute('aLifetime', new THREE.BufferAttribute(lifetimes, 1));
+                    this.particles.geometry.setAttribute('aAge', new THREE.BufferAttribute(this.particleAges, 1));
+                }
+
+                // 閃光(フラッシュ)
+                const isNishaku = this.type === 'nishaku-dama';
+                const flash = new THREE.PointLight(
+                    this.color,
+                    isNishaku ? 10 : 5, // 二尺玉はより明るい
+                    isNishaku ? 600 : 300, // 二尺玉はより広範囲
+                    2
+                );
                 flash.position.copy(this.rocket.position);
                 scene.add(flash);
                 setTimeout(() => scene.remove(flash), 300);
@@ -1661,37 +1721,55 @@
 
             update(dt) {
                 if (this.exploded) {
-                    const positions = this.particles.geometry.attributes.position.array;
-                    const colors = this.particles.geometry.attributes.color.array;
-                    let aliveCount = 0;
-                    for (let i = 0; i < this.particleAges.length; i++) {
-                        if (this.particleAges[i] < this.particleLifetimes[i]) {
-                            this.particleAges[i] += dt;
-                            this.particleVelocities[i].add(gravity);
-                            if (this.type === 'willow' || this.type === 'crown') this.particleVelocities[i].y -= 0.03;
+                    // 1. 親玉パーティクルが存在する場合の更新処理
+                    if (this.particles) {
+                        const positions = this.particles.geometry.attributes.position.array;
+                        const colors = this.particles.geometry.attributes.color.array;
+                        let aliveCount = 0;
+                        for (let i = 0; i < this.particleAges.length; i++) {
+                            if (this.particleAges[i] < this.particleLifetimes[i]) {
+                                this.particleAges[i] += dt;
+                                this.particleVelocities[i].add(gravity);
+                                if (this.type === 'willow' || this.type === 'crown') this.particleVelocities[i].y -= 0.03;
 
-                            positions[i * 3] += this.particleVelocities[i].x * dt;
-                            positions[i * 3 + 1] += this.particleVelocities[i].y * dt;
-                            positions[i * 3 + 2] += this.particleVelocities[i].z * dt;
+                                positions[i * 3] += this.particleVelocities[i].x * dt;
+                                positions[i * 3 + 1] += this.particleVelocities[i].y * dt;
+                                positions[i * 3 + 2] += this.particleVelocities[i].z * dt;
 
-                            const lifeRatio = this.particleAges[i] / this.particleLifetimes[i];
-                            if (this.type === 'chrysanthemum') {
-                                const c = new THREE.Color(this.color);
-                                c.lerp(new THREE.Color(0xffaa33), lifeRatio);
-                                c.toArray(colors, i * 3);
+                                const lifeRatio = this.particleAges[i] / this.particleLifetimes[i];
+                                if (this.type === 'chrysanthemum') {
+                                    const c = new THREE.Color(this.color);
+                                    c.lerp(new THREE.Color(0xffaa33), lifeRatio);
+                                    c.toArray(colors, i * 3);
+                                }
+                                aliveCount++;
                             }
-                            aliveCount++;
+                        }
+                        this.particles.geometry.attributes.position.needsUpdate = true;
+                        this.particles.geometry.attributes.color.needsUpdate = true;
+                        this.particles.geometry.attributes.aAge.needsUpdate = true;
+
+                        if (aliveCount === 0) {
+                            scene.remove(this.particles);
+                            this.particles.geometry.dispose();
+                            this.particles.material.dispose();
+                            this.particles = null; // 役割を終えたので null にする
                         }
                     }
-                    this.particles.geometry.attributes.position.needsUpdate = true;
-                    this.particles.geometry.attributes.color.needsUpdate = true;
-                    this.particles.geometry.attributes.aAge.needsUpdate = true;
-
-                    if (aliveCount === 0) {
-                        scene.remove(this.particles);
-                        this.particles.geometry.dispose();
-                        this.particles.material.dispose();
-                        return true;
+                    // 2. 親玉パーティクルが存在しない（または消滅した）場合の削除判定
+                    else {
+                        // 子玉を生成する花火は、生成が終わるまで待機
+                        if (this.type === 'bun-pou' || this.type === 'thousand-wheels') {
+                            if (!this.explodedTime) this.explodedTime = 0;
+                            this.explodedTime += dt;
+                            // 子玉生成のタイムアウト(最大500ms)後、安全マージンをもって削除
+                            if (this.explodedTime > 1.0) {
+                                return true; // 自身を削除
+                            }
+                        } else {
+                            // 親玉のみの花火は、パーティクルが消えたら即座に削除
+                            return true;
+                        }
                     }
                 } else {
                     this.life += dt;
@@ -1712,7 +1790,7 @@
             const type = fireworkTypes[Math.floor(Math.random() * fireworkTypes.length)];
             const x = (Math.random() - 0.5) * 150;
             const y = 0;
-            const z = (Math.random() - 0.5) * 150 - 50; // 少し奥に
+            const z = (Math.random() - 0.5) * 150; // 少し奥に
 
             if (type === 'bouquet') {
                 const bouquetCount = isMobile ? 2 : 3;
