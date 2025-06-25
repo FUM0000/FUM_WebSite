@@ -1305,32 +1305,61 @@
             const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
             scene.add(nebulaField);
 
-            const sparkleTexture = particleTexture;
-
+            // パーティクル用のテクスチャ
+            function createSparkleTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 128;
+                const context = canvas.getContext('2d');
+                const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+                gradient.addColorStop(0, 'rgba(255,255,255,1)');
+                gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
+                gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+                gradient.addColorStop(1, 'rgba(255,255,255,0)');
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, 128, 128);
+                return new THREE.CanvasTexture(canvas);
+            }
+            const sparkleTexture = createSparkleTexture();
             const sparkleCount = isMobile ? 30 : 150;
+
+            const sparklePositions = new Float32Array(sparkleCount * 3);
+            const sparkleColors = new Float32Array(sparkleCount * 3);
+
             for (let i = 0; i < sparkleCount; i++) {
                 const r = 3000 + Math.random() * 1000;
                 const theta = Math.acos(2 * Math.random() - 1);
                 const phi = Math.random() * 2 * Math.PI;
-                const sprite = new THREE.Sprite(
-                    new THREE.SpriteMaterial({
-                        map: sparkleTexture,
-                        color: randomColor(),
-                        transparent: true,
-                        opacity: 1,
-                        blending: THREE.AdditiveBlending,
-                        depthWrite: false,
-                        fog: false
-                    })
-                );
-                sprite.position.set(
-                    r * Math.sin(theta) * Math.cos(phi),
-                    r * Math.sin(theta) * Math.sin(phi),
-                    r * Math.cos(theta)
-                );
-                sprite.scale.set(30 + Math.random() * 50, 30 + Math.random() * 50, 1);
-                scene.add(sprite);
+                const i3 = i * 3;
+
+                sparklePositions[i3 + 0] = r * Math.sin(theta) * Math.cos(phi);
+                sparklePositions[i3 + 1] = r * Math.sin(theta) * Math.sin(phi);
+                sparklePositions[i3 + 2] = r * Math.cos(theta);
+
+                const color = randomColor();
+                sparkleColors[i3 + 0] = color.r;
+                sparkleColors[i3 + 1] = color.g;
+                sparkleColors[i3 + 2] = color.b;
             }
+
+            const sparkleGeometry = new THREE.BufferGeometry();
+            sparkleGeometry.setAttribute('position', new THREE.BufferAttribute(sparklePositions, 3));
+            sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(sparkleColors, 3));
+
+            // 設定を見直し、確実に描画されるように調整します。
+            const sparkleMaterial = new THREE.PointsMaterial({
+                map: sparkleTexture,
+                size: 100, // サイズを大きくして視認性を向上させます
+                sizeAttenuation: true, // 遠近感を有効にします
+                vertexColors: true,
+                blending: THREE.AdditiveBlending, // 加算合成で輝きを表現
+                transparent: false,
+                depthWrite: false,
+                fog: false // 遠景のため霧の影響を受けないようにします
+            });
+
+            const sparkles = new THREE.Points(sparkleGeometry, sparkleMaterial);
+            scene.add(sparkles);
 
             const clusterCount = isMobile ? 1 : 4;
             for (let c = 0; c < clusterCount; c++) {
