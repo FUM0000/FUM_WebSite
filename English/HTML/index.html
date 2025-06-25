@@ -236,7 +236,7 @@
                 emissive: 0x00ffcc,
                 emissiveIntensity: 0.5,
                 shininess: 100,
-                fog: true
+                fog: false
             });
 
             const textMesh1 = new THREE.Mesh(textGeometry1, textMaterial);
@@ -507,7 +507,7 @@
         // 修正: emissiveとemissiveIntensityを削除
         const cursorParticleMaterial = new THREE.PointsMaterial({
             color: 0x00ffcc,
-            size: isMobile ? 0.1 : 0.05,
+            size: 0.1,
             transparent: true,
             opacity: 0.8,
         });
@@ -521,17 +521,15 @@
         ];
 
         const totalElectrons = electronShells.reduce((sum, shell) => sum + shell.electrons, 0);
-        const pointSize = isMobile ? 0.25 : 0.12;
+        const pointSize = 0.25;
         const connectionDistance = 4.5;
         const avoidanceDistance = 1.2;
         const repulsionStrength = 0.02;
 
-        // 修正: emissiveとemissiveIntensityを削除
         const pointMaterial = new THREE.PointsMaterial({
             color: 0x00ffcc,
             size: pointSize,
-            sizeAttenuation: true,
-            fog: true
+            fog: false
         });
 
         const positions = new Float32Array(totalElectrons * 3);
@@ -574,12 +572,11 @@
         const pointCloud = new THREE.Points(pointGeometry, pointMaterial);
         scene.add(pointCloud);
 
-        // 修正: emissiveとemissiveIntensityを削除
         const lineMaterial = new THREE.LineBasicMaterial({
             color: 0x00ffff,
             transparent: true,
-            opacity: isMobile ? 0.2 : 0.1,
-            fog: true
+            opacity: 0.2,
+            fog: false
         });
 
         let lineSegments;
@@ -840,38 +837,6 @@
             lineSegments.geometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
             lineSegments.geometry.computeBoundingSphere();
         }
-
-        const galaxyCount = isMobile ? 8 : 40;
-        const galaxyPositions = new Float32Array(galaxyCount * 3);
-        const galaxyColors = new Float32Array(galaxyCount * 3);
-        for (let i = 0; i < galaxyCount; i++) {
-            const r = 1000 + Math.random() * 1000;
-            const theta = Math.random() * 2 * Math.PI;
-            const phi = Math.acos(2 * Math.random() - 1);
-            galaxyPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-            galaxyPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            galaxyPositions[i * 3 + 2] = r * Math.cos(phi);
-            const color = new THREE.Color(0xffffff).lerp(new THREE.Color(0x88aaff), Math.random());
-            galaxyColors[i * 3] = color.r;
-            galaxyColors[i * 3 + 1] = color.g;
-            galaxyColors[i * 3 + 2] = color.b;
-        }
-        const galaxyGeometry = new THREE.BufferGeometry();
-        galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
-        galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
-
-        const galaxyMaterial = new THREE.PointsMaterial({
-            vertexColors: true,
-            size: isMobile ? 0.2 : 0.1,
-            sizeAttenuation: true,
-            transparent: true,
-            opacity: 0.1,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            fog: true
-        });
-        const galaxySystem = new THREE.Points(galaxyGeometry, galaxyMaterial);
-        scene.add(galaxySystem);
 
         let Flag_CameraAnimation = true;
         let Time_CameraAnimation_Start = null;
@@ -1176,7 +1141,7 @@
 
         function createUniverseDetail() {
             // パフォーマンス向上のためパーティクル数をさらに削減
-            const starCount = isMobile ? 500 : 4000;
+            const starCount = isMobile ? 2000 : 4000;
             const starPositions = new Float32Array(starCount * 3);
             const starColors = new Float32Array(starCount * 3);
             for (let i = 0; i < starCount; i++) {
@@ -1196,13 +1161,12 @@
             starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
             const starMaterial = new THREE.PointsMaterial({
                 vertexColors: true,
-                size: 1 + Math.random() * 4,
-                sizeAttenuation: true,
+                size: isMobile ? 20 : 10,
                 transparent: true,
                 opacity: 0.5,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false,
-                fog: true
+                fog: false
             });
             const starField = new THREE.Points(starGeometry, starMaterial);
             scene.add(starField);
@@ -1257,16 +1221,15 @@
             const galaxyFieldMaterial = new THREE.PointsMaterial({
                 map: particleTexture,
                 vertexColors: true,
-                size: isMobile ? 0.5 : 0.3, // 不透明なのでサイズを小さく調整
-                sizeAttenuation: true,
+                size: isMobile ? 0.5 : 0.25,
                 transparent: false,         // 透明度を無効化
                 depthWrite: true,           // 深度情報を書き込む
-                fog: true
+                fog: false
             });
             const galaxyField = new THREE.Points(galaxyGeometry, galaxyFieldMaterial);
             scene.add(galaxyField);
 
-            const nebulaCount = isMobile ? 100 : 800;
+            const nebulaCount = isMobile ? 100 : 500;
             const nebulaPositions = new Float32Array(nebulaCount * 3);
             const nebulaColors = new Float32Array(nebulaCount * 3);
             const nebulaMinRadius = 100;
@@ -1293,14 +1256,14 @@
             nebulaGeometry.setAttribute('position', new THREE.BufferAttribute(nebulaPositions, 3));
             nebulaGeometry.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
             const nebulaMaterial = new THREE.PointsMaterial({
+                map: particleTexture,
                 vertexColors: true,
-                size: isMobile ? 0.2 : 0.1,
-                sizeAttenuation: true,
+                size: 1,
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0.75,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false,
-                fog: true
+                fog: false
             });
             const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
             scene.add(nebulaField);
@@ -1308,16 +1271,16 @@
             // パーティクル用のテクスチャ
             function createSparkleTexture() {
                 const canvas = document.createElement('canvas');
-                canvas.width = 128;
-                canvas.height = 128;
+                canvas.width = 64;
+                canvas.height = 64;
                 const context = canvas.getContext('2d');
-                const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+                const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
                 gradient.addColorStop(0, 'rgba(255,255,255,1)');
                 gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
                 gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
                 gradient.addColorStop(1, 'rgba(255,255,255,0)');
                 context.fillStyle = gradient;
-                context.fillRect(0, 0, 128, 128);
+                context.fillRect(0, 0, 64, 64);
                 return new THREE.CanvasTexture(canvas);
             }
             const sparkleTexture = createSparkleTexture();
@@ -1327,7 +1290,7 @@
             const sparkleColors = new Float32Array(sparkleCount * 3);
 
             for (let i = 0; i < sparkleCount; i++) {
-                const r = 3000 + Math.random() * 1000;
+                const r = 2000 + Math.random() * 1000;
                 const theta = Math.acos(2 * Math.random() - 1);
                 const phi = Math.random() * 2 * Math.PI;
                 const i3 = i * 3;
@@ -1349,21 +1312,20 @@
             // 設定を見直し、確実に描画されるように調整します。
             const sparkleMaterial = new THREE.PointsMaterial({
                 map: sparkleTexture,
-                size: 100, // サイズを大きくして視認性を向上させます
-                sizeAttenuation: true, // 遠近感を有効にします
+                size: 60, // サイズを大きくして視認性を向上させます
                 vertexColors: true,
                 blending: THREE.AdditiveBlending, // 加算合成で輝きを表現
                 transparent: false,
                 depthWrite: false,
-                fog: false // 遠景のため霧の影響を受けないようにします
+                fog: false
             });
 
             const sparkles = new THREE.Points(sparkleGeometry, sparkleMaterial);
             scene.add(sparkles);
 
-            const clusterCount = isMobile ? 1 : 4;
+            const clusterCount = isMobile ? 2 : 4;
             for (let c = 0; c < clusterCount; c++) {
-                const clusterRadius = 3000 + Math.random() * 2000;
+                const clusterRadius = 2000;
                 const clusterTheta = Math.acos(2 * Math.random() - 1);
                 const clusterPhi = Math.random() * 2 * Math.PI;
                 const clusterCenter = new THREE.Vector3(
@@ -1373,7 +1335,7 @@
                 );
                 const galaxyInCluster = 3 + Math.floor(Math.random() * 5);
                 for (let g = 0; g < galaxyInCluster; g++) {
-                    const particleCount = 500 + Math.floor(Math.random() * 1000);
+                    const particleCount = 50 + Math.floor(Math.random() * 50);
                     const clusterPositions = new Float32Array(particleCount * 3);
                     const clusterColors = new Float32Array(particleCount * 3);
                     const offset = new THREE.Vector3(
@@ -1398,13 +1360,13 @@
                     clusterGeometry.setAttribute('color', new THREE.BufferAttribute(clusterColors, 3));
                     const clusterMaterial = new THREE.PointsMaterial({
                         vertexColors: true,
-                        size: isMobile ? 0.2 + Math.random() * 0.3 : 0.1 + Math.random() * 0.2,
+                        size: 0.1 + Math.random() * 0.3,
                         sizeAttenuation: true,
                         transparent: true,
-                        opacity: 0.4,
+                        opacity: 0.5,
                         blending: THREE.AdditiveBlending,
                         depthWrite: false,
-                        fog: true
+                        fog: false
                     });
                     const clusterField = new THREE.Points(clusterGeometry, clusterMaterial);
                     scene.add(clusterField);
@@ -1413,8 +1375,8 @@
 
             const distantGalaxyCount = isMobile ? 50 : 300;
             for (let g = 0; g < distantGalaxyCount; g++) {
-                const particleCount = 200 + Math.floor(Math.random() * 600);
-                const galaxyRadius = 1500 + Math.random() * 2000;
+                const particleCount = 50 + Math.floor(Math.random() * 50);
+                const galaxyRadius = 2000 + Math.random() * 1000;
                 const galaxyTheta = Math.acos(2 * Math.random() - 1);
                 const galaxyPhi = Math.random() * 2 * Math.PI;
                 const distantPositions = new Float32Array(particleCount * 3);
@@ -1436,28 +1398,27 @@
                 distantGeometry.setAttribute('color', new THREE.BufferAttribute(distantColors, 3));
                 const distantMaterial = new THREE.PointsMaterial({
                     vertexColors: true,
-                    size: 0.1 + Math.random() * 5,
-                    sizeAttenuation: true,
+                    size: 2 + Math.random() * 3,
                     transparent: true,
-                    opacity: 0.05,
+                    opacity: 0.25,
                     blending: THREE.AdditiveBlending,
                     depthWrite: false,
-                    fog: true
+                    fog: false
                 });
                 const distantField = new THREE.Points(distantGeometry, distantMaterial);
                 scene.add(distantField);
             }
 
-            const blackHoleCount = isMobile ? 1 : 3;
+            const blackHoleCount = 10;
             const blackHoleMaterial = new THREE.MeshBasicMaterial({
                 color: 0x000000,
                 fog: false
             });
             for (let i = 0; i < blackHoleCount; i++) {
                 const radius = 25 + Math.random() * 25;
-                const blackHoleGeometry = new THREE.SphereGeometry(radius, 16, 16);
+                const blackHoleGeometry = new THREE.SphereGeometry(radius, 8, 8);
                 const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial);
-                const r = 1000 + Math.random() * 1000;
+                const r = 1500 + Math.random() * 1000;
                 const theta = Math.acos(2 * Math.random() - 1);
                 const phi = Math.random() * 2 * Math.PI;
                 blackHole.position.set(
@@ -1543,13 +1504,13 @@
                 this.subFirework = subFirework;
 
                 const material = new THREE.PointsMaterial({
-                    size: subFirework ? 1.0 : 2.0,
+                    size: subFirework ? 0.2 : 1,
                     color: 0xffeeb3,
                     map: particleTexture,
                     blending: THREE.AdditiveBlending,
                     transparent: true,
                     depthWrite: false,
-                    fog: false // 花火は霧の影響を受けにくくする
+                    fog: false
                 });
 
                 const geometry = new THREE.BufferGeometry();
@@ -1645,7 +1606,7 @@
                     const material = new THREE.ShaderMaterial({
                         uniforms: {
                             pointTexture: { value: particleTexture },
-                            sizeScale: { value: isMobile ? 0.6 : 1.2 }
+                            sizeScale: { value: 0.5 }
                         },
                         vertexShader: `
                             attribute float aLifetime;
@@ -1727,8 +1688,8 @@
                 const isNishaku = this.type === 'nishaku-dama';
                 const flash = new THREE.PointLight(
                     this.color,
-                    isNishaku ? 10 : 5, // 二尺玉はより明るい
-                    isNishaku ? 600 : 300, // 二尺玉はより広範囲
+                    isNishaku ? 5 : 2, // 二尺玉はより明るい
+                    500, // 二尺玉はより広範囲
                     2
                 );
                 flash.position.copy(this.rocket.position);
