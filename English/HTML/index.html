@@ -1271,16 +1271,16 @@
             // パーティクル用のテクスチャ
             function createSparkleTexture() {
                 const canvas = document.createElement('canvas');
-                canvas.width = 64;
-                canvas.height = 64;
+                canvas.width = 32;
+                canvas.height = 32;
                 const context = canvas.getContext('2d');
-                const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+                const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
                 gradient.addColorStop(0, 'rgba(255,255,255,1)');
                 gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
                 gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
                 gradient.addColorStop(1, 'rgba(255,255,255,0)');
                 context.fillStyle = gradient;
-                context.fillRect(0, 0, 64, 64);
+                context.fillRect(0, 0, 32, 32);
                 return new THREE.CanvasTexture(canvas);
             }
             const sparkleTexture = createSparkleTexture();
@@ -1322,6 +1322,32 @@
 
             const sparkles = new THREE.Points(sparkleGeometry, sparkleMaterial);
             scene.add(sparkles);
+
+            const sparkleTexture_wide = createSparkleTexture();
+            const sparkleCount_wide = isMobile ? 20 : 100;
+            for (let i = 0; i < sparkleCount_wide; i++) {
+                const r = 1500 + Math.random() * 1000;
+                const theta = Math.acos(2 * Math.random() - 1);
+                const phi = Math.random() * 2 * Math.PI;
+                const sprite = new THREE.Sprite(
+                    new THREE.SpriteMaterial({
+                        map: sparkleTexture_wide,
+                        color: randomColor(),
+                        transparent: true,
+                        opacity: 1,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        fog: false
+                    })
+                );
+                sprite.position.set(
+                    r * Math.sin(theta) * Math.cos(phi),
+                    r * Math.sin(theta) * Math.sin(phi),
+                    r * Math.cos(theta)
+                );
+                sprite.scale.set(30 + Math.random() * 50, 30 + Math.random() * 50, 1);
+                scene.add(sprite);
+            }
 
             const clusterCount = isMobile ? 2 : 4;
             for (let c = 0; c < clusterCount; c++) {
