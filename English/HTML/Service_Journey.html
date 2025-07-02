@@ -1,0 +1,148 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+  <title>Journey</title>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Journey</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
+            <!-- カテゴリ選択 -->
+            <v-row justify="center">
+              <v-col xs="12" md="8">
+                <v-select 
+                  v-model="selectedCategory" 
+                  :items="categories" 
+                  label="Category"
+                  item-text="text"
+                  item-value="value"
+                  >
+                </v-select>
+              </v-col>
+            </v-row>
+
+            <!-- 場所選択 -->
+            <v-row justify="center">
+              <v-col xs="12" md="8">
+                <v-select
+                  v-if="selectedCategory"
+                  v-model="selectedLocation"
+                  :items="currentLocations"
+                  label="Location"
+                  item-text="name"
+                  item-value="url"
+                  clearable
+                ></v-select>
+              </v-col>
+            </v-row>
+
+            <!-- Google Earth 表示エリア -->
+            <v-row justify="center" v-if="selectedLocation">
+              <v-col xs="12" md="8">
+                <v-responsive :aspect-ratio="16/9">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameborder="0"
+                    style="border:0"
+                    :src="selectedLocation"
+                    allowfullscreen>
+                  </iframe>
+                </v-responsive>
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.0"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        // 選択中のカテゴリ（初期値: 世界遺産）
+        selectedCategory: 'world_heritage',
+        // カテゴリのリスト
+        categories: [
+          { text: '世界遺産', value: 'world_heritage' },
+          { text: '珍しい地形', value: 'unique_landscapes' },
+        ],
+        // 選択中の場所のURL
+        selectedLocation: null,
+        // 場所のデータ
+        locations: {
+          world_heritage: [
+            { name: 'マチュ・ピチュ', url: 'https://earth.google.com/web/search/Machu+Picchu' },
+            { name: 'ギザの三大ピラミッド', url: 'https://earth.google.com/web/search/Giza+pyramid+complex' },
+            { name: '万里の長城 (八達嶺)', url: 'https://earth.google.com/web/search/Great+Wall+at+Badaling' },
+            { name: 'アンコール・ワット', url: 'https://earth.google.com/web/search/Angkor+Wat' },
+          ],
+          unique_landscapes: [
+            { name: 'ソコトラ島', url: 'https://earth.google.com/web/search/Socotra' },
+            { name: '張掖丹霞地貌', url: 'https://earth.google.com/web/search/Zhangye+Danxia+National+Geological+Park' },
+            { name: 'リシャット構造', url: 'https://earth.google.com/web/search/Richat+Structure' },
+            { name: 'ウユニ塩湖', url: 'https://earth.google.com/web/search/Salar+de+Uyuni' },
+          ],
+        }
+      },
+      computed: {
+        // 選択されたカテゴリに基づいて表示する場所のリストを動的に変更
+        currentLocations() {
+          return this.locations[this.selectedCategory] || [];
+        }
+      },
+      watch: {
+        // カテゴリが変更されたら、場所の選択をリセットする
+        selectedCategory() {
+          this.selectedLocation = null;
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>

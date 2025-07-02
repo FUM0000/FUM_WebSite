@@ -85,8 +85,170 @@
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0x222222));
-        if (Mobile_or_Desktop()) document.addEventListener('touchstart', function () { TouchStart(event); });
-        else document.addEventListener('mousedown', function () { TouchStart(event); });
+        if (Mobile_or_Desktop()) {
+            document.addEventListener('touchstart', function () { TouchStart(event); });
+            document.addEventListener('keydown', function () { KeyDown(event); });
+        }
+        else {
+            document.addEventListener('mousedown', function () { TouchStart(event); });
+            document.addEventListener('keydown', function () { KeyDown(event); });
+        }
+
+
+        // =================================================================================
+        // 弾クラス (C_Bullet)
+        // =================================================================================
+        class C_Bullet extends FC_GameObject {
+            _Speed = 12; 
+            _Lifespan = 2; 
+            _Timer_Life = new FC_Timer(this._Lifespan);
+            _IsActive = true;
+            get IsActive() { return this._IsActive; }
+
+            constructor(_position, _rotationZ) {
+                super();
+                const geometry = new THREE.SphereGeometry(0.15, 8, 8);
+                const material = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+                this._Object = new THREE.Mesh(geometry, material);
+                this.Position = _position;
+                this._Object.rotation.z = _rotationZ;
+                Scene.add(this._Object);
+                this._Timer_Life.Restart();
+            }
+
+            Update() {
+                if (!this._IsActive) return;
+
+                const direction = new THREE.Vector3(0, 1, 0);
+                direction.applyQuaternion(this._Object.quaternion);
+                this.Position.add(direction.multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
+
+                this._Timer_Life.Update();
+                if (this._Timer_Life.Flag_Finished) this.Destroy();
+            }
+
+            Destroy() {
+                if (!this._IsActive) return;
+                this._IsActive = false;
+                Scene.remove(this._Object);
+            }
+        }
+
+        // =================================================================================
+        // ドロップアイテムクラス (C_Item_Drop)
+        // =================================================================================
+        class C_Item_Drop extends FC_GameObject {
+            _Lifespan = 7.0;
+            _Timer_Life = new FC_Timer(this._Lifespan);
+            _IsActive = true;
+            get IsActive() { return this._IsActive; }
+            _Radius = 0.3;
+            _Type = 'energy'; // 'energy' or 'ammo'
+            get Type() { return this._Type; }
+            _Value = 0;
+            get Value() { return this._Value; }
+
+
+            constructor(_position, _type) {
+                super();
+                this._Type = _type;
+                let color;
+                if(this._Type === 'energy') {
+                    color = 0x00FF88; // 緑
+                    this._Value = 10; // エネルギー回復量
+                } else { // ammo
+                    color = 0xFFD700; // 黄
+                    this._Value = 8; // 弾薬回復量
+                }
+
+                const geometry = new THREE.IcosahedronGeometry(this._Radius, 0);
+                const material = new THREE.MeshBasicMaterial({ color: color });
+                this._Object = new THREE.Mesh(geometry, material);
+                this.Position = _position;
+                Scene.add(this._Object);
+                this._Timer_Life.Restart();
+            }
+
+            Update() {
+                if (!this._IsActive) return;
+
+                const timeRatio = this._Timer_Life.Time_Current / this._Lifespan;
+                if (timeRatio > 0.7) {
+                    this._Object.visible = Math.floor(this._Timer_Life.Time_Current * 12) % 2 === 0;
+                }
+
+                this._Timer_Life.Update();
+                if (this._Timer_Life.Flag_Finished) this.Destroy();
+            }
+
+            Destroy() {
+                if (!this._IsActive) return;
+                this._IsActive = false;
+                this._Object.visible = false;
+                Scene.remove(this._Object);
+            }
+        }
+
+
+        // =================================================================================
+        // 敵（アステロイド）クラス (C_Enemy_Asteroid)
+        // =================================================================================
+        class C_Enemy_Asteroid extends FC_GameObject {
+            _Speed = 1;
+            _Velocity = new THREE.Vector3();
+            _IsActive = true;
+            get IsActive() { return this._IsActive; }
+            _Radius = 1;
+
+            constructor() {
+                super();
+                const geometry = new THREE.IcosahedronGeometry(this._Radius, 0);
+                const material = new THREE.MeshStandardMaterial({ color: 0xFF8C00, flatShading: true });
+                this._Object = new THREE.Mesh(geometry, material);
+                Scene.add(this._Object);
+                this.Initialize();
+            }
+
+            Initialize() {
+                const cameraZ = Camera.Object.position.z;
+                const distance = -cameraZ;
+                const vFov = THREE.MathUtils.degToRad(Camera.Object.fov);
+                const height = 2 * Math.tan(vFov / 2) * distance;
+                const width = height * Camera.Object.aspect;
+                const cameraCenter = Camera.Position_LookAt;
+                const spawnOffset = 2.0;
+                const side = Math.floor(Math.random() * 4);
+                let x, y;
+
+                switch (side) {
+                    case 0: x = RandomNumber_Between(cameraCenter.x - width / 2, cameraCenter.x + width / 2); y = cameraCenter.y + height / 2 + spawnOffset; break;
+                    case 1: x = RandomNumber_Between(cameraCenter.x - width / 2, cameraCenter.x + width / 2); y = cameraCenter.y - height / 2 - spawnOffset; break;
+                    case 2: x = cameraCenter.x + width / 2 + spawnOffset; y = RandomNumber_Between(cameraCenter.y - height / 2, cameraCenter.y + height / 2); break;
+                    case 3: x = cameraCenter.x - width / 2 - spawnOffset; y = RandomNumber_Between(cameraCenter.y - height / 2, cameraCenter.y + height / 2); break;
+                }
+                this.Position = new THREE.Vector3(x, y, 0);
+
+                const targetPos = new THREE.Vector3(
+                    RandomNumber_Between(cameraCenter.x - width / 3, cameraCenter.x + width / 3),
+                    RandomNumber_Between(cameraCenter.y - height / 3, cameraCenter.y + height / 3),
+                    0
+                );
+                this._Velocity = targetPos.sub(this.Position).normalize();
+                this._Speed = RandomNumber_Between(2.5, 4.5);
+            }
+
+            Update() {
+                if (!this._IsActive) return;
+                this.Position.add(this._Velocity.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
+                if (this.Position.distanceTo(Player.Position) > 50) this.Destroy();
+            }
+
+            Destroy() {
+                if (!this._IsActive) return;
+                this._IsActive = false;
+                Scene.remove(this._Object);
+            }
+        }
 
         class C_Manager extends FC_Manager {
 
@@ -102,35 +264,45 @@
             _UI_Gameover = new FC_TextPlane(Scene, Camera, "GAMEOVER", "#CF000000", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
             _UI_Tap = new FC_TextPlane(Scene, Camera, "TAP", "#CF000000", new THREE.Vector2(3, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
 
+            _UI_Shoot = new FC_TextPlane(Scene, Camera, "SHOOT", "#0088FF", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            get UI_Shoot() { return this._UI_Shoot; }
+            _UI_Score = new FC_TextPlane(Scene, Camera, "SCORE: 0", "#FFFFFF", new THREE.Vector2(7, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            _Score = 0;
+
             _UI_Energy = new FC_TextPlane(Scene, Camera, "ENERGY: 100%", "#00FF88", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            _UI_Ammo = new FC_TextPlane(Scene, Camera, "AMMO: 100", "#FFD700", new THREE.Vector2(7, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+
             _UI_Boost = new FC_TextPlane(Scene, Camera, "BOOST", "#0000CF", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
             get UI_Boost() { return this._UI_Boost; }
 
             _Manager_EnergyArea = new C_Manager_EnergyArea();
-
             _Particle_Move;
 
+            _Bullets = [];
+            _Enemies = [];
+            _Drops = [];
+            _Timer_EnemySpawn = new FC_Timer(1.8);
+            _SpawnInterval = 1.8;
 
             constructor() {
                 super(Scene, Renderer);
-
                 this.BGM = '../../Asset/Audio/wave_1.wav';
                 this.BGM.Volume = 0.2;
                 Scene.fog = new THREE.Fog(0x222222, 0, 0);
 
                 this._UI_Home.Initialize();
                 this._UI_Music.Initialize();
-
                 this._UI_Start.Initialize();
                 this._UI_Gameover.Initialize();
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Fog = false;
                 this._UI_Tap.Show();
                 this._UI_Tap.LookAt(Camera.Position);
-
                 this._UI_Energy.Initialize();
                 this._UI_Boost.Initialize();
-
+                this._UI_Shoot.Initialize();
+                this._UI_Score.Initialize();
+                this._UI_Ammo.Initialize();
                 this._Particle_Move = new C_Particle_Move();
             }
 
@@ -143,6 +315,19 @@
                 Camera.Target = Player;
                 Camera.Object.far = 1000;
                 Camera.Object.updateProjectionMatrix();
+
+                this._Bullets.forEach(b => b.Destroy());
+                this._Bullets = [];
+                this._Enemies.forEach(e => e.Destroy());
+                this._Enemies = [];
+                this._Drops.forEach(d => d.Destroy());
+                this._Drops = [];
+
+                this._Score = 0;
+                this._UI_Score.Text = "SCORE: 0";
+                this._SpawnInterval = 1.8;
+                this._Timer_EnemySpawn.Time_Limit = this._SpawnInterval;
+                this._Timer_EnemySpawn.Restart();
 
                 this._UI_Start.Position = new THREE.Vector3(0, 0.5, -8);
                 this._UI_Gameover.Hide();
@@ -192,15 +377,77 @@
 
             Start() {
                 super.Start();
-
                 this._UI_Start.Animation_Move(new THREE.Vector3(0, 1, 0), 1);
                 this._UI_Tap.Animation_Move(new THREE.Vector3(0, -1, 0), 1);
             }
             GameOver() {
                 super.GameOver();
-
                 this._UI_Gameover.Position = new THREE.Vector3(Camera.Position_LookAt.x, Camera.Position_LookAt.y + 0.5, -8);
+                this._UI_Gameover.Text = `GAMEOVER\nSCORE: ${this._Score}`;
                 this._UI_Gameover.Show();
+            }
+
+            Shoot() {
+                if (this._State !== "Playing") return;
+                const bullet = Player.Shoot();
+                if (bullet) this._Bullets.push(bullet);
+            }
+
+            #SpawnEnemy() {
+                this._Timer_EnemySpawn.Update();
+                if (this._Timer_EnemySpawn.Flag_Finished) {
+                    const enemy = new C_Enemy_Asteroid();
+                    this._Enemies.push(enemy);
+
+                    this._SpawnInterval = Math.max(0.3, this._SpawnInterval * 0.995);
+                    this._Timer_EnemySpawn.Time_Limit = this._SpawnInterval;
+                    this._Timer_EnemySpawn.Restart();
+                }
+            }
+
+            #CheckCollisions() {
+                // 弾 vs 敵
+                for (let i = this._Bullets.length - 1; i >= 0; i--) {
+                    const bullet = this._Bullets[i];
+                    if (!bullet.IsActive) continue;
+
+                    for (let j = this._Enemies.length - 1; j >= 0; j--) {
+                        const enemy = this._Enemies[j];
+                        if (!enemy.IsActive) continue;
+
+                        if (bullet.Position.distanceTo(enemy.Position) < enemy._Radius) {
+                            bullet.Destroy();
+                            const dropType = Math.random() < 0.6 ? 'ammo' : 'energy';
+                            const drop = new C_Item_Drop(enemy.Position.clone(), dropType);
+                            this._Drops.push(drop);
+                            enemy.Destroy();
+
+                            this._Score += 100;
+                            this._UI_Score.Text = `SCORE: ${this._Score}`;
+                            break;
+                        }
+                    }
+                }
+
+                // プレイヤー vs 敵
+                for (let i = this._Enemies.length - 1; i >= 0; i--) {
+                    const enemy = this._Enemies[i];
+                    if (!enemy.IsActive) continue;
+                    if (Player.Position.distanceTo(enemy.Position) < Player._Radius + enemy._Radius) {
+                        enemy.Destroy();
+                        Player.TakeDamage(25);
+                    }
+                }
+
+                // プレイヤー vs ドロップアイテム
+                for (let i = this._Drops.length - 1; i >= 0; i--) {
+                    const drop = this._Drops[i];
+                    if (!drop.IsActive) continue;
+                    if (Player.Position.distanceTo(drop.Position) < Player._Radius + drop._Radius) {
+                        Player.Collect_Item(drop);
+                        drop.Destroy();
+                    }
+                }
             }
 
 
@@ -237,13 +484,24 @@
                 quaternion_tilt_x_2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(30));
                 quaternion_2.multiply(quaternion_tilt_y_2);
                 quaternion_2.multiply(quaternion_tilt_x_2);
-                this._UI_Energy.Place_on_Screen(new THREE.Vector2(-0.5, 0.7), 4);
+
+                this._UI_Energy.Place_on_Screen(new THREE.Vector2(-0.5, 0.8), 4);
                 this._UI_Energy.Rotation_Quaternion = quaternion_2;
-                const percentage = Math.round((Player.Energy_Carbon / 100) * 100);
-                this._UI_Energy.Text = `ENERGY: ${percentage.toString().padStart(3, '0')}%`;
+                const percentage = Math.round((Player.Energy_Carbon / Player._Energy_Carbon_Max) * 100);
+                this._UI_Energy.Text = `ENERGY: ${percentage.toString().padStart(3, ' ')}%`;
                 if (percentage >= 50) this._UI_Energy.Color = "#00FF88";
-                else if (percentage >= 10) this._UI_Energy.Color = "#CFCF00";
+                else if (percentage >= 20) this._UI_Energy.Color = "#CFCF00";
                 else this._UI_Energy.Color = "#CF0000";
+
+                this._UI_Ammo.Place_on_Screen(new THREE.Vector2(-0.5, 0.7), 4);
+                this._UI_Ammo.Rotation_Quaternion = quaternion_2;
+                this._UI_Ammo.Text = `AMMO: ${Player.Ammo.toString().padStart(3, ' ')}`;
+                if (Player.Ammo > 0) this._UI_Ammo.Color = "#FFD700";
+                else this._UI_Ammo.Color = "#CF0000";
+
+
+                this._UI_Score.Place_on_Screen(new THREE.Vector2(0, 0.85), 4);
+                this._UI_Score.Rotation_Quaternion = quaternion_camera;
 
                 const quaternion_3 = quaternion_camera.clone();
                 const quaternion_tilt_y_3 = new THREE.Quaternion();
@@ -254,6 +512,17 @@
                 quaternion_3.multiply(quaternion_tilt_x_3);
                 this._UI_Boost.Place_on_Screen(new THREE.Vector2(-0.6, -0.5), 4);
                 this._UI_Boost.Rotation_Quaternion = quaternion_3;
+
+                const quaternion_4 = quaternion_camera.clone();
+                const quaternion_tilt_y_4 = new THREE.Quaternion();
+                const quaternion_tilt_x_4 = new THREE.Quaternion();
+                quaternion_tilt_y_4.setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(-30));
+                quaternion_tilt_x_4.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(-30));
+                quaternion_4.multiply(quaternion_tilt_y_4);
+                quaternion_4.multiply(quaternion_tilt_x_4);
+                this._UI_Shoot.Place_on_Screen(new THREE.Vector2(0.6, -0.5), 4);
+                this._UI_Shoot.Rotation_Quaternion = quaternion_4;
+
             }
             #Update_Playing() {
                 if (this._Input_Move.length() == 0) this._Input_Move = this._Keyboard.Input_Move;
@@ -266,9 +535,21 @@
                 this._UI_Tap.Update();
 
                 this._Manager_EnergyArea.Update();
-                if (this._Manager_EnergyArea.Check(Player.Position)) Player.Collect_Carbon();
+                if (this._Manager_EnergyArea.Check(Player.Position)) Player.Replenish_at_Base();
 
                 this._Particle_Move.Update();
+
+                this.#SpawnEnemy();
+
+                this._Bullets.forEach(b => b.Update());
+                this._Enemies.forEach(e => e.Update());
+                this._Drops.forEach(d => d.Update());
+
+                this.#CheckCollisions();
+
+                this._Bullets = this._Bullets.filter(b => b.IsActive);
+                this._Enemies = this._Enemies.filter(e => e.IsActive);
+                this._Drops = this._Drops.filter(d => d.IsActive);
             }
         }
 
@@ -283,24 +564,32 @@
             }
 
             _Speed;
-            _Speed_Past;
-            _Speed_Collect;
-
             _Energy_Carbon;
             _Energy_Carbon_Max;
             _Energy_Carbon_Rate_Decrease;
             get Energy_Carbon() { return this._Energy_Carbon; }
+            get _Energy_Carbon_Max() { return this._Energy_Carbon_Max; }
+
 
             _Object;
             get Object() { return this._Object; }
 
+            _Radius = 0.5;
+            _Shoot_Cooldown = new FC_Timer(0.18);
+
+            _Ammo;
+            _Ammo_Max;
+            get Ammo() { return this._Ammo; }
+
             constructor() {
                 super();
 
-                const geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 3);
-                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const geometry = new THREE.ConeGeometry(this._Radius, this._Radius * 2, 4);
+                const material = new THREE.MeshStandardMaterial({ color: 0x00ff00, flatShading: true });
                 const mesh = new THREE.Mesh(geometry, material);
-                mesh.scale.x = 0.5;
+                // ### 修正箇所 ###
+                // お客様のご指定通り、回転の初期値を元に戻しました
+                mesh.rotation.z = Math.PI / 2;
                 this._Object = mesh;
                 Scene.add(this._Object);
 
@@ -310,46 +599,86 @@
 
             Initialize() {
                 this.Flag_Boost = false;
-
                 this._Speed = 1.2;
-                this._Speed_Past = this._Speed;
-                this._Speed_Collect = 0.5;
-
                 this._Energy_Carbon = 100;
                 this._Energy_Carbon_Max = 100;
-                this._Energy_Carbon_Rate_Decrease = 5;
-                this._Energy_Carbon_Rate_Efficiency = 2;
+                this._Energy_Carbon_Rate_Decrease = 1;
+                this._Energy_Carbon_Rate_Efficiency = 4;
+
+                this._Ammo = 30;
+                this._Ammo_Max = 100;
 
                 this.Position = new THREE.Vector3(0, 0, 0);
-                this.Rotation = new THREE.Vector3(Math.PI / 2, Math.PI, 0);
+                this._Shoot_Cooldown.Finish();
             }
             Update(_input) {
+                this._Shoot_Cooldown.Update();
                 if (_input && _input.length() != 0) {
                     const direction = new THREE.Vector3(-_input.x, _input.y, 0).normalize();
                     this.Move(direction.clone());
-                    this._Object.rotation.y = Math.atan2(direction.y, direction.x) + Math.PI / 2;
+                    // ### 修正箇所 ###
+                    // お客様のご指定通り、回転の計算式を元に戻しました
+                    this._Object.rotation.z = Math.atan2(direction.y, direction.x) - Math.PI / 2;
                 }
             }
 
 
             Move(_direction) {
                 this._Energy_Carbon -= this._Energy_Carbon_Rate_Decrease * FC_Environment.TIME_DELTA;
-                this._Object.position.add(_direction.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
 
+                let currentSpeed = this._Speed;
                 if (this._Flag_Boost) {
+                    currentSpeed *= 2;
                     this._Energy_Carbon -= this._Energy_Carbon_Rate_Decrease * this._Energy_Carbon_Rate_Efficiency * FC_Environment.TIME_DELTA;
-                    this._Object.position.add(_direction.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
                 }
+
+                this._Object.position.add(_direction.clone().multiplyScalar(currentSpeed * FC_Environment.TIME_DELTA));
+
                 this._Energy_Carbon = Math.max(0, this._Energy_Carbon);
                 if (this._Energy_Carbon <= 0) Manager.GameOver();
             }
-            Collect_Carbon() {
-                const rate = this._Energy_Carbon_Max * this._Speed_Collect;
-                this._Energy_Carbon += rate * FC_Environment.TIME_DELTA;
+
+            Shoot() {
+                if (this._Shoot_Cooldown.Flag_Finished && this._Ammo > 0) {
+                    this._Ammo--;
+                    this._Shoot_Cooldown.Restart();
+
+                    const direction = new THREE.Vector3(0, 1, 0).applyQuaternion(this._Object.quaternion);
+                    const bulletPos = this.Position.clone().add(direction.multiplyScalar(this._Radius));
+
+                    return new C_Bullet(bulletPos, this._Object.rotation.z);
+                }
+                return null;
+            }
+
+            TakeDamage(_amount) {
+                this._Energy_Carbon -= _amount;
+                this._Energy_Carbon = Math.max(0, this._Energy_Carbon);
+                if (this._Energy_Carbon <= 0) Manager.GameOver();
+            }
+
+            Collect_Item(_item) {
+                if(_item.Type === 'energy') {
+                    this._Energy_Carbon += _item.Value;
+                    this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon);
+                } else { // ammo
+                    this._Ammo += _item.Value;
+                    this._Ammo = Math.min(this._Ammo_Max, this._Ammo);
+                }
+            }
+
+            Replenish_at_Base() {
+                const energyRate = this._Energy_Carbon_Max * 0.3;
+                const ammoRate = this._Ammo_Max * 0.4;
+                this._Energy_Carbon += energyRate * FC_Environment.TIME_DELTA;
+                this._Ammo += ammoRate * FC_Environment.TIME_DELTA;
                 this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon);
+                this._Ammo = Math.min(this._Ammo_Max, Math.floor(this._Ammo));
             }
         }
 
+        // C_Particle_Move, C_Background, C_Manager_EnergyArea, C_EnergyAreaクラスは変更なしのため省略
+        // (元のコードをそのままここにペーストしてください)
         class C_Particle_Move {
 
             _Array_Particle;
@@ -744,30 +1073,6 @@
             }
         }
 
-        class C_Item_EnergyShip extends FC_Item {
-
-            constructor() {
-                super();
-
-                const geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 3);
-                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.scale.x = 0.5;
-                this._Object = mesh;
-            }
-
-            Initialize() {
-
-            }
-            Update() {
-                this.#Collision();
-            }
-
-            #Collision() {
-
-            }
-        }
-
         const Environment = new FC_Environment();
         const Camera = new FC_Camera(Renderer, undefined, new THREE.Vector3(0, 0, -10));
         const Light_Ambient = new FC_Light_Ambient(Scene);
@@ -779,6 +1084,12 @@
 
         Manager.Initialize();
         Manager.Update();
+
+        function KeyDown(event) {
+            if (event.code === 'Space') {
+                Manager.Shoot();
+            }
+        }
 
         function TouchStart(event) {
             if (Manager.Timer_Input.Flag_Finished) {
@@ -809,6 +1120,9 @@
 
                 const ui_boost = raycaster.intersectObject(Manager.UI_Boost.Mesh_Front);
                 if (ui_boost.length > 0) { Player.Flag_Boost = !Player.Flag_Boost; return; }
+
+                const ui_shoot = raycaster.intersectObject(Manager.UI_Shoot.Mesh_Front);
+                if (ui_shoot.length > 0) { Manager.Shoot(); return; }
 
                 switch (Manager.State) {
                     case "Loaded":

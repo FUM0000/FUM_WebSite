@@ -444,6 +444,7 @@ class FC_Timer extends FC_GameObject {
         this._Timer = 0;
         this.Start();
     }
+    Finish() { this._Flag_Finished = true; }
 }
 class FC_Audio extends FC_GameObject {
 
