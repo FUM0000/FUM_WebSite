@@ -26,6 +26,34 @@
   <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
 
   <title>Journey</title>
+
+  <!-- ポップなデザインのためのカスタムスタイル -->
+  <style>
+    #Main {
+      background-color: #f0f2f5;
+    }
+
+    .card-title-icon {
+      margin-right: 12px;
+      color: #4285F4;
+      /* Google Blue */
+    }
+
+    .placeholder-sheet {
+      border: 2px dashed #dcdcdc;
+      background-color: #f5f5f5 !important;
+      border-radius: 16px;
+    }
+
+    .placeholder-text {
+      color: #757575;
+      font-weight: 500;
+    }
+
+    .street-view-frame {
+      border-radius: 16px;
+    }
+  </style>
 </head>
 
 <body>
@@ -37,52 +65,49 @@
 
       <v-main id="Main">
         <transition name="Fade_Page">
-          <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
-            <!-- カテゴリ選択 -->
+          <v-container v-show="Ready_Page" fluid class="pa-md-8 pa-4">
             <v-row justify="center">
-              <v-col xs="12" md="8">
-                <v-select 
-                  v-model="selectedCategory" 
-                  :items="categories" 
-                  label="Category"
-                  item-text="text"
-                  item-value="value"
-                  >
-                </v-select>
+              <v-col cols="12" md="10" lg="8">
+
+                <v-card class="mx-auto" rounded="xl" elevation="2">
+                  <v-card-title class="font-weight-bold text-h5 pb-0">
+                    <v-icon class="card-title-icon" size="32">mdi-map-marker-path</v-icon>
+                    World Journey
+                  </v-card-title>
+
+                  <v-card-text style="padding-top: 16px;">
+                    <!-- カテゴリ選択 -->
+                    <v-select v-model="selectedCategory" :items="categories" label="Category" item-text="text"
+                      item-value="value" outlined rounded color="primary" prepend-inner-icon="mdi-google-earth"
+                      class="mt-5">
+                    </v-select>
+
+                    <!-- 場所選択 -->
+                    <v-select v-model="selectedLocation" :items="currentLocations" label="Location" item-text="name"
+                      return-object clearable outlined rounded color="primary"
+                      prepend-inner-icon="mdi-map-marker-outline" :disabled="!selectedCategory" class="mt-0 mb-0"></v-select>
+
+                    <!-- Google Maps Street View 表示エリア -->
+                    <v-responsive :aspect-ratio="16/9" class="mt-0">
+                      <!-- ロケーション選択後のStreet View -->
+                      <iframe v-if="selectedLocation" :src="streetViewUrl" width="100%" height="100%" style="border:0;"
+                        allowfullscreen="" loading="lazy" class="street-view-frame">
+                      </iframe>
+                      <!-- ロケーション選択前のプレースホルダー -->
+                      <v-sheet v-else class="fill-height placeholder-sheet">
+                        <v-row align="center" justify="center" class="fill-height text-center">
+                          <v-col>
+                            <v-icon size="64" color="grey lighten-1">mdi-map-search-outline</v-icon>
+                            <div class="mt-4 text-h6 placeholder-text">場所を選択してください</div>
+                          </v-col>
+                        </v-row>
+                      </v-sheet>
+                    </v-responsive>
+                  </v-card-text>
+                </v-card>
+
               </v-col>
             </v-row>
-
-            <!-- 場所選択 -->
-            <v-row justify="center">
-              <v-col xs="12" md="8">
-                <v-select
-                  v-if="selectedCategory"
-                  v-model="selectedLocation"
-                  :items="currentLocations"
-                  label="Location"
-                  item-text="name"
-                  return-object
-                  clearable
-                ></v-select>
-              </v-col>
-            </v-row>
-
-            <!-- Google Maps Street View 表示エリア -->
-            <v-row justify="center" v-if="selectedLocation">
-              <v-col xs="12" md="8">
-                <v-responsive :aspect-ratio="16/9">
-                  <iframe
-                    :src="streetViewUrl"
-                    width="100%"
-                    height="100%"
-                    style="border:0;"
-                    allowfullscreen=""
-                    loading="lazy">
-                  </iframe>
-                </v-responsive>
-              </v-col>
-            </v-row>
-
           </v-container>
         </transition>
       </v-main>
@@ -101,15 +126,25 @@
   <script>
     new Vue({
       el: '#App',
-      vuetify: new Vuetify(),
+      vuetify: new Vuetify({
+        theme: {
+          themes: {
+            light: {
+              primary: '#4285F4', // Google Blue
+            },
+          },
+        },
+      }),
       mixins: [window.Mixins_Common],
       data: {
-        apiKey: 'AIzaSyC9AshiL5BlN8mF_LAKh_rGxvHMPdK3Mw0', 
+        // [重要] APIキーを直接コードに記述することはセキュリティ上危険です。
+        // 本番環境では、サーバーサイドでキーを管理するなど、適切な方法で保護してください。
+        apiKey: 'AIzaSyC9AshiL5BlN8mF_LAKh_rGxvHMPdK3Mw0',
 
         selectedCategory: 'world_heritage',
         categories: [
-          { text: '世界遺産', value: 'world_heritage' },
-          { text: '珍しい地形・風景', value: 'unique_landscapes' },
+          { text: '世界遺産 (World Heritage)', value: 'world_heritage' },
+          { text: '珍しい地形・風景 (Unique Landscapes)', value: 'unique_landscapes' },
         ],
         selectedLocation: null,
         locations: {
@@ -133,10 +168,10 @@
         },
         streetViewUrl() {
           if (!this.selectedLocation) return '';
-          
+
           const loc = this.selectedLocation;
           const base = 'https://www.google.com/maps/embed/v1/streetview';
-          
+
           return `${base}?key=${this.apiKey}&location=${loc.lat},${loc.lng}&heading=${loc.heading}&pitch=${loc.pitch}&fov=${loc.fov}`;
         }
       },
@@ -144,6 +179,10 @@
         selectedCategory() {
           this.selectedLocation = null;
         }
+      },
+      mounted() {
+        // 初期表示で最初の場所を選択状態にする場合（任意）
+        // this.selectedLocation = this.currentLocations[0];
       }
     })
   </script>
