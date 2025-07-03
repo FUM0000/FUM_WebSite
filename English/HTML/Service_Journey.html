@@ -27,29 +27,24 @@
 
   <title>Journey</title>
 
-  <!-- ポップなデザインのためのカスタムスタイル -->
+  <!-- Custom styles for a pop design -->
   <style>
     #Main {
       background-color: #f0f2f5;
     }
-
     .card-title-icon {
       margin-right: 12px;
-      color: #4285F4;
-      /* Google Blue */
+      color: #4285F4; /* Google Blue */
     }
-
     .placeholder-sheet {
       border: 2px dashed #dcdcdc;
       background-color: #f5f5f5 !important;
       border-radius: 16px;
     }
-
     .placeholder-text {
       color: #757575;
       font-weight: 500;
     }
-
     .street-view-frame {
       border-radius: 16px;
     }
@@ -65,42 +60,68 @@
 
       <v-main id="Main">
         <transition name="Fade_Page">
-          <v-container v-show="Ready_Page" fluid class="pa-md-8 pa-4">
+          <v-container v-show="Ready_Page" fluid class="pa-4">
             <v-row justify="center">
-              <v-col cols="12" md="10" lg="8">
+              <v-col cols="12" md="6">
 
                 <v-card class="mx-auto" rounded="xl" elevation="2">
                   <v-card-title class="font-weight-bold text-h5 pb-0">
                     <v-icon class="card-title-icon" size="32">mdi-map-marker-path</v-icon>
                     World Journey
                   </v-card-title>
-
-                  <v-card-text style="padding-top: 16px;">
-                    <!-- カテゴリ選択 -->
-                    <v-select v-model="selectedCategory" :items="categories" label="Category" item-text="text"
-                      item-value="value" outlined rounded color="primary" prepend-inner-icon="mdi-google-earth"
-                      class="mt-5">
+                  
+                  <v-card-text class="pt-4">
+                    <!-- Category Selection -->
+                    <v-select 
+                      v-model="selectedCategory" 
+                      :items="categories" 
+                      label="Category"
+                      item-text="text"
+                      item-value="value"
+                      outlined
+                      rounded
+                      color="primary"
+                      prepend-inner-icon="mdi-google-earth"
+                      class="mt-4"
+                    >
                     </v-select>
 
-                    <!-- 場所選択 -->
-                    <v-select v-model="selectedLocation" :items="currentLocations" label="Location" item-text="name"
-                      return-object clearable outlined rounded color="primary"
-                      prepend-inner-icon="mdi-map-marker-outline" :disabled="!selectedCategory" class="mt-0 mb-0"></v-select>
+                    <!-- Location Selection -->
+                    <v-select
+                      v-model="selectedLocation"
+                      :items="currentLocations"
+                      label="Location"
+                      item-text="name"
+                      return-object
+                      clearable
+                      outlined
+                      rounded
+                      color="primary"
+                      prepend-inner-icon="mdi-map-marker-outline"
+                      :disabled="!selectedCategory"
+                    ></v-select>
 
-                    <!-- Google Maps Street View 表示エリア -->
+                    <!-- Google Maps Street View Display Area -->
                     <v-responsive :aspect-ratio="16/9" class="mt-0">
-                      <!-- ロケーション選択後のStreet View -->
-                      <iframe v-if="selectedLocation" :src="streetViewUrl" width="100%" height="100%" style="border:0;"
-                        allowfullscreen="" loading="lazy" class="street-view-frame">
+                      <!-- Street View after location selection -->
+                      <iframe
+                        v-if="selectedLocation"
+                        :src="streetViewUrl"
+                        width="100%"
+                        height="100%"
+                        style="border:0;"
+                        allowfullscreen=""
+                        loading="lazy"
+                        class="street-view-frame">
                       </iframe>
-                      <!-- ロケーション選択前のプレースホルダー -->
+                      <!-- Placeholder before location selection -->
                       <v-sheet v-else class="fill-height placeholder-sheet">
-                        <v-row align="center" justify="center" class="fill-height text-center">
-                          <v-col>
-                            <v-icon size="64" color="grey lighten-1">mdi-map-search-outline</v-icon>
-                            <div class="mt-4 text-h6 placeholder-text">場所を選択してください</div>
-                          </v-col>
-                        </v-row>
+                          <v-row align="center" justify="center" class="fill-height text-center">
+                              <v-col>
+                                  <v-icon size="64" color="grey lighten-1">mdi-map-search-outline</v-icon>
+                                  <div class="mt-4 text-h6 placeholder-text">Please select a location</div>
+                              </v-col>
+                          </v-row>
                       </v-sheet>
                     </v-responsive>
                   </v-card-text>
@@ -137,29 +158,50 @@
       }),
       mixins: [window.Mixins_Common],
       data: {
-        // [重要] APIキーを直接コードに記述することはセキュリティ上危険です。
-        // 本番環境では、サーバーサイドでキーを管理するなど、適切な方法で保護してください。
-        apiKey: 'AIzaSyC9AshiL5BlN8mF_LAKh_rGxvHMPdK3Mw0',
+        // [IMPORTANT] Hardcoding API keys in client-side code is a security risk.
+        // In a production environment, protect your key by managing it on the server-side.
+        apiKey: 'AIzaSyC9AshiL5BlN8mF_LAKh_rGxvHMPdK3Mw0', 
 
         selectedCategory: 'world_heritage',
         categories: [
-          { text: '世界遺産 (World Heritage)', value: 'world_heritage' },
-          { text: '珍しい地形・風景 (Unique Landscapes)', value: 'unique_landscapes' },
+          { text: 'World Heritage', value: 'world_heritage' },
+          { text: 'Unique Landscapes', value: 'unique_landscapes' },
+          { text: 'Iconic Cities', value: 'iconic_cities' },
         ],
         selectedLocation: null,
         locations: {
           world_heritage: [
-            { name: 'マチュ・ピチュ (ペルー)', lat: -13.1651289, lng: -72.5444159, heading: 345.02, pitch: 1.72, fov: 90 },
-            { name: 'コロッセオ (イタリア)', lat: 41.89021, lng: 12.492231, heading: 240, pitch: 0, fov: 90 },
-            { name: 'ギザのピラミッド (エジプト)', lat: 29.9760, lng: 31.1312, heading: 90, pitch: 0, fov: 90 },
-            { name: '万里の長城 (中国)', lat: 40.3615, lng: 115.9980, heading: 180, pitch: -10, fov: 90 },
+            { name: 'Machu Picchu, Peru', lat: -13.1651289, lng: -72.5444159, heading: 345.02, pitch: 1.72, fov: 90 },
+            { name: 'Colosseum, Italy', lat: 41.89021, lng: 12.492231, heading: 240, pitch: 0, fov: 90 },
+            { name: 'Pyramids of Giza, Egypt', lat: 29.976137, lng: 31.131315, heading: 65, pitch: 0, fov: 90 },
+            { name: 'Great Wall of China (Mutianyu)', lat: 40.43147, lng: 116.57037, heading: 350, pitch: 0, fov: 90 },
+            { name: 'Taj Mahal, India', lat: 27.175145, lng: 78.042142, heading: 180, pitch: 0, fov: 90 },
+            { name: 'Petra, Jordan', lat: 30.32845, lng: 35.44436, heading: 35, pitch: 0, fov: 75 },
+            { name: 'Angkor Wat, Cambodia', lat: 13.412499, lng: 103.866926, heading: 210, pitch: 5, fov: 90 },
+            { name: 'Acropolis of Athens, Greece', lat: 37.971532, lng: 23.725749, heading: 290, pitch: 0, fov: 90 },
+            { name: 'Stonehenge, UK', lat: 51.178882, lng: -1.826215, heading: 315, pitch: 0, fov: 90 },
           ],
           unique_landscapes: [
-            { name: 'グランド・キャニオン (アメリカ)', lat: 36.0592, lng: -112.1098, heading: -30, pitch: 0, fov: 90 },
-            { name: 'バオバブの並木道 (マダガスカル)', lat: -20.2509, lng: 44.4182, heading: 10, pitch: 0, fov: 90 },
-            { name: 'ソコトラ島 (イエメン)', lat: 12.4820, lng: 54.0205, heading: 0, pitch: 0, fov: 90 },
-            { name: 'サントリーニ島 (ギリシャ)', lat: 36.4618, lng: 25.3762, heading: 330, pitch: 0, fov: 90 },
+            { name: 'Grand Canyon, USA', lat: 36.0592, lng: -112.1098, heading: -30, pitch: 0, fov: 90 },
+            { name: 'Avenue of the Baobabs, Madagascar', lat: -20.2509, lng: 44.4182, heading: 10, pitch: 0, fov: 90 },
+            { name: 'Salar de Uyuni, Bolivia (Wet Season)', lat: -20.244249, lng: -67.453308, heading: 180, pitch: 0, fov: 90 },
+            { name: 'Cappadocia, Turkey', lat: 38.65795, lng: 34.84813, heading: 100, pitch: 0, fov: 90 },
+            { name: 'Zhangjiajie National Forest Park, China', lat: 29.33083, lng: 110.4384, heading: 20, pitch: -10, fov: 90 },
+            { name: 'Cliffs of Moher, Ireland', lat: 52.97143, lng: -9.42436, heading: 240, pitch: 5, fov: 90 },
+            { name: 'Plitvice Lakes National Park, Croatia', lat: 44.8878, lng: 15.6195, heading: 320, pitch: 0, fov: 90 },
+            { name: 'Santorini (Oia), Greece', lat: 36.4618, lng: 25.3762, heading: 330, pitch: 0, fov: 90 },
+            { name: 'Socotra Island, Yemen', lat: 12.486221, lng: 54.012581, heading: 90, pitch: 0, fov: 90 },
           ],
+          iconic_cities: [
+            { name: 'Times Square, New York, USA', lat: 40.758896, lng: -73.985130, heading: 185, pitch: 10, fov: 90 },
+            { name: 'Eiffel Tower, Paris, France', lat: 48.85824, lng: 2.2945, heading: 210, pitch: 5, fov: 90 },
+            { name: 'Shibuya Crossing, Tokyo, Japan', lat: 35.659489, lng: 139.700548, heading: 320, pitch: 0, fov: 90 },
+            { name: 'London Eye, London, UK', lat: 51.503324, lng: -0.119543, heading: 45, pitch: 5, fov: 90 },
+            { name: 'Burj Khalifa, Dubai, UAE', lat: 25.1972, lng: 55.2744, heading: 145, pitch: 15, fov: 90 },
+            { name: 'Sydney Opera House, Australia', lat: -33.856784, lng: 151.215297, heading: 130, pitch: 0, fov: 90 },
+            { name: 'Red Square, Moscow, Russia', lat: 55.75393, lng: 37.620795, heading: 15, pitch: 0, fov: 90 },
+            { name: 'Christ the Redeemer, Rio de Janeiro, Brazil', lat: -22.951916, lng: -43.210487, heading: 0, pitch: 10, fov: 90 },
+          ]
         }
       },
       computed: {
@@ -181,8 +223,10 @@
         }
       },
       mounted() {
-        // 初期表示で最初の場所を選択状態にする場合（任意）
-        // this.selectedLocation = this.currentLocations[0];
+        // To select the first location on initial load (optional)
+        // if (this.currentLocations.length > 0) {
+        //   this.selectedLocation = this.currentLocations[0];
+        // }
       }
     })
   </script>
