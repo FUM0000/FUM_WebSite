@@ -599,26 +599,14 @@ Vue.component('main-navigation', {
                 <template v-slot:activator>
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
-
-                <v-list-item href="./Service_Calendar.html">
+                
+                <v-list-item href="./Service_Journey.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Calendar</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Service_ImageEditor.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Image Editor</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Service_ImageLayout.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Image Layout</v-list-item-title>
+                    <v-list-item-title>Journey</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Service_QRCode.html">
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
-                </v-list-item>
-                <v-list-item href="./Service_VariousConverters.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Various Converters</v-list-item-title>
                 </v-list-item>
                 <v-list-item href="./Service_VariousStatistics.html">
                     <v-list-item-icon />
@@ -653,6 +641,14 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Font Preview</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_ImageEditor.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Image Editor</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Service_ImageLayout.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Image Layout</v-list-item-title>
+                    </v-list-item>
                 </v-list-group sub-group>
 
                 <v-list-group sub-group :value="false">
@@ -663,6 +659,21 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Service_RecommendCounterPick.html">
                         <v-list-item-icon />
                         <v-list-item-title>Counter Pick</v-list-item-title>
+                    </v-list-item>
+                </v-list-group sub-group>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Other</v-list-item-title>
+                    </template>
+
+                    <v-list-item href="./Service_Calendar.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Calendar</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Service_VariousConverters.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Various Converters</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
             </v-list-group>
