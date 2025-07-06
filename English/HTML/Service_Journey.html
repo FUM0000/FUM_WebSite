@@ -110,12 +110,10 @@
 
                       <!-- Google Maps Street View Display Area -->
                       <v-responsive :aspect-ratio="16/9" class="mt-0">
-                        <!-- Street View after location selection -->
-                        <iframe v-if="selectedLocation" :src="streetViewUrl" width="100%" height="100%"
-                          style="border:0;" allowfullscreen="" loading="lazy" class="street-view-frame">
-                        </iframe>
+                        <div v-show="selectedLocation" id="street-view-pano" class="fill-height street-view-frame">
+                        </div>
                         <!-- Placeholder before location selection -->
-                        <v-sheet v-else class="fill-height placeholder-sheet">
+                        <v-sheet v-if="!selectedLocation" class="fill-height placeholder-sheet">
                           <v-row align="center" justify="center" class="fill-height text-center">
                             <v-col>
                               <v-icon size="64" color="grey lighten-1">mdi-map-search-outline</v-icon>
@@ -161,6 +159,8 @@
         // [IMPORTANT] Hardcoding API keys in client-side code is a security risk.
         // In a production environment, protect your key by managing it on the server-side.
         apiKey: 'AIzaSyC9AshiL5BlN8mF_LAKh_rGxvHMPdK3Mw0',
+        panorama: null,
+        googleApiLoaded: false,
 
         selectedCategory: 'world_heritage',
         categories: [
@@ -253,21 +253,66 @@
         currentLocations() {
           return this.locations[this.selectedCategory] || [];
         },
-        streetViewUrl() {
-          if (!this.selectedLocation) return '';
-
-          const loc = this.selectedLocation;
-          const base = 'https://www.google.com/maps/embed/v1/streetview';
-
-          return `${base}?key=${this.apiKey}&location=${loc.lat},${loc.lng}&heading=${loc.heading}&pitch=${loc.pitch}&fov=${loc.fov}`;
-        }
       },
       watch: {
         selectedCategory() {
           this.selectedLocation = null;
+          if (this.panorama) {
+            this.panorama.setVisible(false);
+          }
+        },
+        selectedLocation(newLocation) {
+          if (newLocation && this.googleApiLoaded) {
+            this.updateStreetView(newLocation);
+          }
         }
       },
       methods: {
+        updateStreetView(location) {
+          const isMobile = window.innerWidth <= 768;
+          const position = { lat: location.lat, lng: location.lng };
+          // fovをzoomに変換 (近似値)
+          const zoom = Math.log2(180 / (location.fov || 90));
+
+          const options = {
+            position: position,
+            pov: { heading: location.heading, pitch: location.pitch },
+            zoom: zoom,
+            disableDefaultUI: isMobile,
+            motionTracking: false,
+            showRoadLabels: !isMobile,
+            fullscreenControl: !isMobile
+          };
+
+          if (!this.panorama) {
+            this.panorama = new google.maps.StreetViewPanorama(
+              document.getElementById('street-view-pano'), options
+            );
+          } else {
+            this.panorama.setOptions(options);
+          }
+          this.panorama.setVisible(true);
+        },
+        loadGoogleMapsApi() {
+          if (window.google && window.google.maps) {
+            this.googleApiLoaded = true;
+            return;
+          }
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}`;
+          script.async = true;
+          script.defer = true;
+          script.onload = () => {
+            this.googleApiLoaded = true;
+            if (this.selectedLocation) {
+              this.updateStreetView(this.selectedLocation);
+            }
+          };
+          script.onerror = () => {
+            console.error("Google Maps API could not be loaded.");
+          };
+          document.head.appendChild(script);
+        },
         jumpToNextLocation() {
           if (!this.selectedCategory) return;
           const locations = this.currentLocations;
@@ -296,6 +341,7 @@
         }
       },
       mounted() {
+        this.loadGoogleMapsApi();
         // To select the first location on initial load (optional)
         // if (this.currentLocations.length > 0) {
         //   this.selectedLocation = this.currentLocations[0];
