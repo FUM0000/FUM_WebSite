@@ -114,47 +114,47 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Basic_Memory.html">
+                    <v-list-item href="./Japanese_Basic_Memory.html">
                         <v-list-item-icon />
                         <v-list-item-title>Memory Mechanism</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_LearningPoints.html">
+                    <v-list-item href="./Japanese_Basic_LearningPoints.html">
                         <v-list-item-icon />
                         <v-list-item-title>Learning Points</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_Character.html">
+                    <v-list-item href="./Japanese_Basic_Character.html">
                         <v-list-item-icon />
                         <v-list-item-title>Character</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_Grammar.html">
+                    <v-list-item href="./Japanese_Basic_Grammar.html">
                         <v-list-item-icon />
                         <v-list-item-title>Grammar</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_Asking.html">
+                    <v-list-item href="./Japanese_Basic_Asking.html">
                         <v-list-item-icon />
                         <v-list-item-title>Asking</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_GeneralWord.html">
+                    <v-list-item href="./Japanese_Basic_GeneralWord.html">
                         <v-list-item-icon />
                         <v-list-item-title>Word - General Word</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_Conversation.html">
+                    <v-list-item href="./Japanese_Basic_Conversation.html">
                         <v-list-item-icon />
                         <v-list-item-title>Word - Conversation</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_Verb.html">
+                    <v-list-item href="./Japanese_Basic_Verb.html">
                         <v-list-item-icon />
                         <v-list-item-title>Word - Verb</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_Adjective_i.html">
+                    <v-list-item href="./Japanese_Basic_Adjective_i.html">
                         <v-list-item-icon />
                         <v-list-item-title>Word - Adjective - i</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_Adjective_na.html">
+                    <v-list-item href="./Japanese_Basic_Adjective_na.html">
                         <v-list-item-icon />
                         <v-list-item-title>Word - Adjective - na</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Basic_Adverb.html">
+                    <v-list-item href="./Japanese_Basic_Adverb.html">
                         <v-list-item-icon />
                         <v-list-item-title>Word - Adverb</v-list-item-title>
                     </v-list-item>
