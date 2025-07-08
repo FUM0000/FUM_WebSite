@@ -9,8 +9,19 @@ Vue.component('card-word-general', {
                 <slot name="first"></slot>
             </div>
         </v-card-title>
-        <v-card-actions class="justify-center">
+        
+        <v-card-actions class="justify-center" style="position: relative;">
             <v-btn color="primary" @click="show = true" text>Answer</v-btn>
+            
+            <v-btn 
+                v-if="audioSrc" 
+                icon 
+                @click="toggleAudio" 
+                color="primary" 
+                style="position: absolute; right: 16px;"
+            >
+                <v-icon>{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+            </v-btn>
         </v-card-actions>
 
         <v-expand-transition>
@@ -31,12 +42,61 @@ Vue.component('card-word-general', {
     data: function () {
         return {
             show: false,
+            audio: null,      // Audioオブジェクトを保持
+            isPlaying: false  // 再生状態を管理
         }
     },
-    props: ['showall'],
+    props: {
+        showall: Boolean,
+        // 音声ファイルのURLを受け取るプロパティ
+        audioSrc: {
+            type: String,
+            default: null
+        }
+    },
     watch: {
-        showall: function (_new, _old) {
-            this.show = _new;
+        showall: function (newVal, _old) {
+            this.show = newVal;
+        },
+        // audioSrcプロパティが変更された場合、既存のオーディオをリセット
+        audioSrc: function () {
+            if (this.audio) {
+                this.audio.pause();
+                this.audio = null;
+                this.isPlaying = false;
+            }
+        }
+    },
+    methods: {
+        toggleAudio() {
+            // Audioオブジェクトがまだ初期化されていなければ、生成する
+            if (!this.audio && this.audioSrc) {
+                this.audio = new Audio(this.audioSrc);
+                // 再生が終了したときのイベントを設定
+                this.audio.addEventListener('ended', () => {
+                    this.isPlaying = false;
+                });
+            }
+
+            // Audioオブジェクトが存在する場合のみ処理
+            if (this.audio) {
+                if (this.isPlaying) {
+                    this.audio.pause();
+                    this.isPlaying = false;
+                } else {
+                    // 再開時は常に最初から再生する
+                    this.audio.currentTime = 0;
+                    this.audio.play();
+                    this.isPlaying = true;
+                }
+            }
+        }
+    },
+    beforeDestroy() {
+        // コンポーネントが破棄される前に、音声を停止してリソースをクリーンアップ
+        if (this.audio) {
+            this.audio.pause();
+            this.audio = null;
         }
     }
 })
