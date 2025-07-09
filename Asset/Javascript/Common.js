@@ -172,24 +172,24 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Food_General.html">
+                    <v-list-item href="./Japanese_Food_General.html">
                         <v-list-item-icon />
                         <v-list-item-title>General</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item href="./Food_Chinese.html">
+                    <v-list-item href="./Japanese_Food_Chinese.html">
                         <v-list-item-icon />
                         <v-list-item-title>Chinese</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Food_Italian.html">
+                    <v-list-item href="./Japanese_Food_Italian.html">
                         <v-list-item-icon />
                         <v-list-item-title>Italian</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Food_Seasoning.html">
+                    <v-list-item href="./Japanese_Food_Seasoning.html">
                         <v-list-item-icon />
                         <v-list-item-title>Seasoning</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Food_Sushi.html">
+                    <v-list-item href="./Japanese_Food_Sushi.html">
                         <v-list-item-icon />
                         <v-list-item-title>Sushi</v-list-item-title>
                     </v-list-item>
@@ -207,39 +207,39 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Hobby_Art.html">
+                    <v-list-item href="./Japanese_Hobby_Art.html">
                         <v-list-item-icon />
                         <v-list-item-title>Art</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Hobby_Game.html">
+                    <v-list-item href="./Japanese_Hobby_Game.html">
                         <v-list-item-icon />
                         <v-list-item-title>Game</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Hobby_Math.html">
+                    <v-list-item href="./Japanese_Hobby_Math.html">
                         <v-list-item-icon />
                         <v-list-item-title>Math</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Hobby_Music.html">
+                    <v-list-item href="./Japanese_Hobby_Music.html">
                         <v-list-item-icon />
                         <v-list-item-title>Music</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Hobby_Outdoor.html">
+                    <v-list-item href="./Japanese_Hobby_Outdoor.html">
                         <v-list-item-icon />
                         <v-list-item-title>Outdoor</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Hobby_Reading.html">
+                    <v-list-item href="./Japanese_Hobby_Reading.html">
                         <v-list-item-icon />
                         <v-list-item-title>Reading</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Hobby_Sf.html">
+                    <v-list-item href="./Japanese_Hobby_Sf.html">
                         <v-list-item-icon />
                         <v-list-item-title>SF</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Hobby_Sport.html">
+                    <v-list-item href="./Japanese_Hobby_Sport.html">
                         <v-list-item-icon />
                         <v-list-item-title>Sport</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Hobby_Travel.html">
+                    <v-list-item href="./Japanese_Hobby_Travel.html">
                         <v-list-item-icon />
                         <v-list-item-title>Travel</v-list-item-title>
                     </v-list-item>
@@ -257,19 +257,19 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Japalish_Explanation.html">
+                    <v-list-item href="./Japanese_Japalish_Explanation.html">
                         <v-list-item-icon />
                         <v-list-item-title>Explanation</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Japalish_Level_1.html">
+                    <v-list-item href="./Japanese_Japalish_Level_1.html">
                         <v-list-item-icon />
                         <v-list-item-title>Level 1</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Japalish_Level_2.html">
+                    <v-list-item href="./Japanese_Japalish_Level_2.html">
                         <v-list-item-icon />
                         <v-list-item-title>Level 2</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Japalish_Level_3.html">
+                    <v-list-item href="./Japanese_Japalish_Level_3.html">
                         <v-list-item-icon />
                         <v-list-item-title>Level 3</v-list-item-title>
                     </v-list-item>
@@ -287,23 +287,23 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Life_Body.html">
+                    <v-list-item href="./Japanese_Life_Body.html">
                         <v-list-item-icon />
                         <v-list-item-title>Body</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Life_Computer.html">
+                    <v-list-item href="./Japanese_Life_Computer.html">
                         <v-list-item-icon />
                         <v-list-item-title>Computer</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Life_House.html">
+                    <v-list-item href="./Japanese_Life_House.html">
                         <v-list-item-icon />
                         <v-list-item-title>House</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Life_Kitchen.html">
+                    <v-list-item href="./Japanese_Life_Kitchen.html">
                         <v-list-item-icon />
                         <v-list-item-title>Kitchen</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Life_Time.html">
+                    <v-list-item href="./Japanese_Life_Time.html">
                         <v-list-item-icon />
                         <v-list-item-title>Time</v-list-item-title>
                     </v-list-item>
@@ -321,28 +321,28 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Nature_General.html">
+                    <v-list-item href="./Japanese_Nature_General.html">
                         <v-list-item-icon />
                         <v-list-item-title>General</v-list-item-title>
                     </v-list-item>
                     
-                    <v-list-item href="./Nature_Animal.html">
+                    <v-list-item href="./Japanese_Nature_Animal.html">
                         <v-list-item-icon />
                         <v-list-item-title>Animal</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Nature_Forest.html">
+                    <v-list-item href="./Japanese_Nature_Forest.html">
                         <v-list-item-icon />
                         <v-list-item-title>Forest</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Nature_Plant.html">
+                    <v-list-item href="./Japanese_Nature_Plant.html">
                         <v-list-item-icon />
                         <v-list-item-title>Plant</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Nature_River.html">
+                    <v-list-item href="./Japanese_Nature_River.html">
                         <v-list-item-icon />
                         <v-list-item-title>River</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Nature_Sea.html">
+                    <v-list-item href="./Japanese_Nature_Sea.html">
                         <v-list-item-icon />
                         <v-list-item-title>Sea</v-list-item-title>
                     </v-list-item>
@@ -360,11 +360,11 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Shop_ClothesStore.html">
+                    <v-list-item href="./Japanese_Shop_ClothesStore.html">
                         <v-list-item-icon />
                         <v-list-item-title>Clothes</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Shop_Supermarket.html">
+                    <v-list-item href="./Japanese_Shop_Supermarket.html">
                         <v-list-item-icon />
                         <v-list-item-title>Supermarket</v-list-item-title>
                     </v-list-item>
@@ -382,47 +382,47 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Outside_Cafe.html">
+                    <v-list-item href="./Japanese_Outside_Cafe.html">
                         <v-list-item-icon />
                         <v-list-item-title>Cafe</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Company.html">
+                    <v-list-item href="./Japanese_Outside_Company.html">
                         <v-list-item-icon />
                         <v-list-item-title>Company</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Direction.html">
+                    <v-list-item href="./Japanese_Outside_Direction.html">
                         <v-list-item-icon />
                         <v-list-item-title>Direction</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Gym.html">
+                    <v-list-item href="./Japanese_Outside_Gym.html">
                         <v-list-item-icon />
                         <v-list-item-title>Gym</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Hospital.html">
+                    <v-list-item href="./Japanese_Outside_Hospital.html">
                         <v-list-item-icon />
                         <v-list-item-title>Hospital</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Restaurant.html">
+                    <v-list-item href="./Japanese_Outside_Restaurant.html">
                         <v-list-item-icon />
                         <v-list-item-title>Restaurant</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Park.html">
+                    <v-list-item href="./Japanese_Outside_Park.html">
                         <v-list-item-icon />
                         <v-list-item-title>Park</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Road.html">
+                    <v-list-item href="./Japanese_Outside_Road.html">
                         <v-list-item-icon />
                         <v-list-item-title>Road</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_School.html">
+                    <v-list-item href="./Japanese_Outside_School.html">
                         <v-list-item-icon />
                         <v-list-item-title>School</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Vehicle.html">
+                    <v-list-item href="./Japanese_Outside_Vehicle.html">
                         <v-list-item-icon />
                         <v-list-item-title>Vehicle</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Outside_Weather.html">
+                    <v-list-item href="./Japanese_Outside_Weather.html">
                         <v-list-item-icon />
                         <v-list-item-title>Weather</v-list-item-title>
                     </v-list-item>
@@ -440,7 +440,7 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Verb_Type.html">
+                    <v-list-item href="./Japanese_Verb_Type.html">
                         <v-list-item-icon />
                         <v-list-item-title>Type</v-list-item-title>
                     </v-list-item>
@@ -458,7 +458,7 @@ Vue.component('main-navigation', {
                         </v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Kanji_Basic.html">
+                    <v-list-item href="./Japanese_Kanji_Basic.html">
                         <v-list-item-icon />
                         <v-list-item-title>Basic</v-list-item-title>
                     </v-list-item>
@@ -467,7 +467,7 @@ Vue.component('main-navigation', {
                 
 
                 <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
-                <v-list-item href="./Recommend_Learning.html">
+                <v-list-item href="./Japanese_Recommend_Learning.html">
                     <v-list-item-icon />
                     <v-list-item-title>Recommend Site</v-list-item-title>
 
@@ -518,11 +518,11 @@ Vue.component('main-navigation', {
                     </template>
 
 
-                    <v-list-item href="./Japan_Shop_List.html">
+                    <v-list-item href="./Japan_Japanese_Shop_List.html">
                         <v-list-item-icon />
                         <v-list-item-title>Overview</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Japan_Shop_Daiso.html">
+                    <v-list-item href="./Japan_Japanese_Shop_Daiso.html">
                         <v-list-item-icon />
                         <v-list-item-title>DAISO</v-list-item-title>
                     </v-list-item>
