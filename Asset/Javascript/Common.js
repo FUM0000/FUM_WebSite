@@ -448,24 +448,6 @@ Vue.component('main-navigation', {
                 <!-- ▲ Verb ▲ ------------------------------------------------------------------------------------->
                 
 
-                <!-- ▼ Kanji ▼ ------------------------------------------------------------------------------------>
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Kanji</v-list-item-title>
-                        
-                        <v-list-item-icon>
-                            <v-icon>mdi-ideogram-cjk</v-icon>
-                        </v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Kanji_Basic.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Basic</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Kanji ▲ ------------------------------------------------------------------------------------>
-                
-
                 <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
                 <v-list-item href="./Japanese_Recommend_Learning.html">
                     <v-list-item-icon />
