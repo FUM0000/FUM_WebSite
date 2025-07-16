@@ -132,7 +132,7 @@ Vue.component('main-navigation', {
                     </v-list-item>
                     <v-list-item href="./Japanese_Basic_Asking.html">
                         <v-list-item-icon />
-                        <v-list-item-title>Asking</v-list-item-title>
+                        <v-list-item-title>Word - Asking</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Japanese_Basic_GeneralWord.html">
                         <v-list-item-icon />
