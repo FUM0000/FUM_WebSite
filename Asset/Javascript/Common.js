@@ -1067,24 +1067,24 @@ Vue.component('custom-carousel-left', {
             <v-col xs="12" md="6">
                 <v-card>
                     <v-system-bar class="font-weight-medium" style="background-color: #BFC8CC99;">{{ title }}</v-system-bar>
-                    <v-carousel delimiter-icon="mdi-album" :show-arrows="false" :height="height" v-model="internalpagenumber">
-                        <!-- v-forで受け取るitemはオブジェクトになります -->
+                    
+                    <v-carousel 
+                        delimiter-icon="mdi-album" 
+                        :show-arrows="false" 
+                        :height="height !== null ? height : 'auto'" 
+                        v-model="internalpagenumber"
+                    >
+
                         <v-carousel-item v-for="(item, index) in items" :key="index">
-                            <!-- ★★★ ここから変更 ★★★ -->
-                            <!-- v-sheetをFlexboxコンテナにして、子要素を縦に並べます -->
                             <v-sheet height="100%" class="d-flex flex-column">
-                                <!-- タイトル表示エリア：item.titleが存在する場合のみ表示します -->
                                 <div v-if="item.title" class="pt-10 text-center font-weight-bold" style="flex-shrink: 0;">
                                     {{ item.title }}
                                 </div>
                                 
-                                <!-- コンテンツ表示エリア：残りの空間をすべて使います -->
-                                <v-row class="flex-grow-1" align="center" justify="center">
-                                    <!-- v-htmlで表示する対象を item.content に変更します -->
+                                <v-row class="ma-5 pb-10 flex-grow-1" align="start" justify="center">
                                     <v-col cols="10" align="center" v-html="item.content" class="text-left"></v-col>
                                 </v-row>
                             </v-sheet>
-                            <!-- ★★★ ここまで変更 ★★★ -->
                         </v-carousel-item>
                     </v-carousel>
                 </v-card>
@@ -1095,7 +1095,16 @@ Vue.component('custom-carousel-left', {
         title: { type: String, required: true },
         // itemsプロパティは { title?: string, content: string } 形式のオブジェクト配列を期待します
         items: { type: Array, required: true },
-        height: { type: Number, required: true },
+
+        // ★★★ [高さ調整] ここから変更 ★★★
+        // heightプロパティを必須(required)でなくし、指定がない場合のデフォルト値をnullに設定します
+        height: { 
+            type: Number, 
+            required: false,
+            default: null
+        },
+        // ★★★ [高さ調整] ここまで変更 ★★★
+
         outpagenumber: { type: Number, default: 0 },
     },
     data() {
