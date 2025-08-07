@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warp Shot</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Courier New', Courier, monospace; }
+        canvas { display: block; }
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #player-stats, #enemy-stats {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none; /* Initially hidden */
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        #game-over-screen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        #restart-button {
+            padding: 12px 25px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #333;
+            color: white;
+            border: 2px solid #555;
+            border-radius: 5px;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        #restart-button:hover {
+            background-color: #555;
+            border-color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <div id="player-stats">
+            <span>PLAYER HP: </span><span id="player-hp"></span><br>
+            <span>AMMO: </span><span id="player-ammo"></span>
+        </div>
+        <div id="enemy-stats">
+            <span>ENEMY HP: </span><span id="enemy-hp"></span>
+        </div>
+    </div>
+
+    <div id="game-over-screen">
+        <h1 id="game-over-text"></h1>
+        <button id="restart-button">RESTART</button>
+    </div>
+
+    <!-- Three.jsの読み込み -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js"
+        }
+    }
+    </script>
+
+    <!-- ゲームスクリプト (全クラスをここに集約) -->
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ==================================================================
+        // ===== Audio Utility (Web Audio API for Sound Effects) ==========
+        // ==================================================================
+
+        let audioCtx;
+        let bgmOscillator;
+        let bgmGain;
+        const bgmNotes = [220.00, 220.00, 246.94, 220.00, 220.00, 261.63, 246.94, 220.00]; // Simple note sequence
+        let bgmNoteIndex = 0;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const gainNode = audioCtx.createGain();
+            gainNode.connect(audioCtx.destination);
+
+            switch (type) {
+                case 'shoot':
+                    const oscShoot = audioCtx.createOscillator();
+                    oscShoot.type = 'triangle';
+                    oscShoot.frequency.setValueAtTime(880, now);
+                    oscShoot.frequency.exponentialRampToValueAtTime(220, now + 0.1);
+                    gainNode.gain.setValueAtTime(0.3, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                    oscShoot.connect(gainNode);
+                    oscShoot.start(now);
+                    oscShoot.stop(now + 0.1);
+                    break;
+                case 'hit':
+                    const oscHit = audioCtx.createOscillator();
+                    oscHit.type = 'square';
+                    oscHit.frequency.setValueAtTime(440, now);
+                    gainNode.gain.setValueAtTime(0.4, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                    oscHit.connect(gainNode);
+                    oscHit.start(now);
+                    oscHit.stop(now + 0.2);
+                    break;
+                case 'warp':
+                    const oscWarp = audioCtx.createOscillator();
+                    oscWarp.type = 'sawtooth';
+                    oscWarp.frequency.setValueAtTime(100, now);
+                    oscWarp.frequency.exponentialRampToValueAtTime(1000, now + 0.15);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.linearRampToValueAtTime(0, now + 0.15);
+                    oscWarp.connect(gainNode);
+                    oscWarp.start(now);
+                    oscWarp.stop(now + 0.15);
+                    break;
+                case 'destroy':
+                    const oscDestroy = audioCtx.createOscillator();
+                    oscDestroy.type = 'noise';
+                    gainNode.gain.setValueAtTime(0.5, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+                    oscDestroy.connect(gainNode);
+                    oscDestroy.start(now);
+                    oscDestroy.stop(now + 1.0);
+                    break;
+                case 'bgm':
+                    if (bgmOscillator) bgmOscillator.stop();
+                    initAudio();
+                    bgmOscillator = audioCtx.createOscillator();
+                    bgmGain = audioCtx.createGain();
+                    bgmOscillator.type = 'sine';
+                    bgmGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    bgmOscillator.connect(bgmGain).connect(audioCtx.destination);
+                    bgmOscillator.start();
+                    
+                    const playNextNote = () => {
+                        if(!bgmOscillator) return;
+                        const note = bgmNotes[bgmNoteIndex % bgmNotes.length];
+                        bgmOscillator.frequency.setValueAtTime(note, audioCtx.currentTime);
+                        bgmNoteIndex++;
+                        setTimeout(playNextNote, 500);
+                    };
+                    playNextNote();
+                    break;
+            }
+        }
+        
+        function stopBGM() {
+            if(bgmOscillator) {
+                bgmGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+                bgmOscillator.stop(audioCtx.currentTime + 0.5);
+                bgmOscillator = null;
+            }
+        }
+
+        // ==================================================================
+        // ===== Bullet Class =============================================
+        // ==================================================================
+        class Bullet {
+            constructor(scene, owner, game) {
+                this.scene = scene;
+                this.owner = owner;
+                this.game = game;
+
+                this.speed = 1.2;
+                this.size = 0.8;
+                
+                const geometry = new THREE.SphereGeometry(this.size, 8, 8);
+                const material = new THREE.MeshBasicMaterial({ color: this.owner.mesh.material.color });
+                this.mesh = new THREE.Mesh(geometry, material);
+
+                // 発射位置と角度をオーナーに合わせる
+                this.mesh.position.copy(this.owner.mesh.position);
+                const direction = new THREE.Vector3(0, 1, 0); // Y軸正方向が前
+                direction.applyQuaternion(this.owner.mesh.quaternion);
+                this.velocity = direction.multiplyScalar(this.speed);
+                
+                this.scene.add(this.mesh);
+            }
+
+            update() {
+                this.mesh.position.add(this.velocity);
+                this.checkWarp();
+            }
+
+            checkWarp() {
+                const worldWidth = this.game.frustumSize * this.game.aspect / 2;
+                const worldHeight = this.game.frustumSize / 2;
+
+                let warped = false;
+                if (this.mesh.position.x > worldWidth) {
+                    this.mesh.position.x = -worldWidth;
+                    warped = true;
+                } else if (this.mesh.position.x < -worldWidth) {
+                    this.mesh.position.x = worldWidth;
+                    warped = true;
+                }
+
+                if (this.mesh.position.y > worldHeight) {
+                    this.mesh.position.y = -worldHeight;
+                    warped = true;
+                } else if (this.mesh.position.y < -worldHeight) {
+                    this.mesh.position.y = worldHeight;
+                    warped = true;
+                }
+                if (warped) {
+                    playSound('warp');
+                }
+            }
+
+            removeFromScene() {
+                this.scene.remove(this.mesh);
+                this.mesh.geometry.dispose();
+                this.mesh.material.dispose();
+            }
+        }
+
+        // ==================================================================
+        // ===== Character Class (Base) ===================================
+        // ==================================================================
+        class Character {
+            constructor(scene, game, position, color) {
+                this.scene = scene;
+                this.game = game;
+                
+                this.size = 2.5;
+                const geometry = new THREE.ConeGeometry(this.size, this.size * 2, 4); // 四角錐に
+                const material = new THREE.MeshBasicMaterial({ color });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.copy(position);
+                this.mesh.rotation.x = Math.PI / 2; // 上から見た視点用に回転
+                this.scene.add(this.mesh);
+
+                this.hp = 10;
+                this.maxAmmo = 5;
+                this.ammo = this.maxAmmo;
+                this.baseSpeed = 0.5;
+                this.speed = this.baseSpeed;
+                
+                this.distanceForAmmo = 0;
+                this.distanceToGetAmmo = 25; // この距離を移動すると弾1発補充
+
+                this.fireCooldown = 300; // ms
+                this.lastFireTime = 0;
+            }
+
+            shoot() {
+                const now = Date.now();
+                if (this.ammo > 0 && now - this.lastFireTime > this.fireCooldown) {
+                    this.ammo--;
+                    this.lastFireTime = now;
+                    
+                    const bullet = new Bullet(this.scene, this, this.game);
+                    this.game.bullets.push(bullet);
+                    playSound('shoot');
+                    return true;
+                }
+                return false;
+            }
+            
+            updateSpeed() {
+                // 弾のストック数に応じて移動スピードを遅くする
+                // 弾が0の時100%, 5の時30%の速度になる
+                const speedModifier = 1.0 - (this.ammo / this.maxAmmo) * 0.7; 
+                this.speed = this.baseSpeed * speedModifier;
+            }
+
+            addAmmoOnMove(distance) {
+                this.distanceForAmmo += distance;
+                if (this.distanceForAmmo >= this.distanceToGetAmmo) {
+                    if (this.ammo < this.maxAmmo) {
+                        this.ammo++;
+                    }
+                    this.distanceForAmmo = 0;
+                }
+            }
+
+            takeDamage(amount) {
+                this.hp = Math.max(0, this.hp - amount);
+            }
+
+            isDead() {
+                return this.hp <= 0;
+            }
+            
+            destroy() {
+                // 破壊エフェクト
+                this.mesh.scale.set(1.5, 1.5, 1.5);
+                let scale = 1.5;
+                const shrink = () => {
+                    scale -= 0.05;
+                    if(scale > 0){
+                       this.mesh.scale.set(scale, scale, scale);
+                       this.mesh.rotation.z += 0.5;
+                       requestAnimationFrame(shrink);
+                    } else {
+                       this.scene.remove(this.mesh);
+                    }
+                };
+                shrink();
+            }
+            
+            keepInBounds() {
+                const worldWidth = this.game.frustumSize * this.game.aspect / 2 - this.size;
+                const worldHeight = this.game.frustumSize / 2 - this.size;
+                this.mesh.position.x = Math.max(-worldWidth, Math.min(worldWidth, this.mesh.position.x));
+                this.mesh.position.y = Math.max(-worldHeight, Math.min(worldHeight, this.mesh.position.y));
+            }
+        }
+
+        // ==================================================================
+        // ===== Player Class ===============================================
+        // ==================================================================
+        class Player extends Character {
+            constructor(scene, game, position, color) {
+                super(scene, game, position, color);
+                this.keys = {};
+                document.addEventListener('keydown', (e) => this.keys[e.code] = true);
+                document.addEventListener('keyup', (e) => this.keys[e.code] = false);
+            }
+
+            update() {
+                const moveVector = new THREE.Vector3();
+                if (this.keys['KeyW']) moveVector.y += 1;
+                if (this.keys['KeyS']) moveVector.y -= 1;
+                if (this.keys['KeyA']) moveVector.x -= 1;
+                if (this.keys['KeyD']) moveVector.x += 1;
+
+                this.updateSpeed();
+                
+                if (moveVector.length() > 0) {
+                    moveVector.normalize().multiplyScalar(this.speed);
+                    this.mesh.position.add(moveVector);
+
+                    // 向きを進行方向へ
+                    const angle = Math.atan2(moveVector.y, moveVector.x) - Math.PI / 2;
+                    this.mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
+                    
+                    // 移動による弾補充
+                    this.addAmmoOnMove(moveVector.length());
+                }
+
+                if (this.keys['Space']) {
+                    this.shoot();
+                }
+
+                this.keepInBounds();
+            }
+        }
+
+        // ==================================================================
+        // ===== Enemy Class (AI) =========================================
+        // ==================================================================
+        class Enemy extends Character {
+            constructor(scene, game, position, color) {
+                super(scene, game, position, color);
+                this.aiState = 'SEEKING'; // SEEKING, AVOIDING, ATTACKING
+                this.stateTimer = 0;
+            }
+
+            update(player, bullets) {
+                this.updateSpeed();
+                this.stateTimer -= 1;
+
+                // --- AI State Logic ---
+                const playerPos = player.mesh.position;
+                const myPos = this.mesh.position;
+                const distanceToPlayer = myPos.distanceTo(playerPos);
+
+                // 1. 回避判断 (最優先)
+                const threateningBullet = this.findThreateningBullet(bullets);
+                if (threateningBullet) {
+                    this.aiState = 'AVOIDING';
+                } 
+                // 2. 状態遷移
+                else if (this.stateTimer <= 0) {
+                     if (distanceToPlayer < 40) {
+                        this.aiState = 'ATTACKING';
+                        this.stateTimer = 180; // 3秒間攻撃
+                    } else {
+                        this.aiState = 'SEEKING';
+                        this.stateTimer = 300; // 5秒間追跡
+                    }
+                }
+                
+                // --- AI Action Logic ---
+                let moveDirection = new THREE.Vector3();
+
+                if (this.aiState === 'AVOIDING') {
+                    moveDirection = this.getEvasionVector(threateningBullet);
+                } 
+                else if (this.aiState === 'ATTACKING') {
+                    // プレイヤーの未来位置を予測して狙う
+                    const futurePlayerPos = this.predictPlayerPosition(player);
+                    this.aimAt(futurePlayerPos);
+                    
+                    // 適切な距離を保つ
+                    if(distanceToPlayer > 30) moveDirection.subVectors(playerPos, myPos);
+                    else if (distanceToPlayer < 20) moveDirection.subVectors(myPos, playerPos);
+                    
+                    this.shoot();
+                } 
+                else { // SEEKING
+                    moveDirection.subVectors(playerPos, myPos);
+                    this.aimAt(playerPos);
+                }
+                
+                // --- 実行 ---
+                if (moveDirection.length() > 0) {
+                    moveDirection.normalize().multiplyScalar(this.speed * 0.8); // AIは少し遅めに
+                    this.mesh.position.add(moveDirection);
+                    this.addAmmoOnMove(moveDirection.length());
+                }
+
+                this.keepInBounds();
+            }
+            
+            aimAt(targetPosition) {
+                const angle = Math.atan2(
+                    targetPosition.y - this.mesh.position.y,
+                    targetPosition.x - this.mesh.position.x
+                ) - Math.PI / 2;
+                this.mesh.quaternion.slerp(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle), 0.1);
+            }
+            
+            // プレイヤーの弾で最も危険なものを探す
+            findThreateningBullet(bullets) {
+                let closestThreat = null;
+                let minDistance = 25; // この範囲内の弾を脅威とみなす
+
+                for (const bullet of bullets) {
+                    if (bullet.owner === this) continue; // 自分の弾は無視
+
+                    const dist = bullet.mesh.position.distanceTo(this.mesh.position);
+                    if (dist < minDistance) {
+                        // 弾が自分に向かっているか大まかにチェック
+                        const toMe = new THREE.Vector3().subVectors(this.mesh.position, bullet.mesh.position);
+                        if (bullet.velocity.dot(toMe) > 0) {
+                            minDistance = dist;
+                            closestThreat = bullet;
+                        }
+                    }
+                }
+                return closestThreat;
+            }
+            
+            // 弾からの回避ベクトルを計算
+            getEvasionVector(bullet) {
+                // 弾の進行方向と垂直な方向へ逃げる
+                const evasionDir = new THREE.Vector3(-bullet.velocity.y, bullet.velocity.x, 0);
+                
+                // 2つの垂直方向のうち、プレイヤーから遠ざかる方を選ぶ
+                const pos1 = this.mesh.position.clone().add(evasionDir);
+                const pos2 = this.mesh.position.clone().sub(evasionDir);
+
+                if (pos1.distanceTo(this.game.player.mesh.position) > pos2.distanceTo(this.game.player.mesh.position)) {
+                    return evasionDir;
+                } else {
+                    return evasionDir.negate();
+                }
+            }
+            
+            predictPlayerPosition(player) {
+                // プレイヤーが動いていない場合は現在位置を返す
+                if (!player.keys['KeyW'] && !player.keys['KeyS'] && !player.keys['KeyA'] && !player.keys['KeyD']) {
+                    return player.mesh.position;
+                }
+                // 弾が到達するまでのおおよその時間を計算
+                const distance = this.mesh.position.distanceTo(player.mesh.position);
+                const bulletTravelTime = distance / (new Bullet(this.scene, this, this.game)).speed; // 仮の弾速で計算
+                
+                // プレイヤーの現在の移動ベクトルを取得
+                const playerMoveVector = new THREE.Vector3();
+                if (player.keys['KeyW']) playerMoveVector.y += 1;
+                if (player.keys['KeyS']) playerMoveVector.y -= 1;
+                if (player.keys['KeyA']) playerMoveVector.x -= 1;
+                if (player.keys['KeyD']) playerMoveVector.x += 1;
+
+                if (playerMoveVector.length() > 0) {
+                    playerMoveVector.normalize().multiplyScalar(player.speed);
+                    const predictedPosition = player.mesh.position.clone().add(playerMoveVector.multiplyScalar(bulletTravelTime));
+                    return predictedPosition;
+                }
+                return player.mesh.position;
+            }
+        }
+
+
+        // ==================================================================
+        // ===== Game Class (Main Controller) =============================
+        // ==================================================================
+        class Game {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.aspect = window.innerWidth / window.innerHeight;
+                this.frustumSize = 100;
+                this.camera = new THREE.OrthographicCamera(
+                    this.frustumSize * this.aspect / -2,
+                    this.frustumSize * this.aspect / 2,
+                    this.frustumSize / 2,
+                    this.frustumSize / -2,
+                    1,
+                    1000
+                );
+                this.camera.position.z = 10;
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x1a1a1a);
+                document.body.appendChild(this.renderer.domElement);
+                
+                this.player = null;
+                this.enemy = null;
+                this.bullets = [];
+
+                this.playerHpUI = document.getElementById('player-hp');
+                this.playerAmmoUI = document.getElementById('player-ammo');
+                this.enemyHpUI = document.getElementById('enemy-hp');
+                this.gameOverScreen = document.getElementById('game-over-screen');
+                this.gameOverText = document.getElementById('game-over-text');
+                this.restartButton = document.getElementById('restart-button');
+                
+                this.isGameOver = false;
+
+                window.addEventListener('resize', this.onWindowResize.bind(this), false);
+                this.restartButton.addEventListener('click', () => location.reload());
+                document.body.addEventListener('keydown', this.firstInteraction.bind(this), { once: true });
+            }
+
+            firstInteraction() {
+                initAudio();
+                playSound('bgm');
+            }
+
+            start() {
+                this.isGameOver = false;
+                this.gameOverScreen.style.display = 'none';
+
+                this.player = new Player(this.scene, this, new THREE.Vector3(-30, 0, 0), 0x00aaff);
+                this.enemy = new Enemy(this.scene, this, new THREE.Vector3(30, 0, 0), 0xff4444);
+                
+                // 背景グリッド
+                const grid = new THREE.GridHelper(this.frustumSize * 2, 20, 0x333333, 0x222222);
+                grid.rotation.x = Math.PI / 2;
+                this.scene.add(grid);
+
+                this.animate();
+            }
+
+            animate() {
+                if (this.isGameOver) return;
+
+                requestAnimationFrame(this.animate.bind(this));
+
+                this.player.update();
+                this.enemy.update(this.player, this.bullets);
+
+                this.bullets.forEach(bullet => bullet.update());
+
+                this.checkCollisions();
+                this.updateUI();
+
+                this.renderer.render(this.scene, this.camera);
+            }
+            
+            checkCollisions() {
+                for (let i = this.bullets.length - 1; i >= 0; i--) {
+                    const bullet = this.bullets[i];
+                    
+                    if (bullet.owner !== this.player && bullet.mesh.position.distanceTo(this.player.mesh.position) < this.player.size) {
+                        this.player.takeDamage(1);
+                        playSound('hit');
+                        bullet.removeFromScene();
+                        this.bullets.splice(i, 1);
+                        if (this.player.isDead()) this.endGame('YOU LOSE...');
+                        continue;
+                    }
+
+                    if (bullet.owner !== this.enemy && bullet.mesh.position.distanceTo(this.enemy.mesh.position) < this.enemy.size) {
+                        this.enemy.takeDamage(1);
+                        playSound('hit');
+                        bullet.removeFromScene();
+                        this.bullets.splice(i, 1);
+                        if (this.enemy.isDead()) this.endGame('YOU WIN!');
+                    }
+                }
+            }
+
+            endGame(message) {
+                if (this.isGameOver) return;
+                this.isGameOver = true;
+                
+                playSound('destroy');
+                stopBGM();
+                
+                this.gameOverText.textContent = message;
+                this.gameOverScreen.style.display = 'flex';
+
+                if (message.includes('WIN')) {
+                    this.enemy.destroy();
+                } else {
+                    this.player.destroy();
+                }
+            }
+
+            updateUI() {
+                this.playerHpUI.textContent = this.player.hp;
+                this.playerAmmoUI.textContent = `${this.player.ammo} / ${this.player.maxAmmo}`;
+                this.enemyHpUI.textContent = this.enemy.hp;
+            }
+
+            onWindowResize() {
+                this.aspect = window.innerWidth / window.innerHeight;
+                this.camera.left = this.frustumSize * this.aspect / -2;
+                this.camera.right = this.frustumSize * this.aspect / 2;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        // ==================================================================
+        // ===== Main Execution ===========================================
+        // ==================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            const game = new Game();
+            game.start();
+        });
+
+    </script>
+</body>
+</html>
