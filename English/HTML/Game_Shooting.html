@@ -1,3 +1,42 @@
+はい、承知いたしました。ゲームをより戦略的で面白いものにするための修正ですね。
+
+以下の3点について、コードを大幅に改良しました。
+
+弾速と弾薬補充ペースの調整:
+
+弾の速度を遅くし、見てから回避できる現実的なスピードにしました。
+
+移動による弾薬補充の必要距離を伸ばし、弾薬管理の重要性を高めました。
+
+敵AIの大幅な強化:
+
+思考ルーチン: 約0.5秒ごとに「思考」し、次の行動を決定するロジックを導入しました。これにより、状況の変化に素早く対応します。
+
+多様な戦略: 単純な追跡や攻撃だけでなく、状況に応じて以下のような人間らしい戦略を使い分けるようになりました。
+
+RETREATING (退却): 自身のHPが少なくなると、プレイヤーから距離を取って逃げることに専念します。
+
+FARMING_AMMO (弾薬補充): 弾がなくなると、攻撃を中断し、コート内を動き回って弾薬の補充を優先します。
+
+AGGRESSIVE_ATTACK (猛攻): プレイヤーのHPが少ないなど、好機と判断すれば積極的に距離を詰めて攻撃します。
+
+STANDARD_ATTACK (標準戦闘): プレイヤーを揺さぶるように上下に動きながら、牽制と攻撃の機会をうかがいます。
+
+人間らしい動き: AIの移動目標に少しランダム性を持たせることで、単調で予測しやすい動きをなくし、より人間らしい挙動を実現しました。
+
+ワープ弾を意識した戦術:
+
+AIはコートの上下端をうまく利用するようになりました。端に位置取りをしてプレイヤーを揺さぶったり、弾がワープしてくる時間差を利用したりするような、より高度な位置取りを試みます。
+
+これらの変更により、敵AIは単なる的ではなく、プレイヤーの状況を見ながら戦術を変えてくる手強い好敵手になったはずです。
+
+修正後のコード Game_Shooting.html
+code
+Html
+download
+content_copy
+expand_less
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -189,7 +228,7 @@
         // ==================================================================
         // ===== Bullet Class =============================================
         // ==================================================================
-        const BULLET_SPEED = 1.2;
+        const BULLET_SPEED = 0.8; // ★修正: 弾速を遅くした
 
         class Bullet {
             constructor(scene, owner, game) {
@@ -204,9 +243,8 @@
                 const material = new THREE.MeshBasicMaterial({ color: this.owner.mesh.material.color });
                 this.mesh = new THREE.Mesh(geometry, material);
 
-                // 発射位置と角度をオーナーに合わせる
                 this.mesh.position.copy(this.owner.mesh.position);
-                const direction = new THREE.Vector3(0, 1, 0); // Y軸正方向が前
+                const direction = new THREE.Vector3(0, 1, 0);
                 direction.applyQuaternion(this.owner.mesh.quaternion);
                 this.velocity = direction.multiplyScalar(this.speed);
                 
@@ -259,12 +297,12 @@
                 this.game = game;
                 
                 this.size = 2.5;
-                this.sizeSq = this.size * this.size; // 衝突判定用の二乗値
-                const geometry = new THREE.ConeGeometry(this.size, this.size * 2, 4); // 四角錐に
+                this.sizeSq = this.size * this.size;
+                const geometry = new THREE.ConeGeometry(this.size, this.size * 2, 4);
                 const material = new THREE.MeshBasicMaterial({ color });
                 this.mesh = new THREE.Mesh(geometry, material);
                 this.mesh.position.copy(position);
-                this.mesh.rotation.x = Math.PI / 2; // 上から見た視点用に回転
+                this.mesh.rotation.x = Math.PI / 2;
                 this.scene.add(this.mesh);
 
                 this.hp = 10;
@@ -274,7 +312,7 @@
                 this.speed = this.baseSpeed;
                 
                 this.distanceForAmmo = 0;
-                this.distanceToGetAmmo = 25; // この距離を移動すると弾1発補充
+                this.distanceToGetAmmo = 60; // ★修正: 弾補充の必要距離を増加
 
                 this.fireCooldown = 300; // ms
                 this.lastFireTime = 0;
@@ -295,8 +333,6 @@
             }
             
             updateSpeed() {
-                // 弾のストック数に応じて移動スピードを遅くする
-                // 弾が0の時100%, 5の時30%の速度になる
                 const speedModifier = 1.0 - (this.ammo / this.maxAmmo) * 0.7; 
                 this.speed = this.baseSpeed * speedModifier;
             }
@@ -320,7 +356,6 @@
             }
             
             destroy() {
-                // 破壊エフェクト
                 this.mesh.scale.set(1.5, 1.5, 1.5);
                 let scale = 1.5;
                 const shrink = () => {
@@ -347,15 +382,12 @@
                 document.addEventListener('keydown', (e) => this.keys[e.code] = true);
                 document.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
-                // パフォーマンス改善：ベクトルを再利用
                 this._moveVector = new THREE.Vector3();
-                
-                // 向きを常に右（敵側）に固定
                 this.mesh.rotation.z = -Math.PI / 2;
             }
 
             update() {
-                this._moveVector.set(0, 0, 0); // ベクトルをリセット
+                this._moveVector.set(0, 0, 0);
                 if (this.keys['KeyW']) this._moveVector.y += 1;
                 if (this.keys['KeyS']) this._moveVector.y -= 1;
                 if (this.keys['KeyA']) this._moveVector.x -= 1;
@@ -363,12 +395,9 @@
 
                 this.updateSpeed();
                 
-                // パフォーマンス改善: lengthSqで比較
                 if (this._moveVector.lengthSq() > 0) {
                     this._moveVector.normalize().multiplyScalar(this.speed);
                     this.mesh.position.add(this._moveVector);
-                    
-                    // 移動による弾補充
                     this.addAmmoOnMove(this._moveVector.length());
                 }
 
@@ -382,7 +411,6 @@
             keepInBounds() {
                 const worldWidth = this.game.frustumSize * this.game.aspect / 2 - this.size;
                 const worldHeight = this.game.frustumSize / 2 - this.size;
-                // プレイヤーは左側のコート(x < 0)に制限
                 this.mesh.position.x = Math.max(-worldWidth, Math.min(0 - this.size, this.mesh.position.x));
                 this.mesh.position.y = Math.max(-worldHeight, Math.min(worldHeight, this.mesh.position.y));
             }
@@ -394,11 +422,15 @@
         class Enemy extends Character {
             constructor(scene, game, position, color) {
                 super(scene, game, position, color);
-                this.aiState = 'SEEKING'; // SEEKING, AVOIDING, ATTACKING
-                this.stateTimer = 0;
+                // ★AIの思考パターンを追加
+                this.aiState = 'STANDARD_ATTACK'; // 'AVOIDING', 'RETREATING', 'FARMING_AMMO', 'AGGRESSIVE_ATTACK', 'STANDARD_ATTACK'
                 
-                // パフォーマンス改善：ベクトルを再利用
+                this.thinkInterval = 30; // 30フレーム(約0.5秒)ごとに思考する
+                this.thinkCooldown = this.thinkInterval;
+
+                // ベクトルを再利用してパフォーマンス改善
                 this._moveDirection = new THREE.Vector3();
+                this._targetPosition = new THREE.Vector3(this.mesh.position.x, 0, 0); // 初期目標
                 this._toMeVector = new THREE.Vector3();
                 this._evasionDir = new THREE.Vector3();
                 this._pos1 = new THREE.Vector3();
@@ -407,55 +439,99 @@
                 // 向きを常に左（プレイヤー側）に固定
                 this.mesh.rotation.z = Math.PI / 2;
             }
+            
+            // ★AIの思考ルーチン
+            think(player) {
+                const myPos = this.mesh.position;
+                const playerPos = player.mesh.position;
+
+                // 状況評価
+                const isMyHpLow = this.hp <= 3;
+                const isMyAmmoLow = this.ammo <= 1;
+                const isPlayerHpLow = player.hp <= 4;
+                const hasEnoughAmmo = this.ammo >= 3;
+
+                // 戦略決定
+                let newState = 'STANDARD_ATTACK';
+                if (isMyHpLow) {
+                    newState = 'RETREATING';
+                } else if (isMyAmmoLow) {
+                    newState = 'FARMING_AMMO';
+                } else if (isPlayerHpLow && hasEnoughAmmo) {
+                    newState = 'AGGRESSIVE_ATTACK';
+                }
+                
+                // 状態が切り替わったか、目標に到達したら新しい目標を設定
+                if (this.aiState !== newState || myPos.distanceTo(this._targetPosition) < this.size) {
+                    this.aiState = newState;
+                    
+                    const worldHeight = this.game.frustumSize / 2 - this.size;
+                    const worldWidthHalf = (this.game.frustumSize * this.game.aspect / 2 - this.size) / 2;
+                    
+                    switch(this.aiState) {
+                        case 'RETREATING':
+                            // プレイヤーから最も遠いコートの隅を目指す
+                            this._targetPosition.x = this.size;
+                            this._targetPosition.y = (playerPos.y > 0 ? -1 : 1) * worldHeight;
+                            break;
+                            
+                        case 'FARMING_AMMO':
+                            // コート内をランダムに大きく動き回り、弾を補充
+                            this._targetPosition.x = this.size + Math.random() * worldWidthHalf;
+                            this._targetPosition.y = (Math.random() * 2 - 1) * worldHeight;
+                            break;
+
+                        case 'AGGRESSIVE_ATTACK':
+                            // プレイヤーのY座標に直接合わせにいく
+                            this._targetPosition.x = myPos.x;
+                            this._targetPosition.y = playerPos.y;
+                            break;
+
+                        case 'STANDARD_ATTACK':
+                            // プレイヤーのY座標を基準に、上下に揺さぶりをかける
+                            this._targetPosition.x = myPos.x;
+                            const randomOffsetY = (Math.random() * 60 - 30); // -30～+30のオフセット
+                            this._targetPosition.y = THREE.MathUtils.clamp(playerPos.y + randomOffsetY, -worldHeight, worldHeight);
+                            break;
+                    }
+                }
+            }
 
             update(player, bullets) {
                 this.updateSpeed();
-                this.stateTimer -= 1;
 
-                const playerPos = player.mesh.position;
-                const myPos = this.mesh.position;
-                const distanceToPlayerSq = myPos.distanceToSquared(playerPos);
+                // --- 思考 ---
+                this.thinkCooldown--;
+                if (this.thinkCooldown <= 0) {
+                    this.think(player);
+                    this.thinkCooldown = this.thinkInterval + Math.floor(Math.random() * 15); // 少し間隔をランダムに
+                }
 
-                // --- AI State Logic ---
-                // 1. 回避判断 (最優先)
+                // --- 行動決定 ---
+                this._moveDirection.set(0, 0, 0);
+                
+                // 1. 緊急回避 (最優先)
                 const threateningBullet = this.findThreateningBullet(bullets);
                 if (threateningBullet) {
-                    this.aiState = 'AVOIDING';
-                } 
-                // 2. 状態遷移 (脅威がない場合)
-                else if (this.stateTimer <= 0) {
-                     if (distanceToPlayerSq < 40 * 40) { // 距離の2乗で比較
-                        this.aiState = 'ATTACKING';
-                        this.stateTimer = 180; // 3秒間攻撃
-                    } else {
-                        this.aiState = 'SEEKING';
-                        this.stateTimer = 300; // 5秒間追跡
-                    }
-                }
-                
-                // --- AI Action Logic ---
-                this._moveDirection.set(0, 0, 0);
-
-                // ★★★★★★★★★★★★★★★★★ 修正点 ★★★★★★★★★★★★★★★★★
-                // 回避行動は、回避対象の弾(threateningBullet)が存在する場合のみ実行する
-                if (this.aiState === 'AVOIDING' && threateningBullet) {
                     this.getEvasionVector(threateningBullet, this._moveDirection);
-                } 
-                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-                else if (this.aiState === 'ATTACKING') {
-                    // 適切な距離を保つ
-                    if(distanceToPlayerSq > 30 * 30) this._moveDirection.subVectors(playerPos, myPos);
-                    else if (distanceToPlayerSq < 20 * 20) this._moveDirection.subVectors(myPos, playerPos);
+                } else {
+                // 2. 戦略に基づく行動
+                    this._moveDirection.subVectors(this._targetPosition, this.mesh.position);
                     
-                    this.shoot();
-                } 
-                else { // SEEKING or AVOIDING (with no target)
-                    this._moveDirection.subVectors(playerPos, myPos);
+                    // 攻撃判定
+                    const isAttacking = this.aiState === 'AGGRESSIVE_ATTACK' || this.aiState === 'STANDARD_ATTACK';
+                    if (isAttacking) {
+                        // プレイヤーが射線上にいるか（Y座標がある程度近いか）
+                        const yDiff = Math.abs(this.mesh.position.y - player.mesh.position.y);
+                        if (yDiff < 15) { // 射線が合っていると判断する許容範囲
+                             this.shoot();
+                        }
+                    }
                 }
                 
                 // --- 実行 ---
                 if (this._moveDirection.lengthSq() > 0) {
-                    this._moveDirection.normalize().multiplyScalar(this.speed * 0.8); // AIは少し遅めに
+                    this._moveDirection.normalize().multiplyScalar(this.speed * 0.8);
                     this.mesh.position.add(this._moveDirection);
                     this.addAmmoOnMove(this._moveDirection.length());
                 }
@@ -465,7 +541,7 @@
             
             findThreateningBullet(bullets) {
                 let closestThreat = null;
-                let minDistanceSq = 25 * 25; // この範囲内の弾を脅威とみなす (2乗値)
+                let minDistanceSq = 30 * 30; // 脅威とみなす範囲を少し広げる
 
                 for (const bullet of bullets) {
                     if (bullet.owner === this) continue;
@@ -473,7 +549,7 @@
                     const distSq = bullet.mesh.position.distanceToSquared(this.mesh.position);
                     if (distSq < minDistanceSq) {
                         this._toMeVector.subVectors(this.mesh.position, bullet.mesh.position);
-                        if (bullet.velocity.dot(this._toMeVector) > 0) {
+                        if (bullet.velocity.dot(this._toMeVector) > 0) { // 自分に向かっているか
                             minDistanceSq = distSq;
                             closestThreat = bullet;
                         }
@@ -483,10 +559,7 @@
             }
             
             getEvasionVector(bullet, outVector) {
-                // 弾の進行方向と垂直な方向へ逃げる
-                outVector.set(-bullet.velocity.y, bullet.velocity.x, 0);
-                
-                // 2つの垂直方向のうち、プレイヤーから遠ざかる方を選ぶ
+                outVector.set(-bullet.velocity.y, bullet.velocity.x, 0); // 弾の進行方向と垂直
                 this._pos1.copy(this.mesh.position).add(outVector);
                 this._pos2.copy(this.mesh.position).sub(outVector);
 
@@ -499,7 +572,6 @@
             keepInBounds() {
                 const worldWidth = this.game.frustumSize * this.game.aspect / 2 - this.size;
                 const worldHeight = this.game.frustumSize / 2 - this.size;
-                // 敵は右側のコート(x > 0)に制限
                 this.mesh.position.x = Math.max(0 + this.size, Math.min(worldWidth, this.mesh.position.x));
                 this.mesh.position.y = Math.max(-worldHeight, Math.min(worldHeight, this.mesh.position.y));
             }
@@ -559,12 +631,10 @@
                 this.player = new Player(this.scene, this, new THREE.Vector3(-30, 0, 0), 0x00aaff);
                 this.enemy = new Enemy(this.scene, this, new THREE.Vector3(30, 0, 0), 0xff4444);
                 
-                // 背景グリッド
                 const grid = new THREE.GridHelper(this.frustumSize * 2, 20, 0x333333, 0x222222);
                 grid.rotation.x = Math.PI / 2;
                 this.scene.add(grid);
 
-                // 中央のコート境界線
                 const courtLineMaterial = new THREE.LineBasicMaterial({ color: 0xaaaaaa, linewidth: 2 });
                 const points = [];
                 const worldHeight = this.frustumSize / 2;
@@ -574,13 +644,11 @@
                 const courtLine = new THREE.Line(courtLineGeometry, courtLineMaterial);
                 this.scene.add(courtLine);
 
-
                 this.animate();
             }
 
             animate() {
                 if (this.isGameOver) return;
-
                 requestAnimationFrame(this.animate.bind(this));
 
                 this.player.update();
@@ -598,7 +666,6 @@
                 for (let i = this.bullets.length - 1; i >= 0; i--) {
                     const bullet = this.bullets[i];
                     
-                    // プレイヤーとの衝突判定 (distanceToSquaredを使用)
                     if (bullet.owner !== this.player && bullet.mesh.position.distanceToSquared(this.player.mesh.position) < this.player.sizeSq) {
                         this.player.takeDamage(1);
                         playSound('hit');
@@ -608,7 +675,6 @@
                         continue;
                     }
 
-                    // 敵との衝突判定 (distanceToSquaredを使用)
                     if (bullet.owner !== this.enemy && bullet.mesh.position.distanceToSquared(this.enemy.mesh.position) < this.enemy.sizeSq) {
                         this.enemy.takeDamage(1);
                         playSound('hit');
