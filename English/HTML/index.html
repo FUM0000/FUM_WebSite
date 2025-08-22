@@ -60,10 +60,34 @@
             border-right: 10px solid transparent;
             border-top: 10px solid rgba(30, 30, 30, 0.85);
         }
+
+        /* ▼▼▼ 追加されたCSS ▼▼▼ */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 2s ease-out; /* 2秒間のフェードアウト */
+            pointer-events: auto;
+        }
+
+        #loading-overlay.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        /* ▲▲▲ 追加されたCSS ▲▲▲ */
     </style>
 </head>
 
 <body>
+    <!-- ▼▼▼ 追加されたHTML ▼▼▼ -->
+    <div id="loading-overlay"></div>
+    <!-- ▲▲▲ 追加されたHTML ▲▲▲ -->
+
     <canvas id="ElectronShell"></canvas>
     <v-app id="App">
         <template>
@@ -1822,6 +1846,26 @@
 
         createUniverseDetail();
     </script>
+    
+    <!-- ▼▼▼ 追加されたJavaScript ▼▼▼ -->
+    <script>
+        window.addEventListener('load', () => {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                // 4秒間待機
+                setTimeout(() => {
+                    // フェードアウトを開始
+                    overlay.classList.add('fade-out');
+
+                    // フェードアウトアニメーション（2秒）後に要素を削除
+                    setTimeout(() => {
+                        overlay.remove();
+                    }, 2000); // CSSのtransition durationと一致させる
+                }, 4000); // 4秒の待機時間
+            }
+        });
+    </script>
+    <!-- ▲▲▲ 追加されたJavaScript ▲▲▲ -->
 </body>
 
 </html>
