@@ -127,8 +127,8 @@
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
 
                         <div id="YouTubePlayerContainer">
-                            <button id="ClosePlayerButton" @click="closePlayer" style="display: none;">Close Player</button>
-                            <div id="PlaybackOptions" style="display: none;">
+                            <button id="ClosePlayerButton" @click="closePlayer" v-show="isPlayerActive">Close Player</button>
+                            <div id="PlaybackOptions" v-show="isPlayerActive">
                                 <label><input type="radio" name="playMode" value="loop" v-model="playMode"> Loop</label>
                                 <label><input type="radio" name="playMode" value="next" v-model="playMode"> Next Video</label>
                             </div>
@@ -276,6 +276,8 @@
                 playMode: 'loop',
                 currentVideoIndex: -1,
                 isErrorProcessing: false,
+
+                isPlayerActive: false, 
             },
             mounted() {
                 this.playerContainer = document.getElementById('YouTubePlayerContainer');
@@ -317,8 +319,7 @@
                 onPlayerReady(event) {
                     event.target.playVideo();
                     this.playerContainer.classList.add('active');
-                    this.closeButton.style.display = 'block';
-                    this.playbackOptions.style.display = 'flex';
+                    this.isPlayerActive = true; 
                     this.isErrorProcessing = false;
                 },
                 onPlayerStateChange(event) {
@@ -344,8 +345,7 @@
                         this.currentPlayer.destroy();
                         this.currentPlayer = null;
                         this.playerContainer.classList.remove('active');
-                        this.closeButton.style.display = 'none';
-                        this.playbackOptions.style.display = 'none';
+                        this.isPlayerActive = false;
                         this.currentVideoIndex = -1;
                         this.isErrorProcessing = false;
                     }
