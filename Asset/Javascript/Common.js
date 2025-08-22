@@ -464,7 +464,7 @@ Vue.component('main-navigation', {
 
 
             <!-- ▼ Japanese Culture ▼ ------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-sushi">
+            <v-list-group :value="false" prepend-icon="mdi-mountain">
                 <template v-slot:activator>
                     <v-list-item-title>Japanese Culture</v-list-item-title>
                 </template>
