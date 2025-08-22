@@ -100,7 +100,7 @@ Vue.component('main-navigation', {
             <!-- ▼ Japanese Language ▼ ------------------------------------------------------------------------>
             <v-list-group :value="false" prepend-icon="mdi-translate-variant">
                 <template v-slot:activator>
-                    <v-list-item-title>Japanese</v-list-item-title>
+                    <v-list-item-title>Japanese Language</v-list-item-title>
                 </template>
 
 
@@ -464,7 +464,7 @@ Vue.component('main-navigation', {
 
 
             <!-- ▼ Japanese Culture ▼ ------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-mountain">
+            <v-list-group :value="false" prepend-icon="mdi-checkbox-blank-circle">
                 <template v-slot:activator>
                     <v-list-item-title>Japanese Culture</v-list-item-title>
                 </template>
@@ -962,19 +962,6 @@ Vue.component('main-navigation', {
                         <v-icon>mdi-image</v-icon>
                     </v-list-item-icon>
                 </v-list-item>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Flower</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-flower</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Flower_Rose.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Rose</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
             </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
 
