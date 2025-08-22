@@ -464,7 +464,7 @@ Vue.component('main-navigation', {
 
 
             <!-- ▼ Japanese Culture ▼ ------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-home-city-outline">
+            <v-list-group :value="false" prepend-icon="mdi-sushi">
                 <template v-slot:activator>
                     <v-list-item-title>Japanese Culture</v-list-item-title>
                 </template>
@@ -872,53 +872,10 @@ Vue.component('main-navigation', {
             <!-- ▲ Plant ▲ ------------------------------------------------------------------------------------>
 
 
-            <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-stamper">
+            <!-- ▼ Learning ▼ --------------------------------------------------------------------------------->
+            <v-list-group :value="false" prepend-icon="mdi-school">
                 <template v-slot:activator>
-                    <v-list-item-title>About Me</v-list-item-title>
-                </template>
-                
-                <v-list-item href="./AboutMe_Profile.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Profile</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-stamper</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./AboutMe_Blog.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Blog</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-post-outline</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./AboutMe_Brain.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Brain Archive</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-brain</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-
-                <v-list-item href="./AboutMe_Gallery.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Gallery</v-list-item-title>
-                        
-                    <v-list-item-icon>
-                        <v-icon>mdi-image</v-icon>
-                    </v-list-item-icon>
-                </v-list-item>
-            </v-list-group>
-            <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
-
-
-            <!-- ▼ My Note ▼ ---------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-stamper">
-                <template v-slot:activator>
-                    <v-list-item-title>My Note</v-list-item-title>
+                    <v-list-item-title>Learning</v-list-item-title>
                 </template>
 
                 <v-list-group sub-group :value="false">
@@ -963,7 +920,63 @@ Vue.component('main-navigation', {
                 </v-list-item>
                 
             </v-list-group>
-            <!-- ▲ My Note ▲ ---------------------------------------------------------------------------------->
+            <!-- ▲ Learning ▲ --------------------------------------------------------------------------------->
+
+
+            <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
+            <v-list-group :value="false" prepend-icon="mdi-stamper">
+                <template v-slot:activator>
+                    <v-list-item-title>About Me</v-list-item-title>
+                </template>
+                
+                <v-list-item href="./AboutMe_Profile.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Profile</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-stamper</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./AboutMe_Blog.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Blog</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-post-outline</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./AboutMe_Brain.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Brain Archive</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-brain</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+
+                <v-list-item href="./AboutMe_Gallery.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Gallery</v-list-item-title>
+                        
+                    <v-list-item-icon>
+                        <v-icon>mdi-image</v-icon>
+                    </v-list-item-icon>
+                </v-list-item>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Flower</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-flower</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Flower_Rose.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Rose</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+            </v-list-group>
+            <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
 
 
         </v-list>
