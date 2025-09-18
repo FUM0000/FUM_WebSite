@@ -14,16 +14,18 @@ function RandomNumber_Between(_min, _max) { return Math.random() * (_max - _min 
 //// SystemBar
 Vue.component('main-system-bar', {
     template: `
-    <v-system-bar color="#FFFFFF40" class="font-weight-black" style="height: 50px;" app>
+    <v-system-bar color="#FFFFFF60" class="font-weight-black" style="height: 50px;" app>
         <v-row aline="center">
             <v-col cols="9" align-self="center">
                 <audio id="BGM" src="" paused loop></audio>
-                <v-icon id="Speaker">mdi-volume-variant-off</v-icon>
+                <v-btn small outlined icon class="mr-2">
+                    <v-icon id="Speaker" small>mdi-volume-variant-off</v-icon>
+                </v-btn>
                 <slot></slot>
             </v-col>
             
-            <v-col cols="3" class="text-right" @click.stop="Drawer_Local = !Drawer_Local">
-                <v-btn rounded small plain>MENU</v-btn>
+            <v-col cols="3" class="text-right" align-self="center" @click.stop="Drawer_Local = !Drawer_Local">
+                <v-btn small outlined tile>MENU</v-btn>
             </v-col>
         </v-row>
     </v-system-bar>
@@ -984,7 +986,7 @@ Vue.component('main-navigation', {
 //// Footer
 Vue.component('main-footer', {
     template: `
-    <v-footer color="#FFFFFF40" class="font-weight-black" app>
+    <v-footer color="#FFFFFF60" class="font-weight-black" app>
         <v-btn @click="scrollToBottom" text x-small>
             <v-icon color="blue">mdi-chevron-down</v-icon>
         </v-btn>
@@ -1013,7 +1015,7 @@ Vue.component('main-footer', {
 })
 Vue.component('main-footer-simple', {
     template: `
-    <v-footer color="#FFFFFF40" class="font-weight-black" app>
+    <v-footer color="#FFFFFF60" class="font-weight-black" app>
         <v-spacer />
         <span style="font-size: 0.8rem;">© 2025 FUM. All rights reserved.</span>
         <v-spacer />
