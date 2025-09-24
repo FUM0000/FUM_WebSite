@@ -70,6 +70,29 @@
                   </v-card-title>
 
                   <v-card-text class="pt-4">
+                    <!-- Tone Generator -->
+                    <v-card class="mt-6 pa-4" outlined rounded>
+                      <v-card-title class="font-weight-bold text-h6">Hz Generator</v-card-title>
+
+                      <!-- プリセット -->
+                      <v-select v-model="selectedPreset" :items="presets" label="Preset" outlined rounded
+                        color="primary" prepend-inner-icon="mdi-tune" @change="applyPreset"></v-select>
+
+                      <!-- 周波数入力 -->
+                      <v-text-field v-model="toneFreq" label="Frequency (Hz)" type="number" outlined rounded
+                        color="primary" prepend-inner-icon="mdi-waveform"></v-text-field>
+
+                      <!-- 音量調整 -->
+                      <v-slider v-model="toneVolume" min="0" max="0.1" step="0.01" label="Volume" color="primary"
+                        prepend-icon="mdi-volume-high"></v-slider>
+
+                      <!-- 操作ボタン -->
+                      <v-btn color="primary" class="mr-2" @click="playToneHz">Play</v-btn>
+                      <v-btn color="error" class="mr-2" @click="stopTone">Stop</v-btn>
+                      <v-btn color="secondary" @click="resetTone">Reset</v-btn>
+                    </v-card>
+
+
                     <!-- Category Selection -->
                     <v-select v-model="selectedCategory" :items="categories" label="Category" item-text="text"
                       item-value="value" outlined rounded color="primary" prepend-inner-icon="mdi-music-box-multiple"
@@ -130,6 +153,12 @@
       data: {
         selectedCategory: null,
         selectedTrack: null,
+        toneFreq: 285,
+        toneVolume: 0.02,
+        selectedPreset: 'relax', presets: [
+          { text: 'Relax (285Hz)', value: 'relax', freq: 285 },
+        ],
+
         categories: [
           { text: 'Relax', value: 'relax' },
           { text: 'Focus', value: 'focus' },
@@ -166,24 +195,60 @@
         }
       },
       methods: {
-        playTone(freq) {
+        playToneHz() {
+          const freq = parseFloat(this.toneFreq);
+          if (!freq || freq <= 0) {
+            alert("正しい周波数(Hz)を入力してください。");
+            return;
+          }
+
+          // 再生中なら止める
           if (this.audioCtx) this.audioCtx.close();
+
           this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           const osc = this.audioCtx.createOscillator();
-          osc.type = "sine"; // サイン波
+          const gain = this.audioCtx.createGain();
+
+          osc.type = "sine";
           osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
-          osc.connect(this.audioCtx.destination);
+
+          // 音量を適用
+          gain.gain.setValueAtTime(this.toneVolume, this.audioCtx.currentTime);
+
+          osc.connect(gain).connect(this.audioCtx.destination);
           osc.start();
+
           this.oscillator = osc;
+          this.gainNode = gain;
         },
+
         stopTone() {
           if (this.oscillator) {
             this.oscillator.stop();
             this.oscillator.disconnect();
             this.oscillator = null;
           }
+          if (this.audioCtx) {
+            this.audioCtx.close();
+            this.audioCtx = null;
+          }
+        },
+
+        resetTone() {
+          this.toneFreq = 285;
+          this.toneVolume = 0.02;
+          this.selectedPreset = 'relax';
+          this.stopTone();
+        },
+
+        applyPreset(presetValue) {
+          const preset = this.presets.find(p => p.value === presetValue);
+          if (preset) {
+            this.toneFreq = preset.freq;
+          }
         }
       }
+
     });
   </script>
 </body>
