@@ -729,6 +729,10 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Other</v-list-item-title>
                 </v-list-item>
+                <v-list-item href="./Music_BackgroundBGM.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Background BGM</v-list-item-title>
+                </v-list-item>
             </v-list-group>
             <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
             

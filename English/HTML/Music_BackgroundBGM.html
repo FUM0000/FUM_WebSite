@@ -26,28 +26,6 @@
   <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
 
   <title>Background BGM</title>
-
-  <style>
-    #Main {
-      background-color: #f0f2f5;
-    }
-
-    .card-title-icon {
-      margin-right: 12px;
-      color: #4285F4;
-    }
-
-    .placeholder-sheet {
-      border: 2px dashed #dcdcdc;
-      background-color: #f5f5f5 !important;
-      border-radius: 16px;
-    }
-
-    .placeholder-text {
-      color: #757575;
-      font-weight: 500;
-    }
-  </style>
 </head>
 
 <body>
@@ -55,7 +33,7 @@
   <v-app id="App" v-cloak>
     <template>
 
-      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Journey</main-system-bar>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Background BGM</main-system-bar>
 
       <v-main id="Main">
         <transition name="Fade_Page">
@@ -64,61 +42,59 @@
               <v-col cols="12" md="6">
 
                 <v-card class="mx-auto" rounded="xl" elevation="2">
-                  <v-card-title class="font-weight-bold text-h5 pb-0">
-                    <v-icon class="card-title-icon" size="32">mdi-music</v-icon>
-                    Relax & Focus BGM
-                  </v-card-title>
 
-                  <v-card-text class="pt-4">
-                    <!-- Tone Generator -->
-                    <v-card class="mt-6 pa-4" outlined rounded>
-                      <v-card-title class="font-weight-bold text-h6">Hz Generator</v-card-title>
+                  <v-card-text>
+
+                    <v-card class="pa-5 py-2" outlined rounded>
+                      <v-card-title class="font-weight-bold text-h6">Music Player</v-card-title>
+                      <!-- Category Selection -->
+                      <v-select v-model="selectedCategory" :items="categories" label="Category" item-text="text"
+                        item-value="value" outlined rounded color="primary" prepend-inner-icon="mdi-music-box-multiple"
+                        class="mt-4">
+                      </v-select>
+
+                      <!-- Track Selection -->
+                      <v-select v-model="selectedTrack" :items="currentTracks" label="Track" item-text="name"
+                        return-object outlined rounded color="primary" prepend-inner-icon="mdi-music-note"
+                        :disabled="!selectedCategory">
+                      </v-select>
+
+                      <!-- Audio Player -->
+                      <v-responsive class="mt-0 mb-4">
+                        <div v-if="selectedTrack">
+                          <audio :src="selectedTrack.url" ref="bgmAudio" controls loop style="width: 100%;"></audio>
+                        </div>
+                      </v-responsive>
+                    </v-card>
+
+
+                    <!-- Hertz Generator -->
+                    <v-card class="mt-4 pa-5 py-2" outlined rounded>
+                      <v-card-title class="font-weight-bold text-h6">Hertz Generator</v-card-title>
 
                       <!-- プリセット -->
-                      <v-select v-model="selectedPreset" :items="presets" label="Preset" outlined rounded
+                      <v-select class="mt-4" v-model="selectedPreset" :items="presets" label="Preset" outlined rounded
                         color="primary" prepend-inner-icon="mdi-tune" @change="applyPreset"></v-select>
 
                       <!-- 周波数入力 -->
                       <v-text-field v-model="toneFreq" label="Frequency (Hz)" type="number" outlined rounded
                         color="primary" prepend-inner-icon="mdi-waveform"></v-text-field>
 
-                      <!-- 音量調整 -->
-                      <v-slider v-model="toneVolume" min="0" max="0.1" step="0.01" label="Volume" color="primary"
-                        prepend-icon="mdi-volume-high"></v-slider>
+                      <v-row>
+                        <v-col cols="12" md="6">
+                          <!-- 音量調整 -->
+                          <v-slider v-model="toneVolume" min="0" max="0.1" step="0.01" label="Volume" color="primary"
+                            prepend-icon="mdi-volume-high"></v-slider>
+                        </v-col>
 
-                      <!-- 操作ボタン -->
-                      <v-btn color="primary" class="mr-2" @click="playToneHz">Play</v-btn>
-                      <v-btn color="error" class="mr-2" @click="stopTone">Stop</v-btn>
-                      <v-btn color="secondary" @click="resetTone">Reset</v-btn>
+                        <!-- 操作ボタン -->
+                        <v-col cols="12" md="6" class="text-center">
+                          <v-btn color="primary" class="mr-2" @click="playToneHz">Play</v-btn>
+                          <v-btn color="error" class="mr-2" @click="stopTone">Stop</v-btn>
+                          <v-btn color="secondary" @click="resetTone">Reset</v-btn>
+                        </v-col>
+                      </v-row>
                     </v-card>
-
-
-                    <!-- Category Selection -->
-                    <v-select v-model="selectedCategory" :items="categories" label="Category" item-text="text"
-                      item-value="value" outlined rounded color="primary" prepend-inner-icon="mdi-music-box-multiple"
-                      class="mt-4">
-                    </v-select>
-
-                    <!-- Track Selection -->
-                    <v-select v-model="selectedTrack" :items="currentTracks" label="Track" item-text="name"
-                      return-object clearable outlined rounded color="primary" prepend-inner-icon="mdi-music-note"
-                      :disabled="!selectedCategory">
-                    </v-select>
-
-                    <!-- Audio Player -->
-                    <v-responsive class="mt-4">
-                      <div v-if="selectedTrack">
-                        <audio :src="selectedTrack.url" controls autoplay loop style="width: 100%;"></audio>
-                      </div>
-                      <v-sheet v-else class="fill-height placeholder-sheet">
-                        <v-row align="center" justify="center" class="fill-height text-center">
-                          <v-col>
-                            <v-icon size="64" color="grey lighten-1">mdi-music-circle-outline</v-icon>
-                            <div class="mt-4 text-h6 placeholder-text">Please select a track</div>
-                          </v-col>
-                        </v-row>
-                      </v-sheet>
-                    </v-responsive>
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -140,19 +116,11 @@
   <script>
     new Vue({
       el: '#App',
-      vuetify: new Vuetify({
-        theme: {
-          themes: {
-            light: {
-              primary: '#4285F4',
-            },
-          },
-        },
-      }),
+      vuetify: new Vuetify(),
       mixins: [window.Mixins_Common],
       data: {
-        selectedCategory: null,
-        selectedTrack: null,
+        selectedCategory: "Piano",
+        selectedTrack: { name: 'Clair De Lune', url: '../../Asset/Audio/clair_de_lune.wav' },
         toneFreq: 285,
         toneVolume: 0.02,
         selectedPreset: 'relax', presets: [
@@ -160,28 +128,24 @@
         ],
 
         categories: [
-          { text: 'Relax', value: 'relax' },
-          { text: 'Focus', value: 'focus' },
-          { text: 'Nature', value: 'nature' },
-          { text: 'Ambient', value: 'ambient' }
+          { text: 'Piano', value: 'Piano' },
+          { text: 'Ambient', value: 'Ambient' },
+          { text: 'Lo-Fi', value: 'LoFi' },
         ],
         tracks: {
-          relax: [
-            { name: 'Calm Piano', url: 'audio/relax_piano.mp3' },
-            { name: 'Gentle Waves', url: 'audio/relax_waves.mp3' }
+          Piano: [
+            { name: 'Clair De Lune', url: '../../Asset/Audio/clair_de_lune.wav' },
+            { name: 'An Der Wiege', url: '../../Asset/Audio/an_der_wiege.wav' },
+            { name: 'Bach Prelude In C Dur', url: '../../Asset/Audio/bach-prelude-in-c-dur.wav' },
+            { name: 'Gymnopedies', url: '../../Asset/Audio/gymnopedies.wav' },
           ],
-          focus: [
-            { name: 'Lo-Fi Beats', url: 'audio/focus_lofi.mp3' },
-            { name: 'Deep Concentration', url: 'audio/focus_concentration.mp3' }
+          Ambient: [
+            { name: 'Clock Tick', url: '../../Asset/Audio/clock-tick.wav' },
           ],
-          nature: [
-            { name: 'Forest Birds', url: 'audio/nature_forest.mp3' },
-            { name: 'Rain Sounds', url: 'audio/nature_rain.mp3' }
+          LoFi: [
+            { name: 'Lofi 1', url: '../../Asset/Audio/lofi_1.wav' },
+            { name: 'Lofi 2', url: '../../Asset/Audio/lofi_2.wav' },
           ],
-          ambient: [
-            { name: 'Space Ambience', url: 'audio/ambient_space.mp3' },
-            { name: 'Meditation Drone', url: 'audio/ambient_drone.mp3' }
-          ]
         }
       },
       computed: {
@@ -190,8 +154,24 @@
         }
       },
       watch: {
-        selectedCategory() {
-          this.selectedTrack = null;
+        selectedCategory(newCategory) {
+          if (this.tracks[newCategory] && this.tracks[newCategory].length > 0) {
+            this.selectedTrack = this.tracks[newCategory][0];
+          } else {
+            this.selectedTrack = null;
+          }
+        },
+        toneVolume(newVolume) {
+          if (this.gainNode) {
+            this.gainNode.gain.setValueAtTime(newVolume, this.audioCtx.currentTime);
+          }
+        }
+      },
+      mounted() {
+        this.selectedCategory = 'Piano';
+        this.selectedTrack = this.tracks.Piano[0];
+        if (this.$refs.bgmAudio) {
+          this.$refs.bgmAudio.volume = 0.5;
         }
       },
       methods: {
