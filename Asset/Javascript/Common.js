@@ -38,6 +38,8 @@ Vue.component('main-system-bar', {
         }
     },
 })
+
+
 let Name_Store = localStorage.getItem("BGM_Name");
 let Name = Name_Store == null ? "clair_de_lune.wav" : Name_Store;
 let Playing = false;
@@ -51,10 +53,22 @@ $(function () {
             audio.pause();
         }
         else {
-            $(this).removeClass("mdi-volume-variant-off");
-            $(this).addClass("mdi-volume-source");
+            var $this = $(this);
+            $this.removeClass("mdi-volume-variant-off mdi-volume-source");
+            $this.addClass("mdi-loading mdi-spin");
+
             audio.src = "../../Asset/Audio/" + Name;
-            audio.play();
+
+            audio.oncanplaythrough = function () {
+                $this.removeClass("mdi-loading mdi-spin");
+                $this.addClass("mdi-volume-source");
+                audio.play();
+            };
+
+            audio.onerror = function () {
+                $this.removeClass("mdi-loading mdi-spin");
+                $this.addClass("mdi-volume-variant-off");
+            };
         }
     });
     audio.onplaying = function () { Playing = true; };
@@ -65,6 +79,7 @@ function Change_BGM_Name(_name) {
     Name = _name;
     localStorage.setItem("BGM_Name", _name);
 }
+
 
 //// NavigationBar
 Vue.component('main-navigation', {
@@ -1104,8 +1119,8 @@ Vue.component('custom-carousel-left', {
 
         // ★★★ [高さ調整] ここから変更 ★★★
         // heightプロパティを必須(required)でなくし、指定がない場合のデフォルト値をnullに設定します
-        height: { 
-            type: Number, 
+        height: {
+            type: Number,
             required: false,
             default: null
         },
@@ -1243,13 +1258,13 @@ window.Mixins_Youtube = {
     computed: {
         Get_Years() {
             return [...new Set(this.Contents.map(content => content.year.toString().split('/')[0]))]
-            .sort((a, b) => parseInt(a) - parseInt(b));
+                .sort((a, b) => parseInt(a) - parseInt(b));
         }
     },
     methods: {
         ChangeDrawer(_value) { this.Drawer = _value; },
         Get_YearColor(year) {
-            const contentWithYear = this.Contents.find(content => 
+            const contentWithYear = this.Contents.find(content =>
                 content.year.toString().startsWith(year)
             );
             return contentWithYear ? contentWithYear.color : 'primary';
@@ -1260,7 +1275,7 @@ window.Mixins_Youtube = {
                 const yearElement = item.querySelector('.headline.font-weight-bold');
                 return yearElement && yearElement.textContent.trim().startsWith(year);
             });
-    
+
             if (targetItem) {
                 targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
