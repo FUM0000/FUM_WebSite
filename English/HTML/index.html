@@ -666,6 +666,106 @@
         liquidSphere.receiveShadow = false;
         scene.add(liquidSphere);
 
+        // ブラックホール・ジェット（光の柱）
+        const jetLength = 200; // 銀河と同じ大きさ
+        const jetRadius = 4;
+        const jetRadiusInner = 0.01; // 中心側の半径（細く）
+        const jetOffset = 5; // 中心から離す距離
+        const jetSegments = 64;
+
+        // ジェット用のシェーダーマテリアル（光の柱らしい見た目）
+        const jetMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0.0 },
+                color: { value: new THREE.Color(0x00aaff) },
+                innerColor: { value: new THREE.Color(0xffffff) },
+                glowColor: { value: new THREE.Color(0x0088ff) }
+            },
+            vertexShader: `
+                uniform float time;
+                varying vec3 vPosition;
+                varying vec3 vNormal;
+                varying float vY;
+                varying float vDistance;
+                
+                void main() {
+                    vPosition = position;
+                    vNormal = normal;
+                    vY = position.y;
+                    vec3 pos = position;
+                    
+                    vDistance = length(pos.xz);
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 color;
+                uniform vec3 innerColor;
+                uniform vec3 glowColor;
+                uniform float time;
+                varying vec3 vPosition;
+                varying vec3 vNormal;
+                varying float vY;
+                varying float vDistance;
+                
+                void main() {
+                    // 中心からの距離（実際の半径に合わせて調整）
+                    float dist = vDistance;
+                    float maxRadius = 5.75; // jetRadius * 1.15
+                    float normalizedDist = dist / maxRadius;
+                    
+                    // 中心部は白、外側は青にグラデーション
+                    vec3 finalColor = mix(innerColor * 3.0, color * 2.0, smoothstep(0.0, 0.6, normalizedDist));
+                    
+                    // 外側のグロー効果（青い光）
+                    float glow = 1.0 - smoothstep(0.3, 1.2, normalizedDist);
+                    finalColor += glowColor * glow * 1.5;
+                    
+                    // Y軸方向の濃淡：中心付近（vY = 0）が濃く、上下の端に向かって薄くなる
+                    // vYは-100から100の範囲（jetLength/2 = 100）
+                    float yNormalized = abs(vY) / 100.0; // 0.0（中心）から1.0（端）に正規化
+                    float yIntensity = 1.0 - smoothstep(0.0, 1.0, yNormalized);
+                    // 中心付近をより強調
+                    yIntensity = mix(yIntensity, 1.0, 1.0 - smoothstep(0.0, 0.3, yNormalized));
+                    
+                    // 半径方向のアルファ値：中心が濃く、外側に向かって薄くなる
+                    float radialAlpha = 1.0 - smoothstep(0.0, 1.0, normalizedDist);
+                    
+                    // 外側の端で完全にフェードアウト（境目が見えないように）
+                    float edgeFade = smoothstep(0.7, 1.0, normalizedDist);
+                    radialAlpha *= (1.0 - edgeFade);
+                    
+                    // 最終的なアルファ値：半径方向とY軸方向の両方を考慮
+                    float alpha = radialAlpha * yIntensity;
+                    
+                    // 色を明るく
+                    finalColor = min(finalColor, vec3(4.0));
+                    
+                    gl_FragColor = vec4(finalColor, alpha);
+                }
+            `,
+            transparent: true,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        // 上方向のジェット（中心側が細く、外側が太い）
+        // radiusTop: 外側（上）の半径、radiusBottom: 中心側（下）の半径
+        const jetGeometryTop = new THREE.CylinderGeometry(jetRadius * 1.15, jetRadiusInner, jetLength, jetSegments, 1, true);
+        const jetTop = new THREE.Mesh(jetGeometryTop, jetMaterial);
+        // 中心から少し離した位置から始めて、上方向に伸ばす
+        jetTop.position.set(0, jetOffset + jetLength / 2, 0);
+        scene.add(jetTop);
+
+        // 下方向のジェット（中心側が細く、外側が太い）
+        // radiusTop: 中心側（上）の半径、radiusBottom: 外側（下）の半径
+        const jetGeometryBottom = new THREE.CylinderGeometry(jetRadiusInner, jetRadius * 1.15, jetLength, jetSegments, 1, true);
+        const jetBottom = new THREE.Mesh(jetGeometryBottom, jetMaterial);
+        // 中心から少し離した位置から始めて、下方向に伸ばす
+        jetBottom.position.set(0, -jetOffset - jetLength / 2, 0);
+        scene.add(jetBottom);
+
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
@@ -1025,6 +1125,11 @@
             liquidShaderMaterial.uniforms.time.value = time;
             liquidShaderMaterial.uniforms.viewPos.value.copy(camera.position);
             liquidShaderMaterial.uniforms.cameraDistance.value = camera.position.length();
+            
+            // ジェットのアニメーション
+            if (jetMaterial) {
+                jetMaterial.uniforms.time.value = time;
+            }
 
             if (Flag_CameraAnimation) {
                 if (Time_CameraAnimation_Start === null) {
