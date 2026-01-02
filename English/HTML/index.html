@@ -123,41 +123,35 @@
             top: 50%;
             left: 50%;
             width: 225px;
+            /* 円の直径 */
             height: 225px;
-            margin: -112.5px 0 0 -112.5px;
-            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            /* 中心をぴったり合わせる */
             animation: orbit 5s linear infinite;
+            /* 全体を回転 */
         }
 
         .orbit-letter {
             position: absolute;
-            top: 50%;
-            left: 50%;
             font-size: 36px;
             font-weight: 700;
             color: #fff;
-            transform-origin: center center;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
         }
 
-        .orbit-letter:nth-child(1) {
-            transform: rotate(180deg) translateY(-89px) rotate(-6deg);
-        }
-
-        .orbit-letter:nth-child(2) {
-            transform: rotate(210deg) translateY(-97px) rotate(-11deg);
-        }
-
-        .orbit-letter:nth-child(3) {
-            transform: rotate(240deg) translateY(-111px) rotate(-15deg);
+        .orbit-letter.positioned {
+            opacity: 1;
         }
 
         @keyframes orbit {
             from {
-                transform: rotate(0deg);
+                transform: translate(-50%, -50%) rotate(0deg);
             }
 
             to {
-                transform: rotate(-360deg);
+                transform: translate(-50%, -50%) rotate(-360deg);
             }
         }
 
@@ -272,6 +266,15 @@
                 <span class="orbit-letter">F</span>
                 <span class="orbit-letter">U</span>
                 <span class="orbit-letter">M</span>
+                <span class="orbit-letter"></span>
+                <span class="orbit-letter"></span>
+                <span class="orbit-letter"></span>
+                <span class="orbit-letter">F</span>
+                <span class="orbit-letter">U</span>
+                <span class="orbit-letter">M</span>
+                <span class="orbit-letter"></span>
+                <span class="orbit-letter"></span>
+                <span class="orbit-letter"></span>
             </div>
         </div>
 
@@ -346,6 +349,67 @@
                 MessageStyle: { top: '0px', left: '0px' }
             },
         })
+        window.addEventListener('load', () => {
+            const overlay = document.getElementById('loading-overlay');
+            const progressBar = document.getElementById('loadingProgress');
+
+            // === text-orbit の文字を正確に円周配置 + 固まり防止 ===
+            const orbitContainer = document.querySelector('.text-orbit');
+            if (orbitContainer) {
+                const letters = orbitContainer.querySelectorAll('.orbit-letter');
+                const letterCount = letters.length;
+                const radius = 112.5; // 225px / 2
+                const angleStep = 360 / letterCount;
+
+                letters.forEach((letter, index) => {
+                    // 角度計算（上からスタート）
+                    const angleDeg = index * angleStep - 90;
+                    const angleRad = angleDeg * (Math.PI / 180);
+
+                    const x = radius * Math.cos(angleRad);
+                    const y = radius * Math.sin(angleRad);
+
+                    // 位置を即座に設定
+                    letter.style.left = `calc(50% + ${x}px)`;
+                    letter.style.top = `calc(50% + ${y}px)`;
+
+                    // 文字の向き：ここでは「常に上を向く」（読みやすい）
+                    // letter.style.transform = 'translate(-50%, -50%)';
+
+                    // 必要なら他の向きに変更：
+                    // 外側を向く場合：
+                    letter.style.transform = `translate(-50%, -50%) rotate(${index * angleStep}deg)`;
+
+                    // 配置が完了したら表示（少し遅らせて自然に）
+                    setTimeout(() => {
+                        letter.classList.add('positioned');
+                    }, index * 50); // 少しずつ表示でアニメーション感UP（任意）
+                });
+            }
+
+            // === ローディングプログレス処理（そのまま）===
+            if (overlay && progressBar) {
+                let progress = 0;
+                const duration = 4000;
+                const interval = 50;
+
+                const timer = setInterval(() => {
+                    progress += (100 / (duration / interval));
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(timer);
+                    }
+                    progressBar.style.width = progress + '%';
+                }, interval);
+
+                setTimeout(() => {
+                    overlay.classList.add('fade-out');
+                    setTimeout(() => {
+                        overlay.remove();
+                    }, 2000);
+                }, 4000);
+            }
+        });
     </script>
 
     <script type="module">
@@ -1968,36 +2032,6 @@
         */
 
         createUniverseDetail();
-    </script>
-
-    <script>
-        window.addEventListener('load', () => {
-            const overlay = document.getElementById('loading-overlay');
-            const progressBar = document.getElementById('loadingProgress');
-
-            if (overlay && progressBar) {
-                let progress = 0;
-                const duration = 4000; // 4秒で100%にする
-                const interval = 50;   // 更新間隔（ms）
-
-                const timer = setInterval(() => {
-                    progress += (100 / (duration / interval));
-                    if (progress >= 100) {
-                        progress = 100;
-                        clearInterval(timer);
-                    }
-                    progressBar.style.width = progress + '%';
-                }, interval);
-
-                // 4秒後にフェードアウト開始
-                setTimeout(() => {
-                    overlay.classList.add('fade-out');
-                    setTimeout(() => {
-                        overlay.remove();
-                    }, 2000);
-                }, 4000);
-            }
-        });
     </script>
 
 </body>
