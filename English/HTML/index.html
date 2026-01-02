@@ -328,11 +328,11 @@
         const isMobile = window.innerWidth <= 768;
         let textMeshMouthClosed, textMeshMouthOpen;
 
-        const fireworks = [];
-        const gravity = new THREE.Vector3(0, -0.02, 0);
-        const fireworkTypes = ['peony', 'chrysanthemum', 'crown', 'thousand-wheels', 'shape-heart', 'shape-star', 'shape-saturn', 'willow', 'bouquet', 'nishaku-dama', 'bun-pou'];
-        let fireworksEnabled = false; // カメラアニメーション後に花火を有効にするフラグ
-        const MAX_FIREWORKS = isMobile ? 5 : 10; // 花火の最大同時表示数
+        // const fireworks = [];
+        // const gravity = new THREE.Vector3(0, -0.02, 0);
+        // const fireworkTypes = ['peony', 'chrysanthemum', 'crown', 'thousand-wheels', 'shape-heart', 'shape-star', 'shape-saturn', 'willow', 'bouquet', 'nishaku-dama', 'bun-pou'];
+        // let fireworksEnabled = false; // カメラアニメーション後に花火を有効にするフラグ
+        // const MAX_FIREWORKS = isMobile ? 5 : 10; // 花火の最大同時表示数
 
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x020202, 0, 5000);
@@ -398,9 +398,9 @@
 
         const loader = new THREE.FontLoader();
         loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-            const textGeometry1 = new THREE.TextGeometry('^. .^', {
+            const textGeometry1 = new THREE.TextGeometry('. .', {
                 font: font,
-                size: 2,
+                size: 4,
                 height: 0.25,
                 curveSegments: 2,
                 bevelEnabled: true,
@@ -412,7 +412,7 @@
 
             const textGeometryMouthClosed = new THREE.TextGeometry('-', {
                 font: font,
-                size: 1,
+                size: 2,
                 height: 0.25,
                 curveSegments: 2,
                 bevelEnabled: true,
@@ -422,7 +422,7 @@
                 bevelSegments: 0
             });
 
-            const textGeometryMouthOpen = new THREE.TextGeometry('o', {
+            const textGeometryMouthOpen = new THREE.TextGeometry('Ο', {
                 font: font,
                 size: 1,
                 height: 0.25,
@@ -448,17 +448,17 @@
 
             textGeometry1.computeBoundingBox();
             const textWidth1 = textGeometry1.boundingBox.max.x - textGeometry1.boundingBox.min.x;
-            textMesh1.position.set(-textWidth1 / 2 - 0.35, 0, 0);
+            textMesh1.position.set(-textWidth1 / 2, 0, 0);
 
             textGeometryMouthClosed.computeBoundingBox();
             const textWidthClosed = textGeometryMouthClosed.boundingBox.max.x - textGeometryMouthClosed.boundingBox.min.x;
-            textMeshMouthClosed.position.set(-textWidthClosed / 2 - 0.1, -1, 0);
+            textMeshMouthClosed.position.set(-textWidthClosed / 2, -1, 0);
 
             textGeometryMouthOpen.computeBoundingBox();
             const textWidthOpen = textGeometryMouthOpen.boundingBox.max.x - textGeometryMouthOpen.boundingBox.min.x;
-            textMeshMouthOpen.position.set(-textWidthOpen / 2 - 0.025, -0.5, 0); // 口を開いたように少し下に配置
+            textMeshMouthOpen.position.set(-textWidthOpen / 2, -1, 0);
 
-            textMeshMouthOpen.visible = false; // 初期状態は非表示
+            textMeshMouthOpen.visible = false;
 
             scene.add(textMesh1);
             scene.add(textMeshMouthClosed);
@@ -492,11 +492,11 @@
 
         const envMap = createProceduralCubeMap();
 
-        const liquidSphereGeometry = new THREE.SphereGeometry(3, 128, 128);
+        const liquidSphereGeometry = new THREE.SphereGeometry(5, 128, 128);
         const liquidShaderMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 time: { value: 0.0 },
-                baseColor: { value: new THREE.Color(0x0077cc) },
+                baseColor: { value: new THREE.Color(0x000000) },
                 envMap: { value: envMap },
                 viewPos: { value: camera.position },
                 cameraDistance: { value: 0.0 },
@@ -511,7 +511,7 @@
                 scatteringStrength: { value: 1 },
                 rimPower: { value: 2.5 },
                 rimStrength: { value: 0.2 },
-                rimColor: { value: new THREE.Color(0x00ccff) }
+                rimColor: { value: new THREE.Color(0xff0000) }
             },
             vertexShader: `
             varying vec3 vNormal;
@@ -666,22 +666,6 @@
         liquidSphere.receiveShadow = false;
         scene.add(liquidSphere);
 
-        const glassSphereGeometry = new THREE.SphereGeometry(3.5, 64, 64);
-        const glassMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            metalness: 0.1,
-            roughness: 0.05,
-            envMap: envMap,
-            envMapIntensity: 1.0,
-            transparent: true,
-            opacity: 0.2,
-            premultipliedAlpha: true,
-            depthWrite: false,
-            side: THREE.FrontSide
-        });
-        const glassSphere = new THREE.Mesh(glassSphereGeometry, glassMaterial);
-        scene.add(glassSphere);
-
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
@@ -714,80 +698,6 @@
             transparent: true,
             opacity: 0.8,
         });
-
-        const electronShells = [
-            { name: 'K', electrons: 2, radius: 5 },
-            { name: 'L', electrons: 8, radius: 8 },
-            { name: 'M', electrons: 18, radius: 11 },
-            { name: 'N', electrons: 32, radius: 14 },
-            { name: 'O', electrons: 32, radius: 17 }
-        ];
-
-        const totalElectrons = electronShells.reduce((sum, shell) => sum + shell.electrons, 0);
-        const pointSize = 0.25;
-        const connectionDistance = 4.5;
-        const avoidanceDistance = 1.2;
-        const repulsionStrength = 0.02;
-
-        const pointMaterial = new THREE.PointsMaterial({
-            color: 0x00ffcc,
-            size: pointSize,
-            fog: false
-        });
-
-        const positions = new Float32Array(totalElectrons * 3);
-        const velocities = new Float32Array(totalElectrons * 3);
-
-        const ALPHA = 1 / 137;
-        const LIGHT_SPEED = 0.299792458;
-
-        let currentIndex = 0;
-        electronShells.forEach((shell, shellIndex) => {
-            const baseSpeed = (92 * ALPHA * LIGHT_SPEED / (shellIndex + 1)) * 2;
-            for (let i = 0; i < shell.electrons; i++) {
-                const golden_ratio = (1 + Math.sqrt(5)) / 2;
-                const theta = 2 * Math.PI * i / golden_ratio;
-                const phi = Math.acos(1 - 2 * (i + 0.5) / shell.electrons);
-
-                const x = shell.radius * Math.sin(phi) * Math.cos(theta);
-                const y = shell.radius * Math.sin(phi) * Math.sin(theta);
-                const z = shell.radius * Math.cos(phi);
-
-                positions[currentIndex * 3] = x;
-                positions[currentIndex * 3 + 1] = y;
-                positions[currentIndex * 3 + 2] = z;
-
-                const tangentX = -Math.sin(theta);
-                const tangentY = Math.cos(theta);
-                const tangentZ = 0;
-
-                velocities[currentIndex * 3] = tangentX * baseSpeed;
-                velocities[currentIndex * 3 + 1] = tangentY * baseSpeed;
-                velocities[currentIndex * 3 + 2] = tangentZ * baseSpeed;
-
-                currentIndex++;
-            }
-        });
-
-        const pointGeometry = new THREE.BufferGeometry();
-        pointGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-        const pointCloud = new THREE.Points(pointGeometry, pointMaterial);
-        scene.add(pointCloud);
-
-        const lineMaterial = new THREE.LineBasicMaterial({
-            color: 0x00ffff,
-            transparent: true,
-            opacity: 0.2,
-            fog: false
-        });
-
-        let lineSegments;
-        if (!isMobile) {
-            const lineGeometry = new THREE.BufferGeometry();
-            lineSegments = new THREE.LineSegments(lineGeometry, lineMaterial);
-            scene.add(lineSegments);
-        }
 
         const composer = new THREE.EffectComposer(renderer);
         const renderPass = new THREE.RenderPass(scene, camera);
@@ -973,73 +883,6 @@
         cursorParticleSystem.position.set(0, 0, 0);
         scene.add(cursorParticleSystem);
 
-        function animatePoints() {
-            const positions = pointGeometry.attributes.position.array;
-            let currentIndex = 0;
-            electronShells.forEach((shell, shellIndex) => {
-                const shellStartIndex = currentIndex;
-                const shellEndIndex = currentIndex + shell.electrons;
-                for (let i = shellStartIndex; i < shellEndIndex; i++) {
-                    const idx = i * 3;
-                    let x = positions[idx];
-                    let y = positions[idx + 1];
-                    let z = positions[idx + 2];
-                    const currentRadius = Math.sqrt(x * x + y * y + z * z);
-                    const radiusCorrection = (shell.radius - currentRadius) * 0.1;
-                    const radiusVector = {
-                        x: x / currentRadius * radiusCorrection,
-                        y: y / currentRadius * radiusCorrection,
-                        z: z / currentRadius * radiusCorrection
-                    };
-                    let repulsionX = 0, repulsionY = 0, repulsionZ = 0;
-                    for (let j = shellStartIndex; j < shellEndIndex; j++) {
-                        if (i !== j) {
-                            const dx = x - positions[j * 3];
-                            const dy = y - positions[j * 3 + 1];
-                            const dz = z - positions[j * 3 + 2];
-                            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                            if (distance < avoidanceDistance) {
-                                const repulsion = (avoidanceDistance - distance) * repulsionStrength;
-                                repulsionX += dx / distance * repulsion;
-                                repulsionY += dy / distance * repulsion;
-                                repulsionZ += dz / distance * repulsion;
-                            }
-                        }
-                    }
-                    velocities[idx] += radiusVector.x + repulsionX;
-                    velocities[idx + 1] += radiusVector.y + repulsionY;
-                    velocities[idx + 2] += radiusVector.z + repulsionZ;
-                    positions[idx] += velocities[idx];
-                    positions[idx + 1] += velocities[idx + 1];
-                    positions[idx + 2] += velocities[idx + 2];
-                }
-                currentIndex += shell.electrons;
-            });
-            pointGeometry.attributes.position.needsUpdate = true;
-        }
-
-        function updateLines() {
-            if (isMobile) return;
-
-            const positions = pointGeometry.attributes.position.array;
-            const linePositions = [];
-            for (let i = 0; i < positions.length / 3; i++) {
-                for (let j = i + 1; j < positions.length / 3; j++) {
-                    const dx = positions[i * 3] - positions[j * 3];
-                    const dy = positions[i * 3 + 1] - positions[j * 3 + 1];
-                    const dz = positions[i * 3 + 2] - positions[j * 3 + 2];
-                    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                    if (distance < connectionDistance) {
-                        linePositions.push(
-                            positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2],
-                            positions[j * 3], positions[j * 3 + 1], positions[j * 3 + 2]
-                        );
-                    }
-                }
-            }
-            lineSegments.geometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
-            lineSegments.geometry.computeBoundingSphere();
-        }
 
         let Flag_CameraAnimation = true;
         let Time_CameraAnimation_Start = null;
@@ -1205,9 +1048,9 @@
                     controls.enabled = true;
 
                     // カメラアニメーションが終わったら花火を有効化
-                    fireworksEnabled = true;
-                    setTimeout(() => launchFirework(), 500); // 最初の花火
-                    setInterval(launchFirework, 4000); // 定期的な花火
+                    // fireworksEnabled = true;
+                    // setTimeout(() => launchFirework(), 500); // 最初の花火
+                    // setInterval(launchFirework, 4000); // 定期的な花火
                 }
             } else {
                 countDistance += Math.PI * 0.01 * deltaTime;
@@ -1235,30 +1078,17 @@
                 camera.lookAt(0, 0, 0);
             }
 
-            animatePoints();
             frameCount++;
-            // animatePointsは2フレームに1回実行
-            if (frameCount % 2 === 0) {
-                animatePoints();
-            }
-
-            if (!isMobile) {
-                // updateLinesは計算量が非常に大きいため、15フレームに1回に減らす
-                // もしくは、線を引く必要がなければこのブロックごとコメントアウトすると最も効果的です
-                if (frameCount % 30 === 0) {
-                    updateLines();
-                }
-            }
             updateCursorParticles();
 
             // 花火の更新処理
-            if (fireworksEnabled) {
-                for (let i = fireworks.length - 1; i >= 0; i--) {
-                    if (fireworks[i].update(deltaTime)) {
-                        fireworks.splice(i, 1);
-                    }
-                }
-            }
+            // if (fireworksEnabled) {
+            //     for (let i = fireworks.length - 1; i >= 0; i--) {
+            //         if (fireworks[i].update(deltaTime)) {
+            //             fireworks.splice(i, 1);
+            //         }
+            //     }
+            // }
 
             controls.update();
             composer.render();
@@ -1295,12 +1125,12 @@
             composer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        window.addEventListener('click', () => {
-            launchFirework();
-        });
-        window.addEventListener('touchend', () => {
-            launchFirework();
-        });
+        // window.addEventListener('click', () => {
+        //     launchFirework();
+        // });
+        // window.addEventListener('touchend', () => {
+        //     launchFirework();
+        // });
 
         animate();
 
@@ -1429,20 +1259,22 @@
             const galaxyField = new THREE.Points(galaxyGeometry, galaxyFieldMaterial);
             scene.add(galaxyField);
 
+            // 霧散らばる星屑
             const nebulaCount = isMobile ? 100 : 500;
             const nebulaPositions = new Float32Array(nebulaCount * 3);
             const nebulaColors = new Float32Array(nebulaCount * 3);
-            const nebulaMinRadius = 100;
-            const nebulaMaxRadius = 300;
+            const nebulaMinRadius = 60;
+            const nebulaMaxRadius = 250;
             for (let i = 0; i < nebulaCount; i++) {
                 const u = Math.random();
-                const r = Math.cbrt(u * (Math.pow(nebulaMaxRadius, 3) - Math.pow(nebulaMinRadius, 3)) + Math.pow(nebulaMinRadius, 3));
+                const r = nebulaMinRadius + u * (nebulaMaxRadius - nebulaMinRadius);
 
-                const theta = Math.acos(2 * Math.random() - 1);
+                // xz平面での距離をrとして直接制御
                 const phi = Math.random() * 2 * Math.PI;
-                const x = r * Math.sin(theta) * Math.cos(phi);
-                const y = r * 0.3 * Math.sin(theta) * Math.sin(phi);
-                const z = r * Math.cos(theta);
+                const x = r * Math.cos(phi);
+                const z = r * Math.sin(phi);
+                // y座標は圧縮（-r*0.1 から r*0.1 の範囲）
+                const y = (Math.random() - 0.5) * r * 0.2;
                 nebulaPositions[i * 3] = x;
                 nebulaPositions[i * 3 + 1] = y;
                 nebulaPositions[i * 3 + 2] = z;
@@ -1667,6 +1499,7 @@
         }
 
         // 図形花火用の頂点データ
+        /*
         function getShapePoints(shape) {
             const points = [];
             const scale = 15; // 図形の基準サイズ
@@ -1730,7 +1563,9 @@
             }
             return points;
         }
+        */
 
+        /*
         class Firework {
             constructor({ x, y, z, type, color, subFirework = false }) {
                 this.type = type;
@@ -1994,7 +1829,9 @@
                 return false;
             }
         }
+        */
 
+        /*
         function launchFirework() {
             if (!fireworksEnabled) return;
             if (fireworks.length >= MAX_FIREWORKS) return;
@@ -2019,6 +1856,7 @@
                 fireworks.push(new Firework({ x, y, z, type }));
             }
         }
+        */
 
         createUniverseDetail();
     </script>
