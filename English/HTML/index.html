@@ -415,7 +415,6 @@
     <script type="module">
         const vue = window.vue;
         const isMobile = window.innerWidth <= 768;
-        let textMeshMouthClosed, textMeshMouthOpen;
 
         // const fireworks = [];
         // const gravity = new THREE.Vector3(0, -0.02, 0);
@@ -485,6 +484,7 @@
         }
         const particleTexture = createCircleTexture();
 
+        let textMesh1, textMeshMouthClosed, textMeshMouthOpen;
         const loader = new THREE.FontLoader();
         loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
             const textGeometry1 = new THREE.TextGeometry('. .', {
@@ -531,7 +531,7 @@
                 fog: false
             });
 
-            const textMesh1 = new THREE.Mesh(textGeometry1, textMaterial);
+            textMesh1 = new THREE.Mesh(textGeometry1, textMaterial);
             textMeshMouthClosed = new THREE.Mesh(textGeometryMouthClosed, textMaterial);
             textMeshMouthOpen = new THREE.Mesh(textGeometryMouthOpen, textMaterial);
 
@@ -1224,17 +1224,44 @@
             }
         }
 
+        let blinkTimer = 0;
+        function updateFace(delta) {
+            // 瞬き
+            blinkTimer += delta;
+            if (blinkTimer > 3 + Math.random() * 3) {
+                if (textMesh1) textMesh1.visible = false;
+
+                setTimeout(() => {
+                    if (textMesh1) textMesh1.visible = true;
+                }, 120); // 0.12秒
+
+                blinkTimer = 0;
+            }
+
+            // 口
+            if (vue && vue.ShowMessage && textMeshMouthClosed && textMeshMouthOpen) {
+                const isMouthOpen = Math.floor(time * 2) % 2 === 0;
+                textMeshMouthClosed.visible = !isMouthOpen;
+                textMeshMouthOpen.visible = isMouthOpen;
+            } else if (textMeshMouthClosed && textMeshMouthOpen) {
+                textMeshMouthClosed.visible = true;
+                textMeshMouthOpen.visible = false;
+            }
+        }
+
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
-
+            const delta = clock.getDelta();
             const currentTime = performance.now();
-            const deltaTime = (currentTime - lastTime) / 1000;
             lastTime = currentTime;
-            time += deltaTime;
+            time += delta;
 
             blackholeShaderMaterial.uniforms.time.value = time;
             blackholeShaderMaterial.uniforms.viewPos.value.copy(camera.position);
             blackholeShaderMaterial.uniforms.cameraDistance.value = camera.position.length();
+
+            updateFace(delta);
 
             // ジェットのアニメーション
             if (jetMaterial) {
@@ -1268,16 +1295,16 @@
                     // setInterval(launchFirework, 4000); // 定期的な花火
                 }
             } else {
-                countDistance += Math.PI * 0.01 * deltaTime;
+                countDistance += Math.PI * 0.01 * delta;
                 const currentDistance = camera.position.length();
-                let newDistance = currentDistance + Math.sin(countDistance) * 2 * deltaTime;
+                let newDistance = currentDistance + Math.sin(countDistance) * 2 * delta;
                 if (newDistance < 18) {
                     newDistance = 18;
-                    countDistance += Math.PI * deltaTime;
+                    countDistance += Math.PI * delta;
                 }
                 const currentPhi = Math.atan2(camera.position.z, camera.position.x);
-                const newPhi = currentPhi + Math.PI * 0.05 * deltaTime;
-                countTheata += Math.PI * 0.2 * deltaTime;
+                const newPhi = currentPhi + Math.PI * 0.05 * delta;
+                countTheata += Math.PI * 0.2 * delta;
                 let currentTheta = Math.asin(camera.position.y / newDistance);
                 if (currentTheta <= -Math.PI * 0.49) {
                     currentTheta = -Math.PI * 0.49;
@@ -1285,7 +1312,7 @@
                 if (currentTheta >= Math.PI * 0.49) {
                     currentTheta = Math.PI * 0.49;
                 }
-                const newTheta = currentTheta + Math.sin(countTheata) * Math.PI * 2.5 / 180 * deltaTime;
+                const newTheta = currentTheta + Math.sin(countTheata) * Math.PI * 2.5 / 180 * delta;
                 const x = newDistance * Math.cos(newTheta) * Math.cos(newPhi);
                 const y = newDistance * Math.sin(newTheta);
                 const z = newDistance * Math.cos(newTheta) * Math.sin(newPhi);
@@ -1299,7 +1326,7 @@
             // 花火の更新処理
             // if (fireworksEnabled) {
             //     for (let i = fireworks.length - 1; i >= 0; i--) {
-            //         if (fireworks[i].update(deltaTime)) {
+            //         if (fireworks[i].update(delta)) {
             //             fireworks.splice(i, 1);
             //         }
             //     }
@@ -1307,17 +1334,8 @@
 
             controls.update();
             composer.render();
-            if (!isMobile) {
-                updateGlitch();
-            }
-            if (vue && vue.ShowMessage && textMeshMouthClosed && textMeshMouthOpen) {
-                const isMouthOpen = Math.floor(time * 2) % 2 === 0;
-                textMeshMouthClosed.visible = !isMouthOpen;
-                textMeshMouthOpen.visible = isMouthOpen;
-            } else if (textMeshMouthClosed && textMeshMouthOpen) {
-                textMeshMouthClosed.visible = true;
-                textMeshMouthOpen.visible = false;
-            }
+            updateGlitch();
+
             updateSpeechBubble();
         }
 
