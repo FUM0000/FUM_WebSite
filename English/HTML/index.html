@@ -24,11 +24,57 @@
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
-    <link href="../../Asset/CSS/Index.css?v=1.0" rel="stylesheet" />
 
     <title>FUM_Website</title>
 
     <style>
+        body {
+            overflow: hidden;
+        }
+
+        #ElectronShell {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        #App {
+            position: relative;
+            z-index: 1;
+            background-color: transparent !important;
+            pointer-events: none;
+        }
+
+        #App a,
+        #App button,
+        #App input,
+        #App select,
+        #App textarea,
+        #App .v-btn,
+        #App .v-list-item,
+        #App .v-icon {
+            pointer-events: auto;
+        }
+
+        #TextFlow {
+            width: calc(1920px * 0.75);
+            white-space: nowrap;
+            animation: Flow 30s linear infinite;
+        }
+
+        @keyframes Flow {
+            0% {
+                transform: translateX(100vw);
+            }
+
+            100% {
+                transform: translateX(calc(-1920px * 0.75));
+            }
+        }
+
         .speech-bubble {
             position: absolute;
             background: rgba(30, 30, 30, 0.85);
@@ -259,43 +305,31 @@
 </head>
 
 <body>
+
+    <!-- ローディング画面 -->
     <div id="loading-overlay">
         <div class="intro-circle">
             <div class="inner-circle"></div>
             <div class="text-orbit">
-                <span class="orbit-letter">F</span>
-                <span class="orbit-letter">U</span>
-                <span class="orbit-letter">M</span>
-                <span class="orbit-letter"></span>
-                <span class="orbit-letter"></span>
-                <span class="orbit-letter"></span>
-                <span class="orbit-letter">F</span>
-                <span class="orbit-letter">U</span>
-                <span class="orbit-letter">M</span>
-                <span class="orbit-letter"></span>
-                <span class="orbit-letter"></span>
-                <span class="orbit-letter"></span>
+                <span class="orbit-letter">F</span><span class="orbit-letter">U</span><span
+                    class="orbit-letter">M</span><span class="orbit-letter"></span><span
+                    class="orbit-letter"></span><span class="orbit-letter"></span><span
+                    class="orbit-letter">F</span><span class="orbit-letter">U</span><span
+                    class="orbit-letter">M</span><span class="orbit-letter"></span><span
+                    class="orbit-letter"></span><span class="orbit-letter"></span>
             </div>
         </div>
-
         <div class="loading-text">
-            <span>L</span>
-            <span>o</span>
-            <span>a</span>
-            <span>d</span>
-            <span>i</span>
-            <span>n</span>
-            <span>g</span>
-            <span>.</span>
-            <span>.</span>
-            <span>.</span>
+            <span>L</span><span>o</span><span>a</span><span>d</span><span>i</span><span>n</span><span>g</span><span>.</span><span>.</span><span>.</span>
         </div>
         <div class="loading-progress-container">
             <div class="loading-progress-bar" id="loadingProgress"></div>
         </div>
     </div>
 
+    <!-- メインコンテンツ -->
     <canvas id="ElectronShell"></canvas>
+
     <v-app id="App">
         <template>
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Home</main-system-bar>
@@ -303,17 +337,20 @@
             <v-main id="Main">
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="align-content: flex-start;">
+                        <!-- テキストフロー -->
                         <v-container id="TextFlow">
                             <span style="color: red"> &lt;NEWS&gt; </span>
                             <span style="color: rgb(200, 200, 200)">
-                                June to July is the rainy season! Humid air sweeps across Japan. Umbrellas and raincoats
-                                are a must! Watch out for food poisoning and flooding.
+                                New Year’s Day celebrates the beginning of a fresh
+                                year, spent resting, being with family, and thinking about health, happiness, and plans
+                                for the year ahead.
                             </span>
                         </v-container>
                     </v-container>
                 </transition>
             </v-main>
 
+            <!-- 吹き出し -->
             <div :class="['speech-bubble', { 'show': ShowMessage }]" :style="MessageStyle">
                 {{ CurrentMessage }}
             </div>
@@ -416,12 +453,6 @@
         const vue = window.vue;
         const isMobile = window.innerWidth <= 768;
 
-        // const fireworks = [];
-        // const gravity = new THREE.Vector3(0, -0.02, 0);
-        // const fireworkTypes = ['peony', 'chrysanthemum', 'crown', 'thousand-wheels', 'shape-heart', 'shape-star', 'shape-saturn', 'willow', 'bouquet', 'nishaku-dama', 'bun-pou'];
-        // let fireworksEnabled = false; // カメラアニメーション後に花火を有効にするフラグ
-        // const MAX_FIREWORKS = isMobile ? 5 : 10; // 花火の最大同時表示数
-
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x020202, 0, 5000);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
@@ -435,6 +466,10 @@
         renderer.toneMapping = THREE.ReinhardToneMapping;
         renderer.toneMappingExposure = 1.5;
 
+        // レンダー
+        const composer = new THREE.EffectComposer(renderer);
+        const renderPass = new THREE.RenderPass(scene, camera);
+        composer.addPass(renderPass);
 
         function generateNoiseTexture(width = 256, height = 256) {
             const size = width * height;
@@ -874,175 +909,15 @@
             return Math.pow(easeInOutCubic(t), 2);
         }
 
-        const mouse = new THREE.Vector2();
-        const raycaster = new THREE.Raycaster();
-        const intersectionPoint = new THREE.Vector3();
-
+        // インプットパーティクル
         const cursorParticles = [];
         const cursorParticleGeometry = new THREE.BufferGeometry();
-        // 修正: emissiveとemissiveIntensityを削除
         const cursorParticleMaterial = new THREE.PointsMaterial({
             color: 0x00ffcc,
             size: 0.1,
             transparent: true,
             opacity: 0.8,
         });
-
-        const composer = new THREE.EffectComposer(renderer);
-        const renderPass = new THREE.RenderPass(scene, camera);
-        composer.addPass(renderPass);
-
-        const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight));
-        bloomPass.threshold = 0;
-        // パフォーマンス向上のためBloom効果をさらに調整
-        if (isMobile) {
-            bloomPass.strength = 0.6; // ぼやけを軽減
-            bloomPass.radius = 0.1;   // ぼやけを軽減
-        } else {
-            bloomPass.strength = 0.8; // 負荷軽減のため少し下げる
-            bloomPass.radius = 0.6;
-        }
-        composer.addPass(bloomPass);
-
-        const DigitalGlitchShader = {
-            uniforms: {
-                'tDiffuse': { value: null },
-                'tDisp': { value: null },
-                'byp': { value: 0 },
-                'amount': { value: 0.08 },
-                'angle': { value: 0.02 },
-                'seed': { value: 0.02 },
-                'seed_x': { value: 0.02 },
-                'seed_y': { value: 0.02 },
-                'distortion_x': { value: 0.5 },
-                'distortion_y': { value: 0.6 },
-                'col_s': { value: 0.05 }
-            },
-            vertexShader: `
-        varying vec2 vUv;
-        void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `,
-            fragmentShader: `
-        uniform int byp;
-        uniform sampler2D tDiffuse;
-        uniform sampler2D tDisp;
-        uniform float amount;
-        uniform float angle;
-        uniform float seed;
-        float seed_x;
-        uniform float seed_y;
-        uniform float distortion_x;
-        uniform float distortion_y;
-        uniform float col_s;
-        varying vec2 vUv;
-
-        float rand(vec2 co) {
-            return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
-        }
-
-        void main() {
-            if (byp < 1) {
-                vec2 p = vUv;
-                if (amount > 0.0) {
-                    float xs = floor(gl_FragCoord.x / 0.5);
-                    float ys = floor(gl_FragCoord.y / 0.5);
-                    vec4 normal = texture2D(tDisp, p * seed * seed);
-                    if (p.y < distortion_x + col_s && p.y > distortion_x - col_s * seed) {
-                        if (seed_x > 0.0) {
-                            p.y = 1.0 - (p.y + distortion_y);
-                        } else {
-                            p.y = distortion_y;
-                        }
-                    }
-                    if (p.x < distortion_y + col_s && p.x > distortion_y - col_s * seed) {
-                        if (seed_y > 0.0) {
-                            p.x = distortion_x;
-                        } else {
-                            p.x = 1.0 - (p.x + distortion_x);
-                        }
-                    }
-                    p.x += normal.x * seed_x * (seed / 5.0);
-                    p.y += normal.y * seed_y * (seed / 5.0);
-                    vec2 offset = amount * vec2(cos(angle), sin(angle));
-                    vec4 cr = texture2D(tDiffuse, p + offset);
-                    vec4 cga = texture2D(tDiffuse, p);
-                    vec4 cb = texture2D(tDiffuse, p - offset);
-                    gl_FragColor = vec4(cr.r, cga.g, cb.b, 1.0);
-                } else {
-                    gl_FragColor = texture2D(tDiffuse, p);
-                }
-            } else {
-                gl_FragColor = texture2D(tDiffuse, vUv);
-            }
-        }
-    `
-        };
-
-        function generateNoiseTextureForGlitch(size = 64) {
-            const data = new Uint8Array(size * size * 4);
-            for (let i = 0; i < size * size * 4; i++) {
-                data[i] = Math.random() * 255;
-            }
-            const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
-            texture.needsUpdate = true;
-            return texture;
-        }
-
-        let glitchPass;
-        glitchPass = new THREE.ShaderPass(DigitalGlitchShader);
-        glitchPass.uniforms.tDisp.value = generateNoiseTextureForGlitch();
-        glitchPass.renderToScreen = true;
-        composer.addPass(glitchPass);
-
-        let isGlitching = false;
-        let glitchTimeout;
-        function updateGlitch() {
-            if (isGlitching) {
-                glitchPass.uniforms.seed.value = Math.random();
-                glitchPass.uniforms.amount.value = Math.random() * 0.1 + 0.02;
-                glitchPass.uniforms.angle.value = Math.random() * 2;
-                glitchPass.uniforms.seed_x.value = (Math.random() > 0.5 ? 0.02 : -0.02);
-                glitchPass.uniforms.seed_y.value = (Math.random() > 0.5 ? 0.02 : -0.02);
-                glitchPass.uniforms.distortion_x.value = Math.random() * 0.5;
-                glitchPass.uniforms.distortion_y.value = Math.random() * 0.5;
-                glitchPass.uniforms.col_s.value = Math.random() * 0.05;
-            } else {
-                glitchPass.uniforms.amount.value = 0;
-            }
-        }
-
-        function triggerGlitch() {
-            isGlitching = true;
-            clearTimeout(glitchTimeout);
-            const duration = (Math.random() - 0.5) * 500;
-            glitchTimeout = setTimeout(() => {
-                isGlitching = false;
-            }, duration);
-            const nextTrigger = Math.random() * 5000 + 3000;
-            setTimeout(triggerGlitch, nextTrigger);
-        }
-
-        setTimeout(triggerGlitch, 2000);
-
-        function createCursorParticle(x, y, z) {
-            for (let i = 0; i < 1; i++) {
-                const speed = 0.05;
-                const particle = {
-                    position: new THREE.Vector3(x, y, z),
-                    velocity: new THREE.Vector3(
-                        (Math.random() - 0.5) * speed,
-                        (Math.random() - 0.5) * speed,
-                        (Math.random() - 0.5) * speed
-                    ),
-                    life: 1.0
-                };
-                cursorParticles.push(particle);
-            }
-        }
-
         function updateCursorParticles() {
             for (let i = cursorParticles.length - 1; i >= 0; i--) {
                 const particle = cursorParticles[i];
@@ -1061,10 +936,140 @@
             cursorParticleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         }
 
+        // ブルームパス
+        const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight));
+        bloomPass.threshold = 0;
+        if (isMobile) {
+            bloomPass.strength = 0.6;
+            bloomPass.radius = 0.1;
+        } else {
+            bloomPass.strength = 0.8;
+            bloomPass.radius = 0.6;
+        }
+        composer.addPass(bloomPass);
+
+        // グリッチシェーダー
+        const DigitalGlitchShader = {
+            uniforms: {
+                'tDiffuse': { value: null },
+                'tDisp': { value: null },
+                'byp': { value: 0 },
+                'amount': { value: 0.08 },
+                'angle': { value: 0.02 },
+                'seed': { value: 0.02 },
+                'seed_x': { value: 0.02 },
+                'seed_y': { value: 0.02 },
+                'distortion_x': { value: 0.5 },
+                'distortion_y': { value: 0.6 },
+                'col_s': { value: 0.05 }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform int byp;
+                uniform sampler2D tDiffuse;
+                uniform sampler2D tDisp;
+                uniform float amount;
+                uniform float angle;
+                uniform float seed;
+                float seed_x;
+                uniform float seed_y;
+                uniform float distortion_x;
+                uniform float distortion_y;
+                uniform float col_s;
+                varying vec2 vUv;
+
+                float rand(vec2 co) {
+                    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+                }
+
+                void main() {
+                    if (byp < 1) {
+                        vec2 p = vUv;
+                        if (amount > 0.0) {
+                            float xs = floor(gl_FragCoord.x / 0.5);
+                            float ys = floor(gl_FragCoord.y / 0.5);
+                            vec4 normal = texture2D(tDisp, p * seed * seed);
+                            if (p.y < distortion_x + col_s && p.y > distortion_x - col_s * seed) {
+                                if (seed_x > 0.0) {
+                                    p.y = 1.0 - (p.y + distortion_y);
+                                } else {
+                                    p.y = distortion_y;
+                                }
+                            }
+                            if (p.x < distortion_y + col_s && p.x > distortion_y - col_s * seed) {
+                                if (seed_y > 0.0) {
+                                    p.x = distortion_x;
+                                } else {
+                                    p.x = 1.0 - (p.x + distortion_x);
+                                }
+                            }
+                            p.x += normal.x * seed_x * (seed / 5.0);
+                            p.y += normal.y * seed_y * (seed / 5.0);
+                            vec2 offset = amount * vec2(cos(angle), sin(angle));
+                            vec4 cr = texture2D(tDiffuse, p + offset);
+                            vec4 cga = texture2D(tDiffuse, p);
+                            vec4 cb = texture2D(tDiffuse, p - offset);
+                            gl_FragColor = vec4(cr.r, cga.g, cb.b, 1.0);
+                        } else {
+                            gl_FragColor = texture2D(tDiffuse, p);
+                        }
+                    } else {
+                        gl_FragColor = texture2D(tDiffuse, vUv);
+                    }
+                }
+            `
+        };
+        function generateNoiseTextureForGlitch(size = 64) {
+            const data = new Uint8Array(size * size * 4);
+            for (let i = 0; i < size * size * 4; i++) {
+                data[i] = Math.random() * 255;
+            }
+            const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+            texture.needsUpdate = true;
+            return texture;
+        }
+        let glitchPass;
+        glitchPass = new THREE.ShaderPass(DigitalGlitchShader);
+        glitchPass.uniforms.tDisp.value = generateNoiseTextureForGlitch();
+        glitchPass.renderToScreen = true;
+        composer.addPass(glitchPass);
+        let isGlitching = false;
+        let glitchTimeout;
+        function updateGlitch() {
+            if (isGlitching) {
+                glitchPass.uniforms.seed.value = Math.random();
+                glitchPass.uniforms.amount.value = Math.random() * 0.1 + 0.02;
+                glitchPass.uniforms.angle.value = Math.random() * 2;
+                glitchPass.uniforms.seed_x.value = (Math.random() > 0.5 ? 0.02 : -0.02);
+                glitchPass.uniforms.seed_y.value = (Math.random() > 0.5 ? 0.02 : -0.02);
+                glitchPass.uniforms.distortion_x.value = Math.random() * 0.5;
+                glitchPass.uniforms.distortion_y.value = Math.random() * 0.5;
+                glitchPass.uniforms.col_s.value = Math.random() * 0.05;
+            } else {
+                glitchPass.uniforms.amount.value = 0;
+            }
+        }
+        function triggerGlitch() {
+            isGlitching = true;
+            clearTimeout(glitchTimeout);
+            const duration = (Math.random() - 0.5) * 500;
+            glitchTimeout = setTimeout(() => {
+                isGlitching = false;
+            }, duration);
+            const nextTrigger = Math.random() * 5000 + 3000;
+            setTimeout(triggerGlitch, nextTrigger);
+        }
+        setTimeout(triggerGlitch, 2000);
+
         const cursorParticleSystem = new THREE.Points(cursorParticleGeometry, cursorParticleMaterial);
         cursorParticleSystem.position.set(0, 0, 0);
         scene.add(cursorParticleSystem);
-
 
         let Flag_CameraAnimation = true;
         let Time_CameraAnimation_Start = null;
@@ -1333,17 +1338,71 @@
             updateSpeechBubble();
         }
 
-        function onMouseMove(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            raycaster.ray.at(20, intersectionPoint);
-            if (Math.random() < 0.5) {
-                createCursorParticle(intersectionPoint.x, intersectionPoint.y, intersectionPoint.z);
+        // インプットパーティクル
+        const raycaster = new THREE.Raycaster();
+        const intersectionPoint = new THREE.Vector3();
+        const mouse = new THREE.Vector2();
+        let isPointerDown = false;
+        function createCursorParticle(x, y, z) {
+            for (let i = 0; i < 1; i++) {
+                const speed = 0.05;
+                const particle = {
+                    position: new THREE.Vector3(x, y, z),
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * speed,
+                        (Math.random() - 0.5) * speed,
+                        (Math.random() - 0.5) * speed
+                    ),
+                    life: 1.0
+                };
+                cursorParticles.push(particle);
             }
         }
+        function updatePointer(x, y) {
+            mouse.x = (x / window.innerWidth) * 2 - 1;
+            mouse.y = -(y / window.innerHeight) * 2 + 1;
 
+            raycaster.setFromCamera(mouse, camera);
+            raycaster.ray.at(20, intersectionPoint);
+
+            if (Math.random() < 0.5) {
+                createCursorParticle(
+                    intersectionPoint.x,
+                    intersectionPoint.y,
+                    intersectionPoint.z
+                );
+            }
+        }
+        function onMouseDown() {
+            isPointerDown = true;
+        }
+        function onMouseUp() {
+            isPointerDown = false;
+        }
+        function onMouseMove(event) {
+            if (!isPointerDown) return;
+            updatePointer(event.clientX, event.clientY);
+        }
+        function onTouchStart(event) {
+            isPointerDown = true;
+            const touch = event.touches[0];
+            updatePointer(touch.clientX, touch.clientY);
+        }
+        function onTouchMove(event) {
+            if (!isPointerDown) return;
+            const touch = event.touches[0];
+            updatePointer(touch.clientX, touch.clientY);
+        }
+        function onTouchEnd() {
+            isPointerDown = false;
+        }
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mouseup', onMouseUp);
         window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('touchstart', onTouchStart, { passive: true });
+        window.addEventListener('touchmove', onTouchMove, { passive: true });
+        window.addEventListener('touchend', onTouchEnd);
+
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -1703,366 +1762,6 @@
             }
 
         }
-
-        // 図形花火用の頂点データ
-        /*
-        function getShapePoints(shape) {
-            const points = [];
-            const scale = 15; // 図形の基準サイズ
-            const numPoints = 150; // 図形を構成するポイント数
-
-            switch (shape) {
-                case 'heart':
-                    for (let i = 0; i < numPoints; i++) {
-                        const t = (i / numPoints) * 2 * Math.PI;
-                        const x = scale * 1.0 * Math.pow(Math.sin(t), 3);
-                        const y = scale * (0.8 * Math.cos(t) - 0.3 * Math.cos(2 * t) - 0.1 * Math.cos(3 * t) - 0.05 * Math.cos(4 * t));
-                        points.push(new THREE.Vector3(x, y + 2, 0));
-                    }
-                    break;
-                case 'star':
-                    const outerRadius = scale;
-                    const innerRadius = scale * 0.5;
-                    for (let i = 0; i < numPoints; i++) {
-                        const angle = (i / numPoints) * 5 * Math.PI;
-                        const r = i % 2 === 0 ? outerRadius : innerRadius;
-                        const finalRadius = innerRadius + (outerRadius - innerRadius) * Math.abs(Math.sin(angle * 2.5));
-                        points.push(new THREE.Vector3(finalRadius * Math.cos(angle), finalRadius * Math.sin(angle), 0));
-                    }
-                    break;
-                case 'saturn':
-                    const bodyPoints = Math.floor(numPoints * 0.4);
-                    const ringPoints = numPoints - bodyPoints;
-                    const bodyRadius = scale * 0.7;
-                    const ringInnerRadius = scale * 1.0;
-                    const ringOuterRadius = scale * 1.6;
-                    const tilt = 0.2; // 環の傾き（ラジアン）
-
-                    // 本体の生成 (フィボナッチ格子を使って球状に配置)
-                    const phi = Math.PI * (3. - Math.sqrt(5.)); // 黄金角
-                    for (let i = 0; i < bodyPoints; i++) {
-                        const y = 0.25 - (i / (bodyPoints - 0.25)) * 2; // y座標を-1から1に
-                        const radius = Math.sqrt(0.25 - y * y);
-                        const theta = phi * i;
-                        const x = Math.cos(theta) * radius;
-                        const z = Math.sin(theta) * radius;
-                        points.push(new THREE.Vector3(x, y, z).multiplyScalar(bodyRadius));
-                    }
-
-                    // 環の生成
-                    for (let i = 0; i < ringPoints; i++) {
-                        // 円環内にランダムな点を生成
-                        const angle = Math.random() * Math.PI * 2;
-                        // Math.sqrt(Math.random()) を使い、中心部に点が偏らないようにする
-                        const radius = Math.sqrt(Math.random()) * (ringOuterRadius - ringInnerRadius) + ringInnerRadius;
-
-                        const x = Math.cos(angle) * radius;
-                        const z = Math.sin(angle) * radius;
-
-                        // 環を傾けるための回転計算
-                        const rotatedY = z * Math.sin(tilt);
-                        const rotatedZ = z * Math.cos(tilt);
-
-                        points.push(new THREE.Vector3(x, rotatedY, rotatedZ));
-                    }
-                    break;
-            }
-            return points;
-        }
-        */
-
-        /*
-        class Firework {
-            constructor({ x, y, z, type, color, subFirework = false }) {
-                this.type = type;
-                this.color = color || new THREE.Color().setHSL(Math.random(), 1, 0.7);
-                this.subFirework = subFirework;
-
-                const material = new THREE.PointsMaterial({
-                    size: subFirework ? 0.2 : 1,
-                    color: 0xffeeb3,
-                    map: particleTexture,
-                    blending: THREE.AdditiveBlending,
-                    transparent: true,
-                    depthWrite: false,
-                    fog: false
-                });
-
-                const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0]), 3));
-                this.rocket = new THREE.Points(geometry, material);
-                this.rocket.position.set(x, y, z);
-
-                this.velocity = new THREE.Vector3(
-                    (Math.random() - 0.5) * 4,
-                    subFirework ? Math.random() * 5 + 10 : Math.random() * 5 + 20,
-                    (Math.random() - 0.5) * 4
-                );
-                if (type === 'nishaku-dama' && !subFirework) {
-                    this.velocity.y *= 1.5; // より高く打ち上げる
-                }
-                this.life = 0;
-                this.exploded = false;
-                scene.add(this.rocket);
-            }
-
-            explode() {
-                this.exploded = true;
-                scene.remove(this.rocket);
-
-                // 図形花火の頂点データを取得
-                let shapePoints = null;
-                if (this.type.startsWith('shape-')) {
-                    const shapeName = this.type.substring(6);
-                    shapePoints = getShapePoints(shapeName);
-                }
-
-                // 花火の種類に応じて親玉のパーティクル数を決定
-                let particleCount;
-                if (shapePoints) {
-                    particleCount = shapePoints.length;
-                } else {
-                    switch (this.type) {
-                        case 'nishaku-dama':
-                            particleCount = isMobile ? 150 : 350; // 削減
-                            break;
-                        case 'willow':
-                        case 'crown':
-                            particleCount = isMobile ? 100 : 200; // 削減
-                            break;
-                        case 'bun-pou': // 分砲の親玉は光らず、子玉のみで表現
-                            particleCount = 0;
-                            break;
-                        default: // peony, chrysanthemumなど
-                            particleCount = isMobile ? 60 : 120; // 削減
-                    }
-                }
-
-                // 分砲や千輪の子玉を生成
-                if (this.type === 'thousand-wheels' || this.type === 'bun-pou') {
-                    const isBunpou = this.type === 'bun-pou';
-                    const subCount = isMobile ? (isBunpou ? 8 : 4) : (isBunpou ? 20 : 6); // 削減
-                    const launchDelay = isBunpou ? 0 : 200; // 千輪は親玉から少し遅れて開く
-
-                    for (let i = 0; i < subCount; i++) {
-                        setTimeout(() => {
-                            if (fireworks.length >= MAX_FIREWORKS) return;
-
-                            // 分砲は放射状に、千輪はよりランダムに広がる
-                            const subVelocity = isBunpou
-                                ? new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).normalize().multiplyScalar(Math.random() * 10 + 15)
-                                : new THREE.Vector3((Math.random() - 0.5) * 8, Math.random() * 8 + 4, (Math.random() - 0.5) * 8);
-
-                            const fw = new Firework({
-                                x: this.rocket.position.x,
-                                y: this.rocket.position.y,
-                                z: this.rocket.position.z,
-                                type: ['peony', 'chrysanthemum'][Math.floor(Math.random() * 2)],
-                                color: new THREE.Color().setHSL(Math.random(), 1, 0.7),
-                                subFirework: true
-                            });
-
-                            fw.velocity.copy(subVelocity);
-                            // 子玉が飛んでから開くまでの時間
-                            fw.life = isBunpou ? 0.3 + Math.random() * 0.3 : 0.4;
-                            fireworks.push(fw);
-                        }, launchDelay + (isBunpou ? i * 20 : Math.random() * 200)); // 分砲は等間隔、千輪はランダムに射出
-                    }
-                }
-
-                // 親玉のパーティクルを生成
-                if (particleCount > 0) {
-                    const positions = new Float32Array(particleCount * 3);
-                    const colors = new Float32Array(particleCount * 3);
-                    const velocities = [];
-                    const lifetimes = new Float32Array(particleCount);
-
-                    const geometry = new THREE.BufferGeometry();
-                    const material = new THREE.ShaderMaterial({
-                        uniforms: {
-                            pointTexture: { value: particleTexture },
-                            sizeScale: { value: 0.5 }
-                        },
-                        vertexShader: `
-                            attribute float aLifetime;
-                            attribute float aAge;
-                            varying vec3 vColor;
-                            varying float vAgeRatio;
-                            uniform float sizeScale;
-
-                            void main() {
-                                vColor = color;
-                                vAgeRatio = aAge / aLifetime;
-                                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                                gl_PointSize = (1.0 - vAgeRatio) * (vAgeRatio < 0.5 ? 10.0 : 20.0) * sizeScale;
-                                gl_Position = projectionMatrix * mvPosition;
-                            }
-                        `,
-                        fragmentShader: `
-                            uniform sampler2D pointTexture;
-                            varying vec3 vColor;
-                            varying float vAgeRatio;
-
-                            void main() {
-                                float alpha = (1.0 - pow(vAgeRatio, 2.0));
-                                gl_FragColor = texture2D(pointTexture, gl_PointCoord);
-                                gl_FragColor.rgb *= vColor;
-                                gl_FragColor.a *= alpha;
-                            }
-                        `,
-                        blending: THREE.AdditiveBlending,
-                        transparent: true,
-                        depthWrite: false,
-                        fog: false,
-                        vertexColors: true
-                    });
-
-                    this.particles = new THREE.Points(geometry, material);
-                    this.particles.position.copy(this.rocket.position);
-                    scene.add(this.particles);
-
-                    for (let i = 0; i < particleCount; i++) {
-                        const vec = new THREE.Vector3();
-                        if (shapePoints) {
-                            vec.copy(shapePoints[i % shapePoints.length]).multiplyScalar(0.5 + Math.random() * 0.3);
-                        } else {
-                            vec.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
-                            let speed = Math.random() * 8 + 4;
-                            if (this.type === 'crown' || this.type === 'willow') speed *= 0.7;
-                            if (this.type === 'nishaku-dama') speed *= 1.3; // 二尺玉はより大きく広がる
-                            vec.multiplyScalar(speed);
-                        }
-
-                        velocities.push(vec);
-                        lifetimes[i] = Math.random() * 1.5 + 2.0; // 全体的に寿命を少し延ばす
-
-                        let baseColor = this.color;
-                        if (this.type === 'chrysanthemum') lifetimes[i] *= 1.5;
-                        if (this.type === 'willow') {
-                            baseColor = new THREE.Color(0xffd700);
-                            lifetimes[i] *= 2.0;
-                        }
-                        if (this.type === 'nishaku-dama') {
-                            lifetimes[i] *= 1.8; // 二尺玉はさらに長く輝く
-                        }
-
-                        const finalColor = baseColor.clone().lerp(new THREE.Color(0xffffff), 0.5);
-                        finalColor.toArray(colors, i * 3);
-                    }
-
-                    this.particles.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                    this.particles.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-                    this.particleVelocities = velocities;
-                    this.particleLifetimes = lifetimes;
-                    this.particleAges = new Float32Array(particleCount).fill(0);
-                    this.particles.geometry.setAttribute('aLifetime', new THREE.BufferAttribute(lifetimes, 1));
-                    this.particles.geometry.setAttribute('aAge', new THREE.BufferAttribute(this.particleAges, 1));
-                }
-
-                // 閃光(フラッシュ)
-                const isNishaku = this.type === 'nishaku-dama';
-                const flash = new THREE.PointLight(
-                    this.color,
-                    isNishaku ? 5 : 2, // 二尺玉はより明るい
-                    500, // 二尺玉はより広範囲
-                    2
-                );
-                flash.position.copy(this.rocket.position);
-                scene.add(flash);
-                setTimeout(() => scene.remove(flash), 300);
-            }
-
-            update(dt) {
-                if (this.exploded) {
-                    // 1. 親玉パーティクルが存在する場合の更新処理
-                    if (this.particles) {
-                        const positions = this.particles.geometry.attributes.position.array;
-                        const colors = this.particles.geometry.attributes.color.array;
-                        let aliveCount = 0;
-                        for (let i = 0; i < this.particleAges.length; i++) {
-                            if (this.particleAges[i] < this.particleLifetimes[i]) {
-                                this.particleAges[i] += dt;
-                                this.particleVelocities[i].add(gravity);
-                                if (this.type === 'willow' || this.type === 'crown') this.particleVelocities[i].y -= 0.03;
-
-                                positions[i * 3] += this.particleVelocities[i].x * dt;
-                                positions[i * 3 + 1] += this.particleVelocities[i].y * dt;
-                                positions[i * 3 + 2] += this.particleVelocities[i].z * dt;
-
-                                const lifeRatio = this.particleAges[i] / this.particleLifetimes[i];
-                                if (this.type === 'chrysanthemum') {
-                                    const c = new THREE.Color(this.color);
-                                    c.lerp(new THREE.Color(0xffaa33), lifeRatio);
-                                    c.toArray(colors, i * 3);
-                                }
-                                aliveCount++;
-                            }
-                        }
-                        this.particles.geometry.attributes.position.needsUpdate = true;
-                        this.particles.geometry.attributes.color.needsUpdate = true;
-                        this.particles.geometry.attributes.aAge.needsUpdate = true;
-
-                        if (aliveCount === 0) {
-                            scene.remove(this.particles);
-                            this.particles.geometry.dispose();
-                            this.particles.material.dispose();
-                            this.particles = null; // 役割を終えたので null にする
-                        }
-                    }
-                    // 2. 親玉パーティクルが存在しない（または消滅した）場合の削除判定
-                    else {
-                        // 子玉を生成する花火は、生成が終わるまで待機
-                        if (this.type === 'bun-pou' || this.type === 'thousand-wheels') {
-                            if (!this.explodedTime) this.explodedTime = 0;
-                            this.explodedTime += dt;
-                            // 子玉生成のタイムアウト(最大500ms)後、安全マージンをもって削除
-                            if (this.explodedTime > 1.0) {
-                                return true; // 自身を削除
-                            }
-                        } else {
-                            // 親玉のみの花火は、パーティクルが消えたら即座に削除
-                            return true;
-                        }
-                    }
-                } else {
-                    this.life += dt;
-                    this.rocket.position.add(this.velocity.clone().multiplyScalar(dt));
-                    this.velocity.add(gravity);
-                    if (this.velocity.y < 0) {
-                        this.explode();
-                    }
-                }
-                return false;
-            }
-        }
-        */
-
-        /*
-        function launchFirework() {
-            if (!fireworksEnabled) return;
-            if (fireworks.length >= MAX_FIREWORKS) return;
-
-            const type = fireworkTypes[Math.floor(Math.random() * fireworkTypes.length)];
-            const x = (Math.random() - 0.5) * 150;
-            const y = 0;
-            const z = (Math.random() - 0.5) * 150; // 少し奥に
-
-            if (type === 'bouquet') {
-                const bouquetCount = isMobile ? 2 : 3;
-                for (let i = 0; i < bouquetCount; i++) {
-                    setTimeout(() => {
-                        if (fireworks.length >= MAX_FIREWORKS) return;
-                        fireworks.push(new Firework({
-                            x: x + (Math.random() - 0.5) * 50, y: y, z: z + (Math.random() - 0.5) * 50,
-                            type: ['peony', 'chrysanthemum'][Math.floor(Math.random() * 2)]
-                        }));
-                    }, i * 200);
-                }
-            } else {
-                fireworks.push(new Firework({ x, y, z, type }));
-            }
-        }
-        */
 
         createUniverseDetail();
     </script>
