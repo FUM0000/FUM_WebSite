@@ -27,7 +27,6 @@
     <title>Introduction</title>
 
     <style>
-        /* --- 既存のスタイルは省略 --- */
         #interactive-ring {
             position: fixed;
             top: 0;
@@ -213,8 +212,8 @@
         #bug::before {
             content: '';
             position: absolute;
-            width: 15px;
-            height: 2px;
+            width: 10px;
+            height: 1px;
             background: #333;
             border-radius: 2px;
             top: 9px;
@@ -226,7 +225,7 @@
             content: '';
             position: absolute;
             width: 1px;
-            height: 5px;
+            height: 3px;
             background: #333;
             top: 3px;
             left: -2px;
@@ -246,7 +245,6 @@
             animation: fast-flap 0.06s linear infinite;
         }
 
-        /* ▼▼▼ ここからチャットボット用のCSSを追加 ▼▼▼ */
         .chat-widget-container {
             position: fixed;
             bottom: 50px;
@@ -326,8 +324,6 @@
             border-top: 1px solid #e0e0e0;
             background-color: white;
         }
-
-        /* ▲▲▲ ここまでチャットボット用のCSSを追加 ▲▲▲ */
     </style>
 </head>
 
@@ -350,7 +346,7 @@
                                 @touchstart.prevent="dragStart(bubble, $event)">
                                 {{ bubble.theme }}
                             </div>
-                            <div v-if="!isMobile && bug.state !== 'inactive'" id="bug" :style="bug.style">
+                            <div v-if="bug.state !== 'inactive'" id="bug" :style="bug.style">
                                 <div class="bug-wing"></div>
                             </div>
                         </div>
@@ -434,7 +430,6 @@
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Common],
             data: {
-                // --- 既存のdataは省略 ---
                 SelectedTheme: 'Greeting',
                 PageNumber: 0,
                 Themes: ['Greeting', 'Japanese Language', 'Plants', 'Game', 'Cooking', 'Music', 'Japanese Culture', 'About me'],
@@ -451,7 +446,6 @@
                 dragInfo: { lastX: 0, lastY: 0, lastTime: 0, vx: 0, vy: 0, moveEvent: null, upEvent: null },
                 didDrag: false,
 
-                // ▼▼▼ ここからチャットボット用のdataを追加 ▼▼▼
                 chat: {
                     visible: false,
                     loading: false,
@@ -460,11 +454,8 @@
                         { from: 'bot', text: 'こんにちは！<br>このサイトについて何か質問はありますか？' }
                     ]
                 }
-                // ▲▲▲ ここまでチャットボット用のdataを追加 ▲▲▲
             },
-            // ▼▼▼ ここからwatchプロパティを追加 ▼▼▼
             watch: {
-                // 新しいメッセージが追加されたら、自動で一番下までスクロールする
                 'chat.messages': function () {
                     this.$nextTick(() => {
                         const container = this.$refs.chatMessagesContainer;
@@ -474,28 +465,156 @@
                     });
                 }
             },
-            // ▲▲▲ ここまでwatchプロパティを追加 ▲▲▲
             mounted() {
                 setTimeout(() => {
                     this.isMobile = window.innerWidth < 768;
                     this.setupBubbles();
                     this.animateScene();
-                    if (!this.isMobile) {
-                        this.spawnBug();
-                    }
+                    this.spawnBug();
                 }, 150);
-                window.addEventListener('mousemove', this.updateMousePosition);
-            },
-            beforeDestroy() {
-                window.removeEventListener('mousemove', this.updateMousePosition);
             },
             methods: {
-                // --- 既存のmethodsは省略 ---
                 setupBubbles() { const container = document.getElementById('interactive-space'); if (!container) return; const containerRect = container.getBoundingClientRect(); const centerX = containerRect.width / 2; const centerY = containerRect.height / 2; this.bubbles = this.Themes.map(theme => { const isMobile = window.innerWidth < 768; const baseSize = isMobile ? 80 : 120; const randomFactor = isMobile ? 30 : 40; const size = baseSize + Math.random() * randomFactor; const angle = Math.random() * 2 * Math.PI; const radius = Math.min(centerX, centerY) * (isMobile ? 0.35 : (0.4 + Math.random() * 0.4)); const initialX = centerX + Math.cos(angle) * radius; const initialY = centerY + Math.sin(angle) * radius; return { theme: theme, x: initialX, y: initialY, vx: (Math.random() - 0.5) * 1, vy: (Math.random() - 0.5) * 1, isDragging: false, size: size, style: { width: `${size}px`, height: `${size}px`, transform: `translate(-50%, -50%) translate(${initialX}px, ${initialY}px)` } }; }); },
-                animateScene() { this.updateBubbles(); if (!this.isMobile) { this.updateBug(); } requestAnimationFrame(this.animateScene); },
-                updateBubbles() { const container = document.getElementById('interactive-space'); if (!container) return; const rect = container.getBoundingClientRect(); for (let i = 0; i < this.bubbles.length; i++) { const b1 = this.bubbles[i]; if (b1.isDragging) continue; b1.vx += (Math.random() - 0.5) * 0.02; b1.vy += (Math.random() - 0.5) * 0.02; const maxSpeed = 10; b1.vx = Math.max(-maxSpeed, Math.min(maxSpeed, b1.vx)); b1.vy = Math.max(-maxSpeed, Math.min(maxSpeed, b1.vy)); b1.vx *= 0.99; b1.vy *= 0.99; b1.x += b1.vx; b1.y += b1.vy; if (b1.x - b1.size / 2 < 0 && b1.vx < 0) { b1.x = b1.size / 2; b1.vx *= -0.9; } if (b1.x + b1.size / 2 > rect.width && b1.vx > 0) { b1.x = rect.width - b1.size / 2; b1.vx *= -0.9; } if (b1.y - b1.size / 2 < 0 && b1.vy < 0) { b1.y = b1.size / 2; b1.vy *= -0.9; } if (b1.y + b1.size / 2 > rect.height && b1.vy > 0) { b1.y = rect.height - b1.size / 2; b1.vy *= -0.9; } for (let j = i + 1; j < this.bubbles.length; j++) { const b2 = this.bubbles[j]; const dx = b2.x - b1.x; const dy = b2.y - b1.y; const dist = Math.sqrt(dx * dx + dy * dy); const minDist = (b1.size / 2) + (b2.size / 2); if (dist < minDist) { this.resolveCollision(b1, b2, dx, dy, dist, minDist); } } } this.bubbles.forEach(b => { b.style.transform = `translate(-50%, -50%) translate(${b.x}px, ${b.y}px)`; }); },
-                updateBug() { const bug = this.bug; if (bug.state === 'inactive') return; const container = document.getElementById('interactive-space'); if (!container) return; const rect = container.getBoundingClientRect(); if (bug.state === 'flying') { bug.wanderAngle += (Math.random() - 0.5) * 0.8; const wanderForceMagnitude = 0.1; const wanderForceX = Math.cos(bug.wanderAngle) * wanderForceMagnitude; const wanderForceY = Math.sin(bug.wanderAngle) * wanderForceMagnitude; const seekForceMagnitude = 0.0005; const seekForceX = (bug.targetX - bug.x) * seekForceMagnitude; const seekForceY = (bug.targetY - bug.y) * seekForceMagnitude; let avoidanceForceX = 0; let avoidanceForceY = 0; const avoidanceRadius = 180; const avoidanceForceMagnitude = 0.8; this.bubbles.forEach(bubble => { const dx = bug.x - bubble.x; const dy = bug.y - bubble.y; const dist = Math.sqrt(dx * dx + dy * dy); const minDist = avoidanceRadius + bubble.size / 2; if (dist < minDist) { const force = (minDist - dist) / minDist; avoidanceForceX += (dx / dist) * force * avoidanceForceMagnitude; avoidanceForceY += (dy / dist) * force * avoidanceForceMagnitude; } }); bug.ax = wanderForceX + seekForceX + avoidanceForceX; bug.ay = wanderForceY + seekForceY + avoidanceForceY; bug.vx += bug.ax; bug.vy += bug.ay; const maxSpeed = 3; const speed = Math.sqrt(bug.vx * bug.vx + bug.vy * bug.vy); if (speed > maxSpeed) { bug.vx = (bug.vx / speed) * maxSpeed; bug.vy = (bug.vy / speed) * maxSpeed; } bug.vx *= 0.97; bug.vy *= 0.97; const distToTarget = Math.sqrt(Math.pow(bug.targetX - bug.x, 2) + Math.pow(bug.targetY - bug.y, 2)); if (distToTarget < 80) { this.setNewBugTarget(rect); } const margin = 50; if (bug.x < margin) bug.vx += 0.1; if (bug.x > rect.width - margin) bug.vx -= 0.1; if (bug.y < margin) bug.vy += 0.1; if (bug.y > rect.height - margin) bug.vy -= 0.1; this.bubbles.forEach(bubble => { const dx = bug.x - bubble.x; const dy = bug.y - bubble.y; const dist = Math.sqrt(dx * dx + dy * dy); const minDist = bug.size / 2 + bubble.size / 2; if (dist < minDist) { bug.state = 'falling'; bug.vx = bubble.vx * 0.5; bug.vy = bubble.vy * 0.5 + 2; } }); } else if (bug.state === 'falling') { bug.vy += 0.2; bug.vx *= 0.99; if (bug.y > rect.height + bug.size) { bug.state = 'inactive'; clearTimeout(bug.spawnTimer); bug.spawnTimer = setTimeout(() => this.spawnBug(), 2000); } } bug.x += bug.vx; bug.y += bug.vy; if (bug.vx > 0.1) { bug.facing = -1; } else if (bug.vx < -0.1) { bug.facing = 1; } bug.style = { transform: `translate(-50%, -50%) translate(${bug.x}px, ${bug.y}px) scaleX(${bug.facing})` }; },
-                spawnBug() { const container = document.getElementById('interactive-space'); if (!container) return; const rect = container.getBoundingClientRect(); this.bug.x = Math.random() * rect.width; this.bug.y = -this.bug.size * 2; this.bug.state = 'flying'; this.setNewBugTarget(rect); },
+                animateScene() {
+                    this.updateBubbles();
+                    this.updateBug();
+                    requestAnimationFrame(this.animateScene);
+                },
+                updateBubbles() {
+                    const container = document.getElementById('interactive-space');
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect();
+                    for (let i = 0; i < this.bubbles.length; i++) {
+                        const b1 = this.bubbles[i];
+                        if (b1.isDragging) continue;
+                        b1.vx += (Math.random() - 0.5) * 0.02;
+                        b1.vy += (Math.random() - 0.5) * 0.02;
+                        const maxSpeed = 10;
+                        b1.vx = Math.max(-maxSpeed, Math.min(maxSpeed, b1.vx));
+                        b1.vy = Math.max(-maxSpeed, Math.min(maxSpeed, b1.vy));
+                        b1.vx *= 0.99;
+                        b1.vy *= 0.99;
+                        const speed = Math.sqrt(b1.vx * b1.vx + b1.vy * b1.vy);
+                        if (speed < 0.5 && speed > 0) {
+                            b1.vx = (b1.vx / speed) * 0.5;
+                            b1.vy = (b1.vy / speed) * 0.5;
+                        }
+                        b1.x += b1.vx;
+                        b1.y += b1.vy;
+                        if (b1.x - b1.size / 2 < 0 && b1.vx < 0) {
+                            b1.x = b1.size / 2;
+                            b1.vx *= -0.9;
+
+                        } if (b1.x + b1.size / 2 > rect.width && b1.vx > 0) {
+                            b1.x = rect.width - b1.size / 2;
+                            b1.vx *= -0.9;
+
+                        } if (b1.y - b1.size / 2 < 0 && b1.vy < 0) {
+                            b1.y = b1.size / 2;
+                            b1.vy *= -0.9;
+
+                        } if (b1.y + b1.size / 2 > rect.height && b1.vy > 0) {
+                            b1.y = rect.height - b1.size / 2;
+                            b1.vy *= -0.9;
+
+                        }
+                        for (let j = i + 1; j < this.bubbles.length; j++) {
+                            const b2 = this.bubbles[j];
+                            const dx = b2.x - b1.x;
+                            const dy = b2.y - b1.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const minDist = (b1.size / 2) + (b2.size / 2);
+                            if (dist < minDist) {
+                                this.resolveCollision(b1, b2, dx, dy, dist, minDist);
+                            }
+                        }
+                    }
+
+                    this.bubbles.forEach(b => { b.style.transform = `translate(-50%, -50%) translate(${b.x}px, ${b.y}px)`; });
+                },
+                updateBug() {
+                    const bug = this.bug;
+                    if (bug.state === 'inactive') return;
+                    const container = document.getElementById('interactive-space');
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect();
+                    if (bug.state === 'flying') {
+                        bug.wanderAngle += (Math.random() - 0.5) * 0.8;
+                        const wanderForceMagnitude = 0.1;
+                        const wanderForceX = Math.cos(bug.wanderAngle) * wanderForceMagnitude;
+                        const wanderForceY = Math.sin(bug.wanderAngle) * wanderForceMagnitude;
+                        const seekForceMagnitude = 0.0005;
+                        const seekForceX = (bug.targetX - bug.x) * seekForceMagnitude;
+                        const seekForceY = (bug.targetY - bug.y) * seekForceMagnitude;
+                        let avoidanceForceX = 0; let avoidanceForceY = 0;
+                        const avoidanceRadius = 180;
+                        const avoidanceForceMagnitude = 0.8;
+                        this.bubbles.forEach(bubble => {
+                            const dx = bug.x - bubble.x;
+                            const dy = bug.y - bubble.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const minDist = avoidanceRadius + bubble.size / 2;
+                            if (dist < minDist) {
+                                const force = (minDist - dist) / minDist;
+                                avoidanceForceX += (dx / dist) * force * avoidanceForceMagnitude;
+                                avoidanceForceY += (dy / dist) * force * avoidanceForceMagnitude;
+                            }
+                        });
+                        bug.ax = wanderForceX + seekForceX + avoidanceForceX;
+                        bug.ay = wanderForceY + seekForceY + avoidanceForceY;
+                        bug.vx += bug.ax;
+                        bug.vy += bug.ay;
+                        const maxSpeed = 3;
+                        const speed = Math.sqrt(bug.vx * bug.vx + bug.vy * bug.vy);
+                        if (speed > maxSpeed) {
+                            bug.vx = (bug.vx / speed) * maxSpeed;
+                            bug.vy = (bug.vy / speed) * maxSpeed;
+
+                        } bug.vx *= 0.97;
+                        bug.vy *= 0.97;
+                        const distToTarget = Math.sqrt(Math.pow(bug.targetX - bug.x, 2) + Math.pow(bug.targetY - bug.y, 2));
+                        if (distToTarget < 80) { this.setNewBugTarget(rect); }
+                        const margin = 50;
+                        if (bug.x < margin) bug.vx += 0.1;
+                        if (bug.x > rect.width - margin) bug.vx -= 0.1;
+                        if (bug.y < margin) bug.vy += 0.1;
+                        if (bug.y > rect.height - margin) bug.vy -= 0.1;
+                        this.bubbles.forEach(bubble => {
+                            const dx = bug.x - bubble.x;
+                            const dy = bug.y - bubble.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const minDist = bug.size / 2 + bubble.size / 2;
+                            if (dist < minDist) {
+                                bug.state = 'falling';
+                                bug.vx = bubble.vx * 0.5;
+                                bug.vy = bubble.vy * 0.5 + 2;
+                            }
+                        });
+                    } else if (bug.state === 'falling') {
+                        bug.vy += 0.2;
+                        bug.vx *= 0.99;
+                        if (bug.y > rect.height + bug.size) {
+                            bug.state = 'inactive';
+                            clearTimeout(bug.spawnTimer);
+                            bug.spawnTimer = setTimeout(() => this.spawnBug(), 2000);
+
+                        }
+                    } bug.x += bug.vx;
+                    bug.y += bug.vy;
+                    if (bug.vx > 0.1) {
+                        bug.facing = -1;
+
+                    } else if (bug.vx < -0.1) {
+                        bug.facing = 1;
+
+                    } bug.style = { transform: `translate(-50%, -50%) translate(${bug.x}px, ${bug.y}px) scaleX(${bug.facing})` };
+
+                },
+                spawnBug() {
+                    const container = document.getElementById('interactive-space');
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect(); this.bug.x = Math.random() * rect.width; this.bug.y = -this.bug.size * 2; this.bug.state = 'flying'; this.setNewBugTarget(rect);
+                },
                 setNewBugTarget(rect) { this.bug.targetX = Math.random() * rect.width; this.bug.targetY = Math.random() * rect.height; },
                 dragStart(bubble, event) { if (this.modal.visible) return; this.didDrag = false; this.draggedBubble = bubble; const isTouchEvent = event.type === 'touchstart'; const moveEvent = isTouchEvent ? 'touchmove' : 'mousemove'; const upEvent = isTouchEvent ? 'touchend' : 'mouseup'; this.dragInfo.moveEvent = moveEvent; this.dragInfo.upEvent = upEvent; bubble.isDragging = true; const point = isTouchEvent ? event.touches[0] : event; const rect = event.target.closest('#interactive-space').getBoundingClientRect(); this.dragInfo.lastX = point.clientX - rect.left; this.dragInfo.lastY = point.clientY - rect.top; this.dragInfo.lastTime = Date.now(); this.dragInfo.vx = 0; this.dragInfo.vy = 0; bubble.vx = 0; bubble.vy = 0; window.addEventListener(moveEvent, this.dragMove, { passive: false }); window.addEventListener(upEvent, this.dragEnd, { once: true }); },
                 dragMove(event) { if (event.cancelable) event.preventDefault(); if (!this.draggedBubble) return; this.didDrag = true; const point = event.touches ? event.touches[0] : event; const rect = document.getElementById('interactive-space').getBoundingClientRect(); const newX = point.clientX - rect.left; const newY = point.clientY - rect.top; const now = Date.now(); const dt = now - this.dragInfo.lastTime; if (dt > 1) { this.dragInfo.vx = this.dragInfo.vx * 0.7 + ((newX - this.draggedBubble.x) / dt) * 0.3; this.dragInfo.vy = this.dragInfo.vy * 0.7 + ((newY - this.draggedBubble.y) / dt) * 0.3; this.dragInfo.lastTime = now; } this.draggedBubble.x = newX; this.draggedBubble.y = newY; },
@@ -507,13 +626,9 @@
                 changeModalPage(direction) { const newIndex = this.modal.pageIndex + direction; const contents = this.ThemeContents[this.modal.theme]; if (newIndex >= 0 && newIndex < contents.length) { this.modal.pageIndex = newIndex; this.updateModalContent(); } },
                 updateModalContent() { clearTimeout(this.typewriterTimer); const text = this.ThemeContents[this.modal.theme][this.modal.pageIndex]; this.startTypewriter(text); },
                 startTypewriter(fullText) { let i = 0; this.modal.currentText = ''; const speed = 20; const type = () => { if (i < fullText.length) { if (fullText.charAt(i) === '<') { const tagEnd = fullText.indexOf('>', i); this.modal.currentText += fullText.substring(i, tagEnd + 1); i = tagEnd; } else { this.modal.currentText += fullText.charAt(i); } i++; this.typewriterTimer = setTimeout(type, speed); } }; type(); },
-                updateMousePosition(event) {
-                    // This method is kept for potential future use, but is not currently used by the ring animation.
-                },
                 Get_ThemeContent(_theme) { return this.ThemeContents[_theme] },
 
 
-                // ▼▼▼ ここからチャットボット用のmethodsを追加 ▼▼▼
                 toggleChat() {
                     this.chat.visible = !this.chat.visible;
                 },
@@ -549,18 +664,15 @@
                         }
 
                         const data = await response.json();
-                        // 4. 成功したら、待機中メッセージを実際の返信に置き換える
                         this.$set(this.chat.messages, botMessageIndex, { from: 'bot', text: data.text });
 
                     } catch (error) {
                         console.error('Error sending message:', error);
-                        // 5. 失敗したら、エラーメッセージに置き換える
                         this.$set(this.chat.messages, botMessageIndex, { from: 'bot', text: `エラーが発生しました: ${error.message}` });
                     } finally {
                         this.chat.loading = false;
                     }
                 }
-                // ▲▲▲ ここまでチャットボット用のmethodsを追加 ▲▲▲
             }
         })
 
@@ -587,6 +699,7 @@
             let angle = 0;
             let spaceRect = null;
 
+            // アニメーション
             function animate() {
                 requestAnimationFrame(animate);
                 ctx.clearRect(0, 0, width, height);
@@ -596,9 +709,7 @@
                 ctx.textBaseline = 'middle';
                 const isMobile = width < 768;
 
-                // ▼▼▼ 変更点 ▼▼▼
-                const waveAmplitude = isMobile ? 12.5 : 25; // スマホでは波の高さを半分に設定
-                // ▲▲▲ 変更点 ▲▲▲
+                const waveAmplitude = isMobile ? 12.5 : 25;
 
                 if (isMobile) {
                     ctx.shadowColor = 'transparent';
