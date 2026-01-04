@@ -169,12 +169,9 @@
             top: 50%;
             left: 50%;
             width: 225px;
-            /* 円の直径 */
             height: 225px;
             transform: translate(-50%, -50%);
-            /* 中心をぴったり合わせる */
             animation: orbit 5s linear infinite;
-            /* 全体を回転 */
         }
 
         .orbit-letter {
@@ -390,41 +387,31 @@
             const overlay = document.getElementById('loading-overlay');
             const progressBar = document.getElementById('loadingProgress');
 
-            // === text-orbit の文字を正確に円周配置 + 固まり防止 ===
             const orbitContainer = document.querySelector('.text-orbit');
             if (orbitContainer) {
                 const letters = orbitContainer.querySelectorAll('.orbit-letter');
                 const letterCount = letters.length;
-                const radius = 112.5; // 225px / 2
+                const radius = 112.5;
                 const angleStep = 360 / letterCount;
 
                 letters.forEach((letter, index) => {
-                    // 角度計算（上からスタート）
                     const angleDeg = index * angleStep - 90;
                     const angleRad = angleDeg * (Math.PI / 180);
 
                     const x = radius * Math.cos(angleRad);
                     const y = radius * Math.sin(angleRad);
 
-                    // 位置を即座に設定
                     letter.style.left = `calc(50% + ${x}px)`;
                     letter.style.top = `calc(50% + ${y}px)`;
 
-                    // 文字の向き：ここでは「常に上を向く」（読みやすい）
-                    // letter.style.transform = 'translate(-50%, -50%)';
-
-                    // 必要なら他の向きに変更：
-                    // 外側を向く場合：
                     letter.style.transform = `translate(-50%, -50%) rotate(${index * angleStep}deg)`;
 
-                    // 配置が完了したら表示（少し遅らせて自然に）
                     setTimeout(() => {
                         letter.classList.add('positioned');
-                    }, index * 50); // 少しずつ表示でアニメーション感UP（任意）
+                    }, index * 50);
                 });
             }
 
-            // === ローディングプログレス処理（そのまま）===
             if (overlay && progressBar) {
                 let progress = 0;
                 const duration = 4000;
@@ -450,9 +437,10 @@
     </script>
 
     <script type="module">
+
+        // セットアップ
         const vue = window.vue;
         const isMobile = window.innerWidth <= 768;
-
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x020202, 0, 5000);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
@@ -465,134 +453,39 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.toneMapping = THREE.ReinhardToneMapping;
         renderer.toneMappingExposure = 1.5;
-
-        // レンダー
         const composer = new THREE.EffectComposer(renderer);
         const renderPass = new THREE.RenderPass(scene, camera);
         composer.addPass(renderPass);
-
-        function generateNoiseTexture(width = 256, height = 256) {
-            const size = width * height;
-            const data = new Uint8Array(size * 4);
-            for (let i = 0; i < size; i++) {
-                const value = Math.random() * 255;
-                data[i * 4] = value;
-                data[i * 4 + 1] = value;
-                data[i * 4 + 2] = value;
-                data[i * 4 + 3] = 255;
-            }
-            const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
-            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-            texture.needsUpdate = true;
-            return texture;
-        }
-
-        const voidTexture = generateNoiseTexture();
-        const voidBackground = new THREE.Mesh(
-            new THREE.SphereGeometry(3000, 16, 16),
-            new THREE.MeshBasicMaterial({
-                map: voidTexture,
-                side: THREE.BackSide,
-                opacity: 0.2,
-                transparent: true,
-                color: 0x020206,
-                fog: false
-            })
-        );
-        scene.add(voidBackground);
-
-        // パーティクル用のテクスチャ
-        function createCircleTexture() {
-            const size = 16; // 解像度を最低限に
-            const canvas = document.createElement('canvas');
-            canvas.width = size;
-            canvas.height = size;
-            const context = canvas.getContext('2d');
-            const centerX = size / 2;
-            const centerY = size / 2;
-            const radius = size / 2;
-            context.beginPath();
-            context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-            context.fillStyle = '#FFFFFF';
-            context.fill();
-            return new THREE.CanvasTexture(canvas);
-        }
-        const particleTexture = createCircleTexture();
-
-        let textMesh1, textMeshMouthClosed, textMeshMouthOpen;
-        const loader = new THREE.FontLoader();
-        loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-            const textGeometry1 = new THREE.TextGeometry('. .', {
-                font: font,
-                size: 4,
-                height: 0.25,
-                curveSegments: 2,
-                bevelEnabled: true,
-                bevelThickness: 0,
-                bevelSize: 0.02,
-                bevelOffset: 0,
-                bevelSegments: 0
-            });
-
-            const textGeometryMouthClosed = new THREE.TextGeometry('-', {
-                font: font,
-                size: 2,
-                height: 0.25,
-                curveSegments: 2,
-                bevelEnabled: true,
-                bevelThickness: 0,
-                bevelSize: 0.02,
-                bevelOffset: 0,
-                bevelSegments: 0
-            });
-
-            const textGeometryMouthOpen = new THREE.TextGeometry('Ο', {
-                font: font,
-                size: 1,
-                height: 0.25,
-                curveSegments: 2,
-                bevelEnabled: true,
-                bevelThickness: 0,
-                bevelSize: 0.02,
-                bevelOffset: 0,
-                bevelSegments: 0
-            });
-
-            const textMaterial = new THREE.MeshPhongMaterial({
-                color: 0x00ff00,
-                emissive: 0x00ffcc,
-                emissiveIntensity: 0.5,
-                shininess: 100,
-                fog: false
-            });
-
-            textMesh1 = new THREE.Mesh(textGeometry1, textMaterial);
-            textMeshMouthClosed = new THREE.Mesh(textGeometryMouthClosed, textMaterial);
-            textMeshMouthOpen = new THREE.Mesh(textGeometryMouthOpen, textMaterial);
-
-            textGeometry1.computeBoundingBox();
-            const textWidth1 = textGeometry1.boundingBox.max.x - textGeometry1.boundingBox.min.x;
-            textMesh1.position.set(-textWidth1 / 2, 0, 0);
-
-            textGeometryMouthClosed.computeBoundingBox();
-            const textWidthClosed = textGeometryMouthClosed.boundingBox.max.x - textGeometryMouthClosed.boundingBox.min.x;
-            textMeshMouthClosed.position.set(-textWidthClosed / 2, -1, 0);
-
-            textGeometryMouthOpen.computeBoundingBox();
-            const textWidthOpen = textGeometryMouthOpen.boundingBox.max.x - textGeometryMouthOpen.boundingBox.min.x;
-            textMeshMouthOpen.position.set(-textWidthOpen / 2, -1, 0);
-
-            textMeshMouthOpen.visible = false;
-
-            scene.add(textMesh1);
-            scene.add(textMeshMouthClosed);
-            scene.add(textMeshMouthOpen);
-
-            const light = new THREE.PointLight(0x00ffcc, 1);
-            light.position.set(0, 0, 5);
-            scene.add(light);
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
         });
 
+
+        // 素材
+        const colorDistribution = [
+            {
+                type: "blue-white", prob: 0.45, colors: [
+                    { r: 0.53, g: 0.67, b: 1.0 },
+                    { r: 0.67, g: 0.73, b: 1.0 },
+                    { r: 0.93, g: 0.93, b: 1.0 }
+                ]
+            },
+            {
+                type: "yellow", prob: 0.325, colors: [
+                    { r: 1.0, g: 1.0, b: 0.8 },
+                    { r: 1.0, g: 1.0, b: 0.6 }
+                ]
+            },
+            {
+                type: "orange-red", prob: 0.225, colors: [
+                    { r: 1.0, g: 0.67, b: 0.4 },
+                    { r: 1.0, g: 0.4, b: 0.4 }
+                ]
+            }
+        ];
         function createProceduralCubeMap() {
             const size = 64;
             const images = [];
@@ -613,9 +506,463 @@
             cubeTexture.needsUpdate = true;
             return cubeTexture;
         }
-
         const envMap = createProceduralCubeMap();
+        function generateNoiseTexture(width = 256, height = 256) {
+            const size = width * height;
+            const data = new Uint8Array(size * 4);
+            for (let i = 0; i < size; i++) {
+                const value = Math.random() * 255;
+                data[i * 4] = value;
+                data[i * 4 + 1] = value;
+                data[i * 4 + 2] = value;
+                data[i * 4 + 3] = 255;
+            }
+            const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.needsUpdate = true;
+            return texture;
+        }
+        const voidTexture = generateNoiseTexture();
+        function createCircleTexture() {
+            const size = 16;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d');
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2;
+            context.beginPath();
+            context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+            context.fillStyle = '#FFFFFF';
+            context.fill();
+            return new THREE.CanvasTexture(canvas);
+        }
+        const particleTexture = createCircleTexture();
 
+        // カメラコントロール
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 0.5;
+        controls.zoomSpeed = 0.8;
+        controls.enablePan = false;
+        controls.maxPolarAngle = Math.PI - 0.1;
+        controls.minPolarAngle = 0.1;
+        camera.position.copy(new THREE.Vector3(0, 1, 0).multiplyScalar(10000));
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+        function easeInOutSloMo(t) {
+            return Math.pow(easeInOutCubic(t), 2);
+        }
+
+        // ヴォイド
+        const voidBackground = new THREE.Mesh(
+            new THREE.SphereGeometry(3000, 16, 16),
+            new THREE.MeshBasicMaterial({
+                map: voidTexture,
+                side: THREE.BackSide,
+                opacity: 0.2,
+                transparent: true,
+                color: 0x020206,
+                fog: false
+            })
+        );
+        scene.add(voidBackground);
+
+        // 星々
+        function randomColor() {
+            const rand = Math.random();
+            let cumulativeProb = 0;
+            for (const category of colorDistribution) {
+                cumulativeProb += category.prob;
+                if (rand <= cumulativeProb) {
+                    const colorChoice = category.colors[Math.floor(Math.random() * category.colors.length)];
+                    return new THREE.Color(colorChoice.r, colorChoice.g, colorChoice.b);
+                }
+            }
+            return new THREE.Color(1, 1, 1);
+        };
+        function createUniverseDetail() {
+            const starCount = isMobile ? 2000 : 4000;
+            const starPositions = new Float32Array(starCount * 3);
+            const starColors = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                const r = 2000 + Math.random() * 2000;
+                const theta = Math.acos(2 * Math.random() - 1);
+                const phi = Math.random() * 2 * Math.PI;
+                starPositions[i * 3] = r * Math.sin(theta) * Math.cos(phi);
+                starPositions[i * 3 + 1] = r * Math.sin(theta) * Math.sin(phi);
+                starPositions[i * 3 + 2] = r * Math.cos(theta);
+                const color = randomColor();
+                starColors[i * 3] = color.r;
+                starColors[i * 3 + 1] = color.g;
+                starColors[i * 3 + 2] = color.b;
+            }
+            const starGeometry = new THREE.BufferGeometry();
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+            starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+            const starMaterial = new THREE.PointsMaterial({
+                vertexColors: true,
+                size: isMobile ? 20 : 10,
+                transparent: true,
+                opacity: 0.5,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                fog: false
+            });
+            const starField = new THREE.Points(starGeometry, starMaterial);
+            scene.add(starField);
+
+            const galaxyStars = isMobile ? 500 : 1000;
+            const galaxyPositions = new Float32Array(galaxyStars * 3);
+            const galaxyColors = new Float32Array(galaxyStars * 3);
+            const spiralArms = 4;
+            const spiralSpread = 10;
+            const minGalaxyRadius = 40;
+            const maxGalaxyRadius = 200;
+
+            const armWeights = [1, 1.5, 1, 1.5];
+            const totalWeight = armWeights.reduce((sum, weight) => sum + weight, 0);
+            const armAngles = [];
+            let cumulativeWeight = 0;
+            for (let i = 0; i < spiralArms; i++) {
+                armAngles.push((cumulativeWeight / totalWeight) * (2 * Math.PI));
+                cumulativeWeight += armWeights[i];
+            }
+
+            for (let i = 0; i < galaxyStars; i++) {
+                let r = minGalaxyRadius + (maxGalaxyRadius - minGalaxyRadius) * Math.sqrt(Math.random());
+                let armIndex = i % spiralArms;
+                let baseArmAngle = armAngles[armIndex];
+                let twist = r * 0.04;
+                let randomScatter = (Math.random() - 0.5) * 0.4;
+                let angle = baseArmAngle + twist + randomScatter;
+
+                const x = r * Math.cos(angle) + (Math.random() - 0.5) * spiralSpread;
+                const y = (Math.random() - 0.5) * (spiralSpread * 0.3);
+                const z = r * Math.sin(angle) + (Math.random() - 0.5) * spiralSpread;
+                galaxyPositions[i * 3] = x;
+                galaxyPositions[i * 3 + 1] = y;
+                galaxyPositions[i * 3 + 2] = z;
+
+                let t = r / maxGalaxyRadius;
+                let color = new THREE.Color();
+                if (t < 0.5) {
+                    color.set(0xfff4e5);
+                } else {
+                    color.set(0xffeedd);
+                }
+                galaxyColors[i * 3] = color.r;
+                galaxyColors[i * 3 + 1] = color.g;
+                galaxyColors[i * 3 + 2] = color.b;
+            }
+
+            const galaxyGeometry = new THREE.BufferGeometry();
+            galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
+            galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
+            const galaxyFieldMaterial = new THREE.PointsMaterial({
+                map: particleTexture,
+                vertexColors: true,
+                size: isMobile ? 0.5 : 0.25,
+                transparent: false,
+                depthWrite: true,
+                fog: false
+            });
+            const galaxyField = new THREE.Points(galaxyGeometry, galaxyFieldMaterial);
+            scene.add(galaxyField);
+
+            // 霧散らばる星屑
+            const nebulaCount = isMobile ? 100 : 500;
+            const nebulaPositions = new Float32Array(nebulaCount * 3);
+            const nebulaColors = new Float32Array(nebulaCount * 3);
+            const nebulaMinRadius = 60;
+            const nebulaMaxRadius = 250;
+            for (let i = 0; i < nebulaCount; i++) {
+                const u = Math.random();
+                const r = nebulaMinRadius + u * (nebulaMaxRadius - nebulaMinRadius);
+
+                // xz平面での距離をrとして直接制御
+                const phi = Math.random() * 2 * Math.PI;
+                const x = r * Math.cos(phi);
+                const z = r * Math.sin(phi);
+                // y座標は圧縮（-r*0.1 から r*0.1 の範囲）
+                const y = (Math.random() - 0.5) * r * 0.2;
+                nebulaPositions[i * 3] = x;
+                nebulaPositions[i * 3 + 1] = y;
+                nebulaPositions[i * 3 + 2] = z;
+
+                const color = new THREE.Color(0x334455).lerp(new THREE.Color(0x88aaff), Math.random() * 0.3);
+                nebulaColors[i * 3] = color.r;
+                nebulaColors[i * 3 + 1] = color.g;
+                nebulaColors[i * 3 + 2] = color.b;
+            }
+            const nebulaGeometry = new THREE.BufferGeometry();
+            nebulaGeometry.setAttribute('position', new THREE.BufferAttribute(nebulaPositions, 3));
+            nebulaGeometry.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
+            const nebulaMaterial = new THREE.PointsMaterial({
+                map: particleTexture,
+                vertexColors: true,
+                size: 1,
+                transparent: true,
+                opacity: 0.75,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                fog: false
+            });
+            const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
+            scene.add(nebulaField);
+
+            // パーティクル用のテクスチャ
+            function createSparkleTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const context = canvas.getContext('2d');
+                const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+                gradient.addColorStop(0, 'rgba(255,255,255,1)');
+                gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
+                gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+                gradient.addColorStop(1, 'rgba(255,255,255,0)');
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, 32, 32);
+                return new THREE.CanvasTexture(canvas);
+            }
+            const sparkleTexture = createSparkleTexture();
+            const sparkleCount = isMobile ? 30 : 150;
+
+            const sparklePositions = new Float32Array(sparkleCount * 3);
+            const sparkleColors = new Float32Array(sparkleCount * 3);
+
+            for (let i = 0; i < sparkleCount; i++) {
+                const r = 2000 + Math.random() * 1000;
+                const theta = Math.acos(2 * Math.random() - 1);
+                const phi = Math.random() * 2 * Math.PI;
+                const i3 = i * 3;
+
+                sparklePositions[i3 + 0] = r * Math.sin(theta) * Math.cos(phi);
+                sparklePositions[i3 + 1] = r * Math.sin(theta) * Math.sin(phi);
+                sparklePositions[i3 + 2] = r * Math.cos(theta);
+
+                const color = randomColor();
+                sparkleColors[i3 + 0] = color.r;
+                sparkleColors[i3 + 1] = color.g;
+                sparkleColors[i3 + 2] = color.b;
+            }
+
+            const sparkleGeometry = new THREE.BufferGeometry();
+            sparkleGeometry.setAttribute('position', new THREE.BufferAttribute(sparklePositions, 3));
+            sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(sparkleColors, 3));
+
+            const sparkleMaterial = new THREE.PointsMaterial({
+                map: sparkleTexture,
+                size: 60,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                transparent: false,
+                depthWrite: false,
+                fog: false
+            });
+
+            const sparkles = new THREE.Points(sparkleGeometry, sparkleMaterial);
+            scene.add(sparkles);
+
+            const sparkleTexture_wide = createSparkleTexture();
+            const sparkleCount_wide = isMobile ? 20 : 100;
+            for (let i = 0; i < sparkleCount_wide; i++) {
+                const r = 2000 + Math.random() * 1000;
+                const theta = Math.acos(2 * Math.random() - 1);
+                const phi = Math.random() * 2 * Math.PI;
+                const sprite = new THREE.Sprite(
+                    new THREE.SpriteMaterial({
+                        map: sparkleTexture_wide,
+                        color: randomColor(),
+                        transparent: true,
+                        opacity: 1,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        fog: false
+                    })
+                );
+                sprite.position.set(
+                    r * Math.sin(theta) * Math.cos(phi),
+                    r * Math.sin(theta) * Math.sin(phi),
+                    r * Math.cos(theta)
+                );
+                sprite.scale.set(50 + Math.random() * 50, 30 + Math.random() * 50, 1);
+                scene.add(sprite);
+            }
+
+            const clusterCount = isMobile ? 2 : 4;
+            for (let c = 0; c < clusterCount; c++) {
+                const clusterRadius = 2000;
+                const clusterTheta = Math.acos(2 * Math.random() - 1);
+                const clusterPhi = Math.random() * 2 * Math.PI;
+                const clusterCenter = new THREE.Vector3(
+                    clusterRadius * Math.sin(clusterTheta) * Math.cos(clusterPhi),
+                    clusterRadius * Math.sin(clusterTheta) * Math.sin(clusterPhi),
+                    clusterRadius * Math.cos(clusterTheta)
+                );
+                const galaxyInCluster = 3 + Math.floor(Math.random() * 5);
+                for (let g = 0; g < galaxyInCluster; g++) {
+                    const particleCount = 25 + Math.floor(Math.random() * 25);
+                    const clusterPositions = new Float32Array(particleCount * 3);
+                    const clusterColors = new Float32Array(particleCount * 3);
+                    const offset = new THREE.Vector3(
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100
+                    );
+
+                    const centerColor = new THREE.Color(0xffaa55);
+                    const outerColor = new THREE.Color(0x55aaff);
+                    const galaxyRadius = 50;
+
+                    for (let i = 0; i < particleCount; i++) {
+                        const r = Math.random() * galaxyRadius;
+                        const theta = Math.acos(2 * Math.random() - 1);
+                        const phi = Math.random() * 2 * Math.PI;
+
+                        clusterPositions[i * 3] = clusterCenter.x + offset.x + r * Math.sin(theta) * Math.cos(phi);
+                        clusterPositions[i * 3 + 1] = clusterCenter.y + offset.y + r * Math.sin(theta) * Math.sin(phi);
+                        clusterPositions[i * 3 + 2] = clusterCenter.z + offset.z + r * Math.cos(theta);
+
+                        const color = centerColor.clone().lerp(outerColor, r / galaxyRadius);
+
+                        clusterColors[i * 3] = color.r;
+                        clusterColors[i * 3 + 1] = color.g;
+                        clusterColors[i * 3 + 2] = color.b;
+                    }
+                    const clusterGeometry = new THREE.BufferGeometry();
+                    clusterGeometry.setAttribute('position', new THREE.BufferAttribute(clusterPositions, 3));
+                    clusterGeometry.setAttribute('color', new THREE.BufferAttribute(clusterColors, 3));
+                    const clusterMaterial = new THREE.PointsMaterial({
+                        vertexColors: true,
+                        size: 0.1 + Math.random() * 0.3,
+                        sizeAttenuation: true,
+                        transparent: true,
+                        opacity: 0.5,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        fog: false
+                    });
+                    const clusterField = new THREE.Points(clusterGeometry, clusterMaterial);
+                    scene.add(clusterField);
+                }
+            }
+
+            const distantGalaxyCount = isMobile ? 50 : 300;
+            for (let g = 0; g < distantGalaxyCount; g++) {
+                const particleCount = 50 + Math.floor(Math.random() * 50);
+                const galaxyRadius = 2000 + Math.random() * 1000;
+                const galaxyTheta = Math.acos(2 * Math.random() - 1);
+                const galaxyPhi = Math.random() * 2 * Math.PI;
+                const distantPositions = new Float32Array(particleCount * 3);
+                const distantColors = new Float32Array(particleCount * 3);
+                for (let i = 0; i < particleCount; i++) {
+                    const r = Math.random() * 30;
+                    const theta = Math.acos(2 * Math.random() - 1);
+                    const phi = Math.random() * 2 * Math.PI;
+                    distantPositions[i * 3] = galaxyRadius * Math.sin(galaxyTheta) * Math.cos(galaxyPhi) + r * Math.sin(theta) * Math.cos(phi);
+                    distantPositions[i * 3 + 1] = galaxyRadius * Math.sin(galaxyTheta) * Math.sin(galaxyPhi) + r * Math.sin(theta) * Math.sin(phi);
+                    distantPositions[i * 3 + 2] = galaxyRadius * Math.cos(galaxyTheta) + r * Math.cos(theta);
+                    const color = randomColor();
+                    distantColors[i * 3] = color.r;
+                    distantColors[i * 3 + 1] = color.g;
+                    distantColors[i * 3 + 2] = color.b;
+                }
+                const distantGeometry = new THREE.BufferGeometry();
+                distantGeometry.setAttribute('position', new THREE.BufferAttribute(distantPositions, 3));
+                distantGeometry.setAttribute('color', new THREE.BufferAttribute(distantColors, 3));
+                const distantMaterial = new THREE.PointsMaterial({
+                    vertexColors: true,
+                    size: 2 + Math.random() * 3,
+                    transparent: true,
+                    opacity: 0.25,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    fog: false
+                });
+                const distantField = new THREE.Points(distantGeometry, distantMaterial);
+                scene.add(distantField);
+            }
+        }
+        createUniverseDetail();
+
+        // カメラアニメーション
+        let Flag_CameraAnimation = true;
+        let Time_CameraAnimation_Start = null;
+        let Position_Trun_Start = null;
+        let Elapsed;
+        let Radius, Theta, Phi;
+        const POSITION_START = new THREE.Vector3(0, 1, 0).multiplyScalar(2000);
+        const POSITION_END = new THREE.Vector3(-20, 20, 40);
+        const DISTANCE_INNER = 30;
+        const DURATION_ALL = 20 * 1000;
+        const DURATION_INNER = DURATION_ALL * 0.6;
+        const DURATION_END = DURATION_ALL * 0.3;
+        const DURATION_ADJUST = DURATION_ALL - DURATION_INNER - DURATION_END;
+        function Calculate_Bezier(x, p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
+            let t = 0.5;
+            const epsilon = 0.0001;
+            const maxIterations = 10;
+            for (let i = 0; i < maxIterations; i++) {
+                let u = 1 - t;
+                let tt = t * t;
+                let uu = u * u;
+                let uuu = uu * u;
+                let ttt = tt * t;
+                let currentX = uuu * p0x + 3 * uu * t * p1x + 3 * u * tt * p2x + ttt * p3x;
+                let dx = -3 * p0x * uu + 3 * p1x * (1 - 4 * t + 3 * tt) + 3 * p2x * (2 * t - 3 * tt) + 3 * p3x * tt;
+                if (Math.abs(x - currentX) < epsilon) break;
+                t = t - (currentX - x) / dx;
+                t = Math.max(0, Math.min(1, t));
+            }
+            let u = 1 - t;
+            let tt = t * t;
+            let uu = u * u;
+            let uuu = uu * u;
+            let ttt = tt * t;
+            return uuu * p0y + 3 * uu * t * p1y + 3 * u * tt * p2y + ttt * p3y;
+        }
+        function Calculate_Radius() {
+            if (Elapsed < DURATION_INNER) {
+                const progress = Elapsed / DURATION_INNER;
+                const distanceFactor = Calculate_Bezier(progress, 0, 1, 0.4, 1, 0.6, 0, 1, 0);
+                Radius = POSITION_START.length() * distanceFactor + DISTANCE_INNER * (1 - distanceFactor);
+            } else if (Elapsed < DURATION_ALL) {
+                const progress = (Elapsed - DURATION_INNER) / DURATION_END;
+                const distanceFactor = Calculate_Bezier(progress, 0, 0, 0.9, 0.1, 0.7, 0.7, 1, 1);
+                const startDistance = DISTANCE_INNER;
+                const endDistance = POSITION_END.length();
+                Radius = startDistance * (1 - distanceFactor) + endDistance * distanceFactor;
+            }
+        }
+        function Calculate_Theta() {
+            if (Elapsed < DURATION_INNER) {
+                const progress = Elapsed / DURATION_INNER;
+                Theta = Math.PI * 0.5 - Math.PI * (90 / 180) * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.4, 0, 1, 1);
+            } else if (Elapsed > DURATION_INNER + DURATION_END && Elapsed < DURATION_ALL) {
+                const progress = (Elapsed - DURATION_INNER - DURATION_END) / DURATION_ADJUST;
+                Theta = Math.PI * (10 / 180) * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.3, 1, 1, 1);
+            }
+        }
+        function Calculate_Phi() {
+            if (Elapsed < DURATION_INNER) {
+                const progress = Elapsed / DURATION_INNER;
+                Phi = Math.PI * 4 * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.4, 0, 1, 1);
+            } else if (Elapsed < DURATION_INNER + DURATION_END) {
+                const progress = (Elapsed - DURATION_INNER) / DURATION_END;
+                Phi = Math.PI * 2 * Calculate_Bezier(progress, 0, 0, 0, 0.2, 0.8, 0.1, 1, 1);
+            } else if (Elapsed < DURATION_ALL) {
+                const progress = (Elapsed - DURATION_INNER - DURATION_END) / DURATION_ADJUST;
+                Phi = Math.PI * (120 / 180) * Calculate_Bezier(progress, 0, 0, 0, 0.4, 0.4, 0.9, 1, 1);
+            }
+        }
+
+        // ブラックホール
         const blackholeGeometry = new THREE.SphereGeometry(5, 128, 128);
         const blackholeShaderMaterial = new THREE.ShaderMaterial({
             uniforms: {
@@ -789,15 +1136,52 @@
         blackhole.castShadow = false;
         blackhole.receiveShadow = false;
         scene.add(blackhole);
+        let textMesh1, textMeshMouthClosed, textMeshMouthOpen;
+        const loader = new THREE.FontLoader();
+        loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+            const textGeometry1 = new THREE.TextGeometry('. .', { font: font, size: 4, height: 0.25, curveSegments: 2, bevelEnabled: true, bevelThickness: 0, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 0 });
+            const textGeometryMouthClosed = new THREE.TextGeometry('-', { font: font, size: 2, height: 0.25, curveSegments: 2, bevelEnabled: true, bevelThickness: 0, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 0 });
+            const textGeometryMouthOpen = new THREE.TextGeometry('Ο', { font: font, size: 1, height: 0.25, curveSegments: 2, bevelEnabled: true, bevelThickness: 0, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 0 });
 
-        // ブラックホール・ジェット（光の柱）
-        const jetLength = 200; // 銀河と同じ大きさ
+            const textMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ff00,
+                emissive: 0x00ffcc,
+                emissiveIntensity: 0.5,
+                shininess: 100,
+                fog: false
+            });
+
+            textMesh1 = new THREE.Mesh(textGeometry1, textMaterial);
+            textMeshMouthClosed = new THREE.Mesh(textGeometryMouthClosed, textMaterial);
+            textMeshMouthOpen = new THREE.Mesh(textGeometryMouthOpen, textMaterial);
+
+            textGeometry1.computeBoundingBox();
+            const textWidth1 = textGeometry1.boundingBox.max.x - textGeometry1.boundingBox.min.x;
+            textMesh1.position.set(-textWidth1 / 2, 0, 0);
+
+            textGeometryMouthClosed.computeBoundingBox();
+            const textWidthClosed = textGeometryMouthClosed.boundingBox.max.x - textGeometryMouthClosed.boundingBox.min.x;
+            textMeshMouthClosed.position.set(-textWidthClosed / 2, -1, 0);
+
+            textGeometryMouthOpen.computeBoundingBox();
+            const textWidthOpen = textGeometryMouthOpen.boundingBox.max.x - textGeometryMouthOpen.boundingBox.min.x;
+            textMeshMouthOpen.position.set(-textWidthOpen / 2, -1, 0);
+
+            textMeshMouthOpen.visible = false;
+
+            scene.add(textMesh1);
+            scene.add(textMeshMouthClosed);
+            scene.add(textMeshMouthOpen);
+
+            const light = new THREE.PointLight(0x00ffcc, 1);
+            light.position.set(0, 0, 5);
+            scene.add(light);
+        });
+        const jetLength = 200;
         const jetRadius = 4;
-        const jetRadiusInner = 0.01; // 中心側の半径（細く）
-        const jetOffset = 5; // 中心から離す距離
+        const jetRadiusInner = 0.01;
+        const jetOffset = 5;
         const jetSegments = 64;
-
-        // ジェット用のシェーダーマテリアル（光の柱らしい見た目）
         const jetMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 time: { value: 0.0 },
@@ -873,287 +1257,14 @@
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
-
-        // 上方向のジェット（中心側が細く、外側が太い）
-        // radiusTop: 外側（上）の半径、radiusBottom: 中心側（下）の半径
         const jetGeometryTop = new THREE.CylinderGeometry(jetRadius * 1.15, jetRadiusInner, jetLength, jetSegments, 1, true);
         const jetTop = new THREE.Mesh(jetGeometryTop, jetMaterial);
-        // 中心から少し離した位置から始めて、上方向に伸ばす
         jetTop.position.set(0, jetOffset + jetLength / 2, 0);
         scene.add(jetTop);
-
-        // 下方向のジェット（中心側が細く、外側が太い）
-        // radiusTop: 中心側（上）の半径、radiusBottom: 外側（下）の半径
         const jetGeometryBottom = new THREE.CylinderGeometry(jetRadiusInner, jetRadius * 1.15, jetLength, jetSegments, 1, true);
         const jetBottom = new THREE.Mesh(jetGeometryBottom, jetMaterial);
-        // 中心から少し離した位置から始めて、下方向に伸ばす
         jetBottom.position.set(0, -jetOffset - jetLength / 2, 0);
         scene.add(jetBottom);
-
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.rotateSpeed = 0.5;
-        controls.zoomSpeed = 0.8;
-        controls.enablePan = false;
-        controls.maxPolarAngle = Math.PI - 0.1;
-        controls.minPolarAngle = 0.1;
-
-        camera.position.copy(new THREE.Vector3(0, 1, 0).multiplyScalar(10000));
-        camera.lookAt(new THREE.Vector3(0, 0, 0));
-
-        function easeInOutCubic(t) {
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-        }
-        function easeInOutSloMo(t) {
-            return Math.pow(easeInOutCubic(t), 2);
-        }
-
-        // インプットパーティクル
-        const cursorParticles = [];
-        const cursorParticleGeometry = new THREE.BufferGeometry();
-        const cursorParticleMaterial = new THREE.PointsMaterial({
-            color: 0x00ffcc,
-            size: 0.1,
-            transparent: true,
-            opacity: 0.8,
-        });
-        function updateCursorParticles() {
-            for (let i = cursorParticles.length - 1; i >= 0; i--) {
-                const particle = cursorParticles[i];
-                particle.position.add(particle.velocity);
-                particle.life -= 0.01;
-                if (particle.life <= 0) {
-                    cursorParticles.splice(i, 1);
-                }
-            }
-            const positions = new Float32Array(cursorParticles.length * 3);
-            cursorParticles.forEach((particle, i) => {
-                positions[i * 3] = particle.position.x;
-                positions[i * 3 + 1] = particle.position.y;
-                positions[i * 3 + 2] = particle.position.z;
-            });
-            cursorParticleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        }
-
-        // ブルームパス
-        const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight));
-        bloomPass.threshold = 0;
-        if (isMobile) {
-            bloomPass.strength = 0.6;
-            bloomPass.radius = 0.1;
-        } else {
-            bloomPass.strength = 0.8;
-            bloomPass.radius = 0.6;
-        }
-        composer.addPass(bloomPass);
-
-        // グリッチシェーダー
-        const DigitalGlitchShader = {
-            uniforms: {
-                'tDiffuse': { value: null },
-                'tDisp': { value: null },
-                'byp': { value: 0 },
-                'amount': { value: 0.08 },
-                'angle': { value: 0.02 },
-                'seed': { value: 0.02 },
-                'seed_x': { value: 0.02 },
-                'seed_y': { value: 0.02 },
-                'distortion_x': { value: 0.5 },
-                'distortion_y': { value: 0.6 },
-                'col_s': { value: 0.05 }
-            },
-            vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                uniform int byp;
-                uniform sampler2D tDiffuse;
-                uniform sampler2D tDisp;
-                uniform float amount;
-                uniform float angle;
-                uniform float seed;
-                float seed_x;
-                uniform float seed_y;
-                uniform float distortion_x;
-                uniform float distortion_y;
-                uniform float col_s;
-                varying vec2 vUv;
-
-                float rand(vec2 co) {
-                    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
-                }
-
-                void main() {
-                    if (byp < 1) {
-                        vec2 p = vUv;
-                        if (amount > 0.0) {
-                            float xs = floor(gl_FragCoord.x / 0.5);
-                            float ys = floor(gl_FragCoord.y / 0.5);
-                            vec4 normal = texture2D(tDisp, p * seed * seed);
-                            if (p.y < distortion_x + col_s && p.y > distortion_x - col_s * seed) {
-                                if (seed_x > 0.0) {
-                                    p.y = 1.0 - (p.y + distortion_y);
-                                } else {
-                                    p.y = distortion_y;
-                                }
-                            }
-                            if (p.x < distortion_y + col_s && p.x > distortion_y - col_s * seed) {
-                                if (seed_y > 0.0) {
-                                    p.x = distortion_x;
-                                } else {
-                                    p.x = 1.0 - (p.x + distortion_x);
-                                }
-                            }
-                            p.x += normal.x * seed_x * (seed / 5.0);
-                            p.y += normal.y * seed_y * (seed / 5.0);
-                            vec2 offset = amount * vec2(cos(angle), sin(angle));
-                            vec4 cr = texture2D(tDiffuse, p + offset);
-                            vec4 cga = texture2D(tDiffuse, p);
-                            vec4 cb = texture2D(tDiffuse, p - offset);
-                            gl_FragColor = vec4(cr.r, cga.g, cb.b, 1.0);
-                        } else {
-                            gl_FragColor = texture2D(tDiffuse, p);
-                        }
-                    } else {
-                        gl_FragColor = texture2D(tDiffuse, vUv);
-                    }
-                }
-            `
-        };
-        function generateNoiseTextureForGlitch(size = 64) {
-            const data = new Uint8Array(size * size * 4);
-            for (let i = 0; i < size * size * 4; i++) {
-                data[i] = Math.random() * 255;
-            }
-            const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
-            texture.needsUpdate = true;
-            return texture;
-        }
-        let glitchPass;
-        glitchPass = new THREE.ShaderPass(DigitalGlitchShader);
-        glitchPass.uniforms.tDisp.value = generateNoiseTextureForGlitch();
-        glitchPass.renderToScreen = true;
-        composer.addPass(glitchPass);
-        let isGlitching = false;
-        let glitchTimeout;
-        function updateGlitch() {
-            if (isGlitching) {
-                glitchPass.uniforms.seed.value = Math.random();
-                glitchPass.uniforms.amount.value = Math.random() * 0.1 + 0.02;
-                glitchPass.uniforms.angle.value = Math.random() * 2;
-                glitchPass.uniforms.seed_x.value = (Math.random() > 0.5 ? 0.02 : -0.02);
-                glitchPass.uniforms.seed_y.value = (Math.random() > 0.5 ? 0.02 : -0.02);
-                glitchPass.uniforms.distortion_x.value = Math.random() * 0.5;
-                glitchPass.uniforms.distortion_y.value = Math.random() * 0.5;
-                glitchPass.uniforms.col_s.value = Math.random() * 0.05;
-            } else {
-                glitchPass.uniforms.amount.value = 0;
-            }
-        }
-        function triggerGlitch() {
-            isGlitching = true;
-            clearTimeout(glitchTimeout);
-            const duration = (Math.random() - 0.5) * 500;
-            glitchTimeout = setTimeout(() => {
-                isGlitching = false;
-            }, duration);
-            const nextTrigger = Math.random() * 5000 + 3000;
-            setTimeout(triggerGlitch, nextTrigger);
-        }
-        setTimeout(triggerGlitch, 2000);
-
-        const cursorParticleSystem = new THREE.Points(cursorParticleGeometry, cursorParticleMaterial);
-        cursorParticleSystem.position.set(0, 0, 0);
-        scene.add(cursorParticleSystem);
-
-        let Flag_CameraAnimation = true;
-        let Time_CameraAnimation_Start = null;
-        let Position_Trun_Start = null;
-
-        let Elapsed;
-        let Radius, Theta, Phi;
-
-        const POSITION_START = new THREE.Vector3(0, 1, 0).multiplyScalar(2000);
-        const POSITION_END = new THREE.Vector3(-20, 20, 40);
-        const DISTANCE_INNER = 30;
-
-        const DURATION_ALL = 20 * 1000;
-        const DURATION_INNER = DURATION_ALL * 0.6;
-        const DURATION_END = DURATION_ALL * 0.3;
-        const DURATION_ADJUST = DURATION_ALL - DURATION_INNER - DURATION_END;
-
-        function Calculate_Bezier(x, p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
-            let t = 0.5;
-            const epsilon = 0.0001;
-            const maxIterations = 10;
-            for (let i = 0; i < maxIterations; i++) {
-                let u = 1 - t;
-                let tt = t * t;
-                let uu = u * u;
-                let uuu = uu * u;
-                let ttt = tt * t;
-                let currentX = uuu * p0x + 3 * uu * t * p1x + 3 * u * tt * p2x + ttt * p3x;
-                let dx = -3 * p0x * uu + 3 * p1x * (1 - 4 * t + 3 * tt) + 3 * p2x * (2 * t - 3 * tt) + 3 * p3x * tt;
-                if (Math.abs(x - currentX) < epsilon) break;
-                t = t - (currentX - x) / dx;
-                t = Math.max(0, Math.min(1, t));
-            }
-            let u = 1 - t;
-            let tt = t * t;
-            let uu = u * u;
-            let uuu = uu * u;
-            let ttt = tt * t;
-            return uuu * p0y + 3 * uu * t * p1y + 3 * u * tt * p2y + ttt * p3y;
-        }
-
-        function Calculate_Radius() {
-            if (Elapsed < DURATION_INNER) {
-                const progress = Elapsed / DURATION_INNER;
-                const distanceFactor = Calculate_Bezier(progress, 0, 1, 0.4, 1, 0.6, 0, 1, 0);
-                Radius = POSITION_START.length() * distanceFactor + DISTANCE_INNER * (1 - distanceFactor);
-            } else if (Elapsed < DURATION_ALL) {
-                const progress = (Elapsed - DURATION_INNER) / DURATION_END;
-                const distanceFactor = Calculate_Bezier(progress, 0, 0, 0.9, 0.1, 0.7, 0.7, 1, 1);
-                const startDistance = DISTANCE_INNER;
-                const endDistance = POSITION_END.length();
-                Radius = startDistance * (1 - distanceFactor) + endDistance * distanceFactor;
-            }
-        }
-
-        function Calculate_Theta() {
-            if (Elapsed < DURATION_INNER) {
-                const progress = Elapsed / DURATION_INNER;
-                Theta = Math.PI * 0.5 - Math.PI * (90 / 180) * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.4, 0, 1, 1);
-            } else if (Elapsed > DURATION_INNER + DURATION_END && Elapsed < DURATION_ALL) {
-                const progress = (Elapsed - DURATION_INNER - DURATION_END) / DURATION_ADJUST;
-                Theta = Math.PI * (10 / 180) * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.3, 1, 1, 1);
-            }
-        }
-
-        function Calculate_Phi() {
-            if (Elapsed < DURATION_INNER) {
-                const progress = Elapsed / DURATION_INNER;
-                Phi = Math.PI * 4 * Calculate_Bezier(progress, 0, 0, 0.4, 0, 0.4, 0, 1, 1);
-            } else if (Elapsed < DURATION_INNER + DURATION_END) {
-                const progress = (Elapsed - DURATION_INNER) / DURATION_END;
-                Phi = Math.PI * 2 * Calculate_Bezier(progress, 0, 0, 0, 0.2, 0.8, 0.1, 1, 1);
-            } else if (Elapsed < DURATION_ALL) {
-                const progress = (Elapsed - DURATION_INNER - DURATION_END) / DURATION_ADJUST;
-                Phi = Math.PI * (120 / 180) * Calculate_Bezier(progress, 0, 0, 0, 0.4, 0.4, 0.9, 1, 1);
-            }
-        }
-
-        let lastTime = performance.now();
-        let countDistance = Math.PI;
-        let countTheata = Math.PI;
-        let time = 0.0;
-        let frameCount = 0;
-
         const messages = [
             "やぁ！",
             "ようこそ！FUM Websiteへ！",
@@ -1175,7 +1286,6 @@
         let messageVisible = false;
         let messageCooldown = false;
         let isFirstMessage = true;
-
         function updateSpeechBubble() {
             if (!blackhole || !vue) return;
 
@@ -1222,22 +1332,18 @@
                 };
             }
         }
-
         let blinkTimer = 0;
         function updateFace(delta) {
-            // 瞬き
             blinkTimer += delta;
             if (blinkTimer > 3 + Math.random() * 3) {
                 if (textMesh1) textMesh1.visible = false;
 
                 setTimeout(() => {
                     if (textMesh1) textMesh1.visible = true;
-                }, 120); // 0.12秒
+                }, 120);
 
                 blinkTimer = 0;
             }
-
-            // 口
             if (vue && vue.ShowMessage && textMeshMouthClosed && textMeshMouthOpen) {
                 const isMouthOpen = Math.floor(time * 2) % 2 === 0;
                 textMeshMouthClosed.visible = !isMouthOpen;
@@ -1248,25 +1354,150 @@
             }
         }
 
+
+        // ポストエフェクト
+        const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight));
+        bloomPass.threshold = 0;
+        if (isMobile) {
+            bloomPass.strength = 0.6;
+            bloomPass.radius = 0.1;
+        } else {
+            bloomPass.strength = 0.8;
+            bloomPass.radius = 0.6;
+        }
+        composer.addPass(bloomPass);
+        const DigitalGlitchShader = {
+            uniforms: {
+                'tDiffuse': { value: null },
+                'tDisp': { value: null },
+                'byp': { value: 0 },
+                'amount': { value: 0.08 },
+                'angle': { value: 0.02 },
+                'seed': { value: 0.02 },
+                'seed_x': { value: 0.02 },
+                'seed_y': { value: 0.02 },
+                'distortion_x': { value: 0.5 },
+                'distortion_y': { value: 0.6 },
+                'col_s': { value: 0.05 }
+            },
+            vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+            fragmentShader: `
+        uniform int byp;
+        uniform sampler2D tDiffuse;
+        uniform sampler2D tDisp;
+        uniform float amount;
+        uniform float angle;
+        uniform float seed;
+        float seed_x;
+        uniform float seed_y;
+        uniform float distortion_x;
+        uniform float distortion_y;
+        uniform float col_s;
+        varying vec2 vUv;
+
+        float rand(vec2 co) {
+            return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+
+        void main() {
+            if (byp < 1) {
+                vec2 p = vUv;
+                if (amount > 0.0) {
+                    float xs = floor(gl_FragCoord.x / 0.5);
+                    float ys = floor(gl_FragCoord.y / 0.5);
+                    vec4 normal = texture2D(tDisp, p * seed * seed);
+                    if (p.y < distortion_x + col_s && p.y > distortion_x - col_s * seed) {
+                        if (seed_x > 0.0) {
+                            p.y = 1.0 - (p.y + distortion_y);
+                        } else {
+                            p.y = distortion_y;
+                        }
+                    }
+                    if (p.x < distortion_y + col_s && p.x > distortion_y - col_s * seed) {
+                        if (seed_y > 0.0) {
+                            p.x = distortion_x;
+                        } else {
+                            p.x = 1.0 - (p.x + distortion_x);
+                        }
+                    }
+                    p.x += normal.x * seed_x * (seed / 5.0);
+                    p.y += normal.y * seed_y * (seed / 5.0);
+                    vec2 offset = amount * vec2(cos(angle), sin(angle));
+                    vec4 cr = texture2D(tDiffuse, p + offset);
+                    vec4 cga = texture2D(tDiffuse, p);
+                    vec4 cb = texture2D(tDiffuse, p - offset);
+                    gl_FragColor = vec4(cr.r, cga.g, cb.b, 1.0);
+                } else {
+                    gl_FragColor = texture2D(tDiffuse, p);
+                }
+            } else {
+                gl_FragColor = texture2D(tDiffuse, vUv);
+            }
+        }
+    `
+        };
+        function generateNoiseTextureForGlitch(size = 64) {
+            const data = new Uint8Array(size * size * 4);
+            for (let i = 0; i < size * size * 4; i++) {
+                data[i] = Math.random() * 255;
+            }
+            const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+            texture.needsUpdate = true;
+            return texture;
+        }
+        let glitchPass;
+        glitchPass = new THREE.ShaderPass(DigitalGlitchShader);
+        glitchPass.uniforms.tDisp.value = generateNoiseTextureForGlitch();
+        glitchPass.renderToScreen = true;
+        composer.addPass(glitchPass);
+        let isGlitching = false;
+        let glitchTimeout;
+        function updateGlitch() {
+            if (isGlitching) {
+                glitchPass.uniforms.seed.value = Math.random();
+                glitchPass.uniforms.amount.value = Math.random() * 0.1 + 0.02;
+                glitchPass.uniforms.angle.value = Math.random() * 2;
+                glitchPass.uniforms.seed_x.value = (Math.random() > 0.5 ? 0.02 : -0.02);
+                glitchPass.uniforms.seed_y.value = (Math.random() > 0.5 ? 0.02 : -0.02);
+                glitchPass.uniforms.distortion_x.value = Math.random() * 0.5;
+                glitchPass.uniforms.distortion_y.value = Math.random() * 0.5;
+                glitchPass.uniforms.col_s.value = Math.random() * 0.05;
+            } else {
+                glitchPass.uniforms.amount.value = 0;
+            }
+        }
+        function triggerGlitch() {
+            isGlitching = true;
+            clearTimeout(glitchTimeout);
+            const duration = (Math.random() - 0.5) * 500;
+            glitchTimeout = setTimeout(() => {
+                isGlitching = false;
+            }, duration);
+            const nextTrigger = Math.random() * 5000 + 3000;
+            setTimeout(triggerGlitch, nextTrigger);
+        }
+        setTimeout(triggerGlitch, 2000);
+
+
+        // アニメーション
         const clock = new THREE.Clock();
+        let time = 0.0;
+        let countDistance = Math.PI;
+        let countTheata = Math.PI;
         function animate() {
             requestAnimationFrame(animate);
+
             const delta = clock.getDelta();
             const currentTime = performance.now();
-            lastTime = currentTime;
             time += delta;
 
-            blackholeShaderMaterial.uniforms.time.value = time;
-            blackholeShaderMaterial.uniforms.viewPos.value.copy(camera.position);
-            blackholeShaderMaterial.uniforms.cameraDistance.value = camera.position.length();
-
-            updateFace(delta);
-
-            // ジェットのアニメーション
-            if (jetMaterial) {
-                jetMaterial.uniforms.time.value = time;
-            }
-
+            // カメラアニメーション
             if (Flag_CameraAnimation) {
                 if (Time_CameraAnimation_Start === null) {
                     Time_CameraAnimation_Start = currentTime;
@@ -1287,11 +1518,6 @@
                     Flag_CameraAnimation = false;
                     controls.maxDistance = 1200;
                     controls.enabled = true;
-
-                    // カメラアニメーションが終わったら花火を有効化
-                    // fireworksEnabled = true;
-                    // setTimeout(() => launchFirework(), 500); // 最初の花火
-                    // setInterval(launchFirework, 4000); // 定期的な花火
                 }
             } else {
                 countDistance += Math.PI * 0.01 * delta;
@@ -1318,452 +1544,21 @@
                 camera.position.set(x, y, z);
                 camera.lookAt(0, 0, 0);
             }
+            
+            // ブラックホール
+            blackholeShaderMaterial.uniforms.time.value = time;
+            blackholeShaderMaterial.uniforms.viewPos.value.copy(camera.position);
+            blackholeShaderMaterial.uniforms.cameraDistance.value = camera.position.length();
+            updateFace(delta);
+            updateSpeechBubble();
 
-            frameCount++;
-            updateCursorParticles();
-
-            // 花火の更新処理
-            // if (fireworksEnabled) {
-            //     for (let i = fireworks.length - 1; i >= 0; i--) {
-            //         if (fireworks[i].update(delta)) {
-            //             fireworks.splice(i, 1);
-            //         }
-            //     }
-            // }
+            // ポストエフェクト
+            updateGlitch();
 
             controls.update();
             composer.render();
-            updateGlitch();
-
-            updateSpeechBubble();
         }
-
-        // インプットパーティクル
-        const raycaster = new THREE.Raycaster();
-        const intersectionPoint = new THREE.Vector3();
-        const mouse = new THREE.Vector2();
-        let isPointerDown = false;
-        function createCursorParticle(x, y, z) {
-            for (let i = 0; i < 1; i++) {
-                const speed = 0.05;
-                const particle = {
-                    position: new THREE.Vector3(x, y, z),
-                    velocity: new THREE.Vector3(
-                        (Math.random() - 0.5) * speed,
-                        (Math.random() - 0.5) * speed,
-                        (Math.random() - 0.5) * speed
-                    ),
-                    life: 1.0
-                };
-                cursorParticles.push(particle);
-            }
-        }
-        function updatePointer(x, y) {
-            mouse.x = (x / window.innerWidth) * 2 - 1;
-            mouse.y = -(y / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            raycaster.ray.at(20, intersectionPoint);
-
-            if (Math.random() < 0.5) {
-                createCursorParticle(
-                    intersectionPoint.x,
-                    intersectionPoint.y,
-                    intersectionPoint.z
-                );
-            }
-        }
-        function onMouseDown() {
-            isPointerDown = true;
-        }
-        function onMouseUp() {
-            isPointerDown = false;
-        }
-        function onMouseMove(event) {
-            if (!isPointerDown) return;
-            updatePointer(event.clientX, event.clientY);
-        }
-        function onTouchStart(event) {
-            isPointerDown = true;
-            const touch = event.touches[0];
-            updatePointer(touch.clientX, touch.clientY);
-        }
-        function onTouchMove(event) {
-            if (!isPointerDown) return;
-            const touch = event.touches[0];
-            updatePointer(touch.clientX, touch.clientY);
-        }
-        function onTouchEnd() {
-            isPointerDown = false;
-        }
-        window.addEventListener('mousedown', onMouseDown);
-        window.addEventListener('mouseup', onMouseUp);
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('touchstart', onTouchStart, { passive: true });
-        window.addEventListener('touchmove', onTouchMove, { passive: true });
-        window.addEventListener('touchend', onTouchEnd);
-
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // window.addEventListener('click', () => {
-        //     launchFirework();
-        // });
-        // window.addEventListener('touchend', () => {
-        //     launchFirework();
-        // });
-
         animate();
-
-        const colorDistribution = [
-            {
-                type: "blue-white", prob: 0.45, colors: [
-                    { r: 0.53, g: 0.67, b: 1.0 },
-                    { r: 0.67, g: 0.73, b: 1.0 },
-                    { r: 0.93, g: 0.93, b: 1.0 }
-                ]
-            },
-            {
-                type: "yellow", prob: 0.325, colors: [
-                    { r: 1.0, g: 1.0, b: 0.8 },
-                    { r: 1.0, g: 1.0, b: 0.6 }
-                ]
-            },
-            {
-                type: "orange-red", prob: 0.225, colors: [
-                    { r: 1.0, g: 0.67, b: 0.4 },
-                    { r: 1.0, g: 0.4, b: 0.4 }
-                ]
-            }
-        ];
-
-        const randomColor = () => {
-            const rand = Math.random();
-            let cumulativeProb = 0;
-            for (const category of colorDistribution) {
-                cumulativeProb += category.prob;
-                if (rand <= cumulativeProb) {
-                    const colorChoice = category.colors[Math.floor(Math.random() * category.colors.length)];
-                    return new THREE.Color(colorChoice.r, colorChoice.g, colorChoice.b);
-                }
-            }
-            return new THREE.Color(1, 1, 1);
-        };
-
-        function createUniverseDetail() {
-            // パフォーマンス向上のためパーティクル数をさらに削減
-            const starCount = isMobile ? 2000 : 4000;
-            const starPositions = new Float32Array(starCount * 3);
-            const starColors = new Float32Array(starCount * 3);
-            for (let i = 0; i < starCount; i++) {
-                const r = 2000 + Math.random() * 2000;
-                const theta = Math.acos(2 * Math.random() - 1);
-                const phi = Math.random() * 2 * Math.PI;
-                starPositions[i * 3] = r * Math.sin(theta) * Math.cos(phi);
-                starPositions[i * 3 + 1] = r * Math.sin(theta) * Math.sin(phi);
-                starPositions[i * 3 + 2] = r * Math.cos(theta);
-                const color = randomColor();
-                starColors[i * 3] = color.r;
-                starColors[i * 3 + 1] = color.g;
-                starColors[i * 3 + 2] = color.b;
-            }
-            const starGeometry = new THREE.BufferGeometry();
-            starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-            starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
-            const starMaterial = new THREE.PointsMaterial({
-                vertexColors: true,
-                size: isMobile ? 20 : 10,
-                transparent: true,
-                opacity: 0.5,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                fog: false
-            });
-            const starField = new THREE.Points(starGeometry, starMaterial);
-            scene.add(starField);
-
-            const galaxyStars = isMobile ? 500 : 1000;
-            const galaxyPositions = new Float32Array(galaxyStars * 3);
-            const galaxyColors = new Float32Array(galaxyStars * 3);
-            const spiralArms = 4;
-            const spiralSpread = 10;
-            const minGalaxyRadius = 40;
-            const maxGalaxyRadius = 200;
-
-            const armWeights = [1, 1.5, 1, 1.5];
-            const totalWeight = armWeights.reduce((sum, weight) => sum + weight, 0);
-            const armAngles = [];
-            let cumulativeWeight = 0;
-            for (let i = 0; i < spiralArms; i++) {
-                armAngles.push((cumulativeWeight / totalWeight) * (2 * Math.PI));
-                cumulativeWeight += armWeights[i];
-            }
-
-            for (let i = 0; i < galaxyStars; i++) {
-                let r = minGalaxyRadius + (maxGalaxyRadius - minGalaxyRadius) * Math.sqrt(Math.random());
-                let armIndex = i % spiralArms;
-                let baseArmAngle = armAngles[armIndex];
-                let twist = r * 0.04;
-                let randomScatter = (Math.random() - 0.5) * 0.4;
-                let angle = baseArmAngle + twist + randomScatter;
-
-                const x = r * Math.cos(angle) + (Math.random() - 0.5) * spiralSpread;
-                const y = (Math.random() - 0.5) * (spiralSpread * 0.3);
-                const z = r * Math.sin(angle) + (Math.random() - 0.5) * spiralSpread;
-                galaxyPositions[i * 3] = x;
-                galaxyPositions[i * 3 + 1] = y;
-                galaxyPositions[i * 3 + 2] = z;
-
-                let t = r / maxGalaxyRadius;
-                let color = new THREE.Color();
-                if (t < 0.5) {
-                    color.set(0xfff4e5);
-                } else {
-                    color.set(0xffeedd);
-                }
-                galaxyColors[i * 3] = color.r;
-                galaxyColors[i * 3 + 1] = color.g;
-                galaxyColors[i * 3 + 2] = color.b;
-            }
-
-            const galaxyGeometry = new THREE.BufferGeometry();
-            galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
-            galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
-            const galaxyFieldMaterial = new THREE.PointsMaterial({
-                map: particleTexture,
-                vertexColors: true,
-                size: isMobile ? 0.5 : 0.25,
-                transparent: false,         // 透明度を無効化
-                depthWrite: true,           // 深度情報を書き込む
-                fog: false
-            });
-            const galaxyField = new THREE.Points(galaxyGeometry, galaxyFieldMaterial);
-            scene.add(galaxyField);
-
-            // 霧散らばる星屑
-            const nebulaCount = isMobile ? 100 : 500;
-            const nebulaPositions = new Float32Array(nebulaCount * 3);
-            const nebulaColors = new Float32Array(nebulaCount * 3);
-            const nebulaMinRadius = 60;
-            const nebulaMaxRadius = 250;
-            for (let i = 0; i < nebulaCount; i++) {
-                const u = Math.random();
-                const r = nebulaMinRadius + u * (nebulaMaxRadius - nebulaMinRadius);
-
-                // xz平面での距離をrとして直接制御
-                const phi = Math.random() * 2 * Math.PI;
-                const x = r * Math.cos(phi);
-                const z = r * Math.sin(phi);
-                // y座標は圧縮（-r*0.1 から r*0.1 の範囲）
-                const y = (Math.random() - 0.5) * r * 0.2;
-                nebulaPositions[i * 3] = x;
-                nebulaPositions[i * 3 + 1] = y;
-                nebulaPositions[i * 3 + 2] = z;
-
-                const color = new THREE.Color(0x334455).lerp(new THREE.Color(0x88aaff), Math.random() * 0.3);
-                nebulaColors[i * 3] = color.r;
-                nebulaColors[i * 3 + 1] = color.g;
-                nebulaColors[i * 3 + 2] = color.b;
-            }
-            const nebulaGeometry = new THREE.BufferGeometry();
-            nebulaGeometry.setAttribute('position', new THREE.BufferAttribute(nebulaPositions, 3));
-            nebulaGeometry.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
-            const nebulaMaterial = new THREE.PointsMaterial({
-                map: particleTexture,
-                vertexColors: true,
-                size: 1,
-                transparent: true,
-                opacity: 0.75,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                fog: false
-            });
-            const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
-            scene.add(nebulaField);
-
-            // パーティクル用のテクスチャ
-            function createSparkleTexture() {
-                const canvas = document.createElement('canvas');
-                canvas.width = 32;
-                canvas.height = 32;
-                const context = canvas.getContext('2d');
-                const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
-                gradient.addColorStop(0, 'rgba(255,255,255,1)');
-                gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
-                gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
-                gradient.addColorStop(1, 'rgba(255,255,255,0)');
-                context.fillStyle = gradient;
-                context.fillRect(0, 0, 32, 32);
-                return new THREE.CanvasTexture(canvas);
-            }
-            const sparkleTexture = createSparkleTexture();
-            const sparkleCount = isMobile ? 30 : 150;
-
-            const sparklePositions = new Float32Array(sparkleCount * 3);
-            const sparkleColors = new Float32Array(sparkleCount * 3);
-
-            for (let i = 0; i < sparkleCount; i++) {
-                const r = 2000 + Math.random() * 1000;
-                const theta = Math.acos(2 * Math.random() - 1);
-                const phi = Math.random() * 2 * Math.PI;
-                const i3 = i * 3;
-
-                sparklePositions[i3 + 0] = r * Math.sin(theta) * Math.cos(phi);
-                sparklePositions[i3 + 1] = r * Math.sin(theta) * Math.sin(phi);
-                sparklePositions[i3 + 2] = r * Math.cos(theta);
-
-                const color = randomColor();
-                sparkleColors[i3 + 0] = color.r;
-                sparkleColors[i3 + 1] = color.g;
-                sparkleColors[i3 + 2] = color.b;
-            }
-
-            const sparkleGeometry = new THREE.BufferGeometry();
-            sparkleGeometry.setAttribute('position', new THREE.BufferAttribute(sparklePositions, 3));
-            sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(sparkleColors, 3));
-
-            // 設定を見直し、確実に描画されるように調整します。
-            const sparkleMaterial = new THREE.PointsMaterial({
-                map: sparkleTexture,
-                size: 60, // サイズを大きくして視認性を向上させます
-                vertexColors: true,
-                blending: THREE.AdditiveBlending, // 加算合成で輝きを表現
-                transparent: false,
-                depthWrite: false,
-                fog: false
-            });
-
-            const sparkles = new THREE.Points(sparkleGeometry, sparkleMaterial);
-            scene.add(sparkles);
-
-            const sparkleTexture_wide = createSparkleTexture();
-            const sparkleCount_wide = isMobile ? 20 : 100;
-            for (let i = 0; i < sparkleCount_wide; i++) {
-                const r = 2000 + Math.random() * 1000;
-                const theta = Math.acos(2 * Math.random() - 1);
-                const phi = Math.random() * 2 * Math.PI;
-                const sprite = new THREE.Sprite(
-                    new THREE.SpriteMaterial({
-                        map: sparkleTexture_wide,
-                        color: randomColor(),
-                        transparent: true,
-                        opacity: 1,
-                        blending: THREE.AdditiveBlending,
-                        depthWrite: false,
-                        fog: false
-                    })
-                );
-                sprite.position.set(
-                    r * Math.sin(theta) * Math.cos(phi),
-                    r * Math.sin(theta) * Math.sin(phi),
-                    r * Math.cos(theta)
-                );
-                sprite.scale.set(50 + Math.random() * 50, 30 + Math.random() * 50, 1);
-                scene.add(sprite);
-            }
-
-            const clusterCount = isMobile ? 2 : 4;
-            for (let c = 0; c < clusterCount; c++) {
-                const clusterRadius = 2000;
-                const clusterTheta = Math.acos(2 * Math.random() - 1);
-                const clusterPhi = Math.random() * 2 * Math.PI;
-                const clusterCenter = new THREE.Vector3(
-                    clusterRadius * Math.sin(clusterTheta) * Math.cos(clusterPhi),
-                    clusterRadius * Math.sin(clusterTheta) * Math.sin(clusterPhi),
-                    clusterRadius * Math.cos(clusterTheta)
-                );
-                const galaxyInCluster = 3 + Math.floor(Math.random() * 5);
-                for (let g = 0; g < galaxyInCluster; g++) {
-                    const particleCount = 25 + Math.floor(Math.random() * 25);
-                    const clusterPositions = new Float32Array(particleCount * 3);
-                    const clusterColors = new Float32Array(particleCount * 3);
-                    const offset = new THREE.Vector3(
-                        (Math.random() - 0.5) * 100,
-                        (Math.random() - 0.5) * 100,
-                        (Math.random() - 0.5) * 100
-                    );
-
-                    const centerColor = new THREE.Color(0xffaa55);
-                    const outerColor = new THREE.Color(0x55aaff);
-                    const galaxyRadius = 50;
-
-                    for (let i = 0; i < particleCount; i++) {
-                        const r = Math.random() * galaxyRadius;
-                        const theta = Math.acos(2 * Math.random() - 1);
-                        const phi = Math.random() * 2 * Math.PI;
-
-                        clusterPositions[i * 3] = clusterCenter.x + offset.x + r * Math.sin(theta) * Math.cos(phi);
-                        clusterPositions[i * 3 + 1] = clusterCenter.y + offset.y + r * Math.sin(theta) * Math.sin(phi);
-                        clusterPositions[i * 3 + 2] = clusterCenter.z + offset.z + r * Math.cos(theta);
-
-                        const color = centerColor.clone().lerp(outerColor, r / galaxyRadius);
-
-                        clusterColors[i * 3] = color.r;
-                        clusterColors[i * 3 + 1] = color.g;
-                        clusterColors[i * 3 + 2] = color.b;
-                    }
-                    const clusterGeometry = new THREE.BufferGeometry();
-                    clusterGeometry.setAttribute('position', new THREE.BufferAttribute(clusterPositions, 3));
-                    clusterGeometry.setAttribute('color', new THREE.BufferAttribute(clusterColors, 3));
-                    const clusterMaterial = new THREE.PointsMaterial({
-                        vertexColors: true,
-                        size: 0.1 + Math.random() * 0.3,
-                        sizeAttenuation: true,
-                        transparent: true,
-                        opacity: 0.5,
-                        blending: THREE.AdditiveBlending,
-                        depthWrite: false,
-                        fog: false
-                    });
-                    const clusterField = new THREE.Points(clusterGeometry, clusterMaterial);
-                    scene.add(clusterField);
-                }
-            }
-
-            const distantGalaxyCount = isMobile ? 50 : 300;
-            for (let g = 0; g < distantGalaxyCount; g++) {
-                const particleCount = 50 + Math.floor(Math.random() * 50);
-                const galaxyRadius = 2000 + Math.random() * 1000;
-                const galaxyTheta = Math.acos(2 * Math.random() - 1);
-                const galaxyPhi = Math.random() * 2 * Math.PI;
-                const distantPositions = new Float32Array(particleCount * 3);
-                const distantColors = new Float32Array(particleCount * 3);
-                for (let i = 0; i < particleCount; i++) {
-                    const r = Math.random() * 30;
-                    const theta = Math.acos(2 * Math.random() - 1);
-                    const phi = Math.random() * 2 * Math.PI;
-                    distantPositions[i * 3] = galaxyRadius * Math.sin(galaxyTheta) * Math.cos(galaxyPhi) + r * Math.sin(theta) * Math.cos(phi);
-                    distantPositions[i * 3 + 1] = galaxyRadius * Math.sin(galaxyTheta) * Math.sin(galaxyPhi) + r * Math.sin(theta) * Math.sin(phi);
-                    distantPositions[i * 3 + 2] = galaxyRadius * Math.cos(galaxyTheta) + r * Math.cos(theta);
-                    const color = randomColor();
-                    distantColors[i * 3] = color.r;
-                    distantColors[i * 3 + 1] = color.g;
-                    distantColors[i * 3 + 2] = color.b;
-                }
-                const distantGeometry = new THREE.BufferGeometry();
-                distantGeometry.setAttribute('position', new THREE.BufferAttribute(distantPositions, 3));
-                distantGeometry.setAttribute('color', new THREE.BufferAttribute(distantColors, 3));
-                const distantMaterial = new THREE.PointsMaterial({
-                    vertexColors: true,
-                    size: 2 + Math.random() * 3,
-                    transparent: true,
-                    opacity: 0.25,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false,
-                    fog: false
-                });
-                const distantField = new THREE.Points(distantGeometry, distantMaterial);
-                scene.add(distantField);
-            }
-
-        }
-
-        createUniverseDetail();
     </script>
 
 </body>
