@@ -733,40 +733,40 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-carrot</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Vegetable_Database.html">
+                    <v-list-item href="./Plant_Vegetable_Database.html">
                         <v-list-item-icon />
                         <v-list-item-title>Database</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item href="./Vegetable_Burdock.html">
+                    <v-list-item href="./Plant_Vegetable_Burdock.html">
                         <v-list-item-icon />
                         <v-list-item-title>Burdock</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_Chrysanthemum.html">
+                    <v-list-item href="./Plant_Vegetable_Chrysanthemum.html">
                         <v-list-item-icon />
                         <v-list-item-title>Chrysanthemum</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_Eggplant.html">
+                    <v-list-item href="./Plant_Vegetable_Eggplant.html">
                         <v-list-item-icon />
                         <v-list-item-title>Eggplant</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_Konegi.html">
+                    <v-list-item href="./Plant_Vegetable_Konegi.html">
                         <v-list-item-icon />
                         <v-list-item-title>Konegi</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_MiniTomato.html">
+                    <v-list-item href="./Plant_Vegetable_MiniTomato.html">
                         <v-list-item-icon />
                         <v-list-item-title>Mini Tomato</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_Onion.html">
+                    <v-list-item href="./Plant_Vegetable_Onion.html">
                         <v-list-item-icon />
                         <v-list-item-title>Onion</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_Potato.html">
+                    <v-list-item href="./Plant_Vegetable_Potato.html">
                         <v-list-item-icon />
                         <v-list-item-title>Potato</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Vegetable_Spinach.html">
+                    <v-list-item href="./Plant_Vegetable_Spinach.html">
                         <v-list-item-icon />
                         <v-list-item-title>Spinach</v-list-item-title>
                     </v-list-item>
