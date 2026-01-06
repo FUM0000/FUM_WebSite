@@ -702,7 +702,7 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-flower</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Flower_Rose.html">
+                    <v-list-item href="./Plant_Flower_Rose.html">
                         <v-list-item-icon />
                         <v-list-item-title>Rose</v-list-item-title>
                     </v-list-item>
@@ -718,7 +718,7 @@ Vue.component('main-navigation', {
                     </template>
 
 
-                    <v-list-item href="./Herb_Basil.html">
+                    <v-list-item href="./Plant_Herb_Basil.html">
                         <v-list-item-icon />
                         <v-list-item-title>Basil</v-list-item-title>
                     </v-list-item>
