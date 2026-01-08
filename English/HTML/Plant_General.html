@@ -16,14 +16,158 @@
 
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
-    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
-        rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;400;600;800&display=swap" rel="stylesheet">
+
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
 
     <title>Plant > General</title>
+
+    <style>
+        /* ===== Card ===== */
+        .card {
+            background: rgba(26, 46, 26, 0.9);
+            /* #1a2e1a に近い半透明ダークグリーン */
+            border-radius: 24px;
+            border: 1px solid #1e402e;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+
+        /* ===== Card Header ===== */
+        .card-header {
+            padding: 24px 32px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+        }
+
+        .header-green {
+            background: linear-gradient(to right, #047857, #059669);
+            /* 少し暗めのエメラルド */
+        }
+
+        .header-teal {
+            background: linear-gradient(to right, #0d9488, #0e7490);
+            /* 少し暗めのティール */
+        }
+
+        /* ===== Table ===== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: transparent;
+        }
+
+        thead {
+            background: rgba(15, 46, 15, 0.7);
+        }
+
+        th,
+        td {
+            padding: 20px 32px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #a7f3d0;
+        }
+
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: rgba(15, 46, 15, 0.9);
+        }
+
+        td:first-child {
+            width: 30%;
+            font-weight: 600;
+            color: #86efac;
+        }
+
+        td:last-child {
+            white-space: pre-line;
+            color: #d4fdd4;
+        }
+
+        /* ===== Tips ===== */
+        .tips {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+        }
+
+        /* 共通 */
+        .tip {
+            background: rgba(26, 46, 26, 0.9);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
+            border: 1px solid #1e402e;
+        }
+
+        .tip h3 {
+            margin-bottom: 4px;
+        }
+
+        /* Watering（Emerald） */
+        .tips .tip:nth-child(1) {
+            border: 1px solid #1e402e;
+        }
+
+        .tips .tip:nth-child(1) h3 {
+            color: #86efac;
+        }
+
+        /* Sunlight（Teal） */
+        .tips .tip:nth-child(2) {
+            border: 1px solid #0d2e2e;
+        }
+
+        .tips .tip:nth-child(2) h3 {
+            color: #94f1e2;
+        }
+
+        /* Air（Cyan） */
+        .tips .tip:nth-child(3) {
+            border: 1px solid #0d2e2e;
+        }
+
+        .tips .tip:nth-child(3) h3 {
+            color: #87f1ff;
+        }
+
+        .tip-icon {
+            font-size: 1.6rem;
+            margin-bottom: 12px;
+        }
+
+        .tip p {
+            color: #d4fdd4;
+            line-height: 1.6;
+        }
+
+        .tip-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            background-color: #064e3b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+    </style>
 </head>
 
 <body>
@@ -31,89 +175,112 @@
     <v-app id="App">
         <template>
 
-            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Plant > General</main-system-bar>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">
+                Plant > General
+            </main-system-bar>
 
+            <!-- ===== Main ===== -->
             <v-main id="Main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
+                    <v-container v-show="Ready_Page" class="pa-6" style="max-width:1000px">
 
-                        <v-row justify="center">
-                            <v-col xs="12" md="6">
-                                <strong>Common Notes</strong>
-                                <v-simple-table fixed-header class="Table_Rounded Table_Plant">
-                                    <template v-slot:default>
-                                        <thead>
-                                            <tr>
-                                                <th class="text-left Table_Width">Item</th>
-                                                <th class="text-left">Contents</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>Cultivation</td>
-                                                <td>Observation of suitable environments, precautions, and pruning for
-                                                    each plant</td>
+                        <!-- Common Notes -->
+                        <div class="card">
+                            <div class="card-header header-green d-flex align-center">
+                                <v-icon color="white" class="mr-3">mdi-sprout</v-icon>
+                                Common Care Notes
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Cultivation</td>
+                                        <td>Observe environments suitable for each plant, precautions, and pruning
+                                            techniques</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Soil</td>
+                                        <td>
+                                            Maintain air permeability and drainage
+                                            Avoid overcrowding
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Sowing</td>
+                                        <td>Sow seeds on rainy days</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Terminology</td>
+                                        <td>Axillary Bud: A bud that appears between the main stem and developing
+                                            lateral branches</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                                            </tr>
-                                            <tr>
-                                                <td>Soil</td>
-                                                <td>
-                                                    Maintain ventilation and drainage<br>
-                                                    Avoid overcrowding
-                                                </td>
+                        <!-- Companion Plants -->
+                        <div class="card">
+                            <div class="card-header header-teal d-flex align-center">
+                                <v-icon color="white" class="mr-3">mdi-sprout-outline</v-icon>
+                                Companion Plants
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Plant</th>
+                                        <th>Benefits</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Marigold</td>
+                                        <td>Helps suppress soil nematodes</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cleome</td>
+                                        <td>Attracts insects that prey on small pests</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Mint Family</td>
+                                        <td>Repels harmful insects</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Allium Family</td>
+                                        <td>Helps reduce soil-borne diseases</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                                            </tr>
-                                            <tr>
-                                                <td>Sowing</td>
-                                                <td>Sow seeds on rainy days</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Terminology</td>
-                                                <td>
-                                                    Axillary bud: A bud that emerges between the main stem and a
-                                                    developing side branch
-                                                </td>
-
-                                            </tr>
-                                        </tbody>
-                                    </template>
-                                </v-simple-table>
-                            </v-col>
-                        </v-row>
-
-                        <v-row justify="center">
-                            <v-col xs="12" md="6">
-                                <strong>Companion Plants</strong>
-                                <v-simple-table fixed-header class="Table_Rounded Table_Plant">
-                                    <template v-slot:default>
-                                        <thead>
-                                            <tr>
-                                                <th class="text-left Table_Width">Plant</th>
-                                                <th class="text-left">Effect</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>Marigold</td>
-                                                <td>Helps suppress soil nematodes</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Cleome</td>
-                                                <td>Encourages predatory insects that feed on small pests</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Mint Family</td>
-                                                <td>Helps deter pests</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Onion Family</td>
-                                                <td>Helps reduce soil-borne diseases</td>
-                                            </tr>
-                                        </tbody>
-                                    </template>
-                                </v-simple-table>
-                            </v-col>
-                        </v-row>
+                        <!-- Tips -->
+                        <div class="tips">
+                            <div class="tip">
+                                <div class="tip-icon-wrapper">
+                                    <v-icon size="32" color="#86efac">mdi-water-outline</v-icon>
+                                </div>
+                                <h3>Watering</h3>
+                                <p>Water generously once the soil surface becomes dry</p>
+                            </div>
+                            <div class="tip">
+                                <div class="tip-icon-wrapper">
+                                    <v-icon size="32" color="#94f1e2">mdi-weather-sunny</v-icon>
+                                </div>
+                                <h3>Sunlight</h3>
+                                <p>Provide adequate brightness while avoiding direct sunlight</p>
+                            </div>
+                            <div class="tip">
+                                <div class="tip-icon-wrapper">
+                                    <v-icon size="32" color="#87f1ff">mdi-weather-windy</v-icon>
+                                </div>
+                                <h3>Air Circulation</h3>
+                                <p>Good airflow prevents disease and promotes healthy growth</p>
+                            </div>
+                        </div>
 
                     </v-container>
                 </transition>
@@ -125,27 +292,18 @@
         </template>
     </v-app>
 
-    <style>
-        .Table_Width {
-            width: 150px;
-        }
-    </style>
-
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
 
     <script>
-
-        let vue = new Vue({
+        new Vue({
             el: '#App',
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Common],
-            data: {
-            },
+            data: {}
         })
-
     </script>
 
 </body>
