@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>チェックボックス100連打 - 上下ランダム難易度</title>
+    <title>チェックボックス100連打 - 上下ランダム難易度（完全中央・常に見える）</title>
     <style>
         body {
             margin: 0;
             padding: 0;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
-            min-height: 100vh;
             background-color: #f0f0f0;
             font-family: sans-serif;
             overflow: hidden;
@@ -20,17 +21,17 @@
         .timer {
             font-size: 48px;
             font-weight: bold;
-            margin: 60px 0 40px 0;  /* 上から少し離して配置 */
+            margin-bottom: 40px;
             z-index: 10;
         }
 
         .container {
             position: relative;
             width: 100vw;
-            height: 300px;          /* 上下にかなり余裕を持たせる */
+            height: 320px;               /* 大幅に広げて上下余裕を確保 */
             overflow: hidden;
             display: flex;
-            align-items: center;    /* 中央基準 */
+            align-items: center;
         }
 
         .inner {
@@ -38,22 +39,27 @@
             flex-direction: row;
             position: absolute;
             left: 0;
-            transition: left 0.2s ease-in-out;
+            transition: left 0.1s ease-in-out;
+            height: 100%;                /* コンテナの高さに合わせる */
         }
 
         .checkbox-wrapper {
-            width: 70px;
-            height: 100%;           /* コンテナ全体の高さを使う */
+            width: 30px;
+            height: 100%;                /* コンテナ全体の高さを使う */
             display: flex;
             justify-content: center;
             align-items: center;
             margin: 0 10px;
-            transition: transform 0.4s ease-out;
+        }
+
+        .checkbox-container {
+            display: inline-block;
+            transition: transform 0.1s ease-out; /* 移動を少しゆっくり */
         }
 
         input[type="checkbox"] {
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             cursor: pointer;
         }
 
@@ -85,28 +91,29 @@
         const timerDisplay = document.getElementById('timer');
         const gameOver = document.getElementById('gameOver');
 
-        const checkboxWidth = 90; // wrapper幅 + margin
-        const total = 100;
+        const checkboxWidth = 50; // wrapper幅 + margin
+        const total = 20;
         let currentIndex = 0;
         let startTime = null;
         let timerId = null;
-        const checkboxes = [];
+        const checkboxContainers = [];
 
-        // 最大オフセット（px） - 進むほど大きくなるが、コンテナの高さ内に収まるよう制限
-        function getMaxOffset(index) {
-            const baseMax = 20 + (index / (total - 1)) * 140; // 20 → 160px
-            const containerHalfHeight = container.clientHeight / 2;
-            const checkboxHalfHeight = 20; // チェックボックス自体の半分の高さ目安
-            // チェックボックスが完全に隠れないように上限を設定
-            return Math.min(baseMax, containerHalfHeight - checkboxHalfHeight - 10);
+        function getMaxOffset() {
+            const containerHeight = container.clientHeight;
+            const checkboxSize = 38; // チェックボックスの高さ
+            // 最大でコンテナの上下にチェックボックスが半分以上隠れない程度
+            return (containerHeight / 2) - (checkboxSize / 2) - 20; // 余裕20px
         }
 
-        // ターゲットチェックボックスを上下ランダムに動かす（範囲制限あり）
         function randomizeVerticalPosition(targetIndex) {
-            const wrapper = checkboxes[targetIndex].parentElement;
-            const maxOffset = getMaxOffset(targetIndex);
-            const randomOffset = (Math.random() * 2 - 1) * maxOffset;
-            wrapper.style.transform = `translateY(${randomOffset}px)`;
+            const containerEl = checkboxContainers[targetIndex];
+            const maxOffset = getMaxOffset();
+            // 難易度調整：序盤は小さく、終盤は最大まで
+            const difficultyFactor = targetIndex / (total - 1);
+            const currentMax = maxOffset * (0.2 + difficultyFactor * 0.8); // 20% → 100%
+            
+            const randomOffset = (Math.random() * 2 - 1) * currentMax;
+            containerEl.style.transform = `translateY(${randomOffset}px)`;
         }
 
         // チェックボックス生成
@@ -114,11 +121,18 @@
             const wrapper = document.createElement('div');
             wrapper.className = 'checkbox-wrapper';
 
+            const movingContainer = document.createElement('div');
+            movingContainer.className = 'checkbox-container';
+
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.dataset.index = i;
 
-            checkboxes.push(cb);
+            movingContainer.appendChild(cb);
+            wrapper.appendChild(movingContainer);
+            inner.appendChild(wrapper);
+
+            checkboxContainers.push(movingContainer);
 
             cb.addEventListener('change', e => {
                 const idx = parseInt(e.target.dataset.index);
@@ -138,16 +152,13 @@
                     e.target.checked = false;
                 }
             });
-
-            wrapper.appendChild(cb);
-            inner.appendChild(wrapper);
         }
 
         container.addEventListener('click', e => {
             if (e.target.tagName !== 'INPUT' || e.target.type !== 'checkbox') {
                 if (currentIndex > 0) {
                     currentIndex--;
-                    const prevCb = checkboxes[currentIndex];
+                    const prevCb = checkboxContainers[currentIndex].querySelector('input');
                     prevCb.checked = false;
                     prevCb.disabled = false;
 
@@ -180,13 +191,12 @@
             }
         }
 
-        // 初期化
         updateHorizontalPosition();
-        randomizeVerticalPosition(0); // 最初のチェックボックスもランダム（最初は小さい）
+        randomizeVerticalPosition(0);
 
         window.addEventListener('resize', () => {
             updateHorizontalPosition();
-            // リサイズ時は現在のターゲット位置を再調整（必要に応じて）
+            // リサイズ時も現在のターゲットを再調整
             if (currentIndex < total) {
                 randomizeVerticalPosition(currentIndex);
             }
