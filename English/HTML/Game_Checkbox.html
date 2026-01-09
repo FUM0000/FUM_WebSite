@@ -37,7 +37,7 @@
             flex-direction: row;
             position: absolute;
             left: 0;
-            transition: left 0.2s ease-in-out; /* ここだけ速く */
+            transition: left 0.2s ease-in-out;
         }
 
         .checkbox-wrapper {
@@ -55,6 +55,14 @@
             cursor: pointer;
         }
 
+        input[type="checkbox"]:disabled + label::after {
+            content: "✔";
+            position: absolute;
+            color: green;
+            font-size: 20px;
+            pointer-events: none;
+        }
+
         .game-over {
             position: absolute;
             top: 50%;
@@ -70,12 +78,13 @@
 <body>
     <div class="timer" id="timer">0.00</div>
 
-    <div class="container">
+    <div class="container" id="container">
         <div class="inner" id="inner"></div>
         <div class="game-over" id="gameOver">クリア！</div>
     </div>
 
     <script>
+        const container = document.getElementById('container');
         const inner = document.getElementById('inner');
         const timerDisplay = document.getElementById('timer');
         const gameOver = document.getElementById('gameOver');
@@ -85,46 +94,77 @@
         let currentIndex = 0;
         let startTime = null;
         let timerId = null;
+        const checkboxes = []; // 後で参照用に保存
 
+        // チェックボックス生成
         for (let i = 0; i < total; i++) {
-            const w = document.createElement('div');
-            w.className = 'checkbox-wrapper';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'checkbox-wrapper';
 
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.dataset.index = i;
 
+            checkboxes.push(cb);
+
             cb.addEventListener('change', e => {
                 const idx = parseInt(e.target.dataset.index);
+
                 if (idx === currentIndex) {
+                    // 正しい順番 → チェックを維持して次へ
                     currentIndex++;
                     updatePosition();
+                    startTimerIfNeeded();
+                    checkIfFinished();
 
-                    if (currentIndex === 1) {
-                        startTime = performance.now();
-                        timerId = setInterval(() => {
-                            const sec = ((performance.now() - startTime) / 1000).toFixed(2);
-                            timerDisplay.textContent = sec;
-                        }, 10);
-                    }
-
-                    if (currentIndex === total) {
-                        clearInterval(timerId);
-                        gameOver.style.display = 'block';
-                    }
+                    // チェック済みはdisabledにして外せなくする
+                    e.target.disabled = true;
                 } else {
+                    // 間違った順番 → チェックを強制解除
                     e.target.checked = false;
                 }
             });
 
-            w.appendChild(cb);
-            inner.appendChild(w);
+            wrapper.appendChild(cb);
+            inner.appendChild(wrapper);
         }
 
+        // コンテナ全体のクリックを監視（チェックボックス以外をクリックしたら戻る）
+        container.addEventListener('click', e => {
+            // クリック対象がinput[type=checkbox]でなければ戻る処理
+            if (e.target.tagName !== 'INPUT' || e.target.type !== 'checkbox') {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    // 戻った位置のチェックボックスを解除
+                    const prevCb = checkboxes[currentIndex];
+                    prevCb.checked = false;
+                    prevCb.disabled = false;
+                    updatePosition();
+                }
+            }
+        });
+
         function updatePosition() {
-            const vw = document.querySelector('.container').clientWidth;
-            const left = (vw / 2) - (currentIndex * checkboxWidth + checkboxWidth / 2);
-            inner.style.left = `${left}px`;
+            const vw = container.clientWidth;
+            const centerOffset = (vw / 2) - (currentIndex * checkboxWidth + checkboxWidth / 2);
+            inner.style.left = `${centerOffset}px`;
+        }
+
+        function startTimerIfNeeded() {
+            if (currentIndex === 1 && !startTime) {
+                startTime = performance.now();
+                timerId = setInterval(() => {
+                    const sec = ((performance.now() - startTime) / 1000).toFixed(2);
+                    timerDisplay.textContent = sec;
+                }, 10);
+            }
+        }
+
+        function checkIfFinished() {
+            if (currentIndex === total) {
+                clearInterval(timerId);
+                gameOver.style.display = 'block';
+            }
         }
 
         updatePosition();
