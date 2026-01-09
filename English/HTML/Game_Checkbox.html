@@ -1,159 +1,134 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>チェックボックスクリックゲーム</title>
-    <link rel="stylesheet" href="style.css">
-
+    <title>チェックボックス100連打</title>
     <style>
         body {
-            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            margin: 0;
+            align-items: center;
+            height: 100vh;
             background-color: #f0f0f0;
+            font-family: sans-serif;
+        }
+
+        .timer {
+            font-size: 48px;
+            margin: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100px;
             overflow: hidden;
-            /* 横スクロールバーが表示されないように */
-        }
-
-        h1 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        #game-container {
-            width: 80%;
-            /* ゲームコンテナの幅を調整 */
-            overflow: hidden;
-            /* チェックボックスコンテナのスクロールを隠す */
-            border: 2px solid #ccc;
-            padding: 10px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #checkbox-container {
             display: flex;
-            flex-wrap: nowrap;
-            /* チェックボックスが折り返さないように */
-            transition: transform 0.3s ease-in-out;
-            /* スムーズな移動 */
+            align-items: center;
+        }
+
+        .inner {
+            display: flex;
+            flex-direction: row;
+            position: absolute;
+            left: 0;
+            transition: left 0.2s ease-in-out; /* ここだけ速く */
         }
 
         .checkbox-wrapper {
-            margin: 0 5px;
-            /* チェックボックス間のスペース */
+            width: 50px;
+            height: 50px;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
+            margin: 0 10px;
         }
 
         input[type="checkbox"] {
-            transform: scale(1.5);
-            /* チェックボックスを少し大きく表示 */
-            margin-bottom: 5px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
         }
 
-        input[type="checkbox"]:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .checkbox-label {
-            font-size: 0.8em;
-            color: #666;
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: green;
+            font-weight: bold;
+            display: none;
         }
     </style>
 </head>
-
 <body>
-    <h1>チェックボックスクリックゲーム</h1>
-    <div id="game-container">
-        <div id="checkbox-container"></div>
+    <div class="timer" id="timer">0.00</div>
+
+    <div class="container">
+        <div class="inner" id="inner"></div>
+        <div class="game-over" id="gameOver">クリア！</div>
     </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const checkboxContainer = document.getElementById('checkbox-container');
-            const numberOfCheckboxes = 100;
-            let currentIndex = 0; // 現在クリックすべきチェックボックスのインデックス
+        const inner = document.getElementById('inner');
+        const timerDisplay = document.getElementById('timer');
+        const gameOver = document.getElementById('gameOver');
 
-            // チェックボックスを作成
-            for (let i = 0; i < numberOfCheckboxes; i++) {
-                const wrapper = document.createElement('div');
-                wrapper.classList.add('checkbox-wrapper');
+        const checkboxWidth = 70;
+        const total = 100;
+        let currentIndex = 0;
+        let startTime = null;
+        let timerId = null;
 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `checkbox-${i}`;
-                checkbox.dataset.index = i;
-                checkbox.disabled = true; // 最初はすべて無効
+        for (let i = 0; i < total; i++) {
+            const w = document.createElement('div');
+            w.className = 'checkbox-wrapper';
 
-                const label = document.createElement('label');
-                label.htmlFor = `checkbox-${i}`;
-                label.textContent = `No.${i + 1}`;
-                label.classList.add('checkbox-label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.dataset.index = i;
 
-                wrapper.appendChild(checkbox);
-                wrapper.appendChild(label);
-                checkboxContainer.appendChild(wrapper);
-            }
+            cb.addEventListener('change', e => {
+                const idx = parseInt(e.target.dataset.index);
+                if (idx === currentIndex) {
+                    currentIndex++;
+                    updatePosition();
 
-            const checkboxes = document.querySelectorAll('#checkbox-container input[type="checkbox"]');
-
-            // 最初のチェックボックスを有効にする
-            checkboxes[currentIndex].disabled = false;
-
-            // チェックボックスコンテナの位置を調整する関数
-            const adjustContainerPosition = () => {
-                const gameContainerWidth = document.getElementById('game-container').offsetWidth;
-                const currentCheckbox = checkboxes[currentIndex];
-                if (currentCheckbox) {
-                    const checkboxWrapperWidth = currentCheckbox.parentElement.offsetWidth + 10; // チェックボックスの幅 + margin
-                    const offset = (gameContainerWidth / 2) - (checkboxWrapperWidth / 2);
-                    checkboxContainer.style.transform = `translateX(-${currentIndex * checkboxWrapperWidth - offset}px)`;
-                }
-            };
-
-            // 初期位置を調整
-            adjustContainerPosition();
-
-            // チェックボックスクリックイベント
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', (event) => {
-                    const clickedIndex = parseInt(event.target.dataset.index);
-
-                    if (clickedIndex === currentIndex && event.target.checked) {
-                        // 正しいチェックボックスがクリックされた場合
-                        currentIndex++;
-
-                        if (currentIndex < numberOfCheckboxes) {
-                            // 次のチェックボックスを有効にする
-                            checkboxes[currentIndex].disabled = false;
-                        } else {
-                            // 全てのチェックボックスがクリックされた
-                            alert('ゲームクリア！');
-                        }
-                        adjustContainerPosition(); // コンテナの位置を調整
-                    } else if (clickedIndex === currentIndex && !event.target.checked) {
-                        // 正しいチェックボックスだが、チェックを外された場合 (このゲームではあまり意味がないが、念のため)
-                        event.target.checked = true; // チェックを元に戻す
-                    } else {
-                        // 間違ったチェックボックスがクリックされた場合、チェックを元に戻す
-                        event.target.checked = false;
-                        alert('順番にクリックしてください！');
+                    if (currentIndex === 1) {
+                        startTime = performance.now();
+                        timerId = setInterval(() => {
+                            const sec = ((performance.now() - startTime) / 1000).toFixed(2);
+                            timerDisplay.textContent = sec;
+                        }, 10);
                     }
-                });
+
+                    if (currentIndex === total) {
+                        clearInterval(timerId);
+                        gameOver.style.display = 'block';
+                    }
+                } else {
+                    e.target.checked = false;
+                }
             });
 
-            // ウィンドウのリサイズ時にも位置を調整
-            window.addEventListener('resize', adjustContainerPosition);
-        });
+            w.appendChild(cb);
+            inner.appendChild(w);
+        }
+
+        function updatePosition() {
+            const vw = document.querySelector('.container').clientWidth;
+            const left = (vw / 2) - (currentIndex * checkboxWidth + checkboxWidth / 2);
+            inner.style.left = `${left}px`;
+        }
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
     </script>
 </body>
-
 </html>
