@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>チェックボックス100連打 - 上下ランダム難易度（完全中央・常に見える）</title>
+    <title>チェックボックス連打</title>
     <style>
         body {
             margin: 0;
@@ -18,6 +18,59 @@
             overflow: hidden;
         }
 
+        .header {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .reset-btn {
+            font-size: 32px;
+            width: 50px;
+            height: 50px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #666;
+        }
+
+        .total-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 14px;
+            border-radius: 30px;
+            color: white;
+        }
+
+        .total-input-group label {
+            font-size: 15px;
+            white-space: nowrap;
+        }
+
+        .total-input {
+            width: 60px;
+            padding: 6px 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            text-align: center;
+        }
+
         .timer {
             font-size: 48px;
             font-weight: bold;
@@ -28,7 +81,7 @@
         .container {
             position: relative;
             width: 100vw;
-            height: 320px;               /* 大幅に広げて上下余裕を確保 */
+            height: 320px;
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -40,12 +93,12 @@
             position: absolute;
             left: 0;
             transition: left 0.1s ease-in-out;
-            height: 100%;                /* コンテナの高さに合わせる */
+            height: 100%;
         }
 
         .checkbox-wrapper {
             width: 30px;
-            height: 100%;                /* コンテナ全体の高さを使う */
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -54,7 +107,7 @@
 
         .checkbox-container {
             display: inline-block;
-            transition: transform 0.1s ease-out; /* 移動を少しゆっくり */
+            transition: transform 0.1s ease-out;
         }
 
         input[type="checkbox"] {
@@ -78,6 +131,14 @@
 </head>
 <body>
 
+    <div class="header">
+        <button class="reset-btn" id="resetBtn">↺</button>
+        <div class="total-input-group">
+            <label>総数:</label>
+            <input type="number" id="totalInput" class="total-input" value="20" min="5" max="200">
+        </div>
+    </div>
+
     <div class="timer" id="timer">0.00</div>
 
     <div class="container" id="container">
@@ -90,9 +151,11 @@
         const inner = document.getElementById('inner');
         const timerDisplay = document.getElementById('timer');
         const gameOver = document.getElementById('gameOver');
+        const resetBtn = document.getElementById('resetBtn');
+        const totalInput = document.getElementById('totalInput');
 
-        const checkboxWidth = 50; // wrapper幅 + margin
-        const total = 20;
+        let checkboxWidth = 50;
+        let total = parseInt(totalInput.value);
         let currentIndex = 0;
         let startTime = null;
         let timerId = null;
@@ -100,58 +163,73 @@
 
         function getMaxOffset() {
             const containerHeight = container.clientHeight;
-            const checkboxSize = 38; // チェックボックスの高さ
-            // 最大でコンテナの上下にチェックボックスが半分以上隠れない程度
-            return (containerHeight / 2) - (checkboxSize / 2) - 20; // 余裕20px
+            const checkboxSize = 38;
+            return (containerHeight / 2) - (checkboxSize / 2) - 20;
         }
 
         function randomizeVerticalPosition(targetIndex) {
             const containerEl = checkboxContainers[targetIndex];
             const maxOffset = getMaxOffset();
-            // 難易度調整：序盤は小さく、終盤は最大まで
             const difficultyFactor = targetIndex / (total - 1);
-            const currentMax = maxOffset * (0.2 + difficultyFactor * 0.8); // 20% → 100%
-            
+            const currentMax = maxOffset * (0.2 + difficultyFactor * 0.8);
             const randomOffset = (Math.random() * 2 - 1) * currentMax;
             containerEl.style.transform = `translateY(${randomOffset}px)`;
         }
 
-        // チェックボックス生成
-        for (let i = 0; i < total; i++) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'checkbox-wrapper';
+        function createCheckboxes() {
+            // 既存のチェックボックスを全削除
+            inner.innerHTML = '';
+            checkboxContainers.length = 0;
 
-            const movingContainer = document.createElement('div');
-            movingContainer.className = 'checkbox-container';
+            for (let i = 0; i < total; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'checkbox-wrapper';
 
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.dataset.index = i;
+                const movingContainer = document.createElement('div');
+                movingContainer.className = 'checkbox-container';
 
-            movingContainer.appendChild(cb);
-            wrapper.appendChild(movingContainer);
-            inner.appendChild(wrapper);
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.dataset.index = i;
 
-            checkboxContainers.push(movingContainer);
+                movingContainer.appendChild(cb);
+                wrapper.appendChild(movingContainer);
+                inner.appendChild(wrapper);
 
-            cb.addEventListener('change', e => {
-                const idx = parseInt(e.target.dataset.index);
+                checkboxContainers.push(movingContainer);
 
-                if (idx === currentIndex) {
-                    currentIndex++;
-                    updateHorizontalPosition();
-                    startTimerIfNeeded();
-                    checkIfFinished();
-
-                    e.target.disabled = true;
-
-                    if (currentIndex < total) {
-                        randomizeVerticalPosition(currentIndex);
+                cb.addEventListener('change', e => {
+                    const idx = parseInt(e.target.dataset.index);
+                    if (idx === currentIndex) {
+                        currentIndex++;
+                        updateHorizontalPosition();
+                        startTimerIfNeeded();
+                        checkIfFinished();
+                        e.target.disabled = true;
+                        if (currentIndex < total) {
+                            randomizeVerticalPosition(currentIndex);
+                        }
+                    } else {
+                        e.target.checked = false;
                     }
-                } else {
-                    e.target.checked = false;
-                }
-            });
+                });
+            }
+
+            // 初期位置と最初のランダム化
+            updateHorizontalPosition();
+            if (total > 0) {
+                randomizeVerticalPosition(0);
+            }
+        }
+
+        function resetGame() {
+            currentIndex = 0;
+            startTime = null;
+            clearInterval(timerId);
+            timerDisplay.textContent = "0.00";
+            gameOver.style.display = 'none';
+            total = parseInt(totalInput.value) || 20;
+            createCheckboxes();
         }
 
         container.addEventListener('click', e => {
@@ -161,7 +239,6 @@
                     const prevCb = checkboxContainers[currentIndex].querySelector('input');
                     prevCb.checked = false;
                     prevCb.disabled = false;
-
                     updateHorizontalPosition();
                     randomizeVerticalPosition(currentIndex);
                 }
@@ -191,16 +268,19 @@
             }
         }
 
-        updateHorizontalPosition();
-        randomizeVerticalPosition(0);
+        // イベントリスナー
+        resetBtn.addEventListener('click', resetGame);
 
-        window.addEventListener('resize', () => {
-            updateHorizontalPosition();
-            // リサイズ時も現在のターゲットを再調整
-            if (currentIndex < total) {
-                randomizeVerticalPosition(currentIndex);
+        totalInput.addEventListener('change', () => {
+            if (currentIndex === 0) { // ゲーム開始前なら即反映
+                resetGame();
             }
         });
+
+        // 初回生成
+        createCheckboxes();
+
+        window.addEventListener('resize', updateHorizontalPosition);
     </script>
 </body>
 </html>
