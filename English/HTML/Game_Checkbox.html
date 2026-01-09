@@ -1,312 +1,159 @@
-<html>
+<!DOCTYPE html>
+<html lang="ja">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="author" content="F U M">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>チェックボックスクリックゲーム</title>
+    <link rel="stylesheet" href="style.css">
 
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', 'G-B89KY0993B');
-  </script>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            overflow: hidden;
+            /* 横スクロールバーが表示されないように */
+        }
 
-  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
-  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
-  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
-    rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
-  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
 
-  <title>Check Box</title>
+        #game-container {
+            width: 80%;
+            /* ゲームコンテナの幅を調整 */
+            overflow: hidden;
+            /* チェックボックスコンテナのスクロールを隠す */
+            border: 2px solid #ccc;
+            padding: 10px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
 
-  <style>
-    .light-circle {
-      transition: background-color 0.1s;
-    }
+        #checkbox-container {
+            display: flex;
+            flex-wrap: nowrap;
+            /* チェックボックスが折り返さないように */
+            transition: transform 0.3s ease-in-out;
+            /* スムーズな移動 */
+        }
 
-    .result-card {
-      max-width: 600px;
-      margin: 20px auto;
-      min-height: 250px;
-    }
+        .checkbox-wrapper {
+            margin: 0 5px;
+            /* チェックボックス間のスペース */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-    .result-list {
-      min-height: 240px;
-    }
+        input[type="checkbox"] {
+            transform: scale(1.5);
+            /* チェックボックスを少し大きく表示 */
+            margin-bottom: 5px;
+        }
 
-    #trendChart .modebar {
-      position: absolute !important;
-      top: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      justify-content: center;
-    }
-  </style>
+        input[type="checkbox"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .checkbox-label {
+            font-size: 0.8em;
+            color: #666;
+        }
+    </style>
 </head>
 
 <body>
+    <h1>チェックボックスクリックゲーム</h1>
+    <div id="game-container">
+        <div id="checkbox-container"></div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkboxContainer = document.getElementById('checkbox-container');
+            const numberOfCheckboxes = 100;
+            let currentIndex = 0; // 現在クリックすべきチェックボックスのインデックス
 
-  <v-app id="App" v-cloak>
-    <template>
-      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Game > Check Box</main-system-bar>
+            // チェックボックスを作成
+            for (let i = 0; i < numberOfCheckboxes; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('checkbox-wrapper');
 
-      <v-main id="Main">
-        <transition name="Fade_Page">
-          <v-container fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `checkbox-${i}`;
+                checkbox.dataset.index = i;
+                checkbox.disabled = true; // 最初はすべて無効
 
-            <v-row justify="center">
-              <v-col xs="12" md="6">
-                <v-card class="mx-auto pa-6" max-width="600">
-                  <v-card-subtitle class="text-center">
-                    {{ gameStatus }}
-                  </v-card-subtitle>
+                const label = document.createElement('label');
+                label.htmlFor = `checkbox-${i}`;
+                label.textContent = `No.${i + 1}`;
+                label.classList.add('checkbox-label');
 
-                  <v-row justify="center">
-                    <v-col cols="12" sm="8" md="6">
-                      <v-hover v-slot="{ hover }">
-                        <v-card height="400" :color="circleColor"
-                          class="light-circle d-flex align-center justify-center" @click="handleClick" :ripple="false">
-                          <v-card-text class="text-h5 white--text text-center">
-                            {{ buttonText }}
-                          </v-card-text>
-                        </v-card>
-                      </v-hover>
-                    </v-col>
-                  </v-row>
-
-                  <v-card-actions class="justify-center mt-4">
-                    <v-btn color="primary" @click="startGame" :disabled="isPlaying">
-                      Start
-                    </v-btn>
-                  </v-card-actions>
-                </v-card>
-              </v-col>
-            </v-row>
-
-            <v-row justify="center">
-              <v-col xs="12" md="6">
-                <v-card class="result-card pa-4">
-                  <v-card-title class="justify-center">Results</v-card-title>
-                  <v-list class="result-list">
-                    <template v-if="results.length > 0">
-                      <v-list-item v-for="(result, index) in results" :key="index">
-                        <v-list-item-content class="text-center justify-center">
-                          Try {{ index + 1 }}: {{ result }}ms
-                        </v-list-item-content>
-                      </v-list-item>
-                      <v-list-item v-for="n in (5 - results.length)" :key="'empty-'+n">
-                        <v-list-item-content class="text-center text--disabled justify-center">
-                          Try {{ results.length + n }}: --ms
-                        </v-list-item-content>
-                      </v-list-item>
-                    </template>
-                    <template v-else>
-                      <v-list-item v-for="n in 5" :key="n">
-                        <v-list-item-content class="text-center text--disabled justify-center">
-                          Try {{ n }}: --ms
-                        </v-list-item-content>
-                      </v-list-item>
-                    </template>
-                  </v-list>
-                  <v-card-text class="text-center text-h6">
-                    Average: {{ results.length >= 5 ? average : '--' }}ms
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-
-            <v-row justify="center">
-              <v-col xs="12" md="6">
-                <v-card class="result-card pa-4">
-                  <v-card-title class="justify-center">Analysis</v-card-title>
-                  <div id="trendChart" style="width:100%; height:300px;"></div>
-                  <v-list>
-                    <v-list-item>
-                      <v-list-item-content class="text-center">
-                        Best Time: {{ bestTime }}ms
-                      </v-list-item-content>
-                    </v-list-item>
-                    <v-list-item>
-                      <v-list-item-content class="text-center">
-                        Overall Average: {{ overallAverage }}ms
-                      </v-list-item-content>
-                    </v-list-item>
-                  </v-list>
-                </v-card>
-              </v-col>
-            </v-row>
-
-          </v-container>
-        </transition>
-      </v-main>
-
-      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
-      <main-footer></main-footer>
-    </template>
-  </v-app>
-
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
-  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
-  <script>
-    new Vue({
-      el: '#App',
-      vuetify: new Vuetify(),
-      mixins: [window.Mixins_Common],
-      data: {
-        isPlaying: false,
-        lightOn: false,
-        startTime: null,
-        results: [],
-        timeoutId: null,
-        gameStatus: "　",
-        historicalAverages: [],
-        historicalBestTimes: [],
-        gamesCount: 0
-      },
-      computed: {
-        circleColor() {
-          return this.lightOn ? 'green' : 'grey darken-3'
-        },
-        buttonText() {
-          if (!this.isPlaying) return "Ready"
-          return this.lightOn ? "Click!" : "Wait"
-        },
-        average() {
-          if (this.results.length === 0) return 0
-          const sum = this.results.reduce((a, b) => a + b, 0)
-          return Math.round(sum / this.results.length)
-        },
-        bestTime() {
-          if (this.historicalBestTimes.length === 0) return 0
-          return Math.min(...this.historicalBestTimes)
-        },
-        overallAverage() {
-          if (this.historicalAverages.length === 0) return 0
-          const sum = this.historicalAverages.reduce((a, b) => a + b, 0)
-          return Math.round(sum / this.historicalAverages.length)
-        }
-      },
-      methods: {
-        startGame() {
-          this.isPlaying = true
-          this.lightOn = false
-          this.results = []
-          this.gameStatus = "5"
-          this.scheduleLight()
-        },
-        scheduleLight() {
-          const randomDelay = 1000 + Math.random() * 4000
-          this.timeoutId = setTimeout(() => {
-            this.lightOn = true
-            this.startTime = Date.now()
-            this.gameStatus = `${5 - this.results.length}`
-          }, randomDelay)
-        },
-        handleClick() {
-          if (!this.isPlaying) return
-
-          if (!this.lightOn) {
-            clearTimeout(this.timeoutId)
-            this.gameStatus = "Too early! Try again."
-            this.isPlaying = false
-            return
-          }
-
-          const reactionTime = Math.round(Date.now() - this.startTime)
-          this.results.push(reactionTime)
-          this.lightOn = false
-
-          if (this.results.length >= 5) {
-            this.isPlaying = false
-            this.gameStatus = "Complete!"
-            this.gamesCount++
-            this.historicalAverages.push(this.average)
-            this.historicalBestTimes.push(Math.min(...this.results))
-            this.updateChart()
-          } else {
-            this.gameStatus = `${5 - this.results.length}`
-            this.scheduleLight()
-          }
-        },
-        updateChart() {
-          const trendChartElement = document.getElementById('trendChart');
-          const chartWidth = trendChartElement.clientWidth;
-
-          const trace1 = {
-            x: Array.from({ length: this.gamesCount }, (_, i) => i + 1),
-            y: this.historicalAverages,
-            name: 'Average Time',
-            type: 'scatter',
-            line: { color: '#1976D2' }
-          }
-
-          const trace2 = {
-            x: Array.from({ length: this.gamesCount }, (_, i) => i + 1),
-            y: this.historicalBestTimes,
-            name: 'Best Time',
-            type: 'scatter',
-            line: { color: '#4CAF50' }
-          }
-
-          const layout = {
-            width: chartWidth,
-            xaxis: {
-              title: 'Game Number',
-              tickmode: 'linear',
-              tick0: 1,
-              dtick: 1,
-              tickformat: 'd',
-            },
-            yaxis: {
-              title: 'Reaction Time (ms)',
-              tickformat: 'd'
-            },
-            legend: {
-              yanchor: 'bottom',
-              y: -1.5,
-              xanchor: 'center',
-              x: 0.5
-            },
-            showlegend: true,
-            dragmode: 'pan',
-            modebar: {
-              orientation: 'h',
-              bgcolor: 'transparent',
-              color: '#1976D2',
-              activecolor: '#4CAF50'
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(label);
+                checkboxContainer.appendChild(wrapper);
             }
-          }
 
-          const config = {
-            displayModeBar: true,
-            modeBarButtons: [
-              ['pan2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d']
-            ],
-            displaylogo: false,
-            responsive: true,
-          }
+            const checkboxes = document.querySelectorAll('#checkbox-container input[type="checkbox"]');
 
-          Plotly.newPlot('trendChart', [trace1, trace2], layout, config)
-        }
-      },
-      mounted() {
-        this.updateChart()
-      }
-    })
-  </script>
+            // 最初のチェックボックスを有効にする
+            checkboxes[currentIndex].disabled = false;
+
+            // チェックボックスコンテナの位置を調整する関数
+            const adjustContainerPosition = () => {
+                const gameContainerWidth = document.getElementById('game-container').offsetWidth;
+                const currentCheckbox = checkboxes[currentIndex];
+                if (currentCheckbox) {
+                    const checkboxWrapperWidth = currentCheckbox.parentElement.offsetWidth + 10; // チェックボックスの幅 + margin
+                    const offset = (gameContainerWidth / 2) - (checkboxWrapperWidth / 2);
+                    checkboxContainer.style.transform = `translateX(-${currentIndex * checkboxWrapperWidth - offset}px)`;
+                }
+            };
+
+            // 初期位置を調整
+            adjustContainerPosition();
+
+            // チェックボックスクリックイベント
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', (event) => {
+                    const clickedIndex = parseInt(event.target.dataset.index);
+
+                    if (clickedIndex === currentIndex && event.target.checked) {
+                        // 正しいチェックボックスがクリックされた場合
+                        currentIndex++;
+
+                        if (currentIndex < numberOfCheckboxes) {
+                            // 次のチェックボックスを有効にする
+                            checkboxes[currentIndex].disabled = false;
+                        } else {
+                            // 全てのチェックボックスがクリックされた
+                            alert('ゲームクリア！');
+                        }
+                        adjustContainerPosition(); // コンテナの位置を調整
+                    } else if (clickedIndex === currentIndex && !event.target.checked) {
+                        // 正しいチェックボックスだが、チェックを外された場合 (このゲームではあまり意味がないが、念のため)
+                        event.target.checked = true; // チェックを元に戻す
+                    } else {
+                        // 間違ったチェックボックスがクリックされた場合、チェックを元に戻す
+                        event.target.checked = false;
+                        alert('順番にクリックしてください！');
+                    }
+                });
+            });
+
+            // ウィンドウのリサイズ時にも位置を調整
+            window.addEventListener('resize', adjustContainerPosition);
+        });
+    </script>
 </body>
 
 </html>
