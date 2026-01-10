@@ -817,11 +817,15 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Game</v-list-item-title>
                 </template>
                 
-                <v-list-item href="./Game_RandomQuestion.html">
+                <v-list-item href="./Game_KittyHopper.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Random Question</v-list-item-title>
-
-                    <v-list-item-icon><v-icon>mdi-comment-question-outline</v-icon></v-list-item-icon>
+                    <v-list-item-title>Kitty Hopper</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-cat</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Game_Checkbox.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Checkman</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-checkbox-outline</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Game_ReflexSpeed.html">
                     <v-list-item-icon />
@@ -831,13 +835,12 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Game_Roulette.html">
                     <v-list-item-icon />
                     <v-list-item-title>Roulette</v-list-item-title>
-                    
-                    <v-list-item-icon><v-icon>mdi-pizza</v-icon></v-list-item-icon>
+                    <v-list-item-icon><v-icon>mdi-cheese</v-icon></v-list-item-icon>
                 </v-list-item>
-                <v-list-item href="./Game_KittyHopper.html">
+                <v-list-item href="./Game_RandomQuestion.html">
                     <v-list-item-icon />
-                    <v-list-item-title>Kitty Hopper</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-cat</v-icon></v-list-item-icon>
+                    <v-list-item-title>Random Question</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-comment-question-outline</v-icon></v-list-item-icon>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->

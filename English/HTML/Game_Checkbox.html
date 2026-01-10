@@ -103,6 +103,14 @@
             width: 100%;
             height: 320px;
         }
+
+        #trendChart .modebar {
+            position: absolute !important;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+        }
     </style>
 </head>
 
@@ -119,31 +127,27 @@
                         <v-row justify="center">
                             <v-col cols="12" md="8" lg="6">
                                 <v-card class="mx-auto pa-6" max-width="800">
-                                    
-                                    <div class="header-controls justify-center">
-                                        <v-btn color="primary" large @click="resetGame">
+
+                                    <div class="header-controls">
+                                        <v-btn color="primary" large fab elevation="2" @click="resetGame">
                                             <v-icon>mdi-replay</v-icon>
                                         </v-btn>
 
                                         <v-text-field v-model.number="total" label="Total" type="number" min="5"
                                             max="200" style="max-width: 100px;" outlined hide-details
-                                            @change="resetGame"></v-text-field>
-
-                                        <div class="text-h5 font-weight-bold ml-6">
-                                            Time: {{ timerDisplay }} s
-                                        </div>
+                                            @change="resetGameAndClearStats"></v-text-field>
                                     </div>
 
                                     <div class="container-wrapper" @click="handleContainerClick">
                                         <div class="inner" ref="inner">
-                                            
+
                                         </div>
                                         <div class="game-over-overlay" :class="{show: gameCleared}">
                                             CLEAR! {{ timerDisplay }}s
                                         </div>
                                     </div>
 
-                                    <v-card class="mt-6 pa-4">
+                                    <v-card justify="center" class="mt-6 pa-4">
                                         <v-card-title class="justify-center">Analysis</v-card-title>
                                         <div id="trendChart"></div>
                                         <v-list dense class="mt-4">
@@ -154,8 +158,8 @@
                                             </v-list-item>
                                             <v-list-item>
                                                 <v-list-item-content class="text-center">
-                                                    Overall Average: {{ overallAverage ? overallAverage.toFixed(2) + 's'
-                                                    : '0s' }}
+                                                    Overall Average: {{ overallAverage ? overallAverage.toFixed(2) +
+                                                    's': '0s' }}
                                                 </v-list-item-content>
                                             </v-list-item>
                                         </v-list>
@@ -296,6 +300,7 @@
 
                 handleContainerClick(e) {
                     if (e.target.tagName !== 'INPUT' || e.target.type !== 'checkbox') {
+                        if (this.gameCleared) return;
                         if (this.currentIndex > 0) {
                             this.currentIndex--;
                             const prev = this.checkboxContainers[this.currentIndex].querySelector('input');
@@ -305,6 +310,13 @@
                             this.randomizeVerticalPosition(this.currentIndex);
                         }
                     }
+                },
+
+                resetGameAndClearStats() {
+                    this.historicalTimes = [];
+                    this.historicalBestTimes = [];
+                    this.updateChart();
+                    this.resetGame();
                 },
 
                 resetGame() {
@@ -339,9 +351,12 @@
                     };
 
                     const config = {
+                        displaylogo: false,
                         displayModeBar: true,
                         responsive: true,
-                        modeBarButtonsToRemove: ['lasso2d', 'select2d']
+                        modeBarButtons: [
+                            ['pan2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d']
+                        ],
                     };
 
                     Plotly.newPlot('trendChart', [trace1], layout, config);
