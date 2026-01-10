@@ -539,6 +539,34 @@
             return new THREE.CanvasTexture(canvas);
         }
         const particleTexture = createCircleTexture();
+        function createStarNoiseTexture(size = 1024, density = 0.002) {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, size, size);
+
+            const imageData = ctx.getImageData(0, 0, size, size);
+            const data = imageData.data;
+
+            for (let i = 0; i < size * size; i++) {
+                if (Math.random() < density) {
+                    const brightness = 200 + Math.random() * 55;
+                    data[i * 4] = brightness;
+                    data[i * 4 + 1] = brightness;
+                    data[i * 4 + 2] = brightness;
+                    data[i * 4 + 3] = 255;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(4, 2);
+            return texture;
+        }
 
         // カメラコントロール
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -571,6 +599,21 @@
             })
         );
         scene.add(voidBackground);
+        const starNoiseTexture = createStarNoiseTexture();
+        const starVoid = new THREE.Mesh(
+            new THREE.SphereGeometry(2990, 32, 32),
+            new THREE.MeshBasicMaterial({
+                map: starNoiseTexture,
+                side: THREE.BackSide,
+                transparent: true,
+                opacity: 0.2,
+                color: 0xffffff,
+                fog: false,
+                depthWrite: false
+            })
+        );
+
+        scene.add(starVoid);
 
         // 星々
         function randomColor() {
