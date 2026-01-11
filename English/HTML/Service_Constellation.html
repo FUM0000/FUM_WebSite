@@ -84,8 +84,12 @@
     </script>
 
     <script type="module">
+
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
         const stars = [
             // ── 極めて明るい（-2等級 ～ -0.5等級クラス） ──
@@ -166,10 +170,10 @@
             { name: 'Scheat', ra: 345.5510, dec: 28.0830, mag: 2.44, color: '#ffccaa' },
             { name: 'Enif', ra: 328.3520, dec: 9.8750, mag: 2.38, color: '#ffccaa' },
 
-            // 必要に応じてさらに追加可能（3等級以下は省略）
         ];
 
-        let scene, camera, renderer, controls;
+        let scene, camera, renderer, controls, composer;
+        let bloomPass;
 
         // 国ごとのデフォルト設定（東京に変更済み）
         const countryDefaults = {
@@ -182,37 +186,12 @@
             custom: { lat: 35.0, lon: 135.0, name: "カスタム", stdMeridian: null, tzOffset: 9 }
         };
 
-        function updateDefaultByCountry() {
-            const country = document.getElementById('country').value;
-            const def = countryDefaults[country];
-
-            document.getElementById('lat').value = def.lat.toFixed(4);
-            document.getElementById('lon').value = def.lon.toFixed(4);
-
-            const meridianText = def.stdMeridian !== null
-                ? `標準子午線: ${Math.abs(def.stdMeridian)}°${def.stdMeridian >= 0 ? 'E' : 'W'} (${def.name})`
-                : `標準子午線: --- (カスタム)`;
-            document.getElementById('standardMeridian').textContent = meridianText;
-
-            setCurrentLocalTime(def.tzOffset);
-        }
-
-        function setCurrentLocalTime(offsetHours) {
-            const now = new Date();
-            const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const localMs = utcMs + (offsetHours * 3600000);
-            const localDate = new Date(localMs);
-
-            document.getElementById('date').value = localDate.toISOString().split('T')[0];
-            document.getElementById('time').value = localDate.toTimeString().slice(0, 5);
-        }
-
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x000814);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-            camera.position.set(0.5, 0, 0.5);  // 微小オフセットでクリッピング回避
+            camera.position.set(0.8, 0.3, 0.8);
             camera.lookAt(0, 0, 0);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -220,15 +199,26 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
+            // ── Post Processing ──
+            composer = new EffectComposer(renderer);
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+
+            bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                1.1,     // strength   ← 以前の1.5→0.7に大幅低下
+                0.4,    // radius
+                0.85      // threshold ← 暗い星はほとんど光らない
+            );
+            composer.addPass(bloomPass);
+
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.rotateSpeed = 0.6;
-            controls.zoomSpeed = 1.2;
-            controls.minDistance = 0.01;
-            controls.maxDistance = 1000;
+            controls.dampingFactor = 0.06;
+            controls.rotateSpeed = 0.55;
+            controls.zoomSpeed = 1.15;
 
-            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('resize', onWindowResize);
             animate();
         }
 
@@ -236,14 +226,16 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
         }
 
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-            renderer.render(scene, camera);
+            composer.render();
         }
 
+        // 以下は元のコードとほぼ同じ（緯度経度・時間計算部分）
         function degToRad(deg) { return deg * Math.PI / 180; }
 
         function JulianDateFromUnixTime(t) {
@@ -268,31 +260,40 @@
             const sinAlt = Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(ha);
             const alt = Math.asin(sinAlt);
 
-            let az;
-            if (Math.cos(alt) === 0) {
-                az = 0;
-            } else {
-                az = Math.atan2(
-                    Math.sin(ha) * Math.cos(dec),
-                    Math.cos(ha) * Math.sin(lat) * Math.cos(dec) - Math.sin(dec) * Math.cos(lat)
-                );
-                az = (az + 2 * Math.PI) % (2 * Math.PI);
-            }
+            let az = Math.atan2(
+                Math.sin(ha) * Math.cos(dec),
+                Math.cos(ha) * Math.sin(lat) * Math.cos(dec) - Math.sin(dec) * Math.cos(lat)
+            );
+            az = (az + 2 * Math.PI) % (2 * Math.PI);
 
             return { az, alt };
         }
 
-        function clearStars() {
-            scene.children.forEach(child => {
-                if (child.type === 'Points') {
-                    scene.remove(child);
-                    child.geometry?.dispose();
-                    child.material?.dispose();
-                }
-            });
+        window.updateDefaultByCountry = function () {
+            const country = document.getElementById('country').value;
+            const def = countryDefaults[country] || countryDefaults.custom;
+            document.getElementById('lat').value = def.lat.toFixed(4);
+            document.getElementById('lon').value = def.lon.toFixed(4);
+            document.getElementById('standardMeridian').textContent =
+                def.stdMeridian !== null
+                    ? `標準子午線: ${Math.abs(def.stdMeridian)}°${def.stdMeridian >= 0 ? 'E' : 'W'}`
+                    : `標準子午線: --- (カスタム)`;
+        };
+
+        // 現在の日時を入力欄にセット（日本時間）
+        function setCurrentDateTime() {
+            const now = new Date();
+            // 日本時間に強制（tzOffset=9）
+            const jpTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (9 * 3600000));
+
+            const dateStr = jpTime.toISOString().split('T')[0];
+            const timeStr = jpTime.toTimeString().slice(0, 5);
+
+            document.getElementById('date').value = dateStr;
+            document.getElementById('time').value = timeStr;
         }
 
-        function simulate() {
+        window.simulate = function () {
             const latDeg = parseFloat(document.getElementById('lat').value) || 35;
             const lonDeg = parseFloat(document.getElementById('lon').value) || 135;
             const dateStr = document.getElementById('date').value;
@@ -306,7 +307,6 @@
             const [year, month, day] = dateStr.split('-').map(Number);
             const [hour, min] = timeStr.split(':').map(Number);
 
-            // 入力は現地時間 → UTCに変換
             const localDate = new Date(Date.UTC(year, month - 1, day, hour, min, 0));
             const utcDate = new Date(localDate.getTime() - tzOffset * 3600000);
             const jd = JulianDateFromUnixTime(utcDate.getTime());
@@ -314,7 +314,14 @@
             const lat = degToRad(latDeg);
             const lon = degToRad(lonDeg);
 
-            clearStars();
+            // 古い星を削除
+            scene.children.forEach(child => {
+                if (child.type === 'Points') {
+                    scene.remove(child);
+                    child.geometry?.dispose();
+                    child.material?.dispose();
+                }
+            });
 
             const positions = [];
             const colors = [];
@@ -326,26 +333,30 @@
 
                 const { az, alt } = raDecToAltAz(raRad, decRad, lat, lon, jd);
 
-                // if (alt <= 0) return;
+                // if (alt <= 0) return; // 地平線以下は非表示
 
                 const theta = Math.PI / 2 - alt;
                 const phi = az;
 
-                const radius = 500;
+                const radius = 600;
                 const x = radius * Math.sin(theta) * Math.cos(phi);
                 const z = radius * Math.sin(theta) * Math.sin(phi);
-                const y = radius * Math.cos(theta);  // 天頂が +y で正しい法線方向
+                const y = radius * Math.cos(theta);
 
-                let size = 6.5 - star.mag * 1.8;
-                size = Math.max(0.6, size);
-                size *= 1.4;
-
-                let color = new THREE.Color(0xffffff);
-                if (star.mag < 1.0) color.setHex(0xffffe5);
-                else if (star.mag < 2.0) color.setHex(0xf0f8ff);
+                // サイズ計算（かなり抑えめに）
+                let size = (3.0 - star.mag) * 3;
+                size = Math.max(6, Math.min(8, size));
 
                 positions.push(x, y, z);
-                colors.push(color.r, color.g, color.b);
+
+                // 明るさ（発光強度）を色に反映: 明るい星は色を明るく（Bloomが効きやすく）
+                const col = new THREE.Color(star.color);
+                const brightness = Math.pow(2.512, -star.mag * 0.4); // ← 0.4〜0.6くらいで好み調整
+
+                col.multiplyScalar(brightness * 4.5);
+
+                colors.push(col.r, col.g, col.b);
+
                 sizes.push(size);
             });
 
@@ -356,25 +367,47 @@
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
             geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
 
-            const material = new THREE.PointsMaterial({
-                size: 1.0,
-                sizeAttenuation: true,
+            // カスタムシェーダーで個別サイズをサポート
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    scale: { value: window.innerHeight / 2 }
+                },
+                vertexShader: `
+                    attribute float size;
+                    varying vec3 vColor;
+
+                    void main() {
+                        vColor = color;
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        gl_PointSize = size * (300.0 / -mvPosition.z); // 遠近法調整
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vColor;
+                    void main() {
+                        vec2 coord = gl_PointCoord - vec2(0.5);
+                        float dist = length(coord);
+                        if (dist > 0.49) discard;           // より厳密な円形
+                        float alpha = 1.0 - smoothstep(0.40, 0.49, dist); // 柔らかい縁
+                        gl_FragColor = vec4(vColor, alpha);
+                    }
+                `,
                 vertexColors: true,
                 transparent: true,
-                opacity: 0.92,
-                blending: THREE.AdditiveBlending
+                blending: THREE.AdditiveBlending,
+                depthTest: false,
+                depthWrite: false
             });
 
-            scene.add(new THREE.Points(geometry, material));
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
         }
 
-        window.simulate = simulate;
-        window.updateDefaultByCountry = updateDefaultByCountry;
-
-        // 初期化
+        // 初期化＆初回表示
         init();
-        // ページ読み込み時に日本＋現在時刻でスタート
         updateDefaultByCountry();
+        setCurrentDateTime();
         simulate();
 
     </script>
