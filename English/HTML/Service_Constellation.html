@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>星空シミュレーション（簡易リアル）</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.65);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            z-index: 100;
+        }
+
+        label {
+            display: block;
+            margin: 6px 0;
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="controls">
+        <label>国:
+            <select id="country" onchange="updateDefaultByCountry()">
+                <option value="JP" selected>日本</option>
+                <option value="US">アメリカ (東部)</option>
+                <option value="GB">イギリス</option>
+                <option value="FR">フランス</option>
+                <option value="DE">ドイツ</option>
+                <option value="AU">オーストラリア (東部)</option>
+                <option value="custom">カスタム</option>
+            </select>
+        </label>
+
+        <label>緯度 (deg): <input type="number" id="lat" value="34.4" step="0.1"></label>
+        <label>経度 (deg): <input type="number" id="lon" value="132.45" step="0.1"></label>
+        <p id="standardMeridian" style="margin:8px 0; font-size:0.9em; color:#aaa;">
+            標準子午線: 135°E (日本標準時)
+        </p>
+
+        <label>日付: <input type="date" id="date"></label>
+        <label>時間 (現地時): <input type="time" id="time" step="1"></label>
+        <button type="button" onclick="simulate()">表示更新</button>
+    </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.171.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.171.0/examples/jsm/"
+      }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const stars = [
+            // 元の星たち（そのまま保持）
+            { name: 'Betelgeuse', ra: 88.7929, dec: 7.4071, mag: 0.42 },   // 変光星なので変動あり
+            { name: 'Rigel', ra: 78.6345, dec: -8.2016, mag: 0.18 },
+            { name: 'Bellatrix', ra: 81.2827, dec: 6.3497, mag: 1.64 },
+            { name: 'Saiph', ra: 86.9392, dec: -9.6696, mag: 2.07 },
+            { name: 'Alnitak', ra: 85.1896, dec: -1.9428, mag: 1.74 },
+            { name: 'Alnilam', ra: 84.0534, dec: -1.2019, mag: 1.69 },
+            { name: 'Mintaka', ra: 83.0017, dec: -0.2991, mag: 2.25 },
+            { name: 'Dubhe', ra: 165.9318, dec: 61.7510, mag: 1.81 },
+            { name: 'Merak', ra: 165.4602, dec: 56.3825, mag: 2.34 },
+            { name: 'Phecda', ra: 178.4572, dec: 53.6950, mag: 2.41 },
+            { name: 'Megrez', ra: 183.8567, dec: 57.0328, mag: 3.32 }, // 少し暗めですがBig Dipper用
+            { name: 'Alioth', ra: 193.5072, dec: 55.9598, mag: 1.76 },
+            { name: 'Mizar', ra: 200.9812, dec: 54.9254, mag: 2.23 },
+            { name: 'Alkaid', ra: 206.8851, dec: 49.3133, mag: 1.85 },
+            { name: 'Regulus', ra: 152.0929, dec: 11.9672, mag: 1.36 },
+            { name: 'Denebola', ra: 177.2649, dec: 14.5721, mag: 2.14 },
+            { name: 'Antares', ra: 247.3519, dec: -26.4320, mag: 1.06 },
+            { name: 'Shaula', ra: 263.4022, dec: -37.1038, mag: 1.62 },
+            { name: 'Deneb', ra: 310.3580, dec: 45.2803, mag: 1.25 },
+
+            // （視等級0等級前後〜2.5等級くらいまで）
+            { name: 'Sirius', ra: 101.2872, dec: -16.7161, mag: -1.46 },   // 全天1位
+            { name: 'Canopus', ra: 95.9879, dec: -52.6957, mag: -0.74 },
+            { name: 'Alpha Centauri', ra: 219.9021, dec: -60.8339, mag: -0.27 }, // Rigil Kentaurus
+            { name: 'Arcturus', ra: 213.9153, dec: 19.1824, mag: -0.05 },
+            { name: 'Vega', ra: 279.2347, dec: 38.7837, mag: 0.03 },
+            { name: 'Capella', ra: 79.1723, dec: 45.9980, mag: 0.08 },
+            { name: 'Procyon', ra: 114.8258, dec: 5.2247, mag: 0.34 },
+            { name: 'Achernar', ra: 24.4285, dec: -57.2368, mag: 0.45 },
+            { name: 'Hadar', ra: 203.8640, dec: -60.3829, mag: 0.61 },   // Beta Centauri
+            { name: 'Altair', ra: 297.6958, dec: 8.8683, mag: 0.77 },
+            { name: 'Acrux', ra: 186.6495, dec: -63.0991, mag: 0.77 },   // Alpha Crucis
+            { name: 'Aldebaran', ra: 68.9802, dec: 16.5093, mag: 0.87 },
+            { name: 'Spica', ra: 201.2983, dec: -11.1614, mag: 0.98 },
+            { name: 'Pollux', ra: 116.3289, dec: 28.0262, mag: 1.14 },
+            { name: 'Fomalhaut', ra: 344.4127, dec: -29.6222, mag: 1.16 },
+            { name: 'Becrux', ra: 186.9725, dec: -59.6888, mag: 1.25 },   // Mimosa / Beta Crucis
+            { name: 'Adhara', ra: 104.6563, dec: -28.9721, mag: 1.50 },
+            { name: 'Castor', ra: 113.6499, dec: 31.8883, mag: 1.58 },
+            { name: 'Gacrux', ra: 187.7913, dec: -57.1132, mag: 1.64 },   // Gamma Crucis
+            { name: 'Elnath', ra: 81.5728, dec: 28.6075, mag: 1.65 },
+            { name: 'Miaplacidus', ra: 97.4073, dec: -69.7175, mag: 1.67 },
+
+            // （主に2等星前後）
+            { name: 'Alnair', ra: 330.8939, dec: -46.9600, mag: 1.73 },
+            { name: 'Mirfak', ra: 51.0810, dec: 49.8612, mag: 1.79 },
+            { name: 'Wezen', ra: 108.0290, dec: -26.3932, mag: 1.83 },
+            { name: 'Kaus Australis', ra: 276.0430, dec: -34.3846, mag: 1.79 },
+            { name: 'Sargas', ra: 263.4022, dec: -37.1038, mag: 1.86 },   // Theta Scorpii
+            { name: 'Avior', ra: 125.6286, dec: -59.5095, mag: 1.86 },
+            { name: 'Menkalinan', ra: 94.6407, dec: 44.9474, mag: 1.90 },
+            { name: 'Atria', ra: 167.4890, dec: -69.0277, mag: 1.91 },
+            { name: 'Alhena', ra: 103.4080, dec: 16.3990, mag: 1.93 },
+            { name: 'Peacock', ra: 306.4110, dec: -56.7350, mag: 1.94 },
+            { name: 'Polaris', ra: 37.9461, dec: 89.2641, mag: 1.97 },   // 北極星
+            { name: 'Alphard', ra: 141.8969, dec: -8.6586, mag: 1.99 },
+            { name: 'Algieba', ra: 153.0987, dec: 19.8409, mag: 2.01 },
+            { name: 'Hamal', ra: 50.9803, dec: 23.4624, mag: 2.01 },
+            { name: 'Diphda', ra: 10.8975, dec: 0.0829, mag: 2.04 },   // Beta Ceti
+            { name: 'Nunki', ra: 275.2180, dec: -26.4320, mag: 2.05 },
+            { name: 'Menkent', ra: 210.2990, dec: -36.3700, mag: 2.06 },
+            { name: 'Alpheratz', ra: 2.1197, dec: 29.0900, mag: 2.07 },
+            { name: 'Kochab', ra: 210.7630, dec: 74.1555, mag: 2.07 },
+            { name: 'Rasalhague', ra: 263.4022, dec: 12.5667, mag: 2.08 },
+            { name: 'Algol', ra: 47.0422, dec: 40.9570, mag: 2.09 },   // 変光星
+            { name: 'Mirach', ra: 29.0617, dec: 35.6206, mag: 2.07 },
+            { name: 'Eltanin', ra: 263.4070, dec: 51.4890, mag: 2.24 },
+            { name: 'Schedar', ra: 9.1580, dec: 56.5370, mag: 2.24 },
+            { name: 'Caph', ra: 359.5140, dec: 59.1500, mag: 2.28 },
+        ];
+
+        console.log(`星の数: ${stars.length}個`);  // 約100個くらいになります
+
+        let scene, camera, renderer, controls;
+
+        // 国ごとのデフォルト値（簡易版・代表的な都市の緯度経度と標準時オフセット）
+        const countryDefaults = {
+            JP: { lat: 34.4, lon: 132.45, name: "広島", stdMeridian: 135, tzOffset: 9 },     // JST
+            US: { lat: 40.71, lon: -74.01, name: "ニューヨーク", stdMeridian: -75, tzOffset: -5 },
+            GB: { lat: 51.51, lon: -0.13, name: "ロンドン", stdMeridian: 0, tzOffset: 0 },
+            FR: { lat: 48.86, lon: 2.35, name: "パリ", stdMeridian: 15, tzOffset: 1 },
+            DE: { lat: 52.52, lon: 13.41, name: "ベルリン", stdMeridian: 15, tzOffset: 1 },
+            AU: { lat: -33.87, lon: 151.21, name: "シドニー", stdMeridian: 150, tzOffset: 10 },
+            custom: { lat: 35.0, lon: 135.0, name: "カスタム", stdMeridian: null, tzOffset: 9 }
+        };
+
+        function updateDefaultByCountry() {
+            const country = document.getElementById('country').value;
+            const def = countryDefaults[country];
+
+            document.getElementById('lat').value = def.lat;
+            document.getElementById('lon').value = def.lon;
+
+            const meridianText = def.stdMeridian !== null
+                ? `標準子午線: ${def.stdMeridian}°${def.stdMeridian >= 0 ? 'E' : 'W'} (${def.name})`
+                : `標準子午線: ---`;
+
+            document.getElementById('standardMeridian').textContent = meridianText;
+
+            // カスタム以外は自動で現在時刻をセット
+            if (country !== 'custom') {
+                setCurrentLocalTime(def.tzOffset);
+            }
+        }
+
+        function setCurrentLocalTime(offsetHours) {
+            const now = new Date();
+            // UTCからのオフセットを適用（ミリ秒）
+            const localTime = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
+
+            const dateStr = localTime.toISOString().split('T')[0];
+            const timeStr = localTime.toISOString().split('T')[1].slice(0, 5); // HH:MM
+
+            document.getElementById('date').value = dateStr;
+            document.getElementById('time').value = timeStr;
+        }
+
+        // ページ読み込み時に日本＋現在時刻でスタート
+        window.addEventListener('load', () => {
+            updateDefaultByCountry();           // 日本をデフォルトに
+            // simulate() は init() 内の最後の simulate() で呼ばれるのでここでは不要
+        });
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000814);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 0, 3);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.rotateSpeed = 0.6;
+            controls.zoomSpeed = 1.2;
+            controls.minDistance = 1.2;
+            controls.maxDistance = 800;
+
+            window.addEventListener('resize', onWindowResize, false);
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function degToRad(deg) { return deg * Math.PI / 180; }
+
+        function JulianDateFromUnixTime(t) {
+            return (t / 86400000) + 2440587.5;
+        }
+
+        function greenwichMeanSiderealTime(jd) {
+            const t = (jd - 2451545.0) / 36525.0;
+            let gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * t * t - t * t * t / 38710000;
+            gmst = (gmst % 360 + 360) % 360;
+            return degToRad(gmst);
+        }
+
+        function raDecToAltAz(ra, dec, lat, lon, jd) {
+            const gmst = greenwichMeanSiderealTime(jd);
+            let lst = gmst + lon;
+            let ha = lst - ra;
+
+            ha = ((ha % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            if (ha > Math.PI) ha -= 2 * Math.PI;
+
+            const sinAlt = Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(ha);
+            const alt = Math.asin(sinAlt);
+
+            let az;
+            if (Math.cos(alt) === 0) {
+                az = 0;
+            } else {
+                az = Math.atan2(
+                    Math.sin(ha) * Math.cos(dec),
+                    Math.cos(ha) * Math.sin(lat) * Math.cos(dec) - Math.sin(dec) * Math.cos(lat)
+                );
+                az = (az + 2 * Math.PI) % (2 * Math.PI);
+            }
+
+            return { az, alt };
+        }
+
+        function clearStars() {
+            scene.children.forEach(child => {
+                if (child.type === 'Points') {
+                    scene.remove(child);
+                    child.geometry?.dispose();
+                    child.material?.dispose();
+                }
+            });
+        }
+
+        function simulate() {
+            const latDeg = parseFloat(document.getElementById('lat').value) || 35;
+            const lonDeg = parseFloat(document.getElementById('lon').value) || 135;
+            const dateStr = document.getElementById('date').value;
+            const timeStr = document.getElementById('time').value;
+
+            if (!dateStr || !timeStr) return;
+
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const [hour, min] = timeStr.split(':').map(Number);
+
+            const offsetHours = countryDefaults[document.getElementById('country').value]?.tzOffset || 9;
+            const localDate = new Date(Date.UTC(year, month - 1, day, hour, min, 0));
+            const utcDate = new Date(localDate.getTime() - offsetHours * 3600000);  // 現地→UTC
+            const jd = JulianDateFromUnixTime(utcDate.getTime());
+
+            const lat = degToRad(latDeg);
+            const lon = degToRad(lonDeg);
+
+            clearStars();
+
+            const positions = [];
+            const colors = [];
+            const sizes = [];
+
+            stars.forEach(star => {
+                const raRad = degToRad(star.ra);
+                const decRad = degToRad(star.dec);
+
+                const { az, alt } = raDecToAltAz(raRad, decRad, lat, lon, jd);
+
+                if (alt <= 0) return;
+
+                const theta = Math.PI / 2 - alt;
+                const phi = az + Math.PI;
+
+                const x = Math.sin(theta) * Math.cos(phi);
+                const y = Math.sin(theta) * Math.sin(phi);
+                const z = Math.cos(theta);
+
+                let size = 6.5 - star.mag * 1.8;
+                size = Math.max(0.6, size);
+                size *= 1.4;
+
+                let color = new THREE.Color(0xffffff);
+                if (star.mag < 1.0) color.setHex(0xffffe5);
+                else if (star.mag < 2.0) color.setHex(0xf0f8ff);
+
+                positions.push(x, y, z);
+                colors.push(color.r, color.g, color.b);
+                sizes.push(size);
+            });
+
+            if (positions.length === 0) return;
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                size: 1.0,
+                sizeAttenuation: false,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.92,
+                blending: THREE.AdditiveBlending
+            });
+
+            scene.add(new THREE.Points(geometry, material));
+        }
+
+        window.simulate = simulate;
+
+        init();
+        simulate();
+
+    </script>
+</body>
+
+</html>
