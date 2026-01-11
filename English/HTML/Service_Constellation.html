@@ -206,8 +206,8 @@
 
             bloomPass = new UnrealBloomPass(
                 new THREE.Vector2(window.innerWidth, window.innerHeight),
-                1.1,     // strength   ← 以前の1.5→0.7に大幅低下
-                0.4,    // radius
+                1,     // strength
+                1,    // radius
                 0.85      // threshold ← 暗い星はほとんど光らない
             );
             composer.addPass(bloomPass);
@@ -293,6 +293,42 @@
             document.getElementById('time').value = timeStr;
         }
 
+        // 16進数をRGBに変換するヘルパー
+        function hexToRgb(hex) {
+            hex = hex.replace('#', '');
+            const bigint = parseInt(hex, 16);
+            return {
+                r: (bigint >> 16) & 255,
+                g: (bigint >> 8) & 255,
+                b: bigint & 255
+            };
+        }
+
+        // ── 暖色（赤・オレンジ・黄系）かどうかを判定 ──
+        function isWarmColor(hex) {
+            const { r, g, b } = hexToRgb(hex);
+
+            // 基本条件：赤成分がかなり強い
+            if (r < 180) return false;  // 赤が弱い → 冷色寄り
+
+            // 暖色判定のメイン条件（以下のいずれかを満たせば暖色）
+            const conditions = [
+                // 強い赤～赤橙（Betelgeuse, Antares系）
+                r > 210 && g < 100 && b < 100,
+
+                // オレンジ～黄橙（Aldebaran, Pollux, Arcturus系）
+                r > 210 && g > 120 && g < 200 && b < 140,
+
+                // 淡いオレンジ・黄味がかった白（Arcturus, Menkalinan系）
+                r > 230 && g > 180 && b < 160 && (r - g) < 70,
+
+                // 赤みが強いが少し青を含む場合も救済（自然な暖色範囲）
+                r > g * 1.35 && r > b * 1.4 && (g + b > 100)
+            ];
+
+            return conditions.some(cond => cond === true);
+        }
+
         window.simulate = function () {
             const latDeg = parseFloat(document.getElementById('lat').value) || 35;
             const lonDeg = parseFloat(document.getElementById('lon').value) || 135;
@@ -345,14 +381,17 @@
 
                 // サイズ計算（かなり抑えめに）
                 let size = (3.0 - star.mag) * 3;
-                size = Math.max(6, Math.min(8, size));
+                size = Math.max(6, Math.min(15, size));
 
                 positions.push(x, y, z);
 
-                // 明るさ（発光強度）を色に反映: 明るい星は色を明るく（Bloomが効きやすく）
+                // 明るさ（発光強度）を色に反映
                 const col = new THREE.Color(star.color);
-                const brightness = Math.pow(2.512, -star.mag * 0.4); // ← 0.4〜0.6くらいで好み調整
 
+                // 色温度的な暖色系（赤・オレンジ）を少し強く光らせる補正
+                const warmBoost = isWarmColor(star.color) ? 6 : 1.0;
+                const baseBrightness = Math.pow(2, -star.mag * 0.4);
+                const brightness = baseBrightness * warmBoost;
                 col.multiplyScalar(brightness * 4.5);
 
                 colors.push(col.r, col.g, col.b);
