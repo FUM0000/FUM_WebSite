@@ -148,6 +148,10 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
                 
+                <v-list-item href="./Service_Constellation.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Constellation</v-list-item-title>
+                </v-list-item>
                 <v-list-item href="./Service_Journey.html">
                     <v-list-item-icon />
                     <v-list-item-title>Journey</v-list-item-title>
