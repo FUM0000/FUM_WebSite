@@ -435,6 +435,7 @@
             }, { passive: false });
             // ピンチ
             let lastTouchDistance = null;
+            let isPinching = false;
             renderer.domElement.addEventListener(
                 'touchstart',
                 (event) => {
@@ -445,7 +446,11 @@
                         const dy =
                             event.touches[0].clientY -
                             event.touches[1].clientY;
+
                         lastTouchDistance = Math.hypot(dx, dy);
+                        isPinching = true;
+
+                        controls.enableRotate = false;
                     }
                 },
                 { passive: false }
@@ -453,21 +458,22 @@
             renderer.domElement.addEventListener(
                 'touchmove',
                 (event) => {
-                    if (event.touches.length !== 2 || lastTouchDistance === null) return;
+                    if (event.touches.length !== 2 || !isPinching) return;
+
                     event.preventDefault();
+
                     const dx =
                         event.touches[0].clientX -
                         event.touches[1].clientX;
                     const dy =
                         event.touches[0].clientY -
                         event.touches[1].clientY;
-                    const currentDistance = Math.hypot(dx, dy);
 
+                    const currentDistance = Math.hypot(dx, dy);
                     const delta = lastTouchDistance - currentDistance;
 
-                    // 微振動カット（超重要）
                     if (Math.abs(delta) > 0.5) {
-                        handleZoom(delta);
+                        handleZoom(delta * 10);
                         lastTouchDistance = currentDistance;
                     }
                 },
@@ -475,8 +481,13 @@
             );
             renderer.domElement.addEventListener(
                 'touchend',
-                () => {
-                    lastTouchDistance = null;
+                (event) => {
+                    if (event.touches.length < 2) {
+                        lastTouchDistance = null;
+                        isPinching = false;
+
+                        controls.enableRotate = true;
+                    }
                 },
                 { passive: false }
             );
