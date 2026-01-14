@@ -433,15 +433,53 @@
                 event.preventDefault();
                 handleZoom(event.deltaY);
             }, { passive: false });
-            // ピンチズーム（OrbitControlsが拾うように）
-            controls.addEventListener('zoom', () => {
-                // OrbitControlsのズームイベントをFOVに変換
-                // ※ enableZoom=false でも zoom イベントは一部発火する場合がある
-                const delta = controls.getZoomDelta ? controls.getZoomDelta() : 0;
-                if (delta !== 0) {
-                    handleZoom(delta * 50);
-                }
-            });
+            // ピンチ
+            let lastTouchDistance = null;
+            renderer.domElement.addEventListener(
+                'touchstart',
+                (event) => {
+                    if (event.touches.length === 2) {
+                        const dx =
+                            event.touches[0].clientX -
+                            event.touches[1].clientX;
+                        const dy =
+                            event.touches[0].clientY -
+                            event.touches[1].clientY;
+                        lastTouchDistance = Math.hypot(dx, dy);
+                    }
+                },
+                { passive: false }
+            );
+            renderer.domElement.addEventListener(
+                'touchmove',
+                (event) => {
+                    if (event.touches.length !== 2 || lastTouchDistance === null) return;
+                    event.preventDefault();
+                    const dx =
+                        event.touches[0].clientX -
+                        event.touches[1].clientX;
+                    const dy =
+                        event.touches[0].clientY -
+                        event.touches[1].clientY;
+                    const currentDistance = Math.hypot(dx, dy);
+
+                    const delta = lastTouchDistance - currentDistance;
+
+                    // 微振動カット（超重要）
+                    if (Math.abs(delta) > 0.5) {
+                        handleZoom(delta);
+                        lastTouchDistance = currentDistance;
+                    }
+                },
+                { passive: false }
+            );
+            renderer.domElement.addEventListener(
+                'touchend',
+                () => {
+                    lastTouchDistance = null;
+                },
+                { passive: false }
+            );
 
             window.addEventListener('resize', onWindowResize);
             animate();
