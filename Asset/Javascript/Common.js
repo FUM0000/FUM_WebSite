@@ -678,6 +678,18 @@ Vue.component('main-navigation', {
                     </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Complexity ▲ --------------------------------------------------------------------------->
+                <!-- ▼ Ingredient ▼ --------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Ingredient</v-list-item-title>
+                    </template>
+
+                    <v-list-item href="./Cooking_Bean.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Bean</v-list-item-title>
+                    </v-list-item>
+                </v-list-group sub-group>
+                <!-- ▲ Ingredient ▲ --------------------------------------------------------------------------->
                 
                 <v-list-item href="./Cooking_Science.html">
                     <v-list-item-icon />
