@@ -172,6 +172,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Company</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-microsoft-office</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Service_CalculateSalary.html">
@@ -183,6 +184,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Creator</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-account-group</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Service_BezierCurve.html">
@@ -210,6 +212,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Game</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-gamepad-left</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Service_RecommendCounterPick.html">
@@ -221,6 +224,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Other</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-toolbox</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Service_Calendar.html">
@@ -720,6 +724,7 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Plant_General.html">
                     <v-list-item-icon />
                     <v-list-item-title>General</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-tree</v-icon></v-list-item-icon>
                 </v-list-item>
 
                 <!-- ▼ Flower ▼ ----------------------------------------------------------------------------------->
