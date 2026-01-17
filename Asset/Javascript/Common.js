@@ -148,6 +148,11 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
                 
+                <v-list-item href="./Service_Roulette.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Roulette</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-cheese</v-icon></v-list-item-icon>
+                </v-list-item>
                 <v-list-item href="./Service_Constellation.html">
                     <v-list-item-icon />
                     <v-list-item-title>Constellation</v-list-item-title>
@@ -847,11 +852,6 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Reflex Speed</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-speedometer-slow</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_Roulette.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Roulette</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-cheese</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Game_RandomQuestion.html">
                     <v-list-item-icon />
