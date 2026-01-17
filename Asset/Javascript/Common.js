@@ -156,14 +156,17 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Service_Constellation.html">
                     <v-list-item-icon />
                     <v-list-item-title>Constellation</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-creation</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Service_Journey.html">
                     <v-list-item-icon />
                     <v-list-item-title>Journey</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-bag-personal</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Service_QRCode.html">
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-qrcode-scan</v-icon></v-list-item-icon>
                 </v-list-item>
 
                 <v-list-group sub-group :value="false">
@@ -667,6 +670,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Difficulty</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-finance</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Cooking_Simple.html">
@@ -687,6 +691,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Ingredient</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-carrot</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Cooking_Bean.html">
@@ -699,6 +704,7 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Cooking_Science.html">
                     <v-list-item-icon />
                     <v-list-item-title>Science</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-flask-outline</v-icon></v-list-item-icon>
                 </v-list-item>
 
             </v-list-group>
@@ -823,10 +829,12 @@ Vue.component('main-navigation', {
                 <v-list-item href="./Music_Other.html">
                     <v-list-item-icon />
                     <v-list-item-title>Other</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-panorama-variant</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Music_BackgroundBGM.html">
                     <v-list-item-icon />
                     <v-list-item-title>Background BGM</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-bird</v-icon></v-list-item-icon>
                 </v-list-item>
             </v-list-group>
             <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
