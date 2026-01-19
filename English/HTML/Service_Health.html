@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>呼吸ガイド</title>
+<style>
+  body {
+    font-family: system-ui, -apple-system, BlinkMacOSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+    color: #1e293b;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .method-select {
+    margin: 1.5rem 0 2rem;
+    text-align: center;
+  }
+
+  select {
+    padding: 10px 20px;
+    font-size: 1.05rem;
+    border: 2px solid #60a5fa;
+    border-radius: 10px;
+    background: white;
+    color: #1e293b;
+    cursor: pointer;
+    width: 100%;
+    max-width: 400px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%233b82f6' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 10px;
+  }
+
+  select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.25);
+  }
+
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.8rem 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+
+  .phase-container {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 1.8rem auto;
+  }
+
+  .circle {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      #60a5fa 0deg,
+      #60a5fa var(--progress, 0%),
+      #e5e7eb var(--progress, 0%),
+      #e5e7eb 360deg
+    );
+    transition: all 0.1s linear;
+  }
+
+  .inner-circle {
+    position: absolute;
+    inset: 14px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.6rem;
+    font-weight: bold;
+    color: #1e40af;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .phase-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 0.8rem;
+    color: #334155;
+    text-align: center;
+    min-height: 1.6em;
+  }
+
+  .info-box {
+    margin: 0.7rem 0;
+    padding: 0.8rem 1.1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+
+  .info-box.breathing {
+    background: #f0f7ff;
+    border-left: 5px solid #3b82f6;
+  }
+
+  .info-box.point {
+    background: #f0fdfa;
+    border-left: 5px solid #14b8a6;
+  }
+
+  .info-box.effect {
+    background: #fff1f2;
+    border-left: 5px solid #f43f5e;
+  }
+
+  .info-box h4 {
+    margin: 0 0 0.4rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .info-box p {
+    margin: 0;
+  }
+
+  .controls {
+    text-align: center;
+    margin-top: 1.8rem;
+  }
+
+  button {
+    padding: 10px 28px;
+    font-size: 1.05rem;
+    margin: 0 8px;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .start-btn {
+    background: #10b981;
+    color: white;
+  }
+
+  .stop-btn {
+    background: #ef4444;
+    color: white;
+  }
+
+  button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="method-select">
+    <select id="methodSelect">
+      <optgroup label="リラックス・不安軽減">
+        <option value="478" selected>リラックス：4-7-8呼吸法</option>
+        <option value="box">リラックス：ボックス呼吸</option>
+        <option value="equal">リラックス：イコール呼吸 (5-5)</option>
+        <option value="resonant">リラックス：レゾナント呼吸 (5.5-5.5)</option>
+        <option value="diaphragm">リラックス：横隔膜呼吸 (6-6)</option>
+      </optgroup>
+      <optgroup label="睡眠導入・深い休息">
+        <option value="478sleep">睡眠導入：4-7-8呼吸法（拡張）</option>
+        <option value="pursed">睡眠導入：パースドリップ呼吸 (2-6)</option>
+        <option value="478mod">睡眠導入：4-4-8呼吸法</option>
+      </optgroup>
+      <optgroup label="集中力・冷静さ">
+        <option value="boxfocus">集中力：ボックス呼吸 (4-4-4-4)</option>
+        <option value="alternate">集中力：交互鼻孔呼吸 (4-4-4-4)</option>
+      </optgroup>
+      <optgroup label="ストレス発散・エネルギー">
+        <option value="lion">ストレス発散：ライオン呼吸 (4-6)</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <div class="card">
+    <div id="currentMethod" style="text-align:center; font-size:1.35rem; font-weight:600; color:#1d4ed8; margin-bottom:0.8rem;">
+      4-7-8呼吸法
+    </div>
+
+    <div class="phase-container">
+      <div class="circle" id="progressCircle"></div>
+      <div class="inner-circle" id="count">準備</div>
+    </div>
+
+    <div class="phase-text" id="phaseText">選択してスタート</div>
+
+    <div class="info-box breathing">
+      <h4>呼吸</h4>
+      <p id="breathing">4秒吸う ➡ 7秒止める ➡ 8秒吐く</p>
+    </div>
+
+    <div class="info-box point">
+      <h4>ポイント</h4>
+      <p id="point">鼻から静かに吸い、口から「フー」と音を立てて長く吐く。舌先を上の前歯の裏に軽くつける。</p>
+    </div>
+
+    <div class="info-box effect">
+      <h4>効果</h4>
+      <p id="effect">副交感神経を活性化し、深いリラックス状態へ。不安や緊張を素早く和らげ、睡眠導入にも最適。</p>
+    </div>
+
+    <div class="controls">
+      <button class="start-btn" id="startBtn">スタート</button>
+      <button class="stop-btn" id="stopBtn" disabled>ストップ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const methods = {
+  "478": {
+    name: "4-7-8呼吸法",
+    phases: [
+      { name: "吸う", duration: 4, color: "#60a5fa" },
+      { name: "止める", duration: 7, color: "#a5b4fc" },
+      { name: "吐く", duration: 8, color: "#34d399" }
+    ],
+    breathing: "4秒吸う ➡ 7秒止める ➡ 8秒吐く",
+    point: "鼻から静かに吸い、口から「フー」と音を立てて長く吐く。舌先を上の前歯の裏に軽くつける。",
+    effect: "副交感神経を活性化し、深いリラックス状態へ。不安や緊張を素早く和らげ、睡眠導入にも最適。"
+  },
+  "box": {
+    name: "ボックス呼吸",
+    phases: [
+      { name: "吸う", duration: 4, color: "#60a5fa" },
+      { name: "止める", duration: 4, color: "#a5b4fc" },
+      { name: "吐く", duration: 4, color: "#34d399" },
+      { name: "止める", duration: 4, color: "#fbbf24" }
+    ],
+    breathing: "4秒吸う ➡ 4秒止める ➡ 4秒吐く ➡ 4秒止める",
+    point: "正方形を描くように均等に。各フェーズで同じ長さを保つ。",
+    effect: "心を落ち着かせ、集中力を高める。ストレス時に冷静さを取り戻す。"
+  },
+  "equal": {
+    name: "イコール呼吸 (5-5)",
+    phases: [
+      { name: "吸う", duration: 5, color: "#60a5fa" },
+      { name: "吐く", duration: 5, color: "#34d399" }
+    ],
+    breathing: "5秒吸う ➡ 5秒吐く",
+    point: "吸う・吐くを完全に均等に。鼻呼吸を意識。",
+    effect: "心身のバランスを整え、穏やかなリラックス状態を維持。"
+  },
+  "resonant": {
+    name: "レゾナント呼吸",
+    phases: [
+      { name: "吸う", duration: 5.5, color: "#60a5fa" },
+      { name: "吐く", duration: 5.5, color: "#34d399" }
+    ],
+    breathing: "5.5秒吸う ➡ 5.5秒吐く",
+    point: "1分間に約5.5回のゆったりペース。お腹を意識した深い呼吸。",
+    effect: "心拍変動を最適化し、ストレス耐性を高め、深いリラックスを促進。"
+  },
+  "diaphragm": {
+    name: "横隔膜呼吸",
+    phases: [
+      { name: "吸う", duration: 6, color: "#60a5fa" },
+      { name: "吐く", duration: 6, color: "#34d399" }
+    ],
+    breathing: "6秒吸う ➡ 6秒吐く",
+    point: "お腹を大きく膨らませて吸い、へこませて吐く。胸ではなくお腹を動かす。",
+    effect: "深い酸素供給で全身をリラックスさせ、緊張を解放。"
+  },
+  "478sleep": {
+    name: "4-7-8呼吸法（睡眠特化）",
+    phases: [
+      { name: "吸う", duration: 4, color: "#60a5fa" },
+      { name: "止める", duration: 7, color: "#a5b4fc" },
+      { name: "吐く", duration: 8, color: "#34d399" }
+    ],
+    breathing: "4秒吸う ➡ 7秒止める ➡ 8秒吐く",
+    point: "寝る直前に横になって行う。目を閉じて暗闇に集中。",
+    effect: "速やかに副交感神経優位へ。入眠を促進し、質の高い睡眠へ。"
+  },
+  "pursed": {
+    name: "パースドリップ呼吸",
+    phases: [
+      { name: "吸う", duration: 2, color: "#60a5fa" },
+      { name: "吐く", duration: 6, color: "#34d399" }
+    ],
+    breathing: "2秒吸う ➡ 6秒吐く",
+    point: "唇をすぼめて細く長く吐く。息を「フー」とコントロール。",
+    effect: "ゆっくりとした吐き出しで心を落ち着かせ、深い休息へ導く。"
+  },
+  "478mod": {
+    name: "4-4-8呼吸法",
+    phases: [
+      { name: "吸う", duration: 4, color: "#60a5fa" },
+      { name: "止める", duration: 4, color: "#a5b4fc" },
+      { name: "吐く", duration: 8, color: "#34d399" }
+    ],
+    breathing: "4秒吸う ➡ 4秒止める ➡ 8秒吐く",
+    point: "吐く時間を長くしてリラックスを強調。",
+    effect: "緊張を素早く解放し、睡眠前の深いリラックスに最適。"
+  },
+  "boxfocus": {
+    name: "ボックス呼吸（集中版）",
+    phases: [
+      { name: "吸う", duration: 4, color: "#60a5fa" },
+      { name: "止める", duration: 4, color: "#a5b4fc" },
+      { name: "吐く", duration: 4, color: "#34d399" },
+      { name: "止める", duration: 4, color: "#fbbf24" }
+    ],
+    breathing: "4秒吸う ➡ 4秒止める ➡ 4秒吐く ➡ 4秒止める",
+    point: "厳密に4秒ずつ。雑念が浮かんだらカウントに集中。",
+    effect: "心をクリアにし、集中力・冷静さを高める。"
+  },
+  "alternate": {
+    name: "交互鼻孔呼吸",
+    phases: [
+      { name: "吸う（左）", duration: 4, color: "#60a5fa" },
+      { name: "吐く（右）", duration: 4, color: "#34d399" },
+      { name: "吸う（右）", duration: 4, color: "#60a5fa" },
+      { name: "吐く（左）", duration: 4, color: "#34d399" }
+    ],
+    breathing: "4秒吸う（左） ➡ 4秒吐く（右） ➡ 4秒吸う（右） ➡ 4秒吐く（左）",
+    point: "親指と薬指で鼻孔を交互に塞ぐ。ゆっくり均等に。",
+    effect: "脳の左右バランスを整え、集中力と冷静さを向上。"
+  },
+  "lion": {
+    name: "ライオン呼吸",
+    phases: [
+      { name: "吸う", duration: 4, color: "#60a5fa" },
+      { name: "吐く（大きく）", duration: 6, color: "#ef4444" }
+    ],
+    breathing: "4秒吸う ➡ 6秒吐く（大きく）",
+    point: "吐くときに顔の筋肉を全力で解放。声を出してOK。",
+    effect: "溜まったストレスや緊張を一気に発散。エネルギーをリフレッシュ。"
+  }
+};
+
+let currentMethod = "478";
+let rafId = null;
+let startTime = null;
+let currentPhaseIndex = 0;
+let remaining = 0;
+let isRunning = false;
+
+const methodSelect = document.getElementById("methodSelect");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const countEl = document.getElementById("count");
+const phaseEl = document.getElementById("phaseText");
+const breathingEl = document.getElementById("breathing");
+const pointEl = document.getElementById("point");
+const effectEl = document.getElementById("effect");
+const circle = document.getElementById("progressCircle");
+const methodTitle = document.getElementById("currentMethod");
+
+function updateDisplay(progressPercent, phaseColor) {
+  circle.style.setProperty("--progress", `${progressPercent}%`);
+  circle.style.background = `conic-gradient(${phaseColor} 0deg, ${phaseColor} var(--progress), #e5e7eb var(--progress), #e5e7eb 360deg)`;
+  countEl.textContent = Math.ceil(remaining);
+}
+
+function updatePhaseInfo() {
+  const method = methods[currentMethod];
+  methodTitle.textContent = method.name;
+  breathingEl.textContent = method.breathing;
+  pointEl.textContent = method.point;
+  effectEl.textContent = method.effect;
+}
+
+function nextPhase() {
+  currentPhaseIndex = (currentPhaseIndex + 1) % methods[currentMethod].phases.length;
+  const phase = methods[currentMethod].phases[currentPhaseIndex];
+  remaining = phase.duration;
+  startTime = performance.now();
+  phaseEl.textContent = phase.name;
+  
+  if ("vibrate" in navigator) {
+    navigator.vibrate?.(60);
+  }
+}
+
+function tick(now) {
+  if (!isRunning) return;
+  
+  if (!startTime) startTime = now;
+  
+  const elapsed = (now - startTime) / 1000;
+  remaining = methods[currentMethod].phases[currentPhaseIndex].duration - elapsed;
+  
+  if (remaining <= 0) {
+    nextPhase();
+    tick(now);
+    return;
+  }
+  
+  const phase = methods[currentMethod].phases[currentPhaseIndex];
+  const progress = (elapsed / phase.duration) * 100;
+  updateDisplay(progress, phase.color);
+  
+  rafId = requestAnimationFrame(tick);
+}
+
+function start() {
+  if (isRunning) return;
+  
+  isRunning = true;
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  
+  currentPhaseIndex = 0;
+  startTime = performance.now();
+  remaining = methods[currentMethod].phases[0].duration;
+  
+  updatePhaseInfo();
+  phaseEl.textContent = methods[currentMethod].phases[0].name;
+  updateDisplay(0, methods[currentMethod].phases[0].color);
+  rafId = requestAnimationFrame(tick);
+}
+
+function stop() {
+  if (!isRunning) return;
+  
+  cancelAnimationFrame(rafId);
+  isRunning = false;
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  
+  countEl.textContent = "停止";
+  phaseEl.textContent = "選択してスタート";
+  updateDisplay(0, "#60a5fa");
+}
+
+function changeMethod() {
+  stop();
+  currentMethod = methodSelect.value;
+  updatePhaseInfo();
+  updateDisplay(0, methods[currentMethod].phases[0].color);
+  countEl.textContent = "準備";
+  phaseEl.textContent = "スタートを押して開始";
+}
+
+// イベント
+methodSelect.addEventListener("change", changeMethod);
+startBtn.addEventListener("click", start);
+stopBtn.addEventListener("click", stop);
+
+// 初回
+updatePhaseInfo();
+updateDisplay(0, methods[currentMethod].phases[0].color);
+</script>
+</body>
+</html>

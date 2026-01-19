@@ -148,15 +148,15 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
                 
-                <v-list-item href="./Service_Roulette.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Roulette</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-cheese</v-icon></v-list-item-icon>
-                </v-list-item>
                 <v-list-item href="./Service_Constellation.html">
                     <v-list-item-icon />
                     <v-list-item-title>Constellation</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-creation</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Service_Health.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Health</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-meditation</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Service_Journey.html">
                     <v-list-item-icon />
@@ -167,6 +167,11 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>QR Code</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-qrcode-scan</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Service_Roulette.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Roulette</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-cheese</v-icon></v-list-item-icon>
                 </v-list-item>
 
                 <v-list-group sub-group :value="false">
