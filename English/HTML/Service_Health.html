@@ -1,468 +1,512 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>呼吸ガイド</title>
-<style>
-  body {
-    font-family: system-ui, -apple-system, BlinkMacOSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
-    color: #1e293b;
-    margin: 0;
-    padding: 20px;
-    min-height: 100vh;
-    line-height: 1.5;
-  }
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  .container {
-    max-width: 720px;
-    margin: 0 auto;
-  }
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
 
-  .method-select {
-    margin: 1.5rem 0 2rem;
-    text-align: center;
-  }
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+JP:100,300,400,500,700,900&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
 
-  select {
-    padding: 10px 20px;
-    font-size: 1.05rem;
-    border: 2px solid #60a5fa;
-    border-radius: 10px;
-    background: white;
-    color: #1e293b;
-    cursor: pointer;
-    width: 100%;
-    max-width: 400px;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%233b82f6' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 10px;
-  }
+  <title>Service > Health</title>
 
-  select:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.25);
-  }
+  <style>
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
 
-  .card {
-    background: white;
-    border-radius: 16px;
-    padding: 1.8rem 1.5rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-  }
+    .method-select {
+      margin: 0 0 2rem;
+      text-align: center;
+    }
 
-  .phase-container {
-    position: relative;
-    width: 220px;
-    height: 220px;
-    margin: 1.8rem auto;
-  }
+    select {
+      padding: 10px 20px;
+      font-size: 1.05rem;
+      border: 2px solid #60a5fa;
+      border-radius: 10px;
+      background: white;
+      color: #1e293b;
+      cursor: pointer;
+      width: 100%;
+      max-width: 400px;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%233b82f6' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 10px;
+    }
 
-  .circle {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: conic-gradient(
-      #60a5fa 0deg,
-      #60a5fa var(--progress, 0%),
-      #e5e7eb var(--progress, 0%),
-      #e5e7eb 360deg
-    );
-    transition: all 0.1s linear;
-  }
+    select:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
 
-  .inner-circle {
-    position: absolute;
-    inset: 14px;
-    background: white;
-    border-radius: 50%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.6rem;
-    font-weight: bold;
-    color: #1e40af;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.06);
-  }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.8rem 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
 
-  .phase-text {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-top: 0.8rem;
-    color: #334155;
-    text-align: center;
-    min-height: 1.6em;
-  }
+    .phase-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 1.8rem auto;
+    }
 
-  .info-box {
-    margin: 0.7rem 0;
-    padding: 0.8rem 1.1rem;
-    border-radius: 8px;
-    font-size: 0.95rem;
-  }
+    .circle {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: conic-gradient(#60a5fa 0deg,
+          #60a5fa var(--progress, 0%),
+          #e5e7eb var(--progress, 0%),
+          #e5e7eb 360deg);
+      transition: all 0.1s linear;
+    }
 
-  .info-box.breathing {
-    background: #f0f7ff;
-    border-left: 5px solid #3b82f6;
-  }
+    .inner-circle {
+      position: absolute;
+      inset: 14px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      font-weight: bold;
+      color: #1e40af;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
 
-  .info-box.point {
-    background: #f0fdfa;
-    border-left: 5px solid #14b8a6;
-  }
+    .phase-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-top: 0.8rem;
+      color: #334155;
+      text-align: center;
+      min-height: 1.6em;
+    }
 
-  .info-box.effect {
-    background: #fff1f2;
-    border-left: 5px solid #f43f5e;
-  }
+    .info-box {
+      margin: 0.7rem 0;
+      padding: 0.8rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
 
-  .info-box h4 {
-    margin: 0 0 0.4rem 0;
-    font-size: 1rem;
-    font-weight: 600;
-  }
+    .info-box.breathing {
+      background: #f0f7ff;
+      border-left: 5px solid #3b82f6;
+    }
 
-  .info-box p {
-    margin: 0;
-  }
+    .info-box.point {
+      background: #f0fdfa;
+      border-left: 5px solid #14b8a6;
+    }
 
-  .controls {
-    text-align: center;
-    margin-top: 1.8rem;
-  }
+    .info-box.effect {
+      background: #fff1f2;
+      border-left: 5px solid #f43f5e;
+    }
 
-  button {
-    padding: 10px 28px;
-    font-size: 1.05rem;
-    margin: 0 8px;
-    border: none;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+    .info-box h4 {
+      margin: 0 0 0.4rem 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
 
-  .start-btn {
-    background: #10b981;
-    color: white;
-  }
+    .info-box p {
+      margin: 0;
+    }
 
-  .stop-btn {
-    background: #ef4444;
-    color: white;
-  }
+    .controls {
+      text-align: center;
+      margin-top: 1.8rem;
+    }
 
-  button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-  }
+    button {
+      padding: 10px 28px;
+      font-size: 1.05rem;
+      margin: 0 8px;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
 
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-</style>
+    .start-btn {
+      background: #10b981;
+      color: white;
+    }
+
+    .stop-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="container">
+  <v-app id="App">
+    <template>
 
-  <div class="method-select">
-    <select id="methodSelect">
-      <optgroup label="リラックス・不安軽減">
-        <option value="478" selected>4-7-8呼吸法</option>
-        <option value="box">ボックス呼吸</option>
-        <option value="equal">イコール呼吸</option>
-        <option value="resonant">レゾナント呼吸</option>
-        <option value="diaphragm">横隔膜呼吸</option>
-      </optgroup>
-      <optgroup label="睡眠導入・深い休息">
-        <option value="478sleep">4-7-8呼吸法</option>
-        <option value="pursed">パースドリップ呼吸</option>
-        <option value="478mod">4-4-8呼吸法</option>
-      </optgroup>
-      <optgroup label="集中力・冷静さ">
-        <option value="boxfocus">ボックス呼吸</option>
-        <option value="alternate">交互鼻孔呼吸</option>
-      </optgroup>
-      <optgroup label="ストレス発散・エネルギー">
-        <option value="lion">ライオン呼吸</option>
-      </optgroup>
-    </select>
-  </div>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">About Me > Brain Archive</main-system-bar>
 
-  <div class="card">
-    <div id="currentMethod" style="text-align:center; font-size:1.35rem; font-weight:600; color:#1d4ed8; margin-bottom:0.8rem;">
-      4-7-8呼吸法
-    </div>
 
-    <div class="phase-container">
-      <div class="circle" id="progressCircle"></div>
-      <div class="inner-circle" id="count">準備</div>
-    </div>
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid class="pa-5">
+            
+            <div class="container">
+              <div class="method-select">
+                <select id="methodSelect">
+                  <optgroup label="Relaxation • Anxiety Relief">
+                    <option value="478" selected>4-7-8 Breathing</option>
+                    <option value="box">Box Breathing</option>
+                    <option value="equal">Equal Breathing</option>
+                    <option value="resonant">Resonant Breathing</option>
+                    <option value="diaphragm">Diaphragmatic Breathing</option>
+                  </optgroup>
+                  <optgroup label="Sleep Induction • Deep Rest">
+                    <option value="478sleep">4-7-8 Breathing (Sleep Version)</option>
+                    <option value="pursed">Pursed-lip Breathing</option>
+                    <option value="478mod">4-4-8 Breathing</option>
+                  </optgroup>
+                  <optgroup label="Focus • Calm Clarity">
+                    <option value="boxfocus">Box Breathing (Focus Version)</option>
+                    <option value="alternate">Alternate Nostril Breathing</option>
+                  </optgroup>
+                  <optgroup label="Stress Release • Energy Refresh">
+                    <option value="lion">Lion's Breath</option>
+                  </optgroup>
+                </select>
+              </div>
 
-    <div class="phase-text" id="phaseText">スタートを押して開始</div>
+              <div class="card">
+                <div id="currentMethod"
+                  style="text-align:center; font-size:1.35rem; font-weight:600; color:#1d4ed8; margin-bottom:0.8rem;">
+                  4-7-8 Breathing
+                </div>
 
-    <div class="info-box breathing">
-      <h4>呼吸</h4>
-      <p id="breathing">吸う(4秒) ➡ 止める(7秒) ➡ 吐く(8秒)</p>
-    </div>
+                <div class="phase-container">
+                  <div class="circle" id="progressCircle"></div>
+                  <div class="inner-circle" id="count">Ready</div>
+                </div>
 
-    <div class="info-box point">
-      <h4>ポイント</h4>
-      <p id="point">鼻から静かに吸い、口から「フー」と音を立てて長く吐く。舌先を上の前歯の裏に軽くつける。</p>
-    </div>
+                <div class="phase-text" id="phaseText">Press START to begin</div>
 
-    <div class="info-box effect">
-      <h4>効果</h4>
-      <p id="effect">副交感神経を活性化し、深いリラックス状態へ。不安や緊張を素早く和らげ、睡眠導入にも最適。</p>
-    </div>
+                <div class="controls">
+                  <button class="start-btn" id="startBtn">START</button>
+                  <button class="stop-btn" id="stopBtn" disabled>STOP</button>
+                </div>
 
-    <div class="controls">
-      <button class="start-btn" id="startBtn">スタート</button>
-      <button class="stop-btn" id="stopBtn" disabled>ストップ</button>
-    </div>
-  </div>
-</div>
+                <div class="info-box breathing">
+                  <h4>Pattern</h4>
+                  <p id="breathing">Inhale (4s) → Hold (7s) → Exhale (8s)</p>
+                </div>
 
-<script>
-const methods = {
-  "478": {
-    name: "4-7-8呼吸法",
-    phases: [
-      { name: "吸う", duration: 4, color: "#60a5fa" },
-      { name: "止める", duration: 7, color: "#a5b4fc" },
-      { name: "吐く", duration: 8, color: "#34d399" }
-    ],
-    breathing: "吸う(4秒) ➡ 止める(7秒) ➡ 吐く(8秒)",
-    point: "鼻から静かに吸い、口から「フー」と音を立てて長く吐く。舌先を上の前歯の裏に軽くつける。",
-    effect: "副交感神経を活性化し、深いリラックス状態へ。不安や緊張を素早く和らげ、睡眠導入にも最適。"
-  },
-  "box": {
-    name: "ボックス呼吸",
-    phases: [
-      { name: "吸う", duration: 4, color: "#60a5fa" },
-      { name: "止める", duration: 4, color: "#a5b4fc" },
-      { name: "吐く", duration: 4, color: "#34d399" },
-      { name: "止める", duration: 4, color: "#fbbf24" }
-    ],
-    breathing: "吸う(4秒) ➡ 止める(4秒) ➡ 吐く(4秒) ➡ 止める(4秒)",
-    point: "正方形を描くように均等に。各フェーズで同じ長さを保つ。",
-    effect: "心を落ち着かせ、集中力を高める。ストレス時に冷静さを取り戻す。"
-  },
-  "equal": {
-    name: "イコール呼吸",
-    phases: [
-      { name: "吸う", duration: 5, color: "#60a5fa" },
-      { name: "吐く", duration: 5, color: "#34d399" }
-    ],
-    breathing: "吸う(5秒) ➡ 吐く(5秒)",
-    point: "吸う・吐くを完全に均等に。鼻呼吸を意識。",
-    effect: "心身のバランスを整え、穏やかなリラックス状態を維持。"
-  },
-  "resonant": {
-    name: "レゾナント呼吸",
-    phases: [
-      { name: "吸う", duration: 5.5, color: "#60a5fa" },
-      { name: "吐く", duration: 5.5, color: "#34d399" }
-    ],
-    breathing: "吸う(5.5秒) ➡ 吐く(5.5秒)",
-    point: "1分間に約5.5回のゆったりペース。お腹を意識した深い呼吸。",
-    effect: "心拍変動を最適化し、ストレス耐性を高め、深いリラックスを促進。"
-  },
-  "diaphragm": {
-    name: "横隔膜呼吸",
-    phases: [
-      { name: "吸う", duration: 6, color: "#60a5fa" },
-      { name: "吐く", duration: 6, color: "#34d399" }
-    ],
-    breathing: "吸う(6秒) ➡ 吐く(6秒)",
-    point: "お腹を大きく膨らませて吸い、へこませて吐く。胸ではなくお腹を動かす。",
-    effect: "深い酸素供給で全身をリラックスさせ、緊張を解放。"
-  },
-  "478sleep": {
-    name: "4-7-8呼吸法（拡張）",
-    phases: [
-      { name: "吸う", duration: 4, color: "#60a5fa" },
-      { name: "止める", duration: 7, color: "#a5b4fc" },
-      { name: "吐く", duration: 8, color: "#34d399" }
-    ],
-    breathing: "吸う(4秒) ➡ 止める(7秒) ➡ 吐く(8秒)",
-    point: "寝る直前に横になって行う。目を閉じて暗闇に集中。",
-    effect: "速やかに副交感神経優位へ。入眠を促進し、質の高い睡眠へ。"
-  },
-  "pursed": {
-    name: "パースドリップ呼吸",
-    phases: [
-      { name: "吸う", duration: 2, color: "#60a5fa" },
-      { name: "吐く", duration: 6, color: "#34d399" }
-    ],
-    breathing: "吸う(2秒) ➡ 吐く(6秒)",
-    point: "唇をすぼめて細く長く吐く。息を「フー」とコントロール。",
-    effect: "ゆっくりとした吐き出しで心を落ち着かせ、深い休息へ導く。"
-  },
-  "478mod": {
-    name: "4-4-8呼吸法",
-    phases: [
-      { name: "吸う", duration: 4, color: "#60a5fa" },
-      { name: "止める", duration: 4, color: "#a5b4fc" },
-      { name: "吐く", duration: 8, color: "#34d399" }
-    ],
-    breathing: "吸う(4秒) ➡ 止める(4秒) ➡ 吐く(8秒)",
-    point: "吐く時間を長くしてリラックスを強調。",
-    effect: "緊張を素早く解放し、睡眠前の深いリラックスに最適。"
-  },
-  "boxfocus": {
-    name: "ボックス呼吸（集中版）",
-    phases: [
-      { name: "吸う", duration: 4, color: "#60a5fa" },
-      { name: "止める", duration: 4, color: "#a5b4fc" },
-      { name: "吐く", duration: 4, color: "#34d399" },
-      { name: "止める", duration: 4, color: "#fbbf24" }
-    ],
-    breathing: "吸う(4秒) ➡ 止める(4秒) ➡ 吐く(4秒) ➡ 止める(4秒)",
-    point: "厳密に4秒ずつ。雑念が浮かんだらカウントに集中。",
-    effect: "心をクリアにし、集中力・冷静さを高める。"
-  },
-  "alternate": {
-    name: "交互鼻孔呼吸",
-    phases: [
-      { name: "吸う（左）", duration: 4, color: "#60a5fa" },
-      { name: "吐く（右）", duration: 4, color: "#34d399" },
-      { name: "吸う（右）", duration: 4, color: "#60a5fa" },
-      { name: "吐く（左）", duration: 4, color: "#34d399" }
-    ],
-    breathing: "吸う(4秒・左) ➡ 吐く(4秒・右) ➡ 吸う(4秒・右) ➡ 吐く(4秒・左)",
-    point: "親指と薬指で鼻孔を交互に塞ぐ。ゆっくり均等に。",
-    effect: "脳の左右バランスを整え、集中力と冷静さを向上。"
-  },
-  "lion": {
-    name: "ライオン呼吸",
-    phases: [
-      { name: "吸う", duration: 4, color: "#60a5fa" },
-      { name: "吐く（大きく）", duration: 6, color: "#ef4444" }
-    ],
-    breathing: "吸う(4秒) ➡ 吐く(6秒・大きく)",
-    point: "吐くときに顔の筋肉を全力で解放。声を出してOK。",
-    effect: "溜まったストレスや緊張を一気に発散。エネルギーをリフレッシュ。"
-  }
-};
+                <div class="info-box point">
+                  <h4>Key Points</h4>
+                  <p id="point">Inhale quietly through the nose, exhale slowly through the mouth making a "whoosh"
+                    sound. Lightly
+                    touch the tip of your tongue to the back of your upper front teeth.</p>
+                </div>
 
-let currentMethod = "478";
-let rafId = null;
-let startTime = null;
-let currentPhaseIndex = 0;
-let remaining = 0;
-let isRunning = false;
+                <div class="info-box effect">
+                  <h4>Benefits</h4>
+                  <p id="effect">Activates the parasympathetic nervous system, quickly leading to deep relaxation.
+                    Excellent for
+                    reducing anxiety, tension, and helping with falling asleep.</p>
+                </div>
+              </div>
+          </v-container>
+        </transition>
+      </v-main>
 
-const methodSelect = document.getElementById("methodSelect");
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
-const countEl = document.getElementById("count");
-const phaseEl = document.getElementById("phaseText");
-const breathingEl = document.getElementById("breathing");
-const pointEl = document.getElementById("point");
-const effectEl = document.getElementById("effect");
-const circle = document.getElementById("progressCircle");
-const methodTitle = document.getElementById("currentMethod");
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer-simple></main-footer-simple>
 
-function updateDisplay(progressPercent, phaseColor) {
-  circle.style.setProperty("--progress", `${progressPercent}%`);
-  circle.style.background = `conic-gradient(${phaseColor} 0deg, ${phaseColor} var(--progress), #e5e7eb var(--progress), #e5e7eb 360deg)`;
-  countEl.textContent = Math.ceil(remaining);
-}
+    </template>
+  </v-app>
 
-function updatePhaseInfo() {
-  const method = methods[currentMethod];
-  methodTitle.textContent = method.name;
-  breathingEl.textContent = method.breathing;
-  pointEl.textContent = method.point;
-  effectEl.textContent = method.effect;
-}
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
 
-function nextPhase() {
-  currentPhaseIndex = (currentPhaseIndex + 1) % methods[currentMethod].phases.length;
-  const phase = methods[currentMethod].phases[currentPhaseIndex];
-  remaining = phase.duration;
-  startTime = performance.now();
-  phaseEl.textContent = phase.name;
-  
-  if ("vibrate" in navigator) {
-    navigator.vibrate?.(60);
-  }
-}
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+    })
 
-function tick(now) {
-  if (!isRunning) return;
-  
-  if (!startTime) startTime = now;
-  
-  const elapsed = (now - startTime) / 1000;
-  remaining = methods[currentMethod].phases[currentPhaseIndex].duration - elapsed;
-  
-  if (remaining <= 0) {
-    nextPhase();
-    tick(now);
-    return;
-  }
-  
-  const phase = methods[currentMethod].phases[currentPhaseIndex];
-  const progress = (elapsed / phase.duration) * 100;
-  updateDisplay(progress, phase.color);
-  
-  rafId = requestAnimationFrame(tick);
-}
+    const methods = {
+      "478": {
+        name: "4-7-8 Breathing",
+        phases: [
+          { name: "Inhale", duration: 4, color: "#60a5fa" },
+          { name: "Hold", duration: 7, color: "#a5b4fc" },
+          { name: "Exhale", duration: 8, color: "#34d399" }
+        ],
+        breathing: "Inhale (4s) → Hold (7s) → Exhale (8s)",
+        point: "Inhale quietly through the nose, exhale slowly through the mouth with a 'whoosh' sound. Lightly touch the tip of your tongue to the back of your upper front teeth.",
+        effect: "Activates the parasympathetic nervous system, quickly inducing deep relaxation. Great for anxiety relief and sleep onset."
+      },
+      "box": {
+        name: "Box Breathing",
+        phases: [
+          { name: "Inhale", duration: 4, color: "#60a5fa" },
+          { name: "Hold", duration: 4, color: "#a5b4fc" },
+          { name: "Exhale", duration: 4, color: "#34d399" },
+          { name: "Hold", duration: 4, color: "#fbbf24" }
+        ],
+        breathing: "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
+        point: "Keep each phase exactly the same length, like drawing a perfect square.",
+        effect: "Calms the mind and boosts focus. Excellent for regaining composure under stress."
+      },
+      "equal": {
+        name: "Equal Breathing",
+        phases: [
+          { name: "Inhale", duration: 5, color: "#60a5fa" },
+          { name: "Exhale", duration: 5, color: "#34d399" }
+        ],
+        breathing: "Inhale (5s) → Exhale (5s)",
+        point: "Make inhale and exhale perfectly equal. Focus on nasal breathing.",
+        effect: "Balances mind and body, maintains a calm and relaxed state."
+      },
+      "resonant": {
+        name: "Resonant Breathing",
+        phases: [
+          { name: "Inhale", duration: 5.5, color: "#60a5fa" },
+          { name: "Exhale", duration: 5.5, color: "#34d399" }
+        ],
+        breathing: "Inhale (5.5s) → Exhale (5.5s)",
+        point: "Aim for about 5.5 breaths per minute. Focus on deep belly breathing.",
+        effect: "Optimizes heart rate variability, improves stress resilience, and promotes deep relaxation."
+      },
+      "diaphragm": {
+        name: "Diaphragmatic Breathing",
+        phases: [
+          { name: "Inhale", duration: 6, color: "#60a5fa" },
+          { name: "Exhale", duration: 6, color: "#34d399" }
+        ],
+        breathing: "Inhale (6s) → Exhale (6s)",
+        point: "Expand your belly significantly on inhale, draw it in on exhale. Move the belly, not the chest.",
+        effect: "Provides deep oxygenation, relaxes the whole body, and releases tension."
+      },
+      "478sleep": {
+        name: "4-7-8 Breathing (Sleep Version)",
+        phases: [
+          { name: "Inhale", duration: 4, color: "#60a5fa" },
+          { name: "Hold", duration: 7, color: "#a5b4fc" },
+          { name: "Exhale", duration: 8, color: "#34d399" }
+        ],
+        breathing: "Inhale (4s) → Hold (7s) → Exhale (8s)",
+        point: "Practice lying down right before sleep. Close your eyes and focus on the darkness.",
+        effect: "Quickly shifts to parasympathetic dominance. Promotes fast sleep onset and high-quality sleep."
+      },
+      "pursed": {
+        name: "Pursed-lip Breathing",
+        phases: [
+          { name: "Inhale", duration: 2, color: "#60a5fa" },
+          { name: "Exhale", duration: 6, color: "#34d399" }
+        ],
+        breathing: "Inhale (2s) → Exhale (6s)",
+        point: "Pucker your lips and exhale slowly and controlled with a 'whoosh' sound.",
+        effect: "Slow exhalation calms the mind and guides you into deep rest."
+      },
+      "478mod": {
+        name: "4-4-8 Breathing",
+        phases: [
+          { name: "Inhale", duration: 4, color: "#60a5fa" },
+          { name: "Hold", duration: 4, color: "#a5b4fc" },
+          { name: "Exhale", duration: 8, color: "#34d399" }
+        ],
+        breathing: "Inhale (4s) → Hold (4s) → Exhale (8s)",
+        point: "Emphasizes relaxation with a longer exhale phase.",
+        effect: "Quickly releases tension. Ideal for deep relaxation before sleep."
+      },
+      "boxfocus": {
+        name: "Box Breathing (Focus Version)",
+        phases: [
+          { name: "Inhale", duration: 4, color: "#60a5fa" },
+          { name: "Hold", duration: 4, color: "#a5b4fc" },
+          { name: "Exhale", duration: 4, color: "#34d399" },
+          { name: "Hold", duration: 4, color: "#fbbf24" }
+        ],
+        breathing: "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
+        point: "Strictly 4 seconds each. When stray thoughts arise, refocus on the count.",
+        effect: "Clears the mind and significantly enhances focus and calm clarity."
+      },
+      "alternate": {
+        name: "Alternate Nostril Breathing",
+        phases: [
+          { name: "Inhale (left)", duration: 4, color: "#60a5fa" },
+          { name: "Exhale (right)", duration: 4, color: "#34d399" },
+          { name: "Inhale (right)", duration: 4, color: "#60a5fa" },
+          { name: "Exhale (left)", duration: 4, color: "#34d399" }
+        ],
+        breathing: "Inhale left (4s) → Exhale right (4s) → Inhale right (4s) → Exhale left (4s)",
+        point: "Use thumb and ring finger to alternately close nostrils. Keep breathing slow and even.",
+        effect: "Balances left and right brain hemispheres, improves focus and emotional calm."
+      },
+      "lion": {
+        name: "Lion's Breath",
+        phases: [
+          { name: "Inhale", duration: 4, color: "#60a5fa" },
+          { name: "Exhale (powerful)", duration: 6, color: "#ef4444" }
+        ],
+        breathing: "Inhale (4s) → Powerful Exhale (6s)",
+        point: "On exhale, fully release all facial muscles. It's okay (and encouraged) to make a loud 'ha' sound.",
+        effect: "Instantly releases built-up stress and tension. Refreshes energy with a powerful reset."
+      }
+    };
 
-function start() {
-  if (isRunning) return;
-  
-  isRunning = true;
-  startBtn.disabled = true;
-  stopBtn.disabled = false;
-  
-  currentPhaseIndex = 0;
-  startTime = performance.now();
-  remaining = methods[currentMethod].phases[0].duration;
-  
-  updatePhaseInfo();
-  phaseEl.textContent = methods[currentMethod].phases[0].name;
-  updateDisplay(0, methods[currentMethod].phases[0].color);
-  rafId = requestAnimationFrame(tick);
-}
+    let currentMethod = "478";
+    let rafId = null;
+    let startTime = null;
+    let currentPhaseIndex = 0;
+    let remaining = 0;
+    let isRunning = false;
 
-function stop() {
-  if (!isRunning) return;
-  
-  cancelAnimationFrame(rafId);
-  isRunning = false;
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
-  
-  countEl.textContent = "停止";
-  phaseEl.textContent = "スタートを押して開始";
-  updateDisplay(0, "#60a5fa");
-}
+    const methodSelect = document.getElementById("methodSelect");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const countEl = document.getElementById("count");
+    const phaseEl = document.getElementById("phaseText");
+    const breathingEl = document.getElementById("breathing");
+    const pointEl = document.getElementById("point");
+    const effectEl = document.getElementById("effect");
+    const circle = document.getElementById("progressCircle");
+    const methodTitle = document.getElementById("currentMethod");
 
-function changeMethod() {
-  stop();
-  currentMethod = methodSelect.value;
-  updatePhaseInfo();
-  updateDisplay(0, methods[currentMethod].phases[0].color);
-  countEl.textContent = "準備";
-  phaseEl.textContent = "スタートを押して開始";
-}
+    function updateDisplay(progressPercent, phaseColor) {
+      circle.style.setProperty("--progress", `${progressPercent}%`);
+      circle.style.background = `conic-gradient(${phaseColor} 0deg, ${phaseColor} var(--progress), #e5e7eb var(--progress), #e5e7eb 360deg)`;
+      countEl.textContent = Math.ceil(remaining);
+    }
 
-methodSelect.addEventListener("change", changeMethod);
-startBtn.addEventListener("click", start);
-stopBtn.addEventListener("click", stop);
+    function updatePhaseInfo() {
+      const method = methods[currentMethod];
+      methodTitle.textContent = method.name;
+      breathingEl.textContent = method.breathing;
+      pointEl.textContent = method.point;
+      effectEl.textContent = method.effect;
+    }
 
-updatePhaseInfo();
-updateDisplay(0, methods[currentMethod].phases[0].color);
-</script>
+    function nextPhase() {
+      currentPhaseIndex = (currentPhaseIndex + 1) % methods[currentMethod].phases.length;
+      const phase = methods[currentMethod].phases[currentPhaseIndex];
+      remaining = phase.duration;
+      startTime = performance.now();
+      phaseEl.textContent = phase.name;
+
+      if ("vibrate" in navigator) {
+        navigator.vibrate?.(60);
+      }
+    }
+
+    function tick(now) {
+      if (!isRunning) return;
+
+      if (!startTime) startTime = now;
+
+      const elapsed = (now - startTime) / 1000;
+      remaining = methods[currentMethod].phases[currentPhaseIndex].duration - elapsed;
+
+      if (remaining <= 0) {
+        nextPhase();
+        tick(now);
+        return;
+      }
+
+      const phase = methods[currentMethod].phases[currentPhaseIndex];
+      const progress = (elapsed / phase.duration) * 100;
+      updateDisplay(progress, phase.color);
+
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function start() {
+      if (isRunning) return;
+
+      isRunning = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      currentPhaseIndex = 0;
+      startTime = performance.now();
+      remaining = methods[currentMethod].phases[0].duration;
+
+      updatePhaseInfo();
+      phaseEl.textContent = methods[currentMethod].phases[0].name;
+      updateDisplay(0, methods[currentMethod].phases[0].color);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function stop() {
+      if (!isRunning) return;
+
+      cancelAnimationFrame(rafId);
+      isRunning = false;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+
+      countEl.textContent = "Stopped";
+      phaseEl.textContent = "Press START to begin";
+      updateDisplay(0, "#60a5fa");
+    }
+
+    function changeMethod() {
+      stop();
+      currentMethod = methodSelect.value;
+      updatePhaseInfo();
+      updateDisplay(0, methods[currentMethod].phases[0].color);
+      countEl.textContent = "Ready";
+      phaseEl.textContent = "Press START to begin";
+    }
+
+    methodSelect.addEventListener("change", changeMethod);
+    startBtn.addEventListener("click", start);
+    stopBtn.addEventListener("click", stop);
+
+    updatePhaseInfo();
+    updateDisplay(0, methods[currentMethod].phases[0].color);
+  </script>
 </body>
+
 </html>
