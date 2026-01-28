@@ -1,12 +1,22 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Warp Shot</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Courier New', Courier, monospace; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            color: white;
+        }
+
+        canvas {
+            display: block;
+        }
+
         #ui-container {
             position: absolute;
             top: 0;
@@ -19,18 +29,22 @@
             font-size: 24px;
             text-shadow: 2px 2px 4px #000;
         }
-        #player-stats, #enemy-stats {
+
+        #player-stats,
+        #enemy-stats {
             background: rgba(0, 0, 0, 0.5);
             padding: 10px 15px;
             border-radius: 5px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
         #game-over-screen {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            display: none; /* Initially hidden */
+            display: none;
+            /* Initially hidden */
             flex-direction: column;
             align-items: center;
             text-align: center;
@@ -39,10 +53,12 @@
             border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
+
         #game-over-screen h1 {
             font-size: 48px;
             margin-bottom: 20px;
         }
+
         #restart-button {
             padding: 12px 25px;
             font-size: 20px;
@@ -53,12 +69,14 @@
             border-radius: 5px;
             transition: background-color 0.3s, border-color 0.3s;
         }
+
         #restart-button:hover {
             background-color: #555;
             border-color: #777;
         }
     </style>
 </head>
+
 <body>
     <div id="ui-container">
         <div id="player-stats">
@@ -165,9 +183,9 @@
                     bgmGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
                     bgmOscillator.connect(bgmGain).connect(audioCtx.destination);
                     bgmOscillator.start();
-                    
+
                     const playNextNote = () => {
-                        if(!bgmOscillator) return;
+                        if (!bgmOscillator) return;
                         const note = bgmNotes[bgmNoteIndex % bgmNotes.length];
                         bgmOscillator.frequency.setValueAtTime(note, audioCtx.currentTime);
                         bgmNoteIndex++;
@@ -177,9 +195,9 @@
                     break;
             }
         }
-        
+
         function stopBGM() {
-            if(bgmOscillator) {
+            if (bgmOscillator) {
                 bgmGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
                 bgmOscillator.stop(audioCtx.currentTime + 0.5);
                 bgmOscillator = null;
@@ -199,7 +217,7 @@
 
                 this.speed = BULLET_SPEED;
                 this.size = 0.8;
-                
+
                 const geometry = new THREE.SphereGeometry(this.size, 8, 8);
                 const material = new THREE.MeshBasicMaterial({ color: this.owner.mesh.material.color });
                 this.mesh = new THREE.Mesh(geometry, material);
@@ -208,7 +226,7 @@
                 const direction = new THREE.Vector3(0, 1, 0);
                 direction.applyQuaternion(this.owner.mesh.quaternion);
                 this.velocity = direction.multiplyScalar(this.speed);
-                
+
                 this.scene.add(this.mesh);
             }
 
@@ -256,7 +274,7 @@
             constructor(scene, game, position, color) {
                 this.scene = scene;
                 this.game = game;
-                
+
                 this.size = 2.5;
                 this.sizeSq = this.size * this.size;
                 const geometry = new THREE.ConeGeometry(this.size, this.size * 2, 4);
@@ -271,7 +289,7 @@
                 this.ammo = this.maxAmmo;
                 this.baseSpeed = 0.5;
                 this.speed = this.baseSpeed;
-                
+
                 this.distanceForAmmo = 0;
                 this.distanceToGetAmmo = 60; // ★修正: 弾補充の必要距離を増加
 
@@ -284,7 +302,7 @@
                 if (this.ammo > 0 && now - this.lastFireTime > this.fireCooldown) {
                     this.ammo--;
                     this.lastFireTime = now;
-                    
+
                     const bullet = new Bullet(this.scene, this, this.game);
                     this.game.bullets.push(bullet);
                     playSound('shoot');
@@ -292,9 +310,9 @@
                 }
                 return false;
             }
-            
+
             updateSpeed() {
-                const speedModifier = 1.0 - (this.ammo / this.maxAmmo) * 0.7; 
+                const speedModifier = 1.0 - (this.ammo / this.maxAmmo) * 0.7;
                 this.speed = this.baseSpeed * speedModifier;
             }
 
@@ -315,18 +333,18 @@
             isDead() {
                 return this.hp <= 0;
             }
-            
+
             destroy() {
                 this.mesh.scale.set(1.5, 1.5, 1.5);
                 let scale = 1.5;
                 const shrink = () => {
                     scale -= 0.05;
-                    if(scale > 0){
-                       this.mesh.scale.set(scale, scale, scale);
-                       this.mesh.rotation.z += 0.5;
-                       requestAnimationFrame(shrink);
+                    if (scale > 0) {
+                        this.mesh.scale.set(scale, scale, scale);
+                        this.mesh.rotation.z += 0.5;
+                        requestAnimationFrame(shrink);
                     } else {
-                       this.scene.remove(this.mesh);
+                        this.scene.remove(this.mesh);
                     }
                 };
                 shrink();
@@ -355,7 +373,7 @@
                 if (this.keys['KeyD']) this._moveVector.x += 1;
 
                 this.updateSpeed();
-                
+
                 if (this._moveVector.lengthSq() > 0) {
                     this._moveVector.normalize().multiplyScalar(this.speed);
                     this.mesh.position.add(this._moveVector);
@@ -385,7 +403,7 @@
                 super(scene, game, position, color);
                 // ★AIの思考パターンを追加
                 this.aiState = 'STANDARD_ATTACK'; // 'AVOIDING', 'RETREATING', 'FARMING_AMMO', 'AGGRESSIVE_ATTACK', 'STANDARD_ATTACK'
-                
+
                 this.thinkInterval = 30; // 30フレーム(約0.5秒)ごとに思考する
                 this.thinkCooldown = this.thinkInterval;
 
@@ -400,7 +418,7 @@
                 // 向きを常に左（プレイヤー側）に固定
                 this.mesh.rotation.z = Math.PI / 2;
             }
-            
+
             // ★AIの思考ルーチン
             think(player) {
                 const myPos = this.mesh.position;
@@ -421,21 +439,21 @@
                 } else if (isPlayerHpLow && hasEnoughAmmo) {
                     newState = 'AGGRESSIVE_ATTACK';
                 }
-                
+
                 // 状態が切り替わったか、目標に到達したら新しい目標を設定
                 if (this.aiState !== newState || myPos.distanceTo(this._targetPosition) < this.size) {
                     this.aiState = newState;
-                    
+
                     const worldHeight = this.game.frustumSize / 2 - this.size;
                     const worldWidthHalf = (this.game.frustumSize * this.game.aspect / 2 - this.size) / 2;
-                    
-                    switch(this.aiState) {
+
+                    switch (this.aiState) {
                         case 'RETREATING':
                             // プレイヤーから最も遠いコートの隅を目指す
                             this._targetPosition.x = this.size;
                             this._targetPosition.y = (playerPos.y > 0 ? -1 : 1) * worldHeight;
                             break;
-                            
+
                         case 'FARMING_AMMO':
                             // コート内をランダムに大きく動き回り、弾を補充
                             this._targetPosition.x = this.size + Math.random() * worldWidthHalf;
@@ -470,26 +488,26 @@
 
                 // --- 行動決定 ---
                 this._moveDirection.set(0, 0, 0);
-                
+
                 // 1. 緊急回避 (最優先)
                 const threateningBullet = this.findThreateningBullet(bullets);
                 if (threateningBullet) {
                     this.getEvasionVector(threateningBullet, this._moveDirection);
                 } else {
-                // 2. 戦略に基づく行動
+                    // 2. 戦略に基づく行動
                     this._moveDirection.subVectors(this._targetPosition, this.mesh.position);
-                    
+
                     // 攻撃判定
                     const isAttacking = this.aiState === 'AGGRESSIVE_ATTACK' || this.aiState === 'STANDARD_ATTACK';
                     if (isAttacking) {
                         // プレイヤーが射線上にいるか（Y座標がある程度近いか）
                         const yDiff = Math.abs(this.mesh.position.y - player.mesh.position.y);
                         if (yDiff < 15) { // 射線が合っていると判断する許容範囲
-                             this.shoot();
+                            this.shoot();
                         }
                     }
                 }
-                
+
                 // --- 実行 ---
                 if (this._moveDirection.lengthSq() > 0) {
                     this._moveDirection.normalize().multiplyScalar(this.speed * 0.8);
@@ -499,7 +517,7 @@
 
                 this.keepInBounds();
             }
-            
+
             findThreateningBullet(bullets) {
                 let closestThreat = null;
                 let minDistanceSq = 30 * 30; // 脅威とみなす範囲を少し広げる
@@ -518,7 +536,7 @@
                 }
                 return closestThreat;
             }
-            
+
             getEvasionVector(bullet, outVector) {
                 outVector.set(-bullet.velocity.y, bullet.velocity.x, 0); // 弾の進行方向と垂直
                 this._pos1.copy(this.mesh.position).add(outVector);
@@ -561,7 +579,7 @@
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.setClearColor(0x1a1a1a);
                 document.body.appendChild(this.renderer.domElement);
-                
+
                 this.player = null;
                 this.enemy = null;
                 this.bullets = [];
@@ -572,7 +590,7 @@
                 this.gameOverScreen = document.getElementById('game-over-screen');
                 this.gameOverText = document.getElementById('game-over-text');
                 this.restartButton = document.getElementById('restart-button');
-                
+
                 this.isGameOver = false;
 
                 window.addEventListener('resize', this.onWindowResize.bind(this), false);
@@ -591,7 +609,7 @@
 
                 this.player = new Player(this.scene, this, new THREE.Vector3(-30, 0, 0), 0x00aaff);
                 this.enemy = new Enemy(this.scene, this, new THREE.Vector3(30, 0, 0), 0xff4444);
-                
+
                 const grid = new THREE.GridHelper(this.frustumSize * 2, 20, 0x333333, 0x222222);
                 grid.rotation.x = Math.PI / 2;
                 this.scene.add(grid);
@@ -622,11 +640,11 @@
 
                 this.renderer.render(this.scene, this.camera);
             }
-            
+
             checkCollisions() {
                 for (let i = this.bullets.length - 1; i >= 0; i--) {
                     const bullet = this.bullets[i];
-                    
+
                     if (bullet.owner !== this.player && bullet.mesh.position.distanceToSquared(this.player.mesh.position) < this.player.sizeSq) {
                         this.player.takeDamage(1);
                         playSound('hit');
@@ -649,10 +667,10 @@
             endGame(message) {
                 if (this.isGameOver) return;
                 this.isGameOver = true;
-                
+
                 playSound('destroy');
                 stopBGM();
-                
+
                 this.gameOverText.textContent = message;
                 this.gameOverScreen.style.display = 'flex';
 
@@ -688,4 +706,5 @@
 
     </script>
 </body>
+
 </html>
