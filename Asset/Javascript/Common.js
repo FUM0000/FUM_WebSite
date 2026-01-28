@@ -925,6 +925,14 @@ Vue.component('main-navigation', {
             </v-list-group>
             <!-- ▲ My Notes ▲ --------------------------------------------------------------------------------->
 
+            
+            <!-- ▼ Setting ▼ ---------------------------------------------------------------------------------->
+            <v-list-item href="../../English/HTML/Setting.html">
+                <v-list-item-icon><v-icon>mdi-cog</v-icon></v-list-item-icon>
+                <v-list-item-title>Setting</v-list-item-title>
+            </v-list-item>
+            <!-- ▲ Setting ▲ ---------------------------------------------------------------------------------->
+
 
         </v-list>
         <!-- ▲ Navigation ▲ ------------------------------------------------------------------------------->
