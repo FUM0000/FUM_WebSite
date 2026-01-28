@@ -1181,7 +1181,8 @@ window.Mixins_Common = {
     },
     methods: {
         ChangeDrawer(_value) { this.Drawer = _value; },
-        
+
+        // メインカラーを適用
         applyMainColor() {
             try {
                 const saved = localStorage.getItem('appSettings');
@@ -1189,6 +1190,11 @@ window.Mixins_Common = {
                     const settings = JSON.parse(saved);
                     if (settings.mainColor) {
                         document.documentElement.style.backgroundColor = settings.mainColor;
+                        // Vuetifyのv-applicationにも適用
+                        const vApp = document.querySelector('.v-application');
+                        if (vApp) {
+                            vApp.style.setProperty('background-color', settings.mainColor, 'important');
+                        }
                     }
                 }
             } catch (error) {
@@ -1197,8 +1203,9 @@ window.Mixins_Common = {
         },
     },
     mounted() {
+        // メインカラーを適用
         this.applyMainColor();
-        
+
         $(window).ready(() => {
             this.Ready_Page = true;
         });
