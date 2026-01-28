@@ -1189,10 +1189,15 @@ window.Mixins_Common = {
                 if (saved) {
                     const settings = JSON.parse(saved);
                     if (settings.mainColor) {
+                        // htmlの背景色を設定
                         document.documentElement.style.backgroundColor = settings.mainColor;
-                        // Vuetifyのv-applicationにも適用
+
+                        // Vuetifyのv-applicationにも適用（ただしcanvasを使用するページは除く）
                         const vApp = document.querySelector('.v-application');
-                        if (vApp) {
+                        const canvas = document.querySelector('#ElectronShell');
+
+                        // canvasがある場合（index.html）は背景を透明に保つ
+                        if (vApp && !canvas) {
                             vApp.style.setProperty('background-color', settings.mainColor, 'important');
                         }
                     }
