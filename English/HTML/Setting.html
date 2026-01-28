@@ -160,7 +160,7 @@
                                                             type="color" 
                                                             v-model="settings.mainColor"
                                                             @input="onSettingChange"
-                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;"
+                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.38); cursor: pointer; padding: 0;"
                                                         >
                                                     </v-col>
                                                 </v-row>
@@ -187,7 +187,7 @@
                                                             type="color" 
                                                             v-model="settings.subColor"
                                                             @input="onSettingChange"
-                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;"
+                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.38); cursor: pointer; padding: 0;"
                                                         >
                                                     </v-col>
                                                 </v-row>
@@ -218,11 +218,11 @@
                                     </v-expand-transition>
                                 </v-card>
 
-                                <!-- 保存・キャンセルボタン -->
+                                <!-- 保存・キャンセル・デフォルトボタン -->
                                 <v-card class="mb-4">
                                     <v-card-text class="pa-4">
                                         <v-row>
-                                            <v-col cols="12" sm="6">
+                                            <v-col cols="12" sm="4">
                                                 <v-btn
                                                     block
                                                     large
@@ -234,7 +234,7 @@
                                                     Save
                                                 </v-btn>
                                             </v-col>
-                                            <v-col cols="12" sm="6">
+                                            <v-col cols="12" sm="4">
                                                 <v-btn
                                                     block
                                                     large
@@ -244,6 +244,18 @@
                                                 >
                                                     <v-icon left>mdi-cancel</v-icon>
                                                     Cancel
+                                                </v-btn>
+                                            </v-col>
+                                            <v-col cols="12" sm="4">
+                                                <v-btn
+                                                    block
+                                                    large
+                                                    outlined
+                                                    color="warning"
+                                                    @click="resetToDefault"
+                                                >
+                                                    <v-icon left>mdi-restore</v-icon>
+                                                    Reset
                                                 </v-btn>
                                             </v-col>
                                         </v-row>
@@ -259,6 +271,25 @@
                                             <v-icon left small>mdi-check-circle</v-icon>
                                             Settings saved successfully!
                                         </v-alert>
+
+                                        <!-- リセット確認ダイアログ -->
+                                        <v-dialog v-model="resetDialog" max-width="400">
+                                            <v-card>
+                                                <v-card-title class="text-h6">
+                                                    <v-icon left color="warning">mdi-alert</v-icon>
+                                                    Reset to Default
+                                                </v-card-title>
+                                                <v-card-text>
+                                                    Are you sure you want to reset all settings to default values?
+                                                    This action cannot be undone.
+                                                </v-card-text>
+                                                <v-card-actions>
+                                                    <v-spacer></v-spacer>
+                                                    <v-btn text @click="resetDialog = false">Cancel</v-btn>
+                                                    <v-btn color="warning" text @click="confirmReset">Reset</v-btn>
+                                                </v-card-actions>
+                                            </v-card>
+                                        </v-dialog>
                                     </v-card-text>
                                 </v-card>
 
@@ -322,6 +353,7 @@
                 autoSave: false,
                 saveSuccess: false,
                 hasChanges: false,
+                resetDialog: false,
                 
                 // BGMオプション
                 bgmOptions: [
@@ -333,13 +365,22 @@
                     { text: 'Ambient', value: 'ambient' },
                 ],
 
+                // デフォルト設定
+                defaultSettings: {
+                    bgm: 'none',
+                    bgmVolume: 50,
+                    seVolume: 50,
+                    mainColor: '#CFD8DC',
+                    subColor: 'rgba(0, 0, 0, 0.6)',
+                },
+
                 // 設定データ
                 settings: {
                     bgm: 'none',
                     bgmVolume: 50,
-                    seVolume: 70,
-                    mainColor: '#FFFFFF',
-                    subColor: '#000000',
+                    seVolume: 50,
+                    mainColor: '#CFD8DC',
+                    subColor: 'rgba(0, 0, 0, 0.6)',
                 },
 
                 // 保存済みの設定(比較用)
@@ -434,6 +475,25 @@
                         this.hasChanges = false;
                         console.log('Changes cancelled, settings restored:', this.settings);
                     }
+                },
+
+                // デフォルトへ戻す（確認ダイアログを表示）
+                resetToDefault() {
+                    this.resetDialog = true;
+                },
+
+                // デフォルトへ戻すことを確定
+                confirmReset() {
+                    this.resetDialog = false;
+                    this.settings = JSON.parse(JSON.stringify(this.defaultSettings));
+                    this.hasChanges = true;
+                    
+                    // 自動保存がオンの場合は即座に保存
+                    if (this.autoSave) {
+                        this.saveSettings();
+                    }
+                    
+                    console.log('Settings reset to default:', this.settings);
                 },
 
                 // 設定を読み込み
