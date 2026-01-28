@@ -1181,8 +1181,24 @@ window.Mixins_Common = {
     },
     methods: {
         ChangeDrawer(_value) { this.Drawer = _value; },
+        
+        applyMainColor() {
+            try {
+                const saved = localStorage.getItem('appSettings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    if (settings.mainColor) {
+                        document.documentElement.style.backgroundColor = settings.mainColor;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to apply main color:', error);
+            }
+        },
     },
     mounted() {
+        this.applyMainColor();
+        
         $(window).ready(() => {
             this.Ready_Page = true;
         });

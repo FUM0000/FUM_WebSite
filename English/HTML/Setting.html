@@ -16,7 +16,9 @@
 
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+        rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
@@ -44,7 +46,25 @@
                         <v-row justify="center">
 
                             <v-col cols="12" md="8">
-                                
+
+                                <!-- 自動保存設定 -->
+                                <v-card class="mb-4">
+                                    <v-card-text class="pa-4">
+                                        <v-row align="center">
+                                            <v-col>
+                                                <div class="d-flex align-center">
+                                                    <v-icon left>mdi-content-save-auto</v-icon>
+                                                    <span class="font-weight-bold">Auto Save</span>
+                                                </div>
+                                            </v-col>
+                                            <v-col cols="auto">
+                                                <v-switch v-model="autoSave" @change="toggleAutoSave" inset dense
+                                                    hide-details></v-switch>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+                                </v-card>
+
                                 <v-card class="mb-4 sound-card">
                                     <v-card-title class="text-h5 font-weight-bold py-3 d-flex justify-space-between">
                                         <span><v-icon left>mdi-music</v-icon>Sound</span>
@@ -54,20 +74,15 @@
                                     </v-card-title>
                                     <v-expand-transition>
                                         <v-card-text v-show="soundExpanded" class="pa-5">
-                                            
+
                                             <!-- BGM選択 -->
                                             <div class="mb-6">
                                                 <v-subheader class="px-0 font-weight-bold">
                                                     <v-icon left>mdi-playlist-music</v-icon>
                                                     BGM Selection
                                                 </v-subheader>
-                                                <v-select
-                                                    v-model="settings.bgm"
-                                                    :items="bgmOptions"
-                                                    outlined
-                                                    dense
-                                                    @change="saveSettings"
-                                                ></v-select>
+                                                <v-select v-model="settings.bgm" :items="bgmOptions" outlined dense
+                                                    @change="onSettingChange"></v-select>
                                             </div>
 
                                             <!-- BGMボリューム -->
@@ -76,14 +91,8 @@
                                                     <v-icon left>mdi-volume-high</v-icon>
                                                     BGM Volume: {{ settings.bgmVolume }}%
                                                 </v-subheader>
-                                                <v-slider
-                                                    v-model="settings.bgmVolume"
-                                                    min="0"
-                                                    max="100"
-                                                    step="5"
-                                                    thumb-label
-                                                    @change="saveSettings"
-                                                ></v-slider>
+                                                <v-slider v-model="settings.bgmVolume" min="0" max="100" step="5"
+                                                    thumb-label @input="onSettingChange"></v-slider>
                                             </div>
 
                                             <!-- SEボリューム -->
@@ -92,25 +101,9 @@
                                                     <v-icon left>mdi-volume-medium</v-icon>
                                                     SE Volume: {{ settings.seVolume }}%
                                                 </v-subheader>
-                                                <v-slider
-                                                    v-model="settings.seVolume"
-                                                    min="0"
-                                                    max="100"
-                                                    step="5"
-                                                    thumb-label
-                                                    @change="saveSettings"
-                                                ></v-slider>
+                                                <v-slider v-model="settings.seVolume" min="0" max="100" step="5"
+                                                    thumb-label @input="onSettingChange"></v-slider>
                                             </div>
-
-                                            <v-alert
-                                                type="success"
-                                                dense
-                                                text
-                                                class="mt-4"
-                                                v-if="soundSaved"
-                                            >
-                                                Settings saved successfully!
-                                            </v-alert>
 
                                         </v-card-text>
                                     </v-expand-transition>
@@ -125,7 +118,7 @@
                                     </v-card-title>
                                     <v-expand-transition>
                                         <v-card-text v-show="colorExpanded" class="pa-5">
-                                            
+
                                             <!-- メインカラー(背景色) -->
                                             <div class="mb-6">
                                                 <v-subheader class="px-0 font-weight-bold">
@@ -134,21 +127,14 @@
                                                 </v-subheader>
                                                 <v-row align="center">
                                                     <v-col cols="12" sm="8">
-                                                        <v-text-field
-                                                            v-model="settings.mainColor"
-                                                            outlined
-                                                            dense
+                                                        <v-text-field v-model="settings.mainColor" outlined dense
                                                             placeholder="#FFFFFF"
-                                                            @change="saveSettings"
-                                                        ></v-text-field>
+                                                            @input="onSettingChange"></v-text-field>
                                                     </v-col>
                                                     <v-col cols="12" sm="4">
-                                                        <input 
-                                                            type="color" 
-                                                            v-model="settings.mainColor"
-                                                            @change="saveSettings"
-                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;"
-                                                        >
+                                                        <input type="color" v-model="settings.mainColor"
+                                                            @input="onSettingChange"
+                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;">
                                                     </v-col>
                                                 </v-row>
                                             </div>
@@ -161,21 +147,14 @@
                                                 </v-subheader>
                                                 <v-row align="center">
                                                     <v-col cols="12" sm="8">
-                                                        <v-text-field
-                                                            v-model="settings.subColor"
-                                                            outlined
-                                                            dense
+                                                        <v-text-field v-model="settings.subColor" outlined dense
                                                             placeholder="#000000"
-                                                            @change="saveSettings"
-                                                        ></v-text-field>
+                                                            @input="onSettingChange"></v-text-field>
                                                     </v-col>
                                                     <v-col cols="12" sm="4">
-                                                        <input 
-                                                            type="color" 
-                                                            v-model="settings.subColor"
-                                                            @change="saveSettings"
-                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;"
-                                                        >
+                                                        <input type="color" v-model="settings.subColor"
+                                                            @input="onSettingChange"
+                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;">
                                                     </v-col>
                                                 </v-row>
                                             </div>
@@ -186,33 +165,49 @@
                                                     <v-icon left>mdi-eye</v-icon>
                                                     Preview
                                                 </v-subheader>
-                                                <div 
-                                                    :style="{
+                                                <div :style="{
                                                         backgroundColor: settings.mainColor,
                                                         color: settings.subColor,
                                                         padding: '20px',
                                                         borderRadius: '8px',
                                                         border: '2px solid #ddd',
                                                         textAlign: 'center'
-                                                    }"
-                                                >
+                                                    }">
                                                     <h3>Sample Text</h3>
                                                     <p>This is how your colors will look together.</p>
                                                 </div>
                                             </div>
 
-                                            <v-alert
-                                                type="success"
-                                                dense
-                                                text
-                                                class="mt-4"
-                                                v-if="colorSaved"
-                                            >
-                                                Settings saved successfully!
-                                            </v-alert>
-
                                         </v-card-text>
                                     </v-expand-transition>
+                                </v-card>
+
+                                <!-- 保存・キャンセルボタン -->
+                                <v-card class="mb-4">
+                                    <v-card-text class="pa-4">
+                                        <v-row>
+                                            <v-col cols="12" sm="6">
+                                                <v-btn block large color="primary" @click="saveSettings"
+                                                    :disabled="!hasChanges">
+                                                    <v-icon left>mdi-content-save</v-icon>
+                                                    Save
+                                                </v-btn>
+                                            </v-col>
+                                            <v-col cols="12" sm="6">
+                                                <v-btn block large outlined @click="cancelChanges"
+                                                    :disabled="!hasChanges">
+                                                    <v-icon left>mdi-cancel</v-icon>
+                                                    Cancel
+                                                </v-btn>
+                                            </v-col>
+                                        </v-row>
+
+                                        <!-- 保存成功メッセージ -->
+                                        <v-alert type="success" dense text class="mt-4 mb-0" v-if="saveSuccess">
+                                            <v-icon left small>mdi-check-circle</v-icon>
+                                            Settings saved successfully!
+                                        </v-alert>
+                                    </v-card-text>
                                 </v-card>
 
                             </v-col>
@@ -272,9 +267,10 @@
             data: {
                 soundExpanded: false,
                 colorExpanded: false,
-                soundSaved: false,
-                colorSaved: false,
-                
+                autoSave: false,
+                saveSuccess: false,
+                hasChanges: false,
+
                 // BGMオプション
                 bgmOptions: [
                     { text: 'None', value: 'none' },
@@ -293,11 +289,16 @@
                     mainColor: '#FFFFFF',
                     subColor: '#000000',
                 },
+
+                // 保存済みの設定(比較用)
+                savedSettings: null,
             },
-            
+
             mounted() {
                 // ページ読み込み時に設定を復元
                 this.loadSettings();
+                // メインカラーを適用
+                this.applyMainColor();
             },
 
             methods: {
@@ -305,21 +306,51 @@
                     this[card + 'Expanded'] = !this[card + 'Expanded'];
                 },
 
+                // 自動保存の切り替え
+                toggleAutoSave() {
+                    localStorage.setItem('autoSave', JSON.stringify(this.autoSave));
+                    if (this.autoSave && this.hasChanges) {
+                        this.saveSettings();
+                    }
+                },
+
+                // 設定変更時の処理
+                onSettingChange() {
+                    this.checkChanges();
+                    if (this.autoSave) {
+                        this.saveSettings();
+                    }
+                },
+
+                // 変更があるかチェック
+                checkChanges() {
+                    if (!this.savedSettings) {
+                        this.hasChanges = false;
+                        return;
+                    }
+                    this.hasChanges = JSON.stringify(this.settings) !== JSON.stringify(this.savedSettings);
+                },
+
                 // 設定を保存
                 saveSettings() {
                     try {
                         localStorage.setItem('appSettings', JSON.stringify(this.settings));
+
+                        // 保存済み設定を更新
+                        this.savedSettings = JSON.parse(JSON.stringify(this.settings));
+                        this.hasChanges = false;
                         
+                        // メインカラーを即座に適用
+                        this.applyMainColor();
+
                         // 保存成功メッセージを表示
-                        this.soundSaved = true;
-                        this.colorSaved = true;
-                        
+                        this.saveSuccess = true;
+
                         // 2秒後にメッセージを非表示
                         setTimeout(() => {
-                            this.soundSaved = false;
-                            this.colorSaved = false;
+                            this.saveSuccess = false;
                         }, 2000);
-                        
+
                         console.log('Settings saved:', this.settings);
                     } catch (error) {
                         console.error('Failed to save settings:', error);
@@ -327,15 +358,42 @@
                     }
                 },
 
+                // メインカラーを適用
+                applyMainColor() {
+                    if (this.settings.mainColor) {
+                        document.documentElement.style.backgroundColor = this.settings.mainColor;
+                    }
+                },
+
+                // 変更をキャンセル
+                cancelChanges() {
+                    if (this.savedSettings) {
+                        this.settings = JSON.parse(JSON.stringify(this.savedSettings));
+                        this.hasChanges = false;
+                        console.log('Changes cancelled, settings restored:', this.settings);
+                    }
+                },
+
                 // 設定を読み込み
                 loadSettings() {
                     try {
+                        // 自動保存設定を読み込み
+                        const autoSaveSetting = localStorage.getItem('autoSave');
+                        if (autoSaveSetting !== null) {
+                            this.autoSave = JSON.parse(autoSaveSetting);
+                        }
+
+                        // アプリ設定を読み込み
                         const saved = localStorage.getItem('appSettings');
                         if (saved) {
                             const parsedSettings = JSON.parse(saved);
                             // 既存の設定とマージ(新しい設定項目が追加された場合に対応)
                             this.settings = Object.assign({}, this.settings, parsedSettings);
+                            this.savedSettings = JSON.parse(JSON.stringify(this.settings));
                             console.log('Settings loaded:', this.settings);
+                        } else {
+                            // 初回ロード時は現在の設定を保存済みとして記録
+                            this.savedSettings = JSON.parse(JSON.stringify(this.settings));
                         }
                     } catch (error) {
                         console.error('Failed to load settings:', error);
