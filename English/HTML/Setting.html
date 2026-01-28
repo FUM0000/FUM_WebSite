@@ -16,7 +16,8 @@
 
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
 
@@ -46,70 +47,170 @@
                                 
                                 <v-card class="mb-4 sound-card">
                                     <v-card-title class="text-h5 font-weight-bold py-3 d-flex justify-space-between">
-                                        <span><v-icon left>mdi-heart</v-icon>Sound</span>
+                                        <span><v-icon left>mdi-music</v-icon>Sound</span>
                                         <v-btn icon @click="toggleCard('sound')">
                                             <v-icon>{{ soundExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
                                         </v-btn>
                                     </v-card-title>
                                     <v-expand-transition>
                                         <v-card-text v-show="soundExpanded" class="pa-5">
-                                            <v-chip-group column>
-                                                <v-chip v-for="hobby in hobbies" :key="hobby.name" class="ma-2"
-                                                    :color="hobby.color">
-                                                    {{ hobby.name }}
-                                                </v-chip>
-                                            </v-chip-group>
+                                            
+                                            <!-- BGM選択 -->
+                                            <div class="mb-6">
+                                                <v-subheader class="px-0 font-weight-bold">
+                                                    <v-icon left>mdi-playlist-music</v-icon>
+                                                    BGM Selection
+                                                </v-subheader>
+                                                <v-select
+                                                    v-model="settings.bgm"
+                                                    :items="bgmOptions"
+                                                    outlined
+                                                    dense
+                                                    @change="saveSettings"
+                                                ></v-select>
+                                            </div>
+
+                                            <!-- BGMボリューム -->
+                                            <div class="mb-6">
+                                                <v-subheader class="px-0 font-weight-bold">
+                                                    <v-icon left>mdi-volume-high</v-icon>
+                                                    BGM Volume: {{ settings.bgmVolume }}%
+                                                </v-subheader>
+                                                <v-slider
+                                                    v-model="settings.bgmVolume"
+                                                    min="0"
+                                                    max="100"
+                                                    step="5"
+                                                    thumb-label
+                                                    @change="saveSettings"
+                                                ></v-slider>
+                                            </div>
+
+                                            <!-- SEボリューム -->
+                                            <div class="mb-4">
+                                                <v-subheader class="px-0 font-weight-bold">
+                                                    <v-icon left>mdi-volume-medium</v-icon>
+                                                    SE Volume: {{ settings.seVolume }}%
+                                                </v-subheader>
+                                                <v-slider
+                                                    v-model="settings.seVolume"
+                                                    min="0"
+                                                    max="100"
+                                                    step="5"
+                                                    thumb-label
+                                                    @change="saveSettings"
+                                                ></v-slider>
+                                            </div>
+
+                                            <v-alert
+                                                type="success"
+                                                dense
+                                                text
+                                                class="mt-4"
+                                                v-if="soundSaved"
+                                            >
+                                                Settings saved successfully!
+                                            </v-alert>
+
                                         </v-card-text>
                                     </v-expand-transition>
                                 </v-card>
 
                                 <v-card class="mb-4 color-card">
                                     <v-card-title class="text-h5 font-weight-bold py-3 d-flex justify-space-between">
-                                        <span><v-icon left>mdi-briefcase-outline</v-icon>Color</span>
+                                        <span><v-icon left>mdi-palette</v-icon>Color</span>
                                         <v-btn icon @click="toggleCard('color')">
-                                            <v-icon>{{ colorExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'
-                                                }}</v-icon>
+                                            <v-icon>{{ colorExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
                                         </v-btn>
                                     </v-card-title>
                                     <v-expand-transition>
                                         <v-card-text v-show="colorExpanded" class="pa-5">
-                                            <v-list dense>
-                                                <template v-for="(category, catIndex) in jobOfferings">
-                                                    <v-subheader :key="`header-${catIndex}`" class="font-weight-bold">{{
-                                                        category.name }}</v-subheader>
-                                                    <v-list-item v-for="(job, jobIndex) in category.items"
-                                                        :key="`${catIndex}-${jobIndex}`">
-                                                        <v-list-item-icon>
-                                                            <v-icon>{{ job.icon }}</v-icon>
-                                                        </v-list-item-icon>
-                                                        <v-list-item-content>
-                                                            <v-list-item-title>{{ job.title }}</v-list-item-title>
-                                                        </v-list-item-content>
-                                                    </v-list-item>
-                                                    <v-divider v-if="catIndex < jobOfferings.length - 1"
-                                                        :key="`divider-${catIndex}`" class="my-2"></v-divider>
-                                                </template>
-                                            </v-list>
-                                            <v-divider class="my-4"></v-divider>
-                                            <p class="subtitle-1 font-weight-bold">The following services are limited to
-                                                certain areas:</p>
-                                            <v-list dense>
-                                                <v-list-item v-for="(job, index) in localJobOfferings" :key="index">
-                                                    <v-list-item-icon>
-                                                        <v-icon>{{ job.icon }}</v-icon>
-                                                    </v-list-item-icon>
-                                                    <v-list-item-content>
-                                                        <v-list-item-title>{{ job.title }}</v-list-item-title>
-                                                    </v-list-item-content>
-                                                </v-list-item>
-                                            </v-list>
-                                            <v-divider class="my-4"></v-divider>
-                                            <p class="subtitle-1">
-                                                　I will accept the job for 3,000 yen per hour. In areas where I am not
-                                                at a high enough level, I will learn with you for 1,000 yen. For details
-                                                or inquiries, please feel free to contact me ☞ <a
-                                                    href="mailto:fuhito.work.1@gmail.com">fuhito.work.1@gmail.com</a>
-                                            </p>
+                                            
+                                            <!-- メインカラー(背景色) -->
+                                            <div class="mb-6">
+                                                <v-subheader class="px-0 font-weight-bold">
+                                                    <v-icon left>mdi-format-color-fill</v-icon>
+                                                    Main Color (Background)
+                                                </v-subheader>
+                                                <v-row align="center">
+                                                    <v-col cols="12" sm="8">
+                                                        <v-text-field
+                                                            v-model="settings.mainColor"
+                                                            outlined
+                                                            dense
+                                                            placeholder="#FFFFFF"
+                                                            @change="saveSettings"
+                                                        ></v-text-field>
+                                                    </v-col>
+                                                    <v-col cols="12" sm="4">
+                                                        <input 
+                                                            type="color" 
+                                                            v-model="settings.mainColor"
+                                                            @change="saveSettings"
+                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;"
+                                                        >
+                                                    </v-col>
+                                                </v-row>
+                                            </div>
+
+                                            <!-- サブカラー -->
+                                            <div class="mb-4">
+                                                <v-subheader class="px-0 font-weight-bold">
+                                                    <v-icon left>mdi-palette-advanced</v-icon>
+                                                    Sub Color
+                                                </v-subheader>
+                                                <v-row align="center">
+                                                    <v-col cols="12" sm="8">
+                                                        <v-text-field
+                                                            v-model="settings.subColor"
+                                                            outlined
+                                                            dense
+                                                            placeholder="#000000"
+                                                            @change="saveSettings"
+                                                        ></v-text-field>
+                                                    </v-col>
+                                                    <v-col cols="12" sm="4">
+                                                        <input 
+                                                            type="color" 
+                                                            v-model="settings.subColor"
+                                                            @change="saveSettings"
+                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;"
+                                                        >
+                                                    </v-col>
+                                                </v-row>
+                                            </div>
+
+                                            <!-- プレビュー -->
+                                            <div class="mb-4">
+                                                <v-subheader class="px-0 font-weight-bold">
+                                                    <v-icon left>mdi-eye</v-icon>
+                                                    Preview
+                                                </v-subheader>
+                                                <div 
+                                                    :style="{
+                                                        backgroundColor: settings.mainColor,
+                                                        color: settings.subColor,
+                                                        padding: '20px',
+                                                        borderRadius: '8px',
+                                                        border: '2px solid #ddd',
+                                                        textAlign: 'center'
+                                                    }"
+                                                >
+                                                    <h3>Sample Text</h3>
+                                                    <p>This is how your colors will look together.</p>
+                                                </div>
+                                            </div>
+
+                                            <v-alert
+                                                type="success"
+                                                dense
+                                                text
+                                                class="mt-4"
+                                                v-if="colorSaved"
+                                            >
+                                                Settings saved successfully!
+                                            </v-alert>
+
                                         </v-card-text>
                                     </v-expand-transition>
                                 </v-card>
@@ -129,7 +230,9 @@
         .profile-card,
         .hobby-card,
         .life-journey-card,
-        .job-offerings-card {
+        .job-offerings-card,
+        .sound-card,
+        .color-card {
             border-radius: 15px;
             overflow: hidden;
             transition: all 0.3s ease-in-out;
@@ -169,78 +272,75 @@
             data: {
                 soundExpanded: false,
                 colorExpanded: false,
-                hobbies: [
-                    { name: 'Plant', color: 'green lighten-4' }, // 自然
-                    { name: 'Piano', color: 'blue-grey lighten-4' }, // 芸術
-                    { name: 'Art', color: 'purple lighten-4' }, // 芸術
-                    { name: 'Travel', color: 'green lighten-4' }, // 自然
-                    { name: 'Programming', color: 'blue lighten-4' }, // 技術
-                    { name: 'Learning', color: 'yellow lighten-4' }, // 学習
-                    { name: 'Training', color: 'yellow lighten-4' }, // 健康
-                    { name: 'YouTube', color: 'pink lighten-4' }, // エンタメ
-                    { name: 'Walk Outside', color: 'light-green lighten-4' }, // 自然
-                    { name: 'Movie', color: 'pink lighten-4' }, // エンタメ
-                    { name: 'Game', color: 'pink lighten-4' }, // エンタメ
-                    { name: 'AI', color: 'blue lighten-4' }, // 技術
-                    { name: 'Cooking', color: 'orange lighten-4' }, // 健康
-                    { name: 'Languages', color: 'green lighten-4' }, // 学習
+                soundSaved: false,
+                colorSaved: false,
+                
+                // BGMオプション
+                bgmOptions: [
+                    { text: 'None', value: 'none' },
+                    { text: 'Calm Piano', value: 'calm_piano' },
+                    { text: 'Nature Sounds', value: 'nature' },
+                    { text: 'Lo-fi Beats', value: 'lofi' },
+                    { text: 'Classical', value: 'classical' },
+                    { text: 'Ambient', value: 'ambient' },
                 ],
-                jobOfferings: [
-                    {
-                        name: 'Lessons',
-                        items: [
-                            { icon: 'mdi-translate', title: 'Language (Japanese, English, Spanish, Chinese)' },
-                            { icon: 'mdi-code-tags', title: 'Programming (Basics, Game Development, Website Creation, Others)' },
-                            { icon: 'mdi-cube-outline', title: '3D Modeling' },
-                            { icon: 'mdi-robot', title: 'How to use AI for learning' },
-                            { icon: 'mdi-laptop', title: 'Computer and Smartphone Usage' },
-                            { icon: 'mdi-chef-hat', title: 'Cooking' },
-                        ]
-                    },
-                    {
-                        name: 'Creation & Development',
-                        items: [
-                            { icon: 'mdi-web', title: 'Website Creation and Maintenance' },
-                            { icon: 'mdi-chart-line', title: 'Business Process Optimization Programming' },
-                        ]
-                    },
-                    {
-                        name: 'Consultation',
-                        items: [
-                            { icon: 'mdi-piggy-bank', title: 'Saving and Investment' },
-                            { icon: 'mdi-comment-question', title: 'Problem-solving' },
-                        ]
-                    },
-                    {
-                        name: 'Other',
-                        items: [
-                            { icon: 'mdi-help-circle', title: 'Other Services (Let\'s talk about it.)' },
-                        ]
-                    }
-                ],
-                localJobOfferings: [
-                    { icon: 'mdi-dumbbell', title: 'Sports and Training Lessons' },
-                    { icon: 'mdi-broom', title: 'Cleaning, Window Washing, Gardening, etc.' },
-                    { icon: 'mdi-food-variant', title: 'Cooking, Errands, Child/Pet Care, and Other Household Services' },
-                ],
-                lifeEvents: [
-                    { year: '1996', description: 'Born in Sapporo, Hokkaido.', color: '#C8E6C9' },
-                    { year: 'Childhood', description: 'I was an active and curious age, riding my tricycle around the neighborhood and making it a routine to greet elderly people tending to their gardens.', color: '#FFF9C4' },
-                    { year: 'Studenthood', description: 'I talked to everyone and was interested in everything. I especially liked sports and games. My mother drank during the day, her violence and outbursts were the worst, and I was in a constant state of bipolar disorder. I could hardly get any of the studies my mother forced me to do.', color: '#B3E5FC' },
-                    { year: '2015', description: 'I moved out which had been a dream of mine for many years. Moved to Kodaira, Tokyo where my father is. Worked part-time in supermarkets, gyms, pubs, etc.', color: '#B2EBF2' },
-                    { year: '2018', description: 'Enrolled in a four-year technical college, majoring in Game Programming. I studied a wide range of techniques with a broad interest in CG technology.', color: '#FFCCBC' },
-                    { year: 'Turning Point I', description: 'I finally started to move in a positive direction by beginning years of philosophical problem solving and conscious positive thinking while organizing my thoughts during my walk, which had become a habit.', color: '#D1C4E9' },
-                    { year: '2022', description: 'I took a job with a Web application development company in Yokohama, Kanagawa and moved there.', color: '#B2DFDB' },
-                    { year: '2023', description: "For several reasons, I was not satisfied with my life in the company and quit my job. Went on a trip to Spain and moved to family home in Fukuyama, Hiroshima.", color: '#F8BBD0' },
-                    { year: 'Turning Point Ⅱ', description: 'The humanistic aspirations of my childhood are returning as I find balance and what I value from a combination of factors such as experience and environment.', color: '#F0F4C3' },
-                    { year: 'Present', description: 'I work part time while learning hobbies and spending quality time.', color: '#CFD8DC' },
-                    { year: 'Future', description: 'I would like to speed up my studies of science, mathematics, IT, and art, and eventually go to space in a few decades.' },
-                ]
+
+                // 設定データ
+                settings: {
+                    bgm: 'none',
+                    bgmVolume: 50,
+                    seVolume: 70,
+                    mainColor: '#FFFFFF',
+                    subColor: '#000000',
+                },
             },
+            
+            mounted() {
+                // ページ読み込み時に設定を復元
+                this.loadSettings();
+            },
+
             methods: {
                 toggleCard(card) {
                     this[card + 'Expanded'] = !this[card + 'Expanded'];
-                }
+                },
+
+                // 設定を保存
+                saveSettings() {
+                    try {
+                        localStorage.setItem('appSettings', JSON.stringify(this.settings));
+                        
+                        // 保存成功メッセージを表示
+                        this.soundSaved = true;
+                        this.colorSaved = true;
+                        
+                        // 2秒後にメッセージを非表示
+                        setTimeout(() => {
+                            this.soundSaved = false;
+                            this.colorSaved = false;
+                        }, 2000);
+                        
+                        console.log('Settings saved:', this.settings);
+                    } catch (error) {
+                        console.error('Failed to save settings:', error);
+                        alert('Failed to save settings. Please try again.');
+                    }
+                },
+
+                // 設定を読み込み
+                loadSettings() {
+                    try {
+                        const saved = localStorage.getItem('appSettings');
+                        if (saved) {
+                            const parsedSettings = JSON.parse(saved);
+                            // 既存の設定とマージ(新しい設定項目が追加された場合に対応)
+                            this.settings = Object.assign({}, this.settings, parsedSettings);
+                            console.log('Settings loaded:', this.settings);
+                        }
+                    } catch (error) {
+                        console.error('Failed to load settings:', error);
+                    }
+                },
             }
         })
     </script>
