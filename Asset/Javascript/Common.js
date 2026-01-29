@@ -40,12 +40,35 @@ Vue.component('main-system-bar', {
 })
 
 
-let Name_Store = localStorage.getItem("BGM_Name");
-let Name = Name_Store == null ? "clair_de_lune.wav" : Name_Store;
+Default_BGM = 'clair_de_lune.wav';
+Default_Volume_BGM = 0.5;
+function Get_Name_BGM() {
+    const saved = localStorage.getItem('appSettings');
+    if (saved) {
+        const settings = JSON.parse(saved);
+        if (settings.bgm && settings.bgm !== 'none') {
+            return settings.bgm + '.wav';
+        }
+    }
+    return Default_BGM;
+}
+function Get_Volume_BGM() {
+    const saved = localStorage.getItem('appSettings');
+    if (saved) {
+        const settings = JSON.parse(saved);
+        if (settings.bgmVolume) {
+            return settings.bgmVolume / 100;
+        }
+    }
+    return Default_Volume_BGM;
+}
+
+let Name;
 let Playing = false;
 $(function () {
-    let audio = $("#BGM")[0];
-    audio.volume = 0.5;
+    const audio = $("#BGM")[0];
+    Name = Get_Name_BGM();
+    audio.volume = Get_Volume_BGM();
     $("#Speaker").on("click", function () {
         if (Playing) {
             $(this).removeClass("mdi-volume-source");
@@ -57,6 +80,8 @@ $(function () {
             $this.removeClass("mdi-volume-variant-off mdi-volume-source");
             $this.addClass("mdi-loading mdi-spin");
 
+            // Settingから最新のBGM設定を取得
+            Name = Get_Name_BGM();
             audio.src = "../../Asset/Audio/" + Name;
 
             audio.oncanplaythrough = function () {
@@ -74,10 +99,24 @@ $(function () {
     audio.onplaying = function () { Playing = true; };
     audio.onpause = function () { Playing = false; };
 });
-function Get_PlayingBGM() { return Playing; }
-function Change_BGM_Name(_name) {
-    Name = _name;
-    localStorage.setItem("BGM_Name", _name);
+function Get_Playing() {
+    return Playing;
+}
+function Change_BGM() {
+    if (Playing) {
+        const audio = $("#BGM")[0];
+        audio.pause();
+        audio.src = "../../Asset/Audio/" + Get_Name_BGM();
+        audio.play();
+    }
+}
+function Change_Volume_BGM() {
+    const audio = $("#BGM")[0];
+    const saved = localStorage.getItem('appSettings');
+    if (saved) {
+        const settings = JSON.parse(saved);
+        audio.volume = (settings.bgmVolume || 50) / 100;
+    }
 }
 
 
