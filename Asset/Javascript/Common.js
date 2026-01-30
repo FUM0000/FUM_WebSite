@@ -56,8 +56,8 @@ function Get_Volume_BGM() {
     const saved = localStorage.getItem('appSettings');
     if (saved) {
         const settings = JSON.parse(saved);
-        if (settings.bgmVolume) {
-            return settings.bgmVolume / 100;
+        if (settings.bgmVolume != null) {
+            return settings.bgmVolume / 100.0;
         }
     }
     return Default_Volume_BGM;
@@ -112,11 +112,7 @@ function Change_BGM() {
 }
 function Change_Volume_BGM() {
     const audio = $("#BGM")[0];
-    const saved = localStorage.getItem('appSettings');
-    if (saved) {
-        const settings = JSON.parse(saved);
-        audio.volume = (settings.bgmVolume || 50) / 100;
-    }
+    audio.volume = Get_Volume_BGM();
 }
 
 
