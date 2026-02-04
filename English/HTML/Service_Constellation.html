@@ -18,7 +18,9 @@
 
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+        rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
@@ -27,8 +29,8 @@
 
     <style>
         body {
-            width:0;
-            height:0;
+            width: 0;
+            height: 0;
         }
 
         canvas {
@@ -76,6 +78,47 @@
             box-sizing: border-box;
             z-index: 100;
             pointer-events: auto;
+            transition: max-height 0.25s ease, padding 0.25s ease;
+        }
+
+        #controls.collapsed {
+            max-height: 3rem;
+            padding: 8px 16px;
+            overflow-y: hidden;
+            /* 閉じているときはスクロール不可 */
+        }
+
+        #controls-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        #controls-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        #controls-toggle {
+            background: transparent;
+            border: 1px solid #888;
+            color: #fff;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        #controls-body {
+            overflow: hidden;
+        }
+
+        /* 閉じているときは中身を非表示にする */
+        #controls.collapsed #controls-body {
+            display: none;
         }
 
         /* ラベルをより読みやすく、指でタップしやすく */
@@ -129,6 +172,12 @@
                 background: rgba(0, 0, 0, 0.65);
             }
 
+            /* PC でも閉じているときはスクロールさせない */
+            #controls.collapsed {
+                max-height: 3rem;
+                overflow-y: hidden;
+            }
+
             label {
                 display: block;
                 margin: 6px 0;
@@ -154,28 +203,34 @@
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Constellation</main-system-bar>
 
             <v-main>
-                <div id="controls">
-                    <label>国:
-                        <select id="country" onchange="updateDefaultByCountry()">
-                            <option value="JP" selected>日本</option>
-                            <option value="US">アメリカ (東部)</option>
-                            <option value="GB">イギリス</option>
-                            <option value="FR">フランス</option>
-                            <option value="DE">ドイツ</option>
-                            <option value="AU">オーストラリア (東部)</option>
-                            <option value="custom">カスタム</option>
-                        </select>
-                    </label>
+                <div id="controls" class="collapsed">
+                    <div id="controls-header" onclick="toggleControls()">
+                        <span id="controls-title">観測条件</span>
+                        <button id="controls-toggle" type="button">開く ▽</button>
+                    </div>
+                    <div id="controls-body">
+                        <label>国:
+                            <select id="country" onchange="updateDefaultByCountry()">
+                                <option value="JP" selected>日本</option>
+                                <option value="US">アメリカ (東部)</option>
+                                <option value="GB">イギリス</option>
+                                <option value="FR">フランス</option>
+                                <option value="DE">ドイツ</option>
+                                <option value="AU">オーストラリア (東部)</option>
+                                <option value="custom">カスタム</option>
+                            </select>
+                        </label>
 
-                    <label>緯度 (deg): <input type="number" id="lat" value="35.6895" step="0.1"></label>
-                    <label>経度 (deg): <input type="number" id="lon" value="139.6917" step="0.1"></label>
-                    <p id="standardMeridian" style="margin:8px 0; font-size:0.9em; color:#aaa;">
-                        標準子午線: 135°E (東京)
-                    </p>
+                        <label>緯度 (deg): <input type="number" id="lat" value="35.6895" step="0.1"></label>
+                        <label>経度 (deg): <input type="number" id="lon" value="139.6917" step="0.1"></label>
+                        <p id="standardMeridian" style="margin:8px 0; font-size:0.9em; color:#aaa;">
+                            標準子午線: 135°E (東京)
+                        </p>
 
-                    <label>日付: <input type="date" id="date"></label>
-                    <label>時間 (現地時): <input type="time" id="time" step="1"></label>
-                    <button type="button" class="button" onclick="simulate()">表示更新</button>
+                        <label>日付: <input type="date" id="date"></label>
+                        <label>時間 (現地時): <input type="time" id="time" step="1"></label>
+                        <button type="button" class="button" onclick="simulate()">表示更新</button>
+                    </div>
                 </div>
             </v-main>
 
@@ -207,163 +262,36 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
         const stars = [
-            // ── 極めて明るい（-2等級 ～ -0.5等級クラス） ──
-            { name: 'Sirius', ra: 101.2872, dec: -16.7161, mag: -1.46, color: '#ffffff' },    // 純白（わずかに青み）
-            { name: 'Canopus', ra: 95.9879, dec: -52.6957, mag: -0.74, color: '#fffaf0' },    // 暖かみのある白
-            { name: 'Alpha Centauri', ra: 219.9021, dec: -60.8339, mag: -0.27, color: '#ffffff' },    // 非常に明るい白
-
-            // ── 0等級クラス ──
-            { name: 'Arcturus', ra: 213.9153, dec: 19.1824, mag: -0.05, color: '#ffe4c4' },    // 淡いオレンジがかった白
-            { name: 'Vega', ra: 279.2347, dec: 38.7837, mag: 0.03, color: '#f0f8ff' },    // 青白い
-            { name: 'Capella', ra: 79.1723, dec: 45.9980, mag: 0.08, color: '#fffacd' },    // やや暖色がかった白
-            { name: 'Rigel', ra: 78.6345, dec: -8.2016, mag: 0.18, color: '#e6f0fa' },    // 青みが強い白
-            { name: 'Procyon', ra: 114.8258, dec: 5.2247, mag: 0.34, color: '#fffaf0' },    // 白～わずかに暖色
-
-            // ── 0.5～1.0等級クラス ──
-            { name: 'Achernar', ra: 24.4285, dec: -57.2368, mag: 0.45, color: '#f0f8ff' },    // 青白い
-            { name: 'Betelgeuse', ra: 88.7929, dec: 7.4071, mag: 0.42, color: '#ff4500' },    // 強い赤（変光星）
-            { name: 'Hadar', ra: 203.8640, dec: -60.3829, mag: 0.61, color: '#e6f0fa' },    // 青白い
-            { name: 'Altair', ra: 297.6958, dec: 8.8683, mag: 0.77, color: '#ffffff' },    // 白
-            { name: 'Acrux', ra: 186.6495, dec: -63.0991, mag: 0.77, color: '#e6f0fa' },    // 青白い
-            { name: 'Aldebaran', ra: 68.9802, dec: 16.5093, mag: 0.87, color: '#ff8c00' },    // 強いオレンジ赤
-
-            // ── 1.0～1.5等級クラス ──
-            { name: 'Spica', ra: 201.2983, dec: -11.1614, mag: 0.98, color: '#e6f0fa' },    // 青白い
-            { name: 'Antares', ra: 247.3519, dec: -26.4320, mag: 1.06, color: '#ff2d2d' },    // 強い赤
-            { name: 'Pollux', ra: 116.3289, dec: 28.0262, mag: 1.14, color: '#ffa07a' },    // オレンジ
-            { name: 'Fomalhaut', ra: 344.4127, dec: -29.6222, mag: 1.16, color: '#ffffff' },    // 白
-            { name: 'Deneb', ra: 310.3580, dec: 45.2803, mag: 1.25, color: '#ffffff' },    // 白
-            { name: 'Becrux', ra: 186.9725, dec: -59.6888, mag: 1.25, color: '#e6f0fa' },    // 青白い（Mimosa）
-            { name: 'Regulus', ra: 152.0929, dec: 11.9672, mag: 1.36, color: '#e6f0fa' },    // 青白い
-
-            // ── 1.5～2.0等級クラス ──
-            { name: 'Adhara', ra: 104.6563, dec: -28.9721, mag: 1.50, color: '#e6f0fa' },
-            { name: 'Castor', ra: 113.6499, dec: 31.8883, mag: 1.58, color: '#ffffff' },
-            { name: 'Shaula', ra: 263.4022, dec: -37.1038, mag: 1.62, color: '#e6f0fa' },
-            { name: 'Gacrux', ra: 187.7913, dec: -57.1132, mag: 1.64, color: '#ff6347' },    // 赤
-            { name: 'Bellatrix', ra: 81.2827, dec: 6.3497, mag: 1.64, color: '#e6f0fa' },
-            { name: 'Elnath', ra: 81.5728, dec: 28.6075, mag: 1.65, color: '#ffffff' },
-            { name: 'Miaplacidus', ra: 97.4073, dec: -69.7175, mag: 1.67, color: '#e6f0fa' },
-            { name: 'Alnilam', ra: 84.0534, dec: -1.2019, mag: 1.69, color: '#e6f0fa' },    // オリオン座の帯（中央）
-            { name: 'Alnair', ra: 330.8939, dec: -46.9600, mag: 1.73, color: '#ffffff' },
-            { name: 'Alnitak', ra: 85.1896, dec: -1.9428, mag: 1.74, color: '#e6f0fa' },    // オリオン座の帯（左）
-            { name: 'Alioth', ra: 193.5072, dec: 55.9598, mag: 1.76, color: '#ffffff' },
-            { name: 'Mirfak', ra: 51.0810, dec: 49.8612, mag: 1.79, color: '#fffacd' },    // 黄白色
-            { name: 'Dubhe', ra: 165.9318, dec: 61.7510, mag: 1.81, color: '#ffa07a' },    // オレンジ
-            { name: 'Wezen', ra: 108.0290, dec: -26.3932, mag: 1.83, color: '#fffacd' },
-            { name: 'Alkaid', ra: 206.8851, dec: 49.3133, mag: 1.85, color: '#ffffff' },
-            { name: 'Sargas', ra: 263.4022, dec: -37.1038, mag: 1.86, color: '#e6f0fa' },
-            { name: 'Avior', ra: 125.6286, dec: -59.5095, mag: 1.86, color: '#ffa07a' },    // オレンジ
-            { name: 'Menkalinan', ra: 94.6407, dec: 44.9474, mag: 1.90, color: '#fffacd' },
-            { name: 'Atria', ra: 167.4890, dec: -69.0277, mag: 1.91, color: '#ffa07a' },
-            { name: 'Alhena', ra: 103.4080, dec: 16.3990, mag: 1.93, color: '#ffffff' },
-            { name: 'Peacock', ra: 306.4110, dec: -56.7350, mag: 1.94, color: '#e6f0fa' },
-            { name: 'Polaris', ra: 37.9461, dec: 89.2641, mag: 1.97, color: '#fff5e1' },    // 淡い黄色
-            { name: 'Alphard', ra: 141.8969, dec: -8.6586, mag: 1.99, color: '#ffa07a' },
-
-            // ── 2.0～2.5等級クラス（一部） ──
-            { name: 'Algieba', ra: 153.0987, dec: 19.8409, mag: 2.01, color: '#fffacd' },
-            { name: 'Hamal', ra: 50.9803, dec: 23.4624, mag: 2.01, color: '#ffa07a' },
-            { name: 'Diphda', ra: 10.8975, dec: 0.0829, mag: 2.04, color: '#ffffff' },
-            { name: 'Nunki', ra: 275.2180, dec: -26.4320, mag: 2.05, color: '#e6f0fa' },
-            { name: 'Menkent', ra: 210.2990, dec: -36.3700, mag: 2.06, color: '#ffa07a' },
-            { name: 'Alpheratz', ra: 2.1197, dec: 29.0900, mag: 2.07, color: '#ffffff' },
-            { name: 'Kochab', ra: 210.7630, dec: 74.1555, mag: 2.07, color: '#fff5e1' },
-            { name: 'Rasalhague', ra: 263.4022, dec: 12.5667, mag: 2.08, color: '#ffffff' },
-            { name: 'Algol', ra: 47.0422, dec: 40.9570, mag: 2.09, color: '#e6f0fa' },
-            { name: 'Mirach', ra: 29.0617, dec: 35.6206, mag: 2.07, color: '#ffccaa' },
-            { name: 'Saiph', ra: 86.9392, dec: -9.6696, mag: 2.07, color: '#e6f0fa' },
-            { name: 'Denebola', ra: 177.2649, dec: 14.5721, mag: 2.14, color: '#ffffff' },
-            { name: 'Eltanin', ra: 263.4070, dec: 51.4890, mag: 2.24, color: '#ffa07a' },
-            { name: 'Schedar', ra: 9.1580, dec: 56.5370, mag: 2.24, color: '#ffccaa' },
-            { name: 'Mizar', ra: 200.9812, dec: 54.9254, mag: 2.23, color: '#ffffff' },
-            { name: 'Mintaka', ra: 83.0017, dec: -0.2991, mag: 2.25, color: '#e6f0fa' },
-            { name: 'Caph', ra: 359.5140, dec: 59.1500, mag: 2.28, color: '#ffffff' },
-            { name: 'Merak', ra: 165.4602, dec: 56.3825, mag: 2.34, color: '#ffffff' },
-            { name: 'Phecda', ra: 178.4572, dec: 53.6950, mag: 2.41, color: '#ffffff' },
-            { name: 'Markab', ra: 345.9430, dec: 15.2050, mag: 2.49, color: '#ffffff' },
-            { name: 'Scheat', ra: 345.5510, dec: 28.0830, mag: 2.44, color: '#ffccaa' },
-            { name: 'Enif', ra: 328.3520, dec: 9.8750, mag: 2.38, color: '#ffccaa' },
-
-            // ── 2.5～3.0等級クラス（代表的な明るい星々） ──
-            { name: 'Alpherg / Kullat Nunu', ra: 9.2187, dec: 23.4624, mag: 2.53, color: '#fff5e1' },      // η Psc - 淡い黄色がかった白（魚座の頭）
-            { name: 'Alrai', ra: 30.1234, dec: 52.3010, mag: 2.54, color: '#ffccaa' },      // γ Cep - オレンジがかった
-            { name: 'Menkib', ra: 81.5728, dec: 20.0015, mag: 2.55, color: '#e6f0fa' },      // ξ Per - 青白い（ペルセウス座）
-            { name: 'Zubenelgenubi', ra: 229.2520, dec: -16.0418, mag: 2.75, color: '#e6f0fa' },    // α Lib - 青白い（天秤座α、連星）
-            { name: 'Zubeneschamali', ra: 229.8519, dec: -9.3820, mag: 2.61, color: '#e6f0fa' },     // β Lib - 珍しい緑がかった白
-            { name: 'Kornephoros', ra: 258.0070, dec: 21.4896, mag: 2.78, color: '#ffa07a' },     // β Her - オレンジ
-            { name: 'Rastaban', ra: 263.7914, dec: 52.3013, mag: 2.79, color: '#ff6347' },     // β Dra - 橙赤っぽい
-            { name: 'Eltanin / Gianfar', ra: 263.4070, dec: 51.4890, mag: 2.24, color: '#ffa07a' },     // γ Dra （※既に2.24で入ってるので省略可）
-            { name: 'Aldebaranの伴星', ra: 68.98, dec: 16.51, mag: 2.8, color: '#ffffff' },   // （変光考慮、厳密にはAldebaran本体が0.87）
-            { name: 'Gienah', ra: 185.9970, dec: 9.9313, mag: 2.58, color: '#e6f0fa' },      // γ Crv - 青白い（からす座）
-            { name: 'Gacruxの次', ra: 187.7913, dec: -57.11, mag: 2.8, color: '#ff6347' },   // （Gacruxは既に1.64）
-            { name: 'Mimosaの次', ra: 186.9725, dec: -59.69, mag: 2.9, color: '#e6f0fa' },      // 南十字座β付近の明るい星
-            { name: 'Alphekka / Gemma', ra: 240.3600, dec: 26.7147, mag: 2.23, color: '#e6f0fa' },     // α CrB （※2.23でギリギリ既存範囲）
-            { name: 'Unukalhai', ra: 242.5980, dec: 6.4258, mag: 2.63, color: '#ff6347' },      // α Ser - 橙色
-            { name: 'Sabik', ra: 263.4022, dec: -12.5600, mag: 2.43, color: '#ffffff' },    // η Oph - 白（※2.43で既存範囲寄り）
-            { name: 'Rasalgethi', ra: 263.4022, dec: 14.3900, mag: 2.8, color: '#ff4500' },  // α Her - 赤色変光星（変光範囲広い）
-            { name: 'Kaus Australis', ra: 276.0430, dec: -34.3846, mag: 1.79, color: '#e6f0fa' },   // ε Sgr （※既存範囲）
-            { name: 'Nunki', ra: 275.2180, dec: -26.4320, mag: 2.05, color: '#e6f0fa' },   // σ Sgr （※既存）
-            { name: 'Ascella', ra: 280.0320, dec: -40.1075, mag: 2.60, color: '#ffffff' },    // ζ Sgr - 白
-            { name: 'Kaus Media', ra: 274.6190, dec: -40.1075, mag: 2.70, color: '#e6f0fa' },    // δ Sgr - 青白い
-            { name: 'Kaus Borealis', ra: 269.0630, dec: -25.4213, mag: 2.82, color: '#ffffff' },    // λ Sgr - 白
-            { name: 'Vindemiatrix', ra: 195.5450, dec: 10.9591, mag: 2.85, color: '#ffffff' },     // ε Vir - 白
-            { name: 'Zavijava', ra: 177.2650, dec: 1.7600, mag: 2.87, color: '#e6f0fa' },      // β Vir - 青白い
-            { name: 'Porrima', ra: 191.2780, dec: -1.4490, mag: 2.74, color: '#e6f0fa' },     // γ Vir - 青白い連星
-            { name: 'Auva', ra: 193.5070, dec: -0.3978, mag: 2.94, color: '#ffa07a' },     // δ Vir - オレンジ寄り
-
-            // ── 3.0～3.5等級クラス（代表的な星々） ──
-            { name: 'Megrez', ra: 165.460, dec: 57.033, mag: 3.32, color: '#ffffff' },          // δ UMa - 大熊座 - 純白（Big Dipperの柄の付け根）
-            { name: 'Merak', ra: 165.460, dec: 56.383, mag: 2.34, color: '#ffffff' },           // β UMa - すでに2.3等級で入っている可能性あり
-            { name: 'Phecda', ra: 178.457, dec: 53.695, mag: 2.41, color: '#ffffff' },          // γ UMa - すでに2.4等級付近
-            { name: 'Alcor', ra: 201.306, dec: 54.988, mag: 3.99, color: '#ffffff' },          // 番外：ミザル（Mizar）の伴星、よく一緒に観測される
-            { name: 'Mizar', ra: 200.981, dec: 54.925, mag: 2.23, color: '#ffffff' },          // ζ UMa - すでに2.2等級
-            { name: 'Thuban', ra: 210.955, dec: 64.376, mag: 3.67, color: '#e6f0fa' },          // α Dra - 青白い、かつての北極星
-            { name: 'Kochab', ra: 210.763, dec: 74.156, mag: 2.07, color: '#fff5e1' },          // β UMi - すでに2.0等級付近
-            { name: 'Pherkad', ra: 225.299, dec: 71.585, mag: 3.05, color: '#e6f0fa' },         // γ UMi - 小熊座 - 青白い
-            { name: 'Alya', ra: 279.235, dec: 30.561, mag: 3.48, color: '#ffffff' },          // θ Ser - へび座 - 白（二重星）
-            { name: 'Alphekka / Gemma', ra: 240.360, dec: 26.715, mag: 2.23, color: '#e6f0fa' },// α CrB - コロナ・ボレアリス座 - すでに2.2等級
-            { name: 'Nusakan', ra: 239.362, dec: 40.390, mag: 3.66, color: '#e6f0fa' },         // β CrB - 青白い
-            { name: 'Seginus', ra: 229.252, dec: 38.318, mag: 3.04, color: '#ffffff' },         // γ Boo - うしかい座 - 白
-            { name: 'Izar', ra: 221.246, dec: 27.074, mag: 2.70, color: '#ffa07a' },          // ε Boo - オレンジ（美しい二重星）
-            { name: 'Muphrid', ra: 210.299, dec: 18.470, mag: 2.68, color: '#ffffff' },         // η Boo - 白
-            { name: 'Alula Borealis', ra: 136.999, dec: 50.316, mag: 3.45, color: '#ffa07a' },  // ν UMa - 北斗七星付近 - オレンジ
-            { name: 'Alula Australis', ra: 136.999, dec: 49.313, mag: 3.79, color: '#ffffff' },// ξ UMa - 二重星
-            { name: 'Alkaphrah', ra: 139.043, dec: 56.383, mag: 3.45, color: '#ffffff' },       // κ UMa - 白
-            { name: 'Talitha', ra: 140.299, dec: 51.672, mag: 3.12, color: '#e6f0fa' },         // ι UMa - 青白い
-            { name: 'Tania Borealis', ra: 147.555, dec: 59.038, mag: 3.45, color: '#ffffff' },  // λ UMa - 白
-            { name: 'Alkard', ra: 141.897, dec: -8.659, mag: 1.99, color: '#ffa07a' },          // α Hya - すでに2.0等級付近
-            { name: 'Acubens', ra: 127.984, dec: 11.861, mag: 4.26, color: '#ffffff' },         // α Cnc - かに座 - やや暗め
-            { name: 'Asellus Australis', ra: 125.628, dec: 21.468, mag: 3.94, color: '#ffa07a' },// δ Cnc - オレンジ
-            { name: 'Asellus Borealis', ra: 124.292, dec: 25.755, mag: 4.66, color: '#ffffff' },// γ Cnc - 少し暗め
-            { name: 'Tegmine', ra: 130.825, dec: 17.648, mag: 3.94, color: '#ffffff' },         // ζ Cnc - 多重星
-            { name: 'Zosma', ra: 170.250, dec: 20.524, mag: 2.56, color: '#ffffff' },          // δ Leo - すでに2.5等級
-            { name: 'Denebola', ra: 177.265, dec: 14.572, mag: 2.14, color: '#ffffff' },        // β Leo - すでに2.1等級
-
-            // ── 3.5～4.0等級クラス（代表的な有名星・固有名星） ──
-            { name: 'Alcor', ra: 201.306, dec: 54.988, mag: 3.99, color: '#ffffff' },              // うしかい座（Mizarの伴星、よく一緒に観測される）
-            { name: 'Pherkad', ra: 225.299, dec: 71.585, mag: 3.05, color: '#e6f0fa' },            // γ UMi - 小熊座（すでに3.0付近で言及あり、参考）
-            { name: 'Alya', ra: 279.235, dec: 30.561, mag: 3.48, color: '#ffffff' },               // θ Serpentis - へび座（二重星）
-            { name: 'Nusakan', ra: 239.362, dec: 40.390, mag: 3.66, color: '#e6f0fa' },            // β Coronae Borealis - コロナ・ボレアリス座
-            { name: 'Alula Borealis', ra: 136.999, dec: 50.316, mag: 3.45, color: '#ffa07a' },     // ν Ursae Majoris - 大熊座（北斗七星付近、オレンジ巨星）
-            { name: 'Talitha', ra: 140.299, dec: 51.672, mag: 3.12, color: '#e6f0fa' },            // ι Ursae Majoris - 大熊座（青白い）
-            { name: 'Tania Borealis', ra: 147.555, dec: 59.038, mag: 3.45, color: '#ffffff' },     // λ Ursae Majoris - 大熊座
-            { name: 'Alkaphrah', ra: 139.043, dec: 56.383, mag: 3.45, color: '#ffffff' },          // κ Ursae Majoris - 大熊座
-            { name: 'Asellus Australis', ra: 125.628, dec: 21.468, mag: 3.94, color: '#ffa07a' },  // δ Cancri - かに座（オレンジ）
-            { name: 'Tegmine', ra: 130.825, dec: 17.648, mag: 3.94, color: '#ffffff' },            // ζ Cancri - かに座（多重星）
-            { name: 'Alhena', ra: 103.408, dec: 16.399, mag: 1.93, color: '#ffffff' },             // γ Geminorum - ふたご座（すでに1.9等級で既存）
-            { name: 'Wasat', ra: 108.029, dec: 21.982, mag: 3.53, color: '#ffffff' },              // δ Geminorum - ふたご座
-            { name: 'Mebsuta', ra: 103.818, dec: 25.131, mag: 3.06, color: '#ffffff' },            // ε Geminorum - ふたご座（少し明るめ）
-            { name: 'Mekbuda', ra: 88.793, dec: 20.570, mag: 3.79, color: '#ffa07a' },             // ζ Geminorum - ふたご座（セフェイド変光星）
-            { name: 'Alzirr', ra: 111.542, dec: 16.399, mag: 3.35, color: '#e6f0fa' },             // ξ Geminorum - ふたご座
-            { name: 'Tejat Posterior', ra: 103.818, dec: 33.157, mag: 3.17, color: '#ffa07a' },    // μ Geminorum - ふたご座
-            { name: 'Propus', ra: 88.793, dec: 22.947, mag: 3.31, color: '#ffa07a' },              // ι Geminorum - ふたご座（変光考慮）
-            { name: 'Alhenaの次', ra: 103.408, dec: 16.399, mag: 3.8, color: '#ffffff' },         // ふたご座周辺の参考
-            { name: 'Chort', ra: 170.250, dec: 20.524, mag: 2.56, color: '#ffffff' },              // θ Leonis - しし座（すでに2.5等級）
-            { name: 'Zosma', ra: 170.250, dec: 20.524, mag: 2.56, color: '#ffffff' },              // δ Leonis - しし座（重複注意）
-            { name: 'Denebola', ra: 177.265, dec: 14.572, mag: 2.14, color: '#ffffff' },           // β Leonis - しし座（すでに2.1等級）
-            { name: 'Regulusの次', ra: 152.093, dec: 11.967, mag: ~3.9, color: '#e6f0fa' },        // しし座の足元付近
-
+            // Orion
+            { name: 'Rigel', ra: 78.6339, dec: -8.2016, mag: 0.18, color: '#dbe9ff' }, // B8Ia 青白
+            { name: 'Betelgeuse', ra: 88.7934, dec: 7.4070, mag: 0.42, color: '#ffb07a' }, // M2Ib 橙赤
+            { name: 'Bellatrix', ra: 81.2829, dec: 6.3497, mag: 1.64, color: '#c9dbff' }, // B2III 青白
+            { name: 'Alnilam', ra: 84.0534, dec: -1.2019, mag: 1.69, color: '#a7c8ff' }, // B0Ia 青
+            { name: 'Alnitak A', ra: 85.1901, dec: -1.9426, mag: 1.88, color: '#9fc2ff' }, // O9.7Ib 青
+            { name: 'Saiph', ra: 86.9391, dec: -9.6696, mag: 2.07, color: '#a7c8ff' }, // B0.5Ia 青
+            { name: 'Mintaka AB', ra: 83.0016, dec: -0.2991, mag: 2.20, color: '#a7c8ff' }, // B0III+O9V 青
+            { name: 'Iota Ori', ra: 83.8584, dec: -5.9099, mag: 2.75, color: '#9fc2ff' },
+            { name: 'Pi3 Ori', ra: 72.4589, dec: 6.9613, mag: 3.19, color: '#fff4ea' }, // F6V 黄白
+            { name: 'Eta Ori', ra: 81.1193, dec: -2.3971, mag: 3.35, color: '#bcd3ff' }, // B1V 青白
+            { name: 'Meissa A', ra: 83.7845, dec: 9.9342, mag: 3.47, color: '#9bbcff' }, // O8III 青
+            { name: 'Tau Ori', ra: 79.4017, dec: -6.8444, mag: 3.59, color: '#d6e4ff' }, // B5III 青白
+            { name: 'Pi4 Ori', ra: 72.8015, dec: 5.6051, mag: 3.68, color: '#c9dbff' }, // B2III 青白
+            { name: 'Alnitak B', ra: 85.1900, dec: -1.9428, mag: 3.70, color: '#a7c8ff' }, // B0III+B1IV 青
+            { name: 'Pi5 Ori', ra: 73.5629, dec: 2.4407, mag: 3.71, color: '#c9dbff' }, // B2III 青白
+            { name: 'Sigma Ori AB', ra: 84.6865, dec: -2.6001, mag: 3.77, color: '#9fc2ff' },  // O9.5V 青  // O9III 青
+            { name: 'Omicron2 Ori', ra: 74.0929, dec: 13.5146, mag: 4.06, color: '#ffd2a1' }, // K2III 橙
+            { name: 'Phi2 Ori', ra: 84.2264, dec: 9.2914, mag: 4.09, color: '#ffe7c2' }, // G8III-IV 黄
+            { name: 'Mu Ori', ra: 90.5958, dec: 9.6474, mag: 4.12, color: '#ffffff' }, // Am 白
+            { name: '29 Ori', ra: 80.9868, dec: -7.8079, mag: 4.13, color: '#ffe7c2' }, // G8III 黄
+            { name: '32 Ori', ra: 82.6960, dec: 5.9482, mag: 4.20, color: '#d6e4ff' }, // B5V 青白
+            { name: 'Pi2 Ori', ra: 72.6530, dec: 8.9003, mag: 4.35, color: '#f8fbff' }, // A1V 白
+            { name: 'Phi1 Ori', ra: 83.7052, dec: 9.4896, mag: 4.39, color: '#a7c8ff' }, // B0IV 青
+            { name: 'Chi1 Ori', ra: 88.5962, dec: 20.2764, mag: 4.39, color: '#fff4ea' }, // G0V 黄白
+            { name: 'Nu Ori', ra: 91.8930, dec: 14.7685, mag: 4.42, color: '#c9dbff' }, // B3IV 青白
+            { name: 'Xi Ori', ra: 92.9850, dec: 14.2088, mag: 4.45, color: '#c9dbff' }, // B3IV 青白
+            { name: 'Rho Ori', ra: 78.3228, dec: 2.8613, mag: 4.46, color: '#ffc78f' }, // K3III 橙
+            { name: 'Pi6 Ori', ra: 74.6371, dec: 1.7140, mag: 4.47, color: '#ffd2a1' }, // K2II 橙
+            { name: 'Omega Ori', ra: 84.7965, dec: 4.1215, mag: 4.50, color: '#c9dbff' },  // B3IIIe 青白
         ];
 
         let scene, camera, renderer, controls, composer;
@@ -412,7 +340,7 @@
             controls.enableZoom = false;
             controls.enablePan = false;
             controls.enableRotate = true;
-            camera.fov = 120;
+            camera.fov = 90;
             camera.updateProjectionMatrix();
             function handleZoom(delta) {
                 // delta > 0 → ズームアウト（視野角大きく）
@@ -549,6 +477,21 @@
                 def.stdMeridian !== null
                     ? `標準子午線: ${Math.abs(def.stdMeridian)}°${def.stdMeridian >= 0 ? 'E' : 'W'}`
                     : `標準子午線: --- (カスタム)`;
+        };
+
+        // コントロールの開閉
+        window.toggleControls = function () {
+            const container = document.getElementById('controls');
+            const toggleBtn = document.getElementById('controls-toggle');
+
+            const isCollapsed = container.classList.contains('collapsed');
+            if (isCollapsed) {
+                container.classList.remove('collapsed');
+                toggleBtn.textContent = '閉じる △';
+            } else {
+                container.classList.add('collapsed');
+                toggleBtn.textContent = '開く ▽';
+            }
         };
 
         // 現在の日時を入力欄にセット（日本時間）
