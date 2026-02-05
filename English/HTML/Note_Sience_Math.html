@@ -68,12 +68,13 @@
                         <v-stepper-step :complete="Count_Step_1 > 1" step="1"
                           @click="Count_Step_1 = 1"></v-stepper-step>
                         <v-divider></v-divider>
-                        <v-stepper-step :complete="Count_Step_2 > 2" step="2"
-                          @click="Count_Step_2 = 2"></v-stepper-step>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2"
+                          @click="Count_Step_1 = 2"></v-stepper-step>
                         <v-divider></v-divider>
                       </v-stepper-header>
 
                       <v-stepper-items>
+
                         <v-stepper-content step="1">
                           <v-card class="mb-12">
                             <v-card-text>
@@ -91,8 +92,7 @@
                             <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
                           </div>
                         </v-stepper-content>
-                      </v-stepper-items>
-                      <v-stepper-items>
+
                         <v-stepper-content step="2">
                           <v-card class="mb-12">
                             <v-card-text>
@@ -101,16 +101,20 @@
                                 dense :open.sync="openNodesPrimeNumberSearch"
                                 @update:open="updateOpenNodesPrimeNumberSearch">
                                 <template v-slot:label="{ item }">
-                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                  <div v-if="item.isCode" v-html="item.name" class="code-block"></div>
+                                  <span v-else :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
                                 </template>
                               </v-treeview>
                             </v-card-text>
                           </v-card>
                           <div class="button-container">
-                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 3">次へ</v-btn>
                           </div>
                         </v-stepper-content>
+
                       </v-stepper-items>
+
                     </v-stepper>
                   </v-card-text>
                 </v-card>
@@ -211,10 +215,51 @@
               { "name": "例　：29は2,3,5で割り切れないので素数" },
             ]
           },
+          {
+            "name": "ミラーラビン素数判定",
+            "children": [
+              {
+                "name": `<pre><code>
+                  import random
+                  def is_prime_miller_rabin(n, k=5):
+                      """
+                      n: 判定したい整数
+                      k: テスト回数（多いほど精度向上）
+                      """
+                      if n < 2:
+                          return False
+                      if n == 2 or n == 3:
+                          return True
+                      if n % 2 == 0:
+                          return False
+
+                      d = n - 1
+                      s = 0
+                      while d % 2 == 0:
+                          d //= 2
+                          s += 1
+
+                      for _ in range(k):
+                          a = random.randrange(2, n - 1)
+                          x = pow(a, d, n)  # a^d % n
+                          if x == 1 or x == n - 1:
+                              continue
+                          for _ in range(s - 1):
+                              x = pow(x, 2, n)
+                              if x == n - 1:
+                                  break
+                          else:
+                              return False
+                      return True  # 高確率で素数
+                  }</code></pre>`, "isCode": true
+              },
+            ]
+          },
         ],
       },
       created() {
         this.filteredMentalArithmetic = JSON.parse(JSON.stringify(this.MentalArithmetic));
+        this.filteredPrimeNumberSearch = JSON.parse(JSON.stringify(this.PrimeNumberSearch));
       },
       methods: {
         collectAllNodeIds(items) {
@@ -233,11 +278,16 @@
         updateOpenNodesMentalArithmetic(newOpen) {
           this.openNodesMentalArithmetic = newOpen;
         },
+        updateOpenNodesPrimeNumberSearch(newOpen) {
+          this.openNodesPrimeNumberSearch = newOpen;
+        },
         filterTreeview() {
           const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
           if (!query) {
             this.filteredMentalArithmetic = JSON.parse(JSON.stringify(this.MentalArithmetic));
             this.openNodesMentalArithmetic = [];
+            this.filteredPrimeNumberSearch = JSON.parse(JSON.stringify(this.PrimeNumberSearch));
+            this.openNodesPrimeNumberSearch = [];
             return;
           }
 
@@ -262,6 +312,8 @@
 
           this.filteredMentalArithmetic = filterTree(JSON.parse(JSON.stringify(this.MentalArithmetic)));
           this.openNodesMentalArithmetic = this.collectAllNodeIds(this.filteredMentalArithmetic);
+          this.filteredPrimeNumberSearch = filterTree(JSON.parse(JSON.stringify(this.PrimeNumberSearch)));
+          this.openNodesPrimeNumberSearch = this.collectAllNodeIds(this.filteredPrimeNumberSearch);
         }
       }
     });
