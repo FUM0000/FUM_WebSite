@@ -927,15 +927,15 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-laptop</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Note_Programming_DesignPattern.html">
+                    <v-list-item href="./Note_Computer_DesignPattern.html">
                         <v-list-item-icon />
                         <v-list-item-title>デザインパターン</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Note_AI.html">
+                    <v-list-item href="./Note_Computer_AI.html">
                         <v-list-item-icon />
                         <v-list-item-title>AI</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Note_Quantum.html">
+                    <v-list-item href="./Note_Computer_Quantum.html">
                         <v-list-item-icon />
                         <v-list-item-title>量子コンピュータ</v-list-item-title>
                     </v-list-item>
@@ -947,13 +947,25 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-account-tie</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Note_AppliedInformation.html">
+                    <v-list-item href="./Note_Qualification_AppliedInformation.html">
                         <v-list-item-icon />
                         <v-list-item-title>応用情報技術者試験</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Learning_Makeup.html">
+                    <v-list-item href="./Note_Qualification_Makeup.html">
                         <v-list-item-icon />
                         <v-list-item-title>日本化粧品検定１級</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+                
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>サイエンス</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-atom-variant</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Note_Sience_Math.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>数学</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
                 
