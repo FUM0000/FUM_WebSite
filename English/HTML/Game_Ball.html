@@ -147,16 +147,13 @@
             #UI_Home_1;
             #UI_Start_1;
             #UI_Clear_1;
-            #Score;
             #Level;
-            #UI_Score_1;
             #UI_Level_1;
 
 
             // Base
             constructor() {
                 this.State = "Made";
-                this.#Score = 0;
                 this.#Level = 1;
                 
                 //// UI
@@ -177,12 +174,6 @@
                 this.#UI_Clear_1.setAttribute("id", "UI_Clear_1");
                 this.#UI_Clear_1.innerHTML = "";
                 document.body.appendChild(this.#UI_Clear_1);
-
-                // Score
-                this.#UI_Score_1 = document.createElement('div');
-                this.#UI_Score_1.setAttribute("id", "UI_Score_1");
-                this.#UI_Score_1.innerHTML = "Score: 0";
-                document.body.appendChild(this.#UI_Score_1);
 
                 // Level
                 this.#UI_Level_1 = document.createElement('div');
@@ -228,18 +219,14 @@
             }
             Clear() {
                 this.#State = "Goal";
-                this.#Score += 100 * this.#Level;
-                this.#UI_Score_1.innerHTML = "Score: " + this.#Score;
-                this.#UI_Clear_1.innerHTML = "WOOOW! +" + (100 * this.#Level) + "pts";
+                this.#UI_Clear_1.innerHTML = "WOOOW! Level Up!";
                 
-                // Level up
-                if (this.#Score >= this.#Level * 500) {
-                    this.#Level++;
-                    this.#UI_Level_1.innerHTML = "Level: " + this.#Level;
-                    // Increase difficulty
-                    Ball_1.Set_Difficulty(this.#Level);
-                    PaperCup_1.Set_Difficulty(this.#Level);
-                }
+                // Level up every clear
+                this.#Level++;
+                this.#UI_Level_1.innerHTML = "Level: " + this.#Level;
+                // Increase difficulty
+                Ball_1.Set_Difficulty(this.#Level);
+                PaperCup_1.Set_Difficulty(this.#Level);
             }
         }
         class Ball_1_CLASS {
@@ -463,7 +450,7 @@
                 // レベルが上がるごとにカップの半径が小さくなる
                 this.#Radius = this.#OriginalRadius * Math.max(1 - (level * 0.05), 0.5);
                 if (this.#Object) {
-                    this.#Object.scale.set(0.01 * (1 - (level * 0.05)), 0.01, 0.01 * (1 - (level * 0.05)));
+                    this.#Object.scale.set(0.01 * (this.#Radius / this.#OriginalRadius), 0.01, 0.01 * (this.#Radius / this.#OriginalRadius));
                 }
             }
         }
@@ -658,7 +645,7 @@
             color: red;
         }
 
-        #UI_Score_1 {
+        #UI_Level_1 {
             position: absolute;
             top: 20px;
             left: 50%;
@@ -666,17 +653,6 @@
             font-size: 1.4em;
             font-weight: bold;
             color: #333;
-            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
-        }
-
-        #UI_Level_1 {
-            position: absolute;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #666;
             text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
         }
 
