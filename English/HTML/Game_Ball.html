@@ -1,103 +1,74 @@
+<!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="UTF-8">
     <meta name="author" content="F U M">
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-    
-      gtag('config', 'G-B89KY0993B');
-    </script>
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
 
-    <!-- Setting -->
     <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
-    <meta charset="utf-8" />
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
 
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
 
     <script type="module">
-
-        // Setup Threejs
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
         import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
+
+        // Renderer
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas_1"), antialias: true });
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         window.addEventListener('resize', ResizeScreen, false);
         Renderer.setClearColor(new THREE.Color(0xFCA3B7));
+
         const Scene = new THREE.Scene();
+
+        // フォグ（遠くをぼかす）
+        Scene.fog = new THREE.Fog(0xFCA3B7, 3, 12);
+
         const Loader_FBX = new FBXLoader();
-        document.addEventListener('touchstart', (_startEvent) => { TouchStart(_startEvent.touches[0].clientX, _startEvent.touches[0].clientY); });
-        document.addEventListener('touchmove', (_moveEvent) => { TouchMove(_moveEvent.touches[0].clientX, _moveEvent.touches[0].clientY); });
-        document.addEventListener('touchend', (_moveEvent) => { TouchEnd(); });
-        document.addEventListener('mousedown', (_startEvent) => { TouchStart(_startEvent.clientX, _startEvent.clientY); });
-        document.addEventListener('mousemove', (_moveEvent) => { TouchMove(_moveEvent.clientX, _moveEvent.clientY); });
-        document.addEventListener('mouseup', (_endEvent) => { TouchEnd(); });
 
+        // カメラ回転制御
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraRotation = { x: 0, y: 0 };
 
-        // Setting Variable
+        document.addEventListener('touchstart', e => TouchStart(e.touches[0].clientX, e.touches[0].clientY));
+        document.addEventListener('touchmove',  e => TouchMove (e.touches[0].clientX, e.touches[0].clientY));
+        document.addEventListener('touchend',   () => TouchEnd());
+        document.addEventListener('mousedown',  e => TouchStart(e.clientX, e.clientY));
+        document.addEventListener('mousemove',  e => TouchMove (e.clientX, e.clientY));
+        document.addEventListener('mouseup',    () => TouchEnd());
+
+        // 定数
         let DeltaTime = 1 / 60;
-        let Gravity = 9.8;
-        const CalculationError = 0.001;
+        const Gravity = 9.8;
         const CalculationError_Time = 0.1;
         const Resistance = 0.998;
 
-
-        // Create Classe
+        // カメラクラス
         class Base_Camera_1_CLASS {
-            // Varibales
-            #Forcusing_Target;
-            #ForcusTarget;
             #Object;
-
-
-            // Base
             constructor() {
-                this.#Forcusing_Target = false;
-                this.#ForcusTarget = null;
-
-                this.#Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 20);
-                this.#Object.position.set(0, 1.5, -1);
-                this.#Object.lookAt(new THREE.Vector3(0, 0, 1));
+                this.#Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 30);
+                this.#Object.position.set(0, 1.5, -1.5);
+                this.#Object.lookAt(0, 0, 2);
             }
             Update() {
-                if (this.#Forcusing_Target && this.#ForcusTarget.Get_Object()) {
-                    this.#Object.lookAt(this.#ForcusTarget.Get_Object().position);
-                }
+                this.#Object.rotation.order = 'YXZ';
+                this.#Object.rotation.x = cameraRotation.x;
+                this.#Object.rotation.y = cameraRotation.y;
+                this.#Object.rotation.z = 0;
             }
-
-
-            // Get Set
             Get_Object() { return this.#Object; }
-            Set_ForcusTarget(target) {
-                this.#Forcusing_Target = true;
-                this.#ForcusTarget = target;
-            }
-
-
-            // Funcitons
-            Finish_ForcusTarget() { this.#Forcusing_Target; }
         }
+
+        // タイマー制御クラス
         class Base_InputControler_1_CLASS {
-            // Varibales
-            #Time_Flag_Finishing;
-            #Time_Flag_Using;
-            #Time_Timer;
-
-
-            // Base
-            constructor() {
-                this.#Time_Flag_Finishing = true;
-                this.#Time_Flag_Using = false;
-                this.#Time_Timer = 0;
-            }
+            #Time_Flag_Finishing = true;
+            #Time_Flag_Using = false;
+            #Time_Timer = 0;
             Update() {
                 if (this.#Time_Flag_Using) {
                     setTimeout(() => {
@@ -106,9 +77,6 @@
                     }, this.#Time_Timer * 1000);
                 }
             }
-
-
-            // Get Set
             Get_Time_Flag_Finishing() { return this.#Time_Flag_Finishing; }
             Set_Timer(_time) {
                 if (!this.#Time_Flag_Using) {
@@ -118,542 +86,379 @@
                 }
             }
         }
+
+        // ライト
         class Base_Light_Ambient_1_CLASS {
-            // Variables
-            #Object;
-
-
-            // Base
             constructor() {
-                this.#Object = new THREE.AmbientLight(0xffffff, 0.8);
-                Scene.add(this.#Object);
+                const light = new THREE.AmbientLight(0xffffff, 0.7);
+                Scene.add(light);
             }
         }
         class Base_Light_Directional_1_CLASS {
-            // Variables
-            #Object;
-
-
-            // Base
             constructor() {
-                this.#Object = new THREE.DirectionalLight(0xffffff, 0.8);
-                Scene.add(this.#Object);
+                const light = new THREE.DirectionalLight(0xffffff, 0.8);
+                light.position.set(5, 10, 3);
+                Scene.add(light);
             }
         }
+
+        // ゲームマネージャ
         class Base_Manager_1_CLASS {
-            // Variables
-            #State;
-            #Flag_Start;
+            #State = "Made";
+            #Level = 1;
             #UI_Home_1;
             #UI_Start_1;
             #UI_Clear_1;
-            #Level;
             #UI_Level_1;
 
-
-            // Base
             constructor() {
-                this.State = "Made";
-                this.#Level = 1;
-                
-                //// UI
-                // Home
+                // UI作成
                 this.#UI_Home_1 = document.createElement('div');
-                this.#UI_Home_1.setAttribute("id", "UI_Home_1");
+                this.#UI_Home_1.id = "UI_Home_1";
                 this.#UI_Home_1.innerHTML = "HOME";
                 document.body.appendChild(this.#UI_Home_1);
-                
-                // Start
+
                 this.#UI_Start_1 = document.createElement('div');
-                this.#UI_Start_1.setAttribute("id", "UI_Start_1");
-                this.#UI_Start_1.innerHTML = "";
+                this.#UI_Start_1.id = "UI_Start_1";
                 document.body.appendChild(this.#UI_Start_1);
-                
-                // WOOOW
+
                 this.#UI_Clear_1 = document.createElement('div');
-                this.#UI_Clear_1.setAttribute("id", "UI_Clear_1");
-                this.#UI_Clear_1.innerHTML = "";
+                this.#UI_Clear_1.id = "UI_Clear_1";
                 document.body.appendChild(this.#UI_Clear_1);
 
-                // Level
                 this.#UI_Level_1 = document.createElement('div');
-                this.#UI_Level_1.setAttribute("id", "UI_Level_1");
+                this.#UI_Level_1.id = "UI_Level_1";
                 this.#UI_Level_1.innerHTML = "Level: 1";
                 document.body.appendChild(this.#UI_Level_1);
 
-                // Audio
-                var bgm = new Audio();
-                bgm.src = '../../Asset/Audio/lofi_1.wav';
-                bgm.loop = true;
-                bgm.volume = 0.5;
-                // bgm.play();
+                const UI_Shoot_1 = document.createElement('div');
+                UI_Shoot_1.id = "UI_Shoot_1";
+                UI_Shoot_1.innerHTML = "発射";
+                document.body.appendChild(UI_Shoot_1);
+
+                UI_Shoot_1.addEventListener('click', () => {
+                    if (this.#State === "Playing") Ball_1.Shoot();
+                });
+
+                $("#UI_Home_1").click(() => {
+                    window.location.href = '../../English/HTML/index.html';
+                });
             }
             Initialize() {
                 this.#State = "WaitingStart";
                 this.#UI_Start_1.innerHTML = "";
             }
-
-
-            // Get Set
             Get_State() { return this.#State; }
             Set_State(_state) { this.#State = _state; }
             Get_Level() { return this.#Level; }
-
-
-            // Functions
             Ready() {
-                this.#State = "WaitingStart"
+                this.#State = "WaitingStart";
                 this.#UI_Start_1.innerHTML = "START";
                 this.#UI_Clear_1.innerHTML = "";
                 Ball_1.Initialize();
                 Progress_1.Initialize();
             }
-            Move_ShootingDrection(_left, _top) {
-                const element = document.getElementById('Circle_1');
-                element.style.left = _left;
-                element.style.top = _top;
-            }
             Start() {
-                this.#State = "WaitingShootingDirection"
+                this.#State = "Playing";
                 this.#UI_Start_1.innerHTML = "";
             }
             Clear() {
                 this.#State = "Goal";
                 this.#UI_Clear_1.innerHTML = "WOOOW! Level Up!";
-                
-                // Level up every clear
                 this.#Level++;
                 this.#UI_Level_1.innerHTML = "Level: " + this.#Level;
-                // Increase difficulty
                 Ball_1.Set_Difficulty(this.#Level);
                 PaperCup_1.Set_Difficulty(this.#Level);
             }
         }
+
+        // ボール
         class Ball_1_CLASS {
-            // Variables
-            #Bounce_Count;
-            #Bounce_Max;
-            #Direction_Move;
-            #ElapsedFrame_Firing;
-            #ElapsedFrame_Gravity;
-            #Flag_Cup;
-            #Flag_Shoot;
-            #Object;
-            #Radius;
-            #Restitution;
-            #StartHeight;
-            #Velocity;
-            #Velocity_Past;
-            #Difficulty;
+            #Bounce_Count = 0;
+            #Bounce_Max = 3;
+            #Direction_Move = new THREE.Vector3();
+            #ElapsedFrame_Firing = 0;
+            #ElapsedFrame_Gravity = 0;
+            #Flag_Cup = false;
+            #Flag_Shoot = false;
+            #Object = null;
+            #Radius = 0.05;
+            #Speed = 10;
+            #Speed_Max = 15;
+            #Speed_Base = 10;
+            #Velocity_X = 0; #Velocity_Y = 0; #Velocity_Z = 0;
+            #X = 0; #Y = 1; #Z = 0;
 
-
-            // Base
             constructor() {
-                this.Initialize();
-                this.#Difficulty = 1;
-                Loader_FBX.load(
-                    "../../Asset/Model/Ball_PinPon_1.fbx",
-                    (_object) => {
-                        // Initialize
-                        _object.scale.set(0.01, 0.01, 0.01);
-                        _object.position.set(0, this.#StartHeight, 0);
-                        this.#Object = _object;
+                Loader_FBX.load('../../Asset/Model/Ball_PinPon_1.fbx', 
+                    obj => {
+                        this.#Object = obj;
+                        this.#Object.scale.set(0.001, 0.001, 0.001);
                         Scene.add(this.#Object);
-                    }
+                    },
+                    undefined,
+                    err => console.error(err)
                 );
             }
+
             Initialize() {
-                // Variables
                 this.#Bounce_Count = 0;
-                this.#Bounce_Max = 38;
-                this.#Direction_Move = new THREE.Vector3(0, -1, 1);
                 this.#ElapsedFrame_Firing = 0;
                 this.#ElapsedFrame_Gravity = 0;
                 this.#Flag_Cup = false;
                 this.#Flag_Shoot = false;
-                this.#Radius = 0.022;
-                this.#Restitution = 0.95;
-                this.#StartHeight = 1;
-                this.#Velocity = 0;
-                this.#Velocity_Past = this.#Velocity;
-                if (this.#Object) this.#Object.position.set(0, this.#StartHeight, 0);
+                this.#Velocity_X = this.#Velocity_Y = this.#Velocity_Z = 0;
+                this.#Speed = this.#Speed_Base;
+                this.#X = 0; this.#Y = 1; this.#Z = 0;
+                if (this.#Object) this.#Object.position.set(0,1,0);
             }
+
             Update() {
-                if (this.#Object && this.#Flag_Shoot) {
-                    this.#ElapsedFrame_Firing++;
-                    if (this.#Velocity > 0.1) this.#Velocity *= Resistance;
-                    else this.#Velocity = 0;
+                if (!this.#Flag_Shoot) {
+                    const cam = Base_Camera_1.Get_Object();
+                    const dir = new THREE.Vector3();
+                    cam.getWorldDirection(dir);
+                    const dist = 0.5;
+                    this.#X = cam.position.x + dir.x * dist;
+                    this.#Y = cam.position.y + dir.y * dist;
+                    this.#Z = cam.position.z + dir.z * dist;
+                    if (this.#Object) this.#Object.position.set(this.#X, this.#Y, this.#Z);
+                }
 
-                    this.Gravity();
-                    this.Move();
-                    this.CheckCollision();
+                if (this.#Flag_Shoot) {
+                    this.#ElapsedFrame_Firing += DeltaTime;
+                    if (this.#ElapsedFrame_Firing >= CalculationError_Time) {
+                        this.#ElapsedFrame_Firing = 0;
+                        this.Update_Shoot();
+                    }
+                }
 
-                    if (this.#Bounce_Count >= this.#Bounce_Max) Base_Manager_1.Ready();
+                if (this.#Object) {
+                    this.#Object.position.set(this.#X, this.#Y, this.#Z);
                 }
             }
 
+            Update_Shoot() {
+                this.#Velocity_X *= Resistance;
+                this.#Velocity_Z *= Resistance;
 
-            // Get Set
-            Get_Flag_Shoot() { return this.#Flag_Shoot; }
+                this.#X += this.#Velocity_X * DeltaTime;
+                this.#Y += this.#Velocity_Y * DeltaTime;
+                this.#Z += this.#Velocity_Z * DeltaTime;
+
+                this.#ElapsedFrame_Gravity += DeltaTime;
+                if (this.#ElapsedFrame_Gravity >= CalculationError_Time) {
+                    this.#ElapsedFrame_Gravity = 0;
+                    this.#Velocity_Y -= Gravity * DeltaTime * 2; // 少し重めに
+                }
+
+                // 床との衝突（y=0）
+                if (this.#Y <= this.#Radius) {
+                    this.#Y = this.#Radius;
+                    this.#Velocity_Y *= -0.75; // バウンド減衰
+                    this.#Bounce_Count++;
+
+                    if (this.#Bounce_Count >= this.#Bounce_Max) {
+                        this.#Flag_Shoot = false;
+                        Base_Manager_1.Ready();
+                    }
+                }
+
+                // カップに入ったか
+                if (PaperCup_1.Get_Object() && !this.#Flag_Cup) {
+                    const dist = this.#Object.position.distanceTo(PaperCup_1.Get_Object().position);
+                    if (dist <= PaperCup_1.Get_Radius() + this.#Radius &&
+                        this.#Y >= PaperCup_1.Get_Height() - 0.12 &&
+                        this.#Velocity_Y < 0) {
+                        this.#Flag_Cup = true;
+                        Base_Manager_1.Clear();
+                        Base_InputControler_1.Set_Timer(2.5);
+                    }
+                }
+            }
+
+            Get_Object() { return this.#Object; }
             Set_Difficulty(level) {
-                this.#Difficulty = level;
-                this.#Bounce_Max = Math.max(38 - (level * 2), 20); // レベルが上がるごとにバウンス回数が減少
-                this.#Restitution = Math.max(0.95 - (level * 0.01), 0.8); // レベルが上がるごとに反発係数が減少
+                this.#Speed_Base = 10 + (level - 1) * 0.6;
             }
-
-
-            // Functions
             Shoot() {
-                Base_Manager_1.Set_State("Playing");
+                const power = Progress_1.Get_Percentage() / 100;
+                this.#Speed = this.#Speed_Base + (this.#Speed_Max - this.#Speed_Base) * power;
+
+                const cam = Base_Camera_1.Get_Object();
+                const dir = new THREE.Vector3();
+                cam.getWorldDirection(dir);
+
+                this.#Velocity_X = dir.x * this.#Speed;
+                this.#Velocity_Y = dir.y * this.#Speed;
+                this.#Velocity_Z = dir.z * this.#Speed;
+
                 this.#Flag_Shoot = true;
-                this.#Velocity = Progress_1.Get_Percentage() * 0.01 * (2.5 - (this.#Difficulty * 0.1)); // レベルが上がるごとに速度が減少
-                this.#Velocity_Past = this.#Velocity;
-
-                const element = document.getElementById('Circle_1');
-                const screen_x = parseInt(element.style.left.replace('px', ''));
-                const screen_y = parseInt(element.style.top.replace('px', ''));
-                let screen_size = new THREE.Vector2();
-                Renderer.getSize(screen_size); 
-                
-                this.#Direction_Move.x = (screen_size.x * 0.5 - screen_x) / screen_size.x;
-                this.#Direction_Move.y = (screen_size.y * 0.5 - screen_y) / screen_size.y;
-            }
-            Gravity() {
-                // Variables
-                const elapsed_time = this.#ElapsedFrame_Gravity * DeltaTime;
-                // Count
-                this.#ElapsedFrame_Gravity++;
-
-
-                // UP
-                if (this.#Direction_Move.y > 0) {
-                    // Variables
-                    const maximum_arrival_time = this.#Velocity_Past / Gravity;
-                    const velocity = Gravity * elapsed_time;
-
-                    // Gravity Move
-                    this.#Object.position.add(new THREE.Vector3(0, 1, 0).multiplyScalar(Math.abs((this.#Velocity_Past - velocity) * DeltaTime)));
-
-                    // MaximumArrivalTime
-                    if (
-                        elapsed_time > maximum_arrival_time - CalculationError_Time &&
-                        elapsed_time < maximum_arrival_time + CalculationError_Time
-                    ) {
-                        this.#Direction_Move.y = -1;
-                        this.#ElapsedFrame_Gravity = 0;
-                    }
-                }
-
-
-                // DOWN
-                else {
-                    // Variables
-                    const velocity = Gravity * elapsed_time;
-
-                    // Gravity Move
-                    this.#Object.position.add(new THREE.Vector3(0, -1, 0).multiplyScalar(velocity * DeltaTime));
-
-                    // Bounce
-                    if (this.#Object.position.y < this.#Radius) {
-                        this.#Object.position.y = this.#Radius;
-                        if (this.#Bounce_Count < this.#Bounce_Max) this.#Direction_Move.y = 1;
-                        this.#Velocity_Past = (Gravity * elapsed_time) * this.#Restitution;
-                        this.#ElapsedFrame_Gravity = 0;
-
-                        // Count
-                        if (this.#Bounce_Count < this.#Bounce_Max) this.#Bounce_Count++;
-                    }
-                }
-            }
-            Move() {
-                const vector = this.#Direction_Move.clone(); vector.y = 0;
-                this.#Object.position.add(vector.multiplyScalar(this.#Velocity * DeltaTime));
-                if (this.#Object.position.z > 2 || this.#Object.position.z < 0) {
-                    this.#Direction_Move.z *= -1;
-                }
-                if (this.#Object.position.x > 0.5 || this.#Object.position.x < -0.5) {
-                    this.#Direction_Move.x *= -1;
-                }
-            }
-            CheckCollision() {
-                if (PaperCup_1.Get_Object()) {
-                    // Variables
-                    const position = this.#Object.position;
-                    const position_xz = new THREE.Vector3(position.x, 0, position.z);
-
-                    // Search
-                    const cup_position = PaperCup_1.Get_Object().position;
-                    const cup_position_xz = new THREE.Vector3(cup_position.x, 0, cup_position.z);
-                    const distance = position_xz.distanceTo(cup_position_xz);
-                    if (distance < PaperCup_1.Get_Radius()) {
-                        if (position.y < PaperCup_1.Get_Height()) {
-                            this.#Flag_Cup = true;
-                        }
-                        else this.#Flag_Cup = false;
-
-                        if (this.#Flag_Cup) {
-                            if (position.y == this.#Radius) {
-                                Base_Manager_1.Clear();
-                                this.#Object.position.x = cup_position.x;
-                                this.#Object.position.z = cup_position.z;
-                            }
-                        }
-                    }
-                    else if (
-                        distance > PaperCup_1.Get_Radius() &&
-                        distance < PaperCup_1.Get_Radius() + this.#Radius
-                    ) {
-                        if (position.y < PaperCup_1.Get_Height()) {
-                            this.#Direction_Move.z *= -1;
-                            this.#Direction_Move.x *= -1;
-                        }
-                    }
-                }
             }
         }
+
+        // 紙コップ
         class PaperCup_1_CLASS {
-            // Variables
-            #Height;
-            #Object;
-            #Radius;
-            #Difficulty;
-            #OriginalRadius;
+            #Height = 0.22;
+            #Object = null;
+            #Radius = 0.085;
+            #X = 0; #Y = 0; #Z = 2;
 
-
-            // Base
             constructor() {
-                // Variables
-                this.#Height = 0.08;
-                this.#OriginalRadius = 0.073 * 0.5;
-                this.#Radius = this.#OriginalRadius;
-                this.#Difficulty = 1;
-
-                Loader_FBX.load(
-                    "../../Asset/Model/Cup_Paper_1.fbx",
-                    (_object) => {
-                        // Initialize
-                        _object.scale.set(0.01, 0.01, 0.01);
-                        _object.position.set(0, 0, 1);
-                        this.#Object = _object;
+                Loader_FBX.load('../../Asset/Model/Cup_Paper_1.fbx',
+                    obj => {
+                        this.#Object = obj;
+                        this.#Object.scale.set(0.001, 0.001, 0.001);
+                        this.#Object.position.set(0, 0, 2);
                         Scene.add(this.#Object);
-                    }
+                    },
+                    undefined,
+                    err => console.error(err)
                 );
             }
 
-
-            // Get Set
-            Get_Height() { return this.#Height; }
             Get_Object() { return this.#Object; }
             Get_Radius() { return this.#Radius; }
+            Get_Height() { return this.#Height; }
             Set_Difficulty(level) {
-                this.#Difficulty = level;
-                // レベルが上がるごとにカップの半径が小さくなる
-                this.#Radius = this.#OriginalRadius * Math.max(1 - (level * 0.05), 0.5);
-                if (this.#Object) {
-                    this.#Object.scale.set(0.01 * (this.#Radius / this.#OriginalRadius), 0.01, 0.01 * (this.#Radius / this.#OriginalRadius));
-                }
+                this.#Z = 2.5 + (level - 1) * 0.4;
+                if (this.#Object) this.#Object.position.z = this.#Z;
             }
         }
+
+        // パワーゲージ
         class Progress_1_CLASS {
-            // Variables
             #Element;
-            #MeterSpeed;
-            #MoveDirection;
-
-
-            // Base
+            #MoveDirection = 1;
             constructor() {
-                this.#Element = document.getElementById("Progress_1");
-                this.#Element.value = 0;
-                this.#Element.max = 100;
-                this.#MeterSpeed = 100; // 0~100 per second
-                this.#MoveDirection = 1;
+                this.#Element = document.getElementById('Progress_1');
             }
             Update() {
-                if (!Ball_1.Get_Flag_Shoot()) {
-                    this.#MoveDirection == 1 ?
-                        this.#Element.value += this.#MeterSpeed * DeltaTime :
-                        this.#Element.value -= this.#MeterSpeed * DeltaTime;
-                    if (this.#Element.value >= this.#Element.max) {
-                        this.#Element.value = this.#Element.max;
+                if (Base_Manager_1.Get_State() === "Playing") {
+                    this.#Element.value += this.#MoveDirection * 2.2;
+                    if (this.#Element.value >= 100) {
+                        this.#Element.value = 100;
                         this.#MoveDirection = -1;
-                    }
-                    else if (this.#Element.value <= 0) {
+                    } else if (this.#Element.value <= 0) {
                         this.#Element.value = 0;
                         this.#MoveDirection = 1;
                     }
                 }
             }
             Initialize() { this.#Element.value = 0; }
-
-
-            // Get Set
-            Get_Percentage() { return this.#Element.value / this.#Element.max * 100; }
+            Get_Percentage() { return this.#Element.value; }
         }
 
+        // 床（大きな板）
+        function CreateFloor() {
+            const geometry = new THREE.PlaneGeometry(30, 30);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x000000,
+                roughness: 0.9 
+            });
+            const floor = new THREE.Mesh(geometry, material);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = 0;
+            floor.receiveShadow = true;
+            Scene.add(floor);
+        }
 
-        // Create Objects
-        const Base_Camera_1 = new Base_Camera_1_CLASS();
+        // インスタンス生成
+        const Base_Camera_1       = new Base_Camera_1_CLASS();
         const Base_InputControler_1 = new Base_InputControler_1_CLASS();
-        const Base_Light_Ambient_1 = new Base_Light_Ambient_1_CLASS();
-        const Base_Light_Directional_1 = new Base_Light_Directional_1_CLASS();
-        const Base_Manager_1 = new Base_Manager_1_CLASS();
-        const Ball_1 = new Ball_1_CLASS();
-        const PaperCup_1 = new PaperCup_1_CLASS();
-        const Progress_1 = new Progress_1_CLASS();
+        new Base_Light_Ambient_1_CLASS();
+        new Base_Light_Directional_1_CLASS();
+        const Base_Manager_1      = new Base_Manager_1_CLASS();
+        const Ball_1              = new Ball_1_CLASS();
+        const PaperCup_1          = new PaperCup_1_CLASS();
+        const Progress_1          = new Progress_1_CLASS();
 
+        CreateFloor();           // 床追加
 
-        // Initialize
         Base_Manager_1.Ready();
 
-
-        // Loop
-        Loop();
+        // アニメーションループ
         function Loop() {
-            // Object Actions
             Base_InputControler_1.Update();
-            if (Base_Manager_1.Get_State() == "Playing") {
+
+            if (Base_Manager_1.Get_State() === "Playing") {
                 Ball_1.Update();
-                Base_Camera_1.Update();
+                Progress_1.Update();
             }
-            else if (Base_Manager_1.Get_State() == "WaitingShoot") Progress_1.Update();
 
+            Base_Camera_1.Update();
 
-            // Threejs
             Renderer.render(Scene, Base_Camera_1.Get_Object());
             requestAnimationFrame(Loop);
         }
+        Loop();
 
-
-        // Functions
         function ResizeScreen() {
-            Base_Camera_1.Get_Object().aspect = window.innerWidth / window.innerHeight;
-            Base_Camera_1.Get_Object().updateProjectionMatrix();
+            const cam = Base_Camera_1.Get_Object();
+            cam.aspect = window.innerWidth / window.innerHeight;
+            cam.updateProjectionMatrix();
             Renderer.setSize(window.innerWidth, window.innerHeight);
         }
-        function TouchStart(_x, _y) {
+
+        function TouchStart(x, y) {
             if (Base_InputControler_1.Get_Time_Flag_Finishing()) {
-                switch (Base_Manager_1.Get_State()) {
-                    case "WaitingStart":
-                        Base_Manager_1.Start();
-                        break;
-                    case "WaitingShootingDirection":
-                        Base_Manager_1.Set_State("MovingShootingDirection");
-                        Base_Manager_1.Move_ShootingDrection(_x, _y);
-                        break;
-                    case "WaitingShoot":
-                        Ball_1.Shoot();
-                        break;
-                    case "Goal":
-                        Base_Manager_1.Ready();
-                        break;
-                    default: break;
+                const state = Base_Manager_1.Get_State();
+                if (state === "WaitingStart") {
+                    Base_Manager_1.Start();
+                } else if (state === "Playing") {
+                    isDragging = true;
+                    previousMousePosition = { x, y };
+                } else if (state === "Goal") {
+                    Base_Manager_1.Ready();
                 }
             }
             Base_InputControler_1.Set_Timer(0.1);
         }
-        function TouchMove(_x, _y) {
-            if (Base_Manager_1.Get_State() == "MovingShootingDirection") {
-                const element = document.getElementById('Circle_1');
-                element.style.left = _x;
-                element.style.top = _y;
+
+        function TouchMove(x, y) {
+            if (Base_Manager_1.Get_State() === "Playing" && isDragging) {
+                const dx = x - previousMousePosition.x;
+                const dy = y - previousMousePosition.y;
+
+                cameraRotation.y -= dx * 0.004;
+                cameraRotation.x -= dy * 0.004;
+                cameraRotation.x = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraRotation.x));
+
+                previousMousePosition = { x, y };
             }
         }
+
         function TouchEnd() {
-            if (Base_Manager_1.Get_State() == "MovingShootingDirection") {
-                Base_Manager_1.Set_State("WaitingShoot");
-            }
+            isDragging = false;
         }
-
-        $("#UI_Home_1").click(function () {
-            window.location.href = '../../English/HTML/index.html';
-        });
-        $("#UI_Reset_1").click(function () {
-            Base_Manager_1.Ready();
-        });
-
-        // Debug
-        class Debug_Checker_Time_1_CLASS {
-            // Varibales
-            #Checking;
-            #FPS;
-            #PreviousTime;
-
-
-            // Base
-            constructor() {
-                this.#Checking = false;
-                this.#PreviousTime = 0;
-            }
-            Update() {
-                if (this.#Checking) {
-                    const currentTime = performance.now();
-                    const deltaTime = currentTime - this.#PreviousTime;
-                    this.#PreviousTime = currentTime;
-
-                    this.#FPS = 1000 / deltaTime;
-                    DeltaTime = deltaTime * 0.001;
-                    Log("FPS: " + this.#FPS);
-                }
-            }
-
-
-            // Get Set
-            Set_Checking(bool) {
-                this.#Checking = bool;
-                this.#PreviousTime = 0;
-            }
-        }
-        function Log(content) { console.log(content); }
-
-
     </script>
 
-</head>
-
-<body>
-
-    <canvas id="Canvas_1"></canvas>
-    <div id="Circle_1"></div>
-    <div id="UI_Reset_1" class="mdi mdi-rotate-left"></div>
-    <progress id="Progress_1" value="100" max="100"></progress>
-
-
     <style>
-        body {
-            margin: 0;
-        }
+        body { margin:0; overflow:hidden; }
+        #Canvas_1 { display:block; }
 
-        #Circle_1 {
+        #UI_Home_1 {
             position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 3em;
-            height: 3em;
-            background-color: #000000;
-            opacity: 0.1;
-            border-radius: 50%;
-            transform: translateX(-50%) translateY(-50%);
-        }
-
-        #UI_Reset_1 {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 2em;
+            top: 16px;
+            right: 16px;
+            font-size: 1.5em;
             font-weight: bold;
-            color: red;
+            color: #e00;
+            cursor: pointer;
+            user-select: none;
         }
 
         #UI_Level_1 {
             position: absolute;
-            top: 20px;
+            top: 16px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 1.4em;
+            font-size: 1.6em;
             font-weight: bold;
-            color: #333;
-            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+            color: #222;
+            background: rgba(255,255,255,0.7);
+            padding: 4px 16px;
+            border-radius: 8px;
         }
 
         #UI_Clear_1 {
@@ -661,63 +466,74 @@
             top: 45%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 2em;
+            font-size: 3.2em;
             font-weight: bold;
             color: #ff4444;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            animation: bounce 0.5s infinite;
+            text-shadow: 3px 3px 6px #0008;
+            pointer-events: none;
+            animation: pop 0.6s infinite alternate;
         }
-
-        @keyframes bounce {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.1); }
-        }
-
-        #Progress_1 {
-            position: absolute;
-            left: 50%;
-            top: 90%;
-            transform: translateX(-50%) translateY(-50%);
-            block-size: 2em;
-            inline-size: 20em;
-            border-radius: 1em;
-            background: rgba(255,255,255,0.3);
-        }
-
-        #Progress_1::-webkit-progress-bar {
-            background: rgba(255,255,255,0.3);
-            border-radius: 1em;
-        }
-
-        #Progress_1::-webkit-progress-value {
-            background: linear-gradient(to right, #ff4444, #ff8800);
-            border-radius: 1em;
-            transition: width 0.1s ease;
-        }
-
-        #UI_Home_1 {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 1.4em;
-            font-weight: bold;
-            color: red;
+        @keyframes pop {
+            from { transform: translate(-50%, -50%) scale(1); }
+            to   { transform: translate(-50%, -50%) scale(1.12); }
         }
 
         #UI_Start_1 {
             position: absolute;
-            top: 60%;
+            top: 55%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 1.4em;
+            font-size: 3em;
             font-weight: bold;
-            color: red;
+            color: #e00;
+            text-shadow: 2px 2px 5px #0006;
+            pointer-events: none;
+        }
+
+        #UI_Shoot_1 {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.9em;
+            font-weight: bold;
+            color: white;
+            background: #ff4444;
+            padding: 16px 48px;
+            border-radius: 12px;
+            box-shadow: 0 5px 12px #0006;
+            user-select: none;
+            cursor: pointer;
+        }
+        #UI_Shoot_1:active {
+            transform: translateX(-50%) scale(0.94);
+            box-shadow: 0 2px 6px #0004;
+        }
+
+        #Progress_1 {
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 260px;
+            height: 18px;
+            border-radius: 9px;
+            background: rgba(0,0,0,0.3);
+        }
+        #Progress_1::-webkit-progress-bar {
+            background: rgba(255,255,255,0.25);
+            border-radius: 9px;
+        }
+        #Progress_1::-webkit-progress-value {
+            background: linear-gradient(90deg, #ff4444, #ffaa00);
+            border-radius: 9px;
+            transition: width 0.08s linear;
         }
     </style>
+</head>
+<body>
+    <canvas id="Canvas_1"></canvas>
+    <progress id="Progress_1" value="0" max="100"></progress>
 
-
-    <script type="module">
-    </script>
 </body>
-
 </html>
