@@ -118,6 +118,12 @@
                 this.#UI_Home_1.innerHTML = "HOME";
                 document.body.appendChild(this.#UI_Home_1);
 
+                // リセットボタンを追加
+                const UI_Reset_1 = document.createElement('div');
+                UI_Reset_1.id = "UI_Reset_1";
+                UI_Reset_1.innerHTML = "RESET";
+                document.body.appendChild(UI_Reset_1);
+
                 this.#UI_Start_1 = document.createElement('div');
                 this.#UI_Start_1.id = "UI_Start_1";
                 document.body.appendChild(this.#UI_Start_1);
@@ -138,6 +144,10 @@
 
                 UI_Shoot_1.addEventListener('click', () => {
                     if (this.#State === "Playing") Ball_1.Shoot();
+                });
+
+                UI_Reset_1.addEventListener('click', () => {
+                    this.Ready();
                 });
 
                 $("#UI_Home_1").click(() => {
@@ -182,10 +192,10 @@
             #Flag_Cup = false;
             #Flag_Shoot = false;
             #Object = null;
-            #Radius = 0.05;
-            #Speed = 10;
-            #Speed_Max = 15;
-            #Speed_Base = 10;
+            #Radius = 0.08;
+            #Speed = 5;
+            #Speed_Max = 8;
+            #Speed_Base = 1;
             #Velocity_X = 0; #Velocity_Y = 0; #Velocity_Z = 0;
             #X = 0; #Y = 1; #Z = 0;
 
@@ -193,7 +203,7 @@
                 Loader_FBX.load('../../Asset/Model/Ball_PinPon_1.fbx', 
                     obj => {
                         this.#Object = obj;
-                        this.#Object.scale.set(0.001, 0.001, 0.001);
+                        this.#Object.scale.set(0.0016, 0.0016, 0.0016);
                         Scene.add(this.#Object);
                     },
                     undefined,
@@ -279,7 +289,7 @@
 
             Get_Object() { return this.#Object; }
             Set_Difficulty(level) {
-                this.#Speed_Base = 10 + (level - 1) * 0.6;
+                this.#Speed_Base = 1;
             }
             Shoot() {
                 const power = Progress_1.Get_Percentage() / 100;
@@ -299,16 +309,18 @@
 
         // 紙コップ
         class PaperCup_1_CLASS {
-            #Height = 0.22;
+            #Height = 0.5;
             #Object = null;
-            #Radius = 0.085;
+            #Radius = 1;
             #X = 0; #Y = 0; #Z = 2;
+
+            #Scale = 0.05;
 
             constructor() {
                 Loader_FBX.load('../../Asset/Model/Cup_Paper_1.fbx',
                     obj => {
                         this.#Object = obj;
-                        this.#Object.scale.set(0.001, 0.001, 0.001);
+                        this.#Object.scale.set(this.#Scale, this.#Scale, this.#Scale);
                         this.#Object.position.set(0, 0, 2);
                         Scene.add(this.#Object);
                     },
@@ -321,7 +333,7 @@
             Get_Radius() { return this.#Radius; }
             Get_Height() { return this.#Height; }
             Set_Difficulty(level) {
-                this.#Z = 2.5 + (level - 1) * 0.4;
+                this.#Z = 2;
                 if (this.#Object) this.#Object.position.z = this.#Z;
             }
         }
@@ -446,6 +458,23 @@
             color: #e00;
             cursor: pointer;
             user-select: none;
+        }
+
+        #UI_Reset_1 {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #0066cc;
+            cursor: pointer;
+            user-select: none;
+            background: rgba(255,255,255,0.7);
+            padding: 4px 12px;
+            border-radius: 8px;
+        }
+        #UI_Reset_1:active {
+            transform: scale(0.95);
         }
 
         #UI_Level_1 {
