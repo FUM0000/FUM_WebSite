@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -27,12 +27,12 @@
 
         const Scene = new THREE.Scene();
 
-        // フォグ（遠くをぼかす）
+        // 繝輔か繧ｰ・磯□縺上ｒ縺ｼ縺九☆・・
         Scene.fog = new THREE.Fog(0xFCA3B7, 3, 12);
 
         const Loader_FBX = new FBXLoader();
 
-        // カメラ回転制御
+        // 繧ｫ繝｡繝ｩ蝗櫁ｻ｢蛻ｶ蠕｡
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
         let cameraRotation = { x: 0, y: 0 };
@@ -44,23 +44,20 @@
         document.addEventListener('mousemove',  e => TouchMove (e.clientX, e.clientY));
         document.addEventListener('mouseup',    () => TouchEnd());
 
-        // 定数
+        // 螳壽焚
         let DeltaTime = 1 / 60;
         const Gravity = 9.8;
         const CalculationError_Time = 0.1;
         const Resistance = 0.998;
 
-        // カメラクラス
+        // 繧ｫ繝｡繝ｩ繧ｯ繝ｩ繧ｹ
         class Base_Camera_1_CLASS {
             #Object;
-            #X = 0;
-            #Y = 1.5;
-            #Z = 0;
+            #X = 0; #Y = 1.5; #Z = 0;
 
             constructor() {
                 this.#Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 30);
                 this.#Object.position.set(this.#X, this.#Y, this.#Z);
-                this.#Object.lookAt(0, 0, 2);
             }
             Update() {
                 this.#Object.rotation.order = 'YXZ';
@@ -71,7 +68,7 @@
             Get_Object() { return this.#Object; }
         }
 
-        // タイマー制御クラス
+        // 繧ｿ繧､繝槭・蛻ｶ蠕｡繧ｯ繝ｩ繧ｹ
         class Base_InputControler_1_CLASS {
             #Time_Flag_Finishing = true;
             #Time_Flag_Using = false;
@@ -94,7 +91,7 @@
             }
         }
 
-        // ライト
+        // 繝ｩ繧､繝・
         class Base_Light_Ambient_1_CLASS {
             constructor() {
                 const light = new THREE.AmbientLight(0xffffff, 0.7);
@@ -109,23 +106,26 @@
             }
         }
 
-        // ゲームマネージャ
+        // 繧ｲ繝ｼ繝繝槭ロ繝ｼ繧ｸ繝｣
         class Base_Manager_1_CLASS {
             #State = "Made";
             #Level = 1;
+            #Pending_LevelUp = false;
             #UI_Home_1;
+            #UI_Power_1;
+            #UI_Shoot_1;
             #UI_Start_1;
             #UI_Clear_1;
             #UI_Level_1;
 
             constructor() {
-                // UI作成
+                // UI菴懈・
                 this.#UI_Home_1 = document.createElement('div');
                 this.#UI_Home_1.id = "UI_Home_1";
                 this.#UI_Home_1.innerHTML = "HOME";
                 document.body.appendChild(this.#UI_Home_1);
 
-                // リセットボタンを追加
+                // 繝ｪ繧ｻ繝・ヨ繝懊ち繝ｳ繧定ｿｽ蜉
                 const UI_Reset_1 = document.createElement('div');
                 UI_Reset_1.id = "UI_Reset_1";
                 UI_Reset_1.innerHTML = "RESET";
@@ -144,13 +144,37 @@
                 this.#UI_Level_1.innerHTML = "Level: 1";
                 document.body.appendChild(this.#UI_Level_1);
 
-                const UI_Shoot_1 = document.createElement('div');
-                UI_Shoot_1.id = "UI_Shoot_1";
-                UI_Shoot_1.innerHTML = "発射";
-                document.body.appendChild(UI_Shoot_1);
+                this.#UI_Power_1 = document.createElement('div');
+                this.#UI_Power_1.id = "UI_Power_1";
+                this.#UI_Power_1.innerHTML = "SET POWER";
+                document.body.appendChild(this.#UI_Power_1);
 
-                UI_Shoot_1.addEventListener('click', () => {
-                    if (this.#State === "Playing") Ball_1.Shoot();
+                this.#UI_Shoot_1 = document.createElement('div');
+                this.#UI_Shoot_1.id = "UI_Shoot_1";
+                this.#UI_Shoot_1.innerHTML = "SHOOT";
+                document.body.appendChild(this.#UI_Shoot_1);
+
+                this.#UI_Power_1.addEventListener('click', () => {
+                    if (this.#State !== "Playing") return;
+                    if (Progress_1.Get_Is_Locked()) {
+                        Progress_1.Unlock();
+                    } else {
+                        Progress_1.Lock();
+                    }
+                    this.Update_Action_UI();
+                });
+
+                this.#UI_Shoot_1.addEventListener('click', () => {
+                    if (this.#State !== "Playing") return;
+                    if (!Progress_1.Get_Is_Locked()) {
+                        this.#UI_Power_1.classList.remove("need-power");
+                        void this.#UI_Power_1.offsetWidth;
+                        this.#UI_Power_1.classList.add("need-power");
+                        return;
+                    }
+                    Ball_1.Shoot();
+                    Progress_1.Unlock();
+                    this.Update_Action_UI();
                 });
 
                 UI_Reset_1.addEventListener('click', () => {
@@ -164,32 +188,63 @@
             Initialize() {
                 this.#State = "WaitingStart";
                 this.#UI_Start_1.innerHTML = "";
+                this.Update_Action_UI();
             }
             Get_State() { return this.#State; }
             Set_State(_state) { this.#State = _state; }
             Get_Level() { return this.#Level; }
             Ready() {
+                if (this.#Pending_LevelUp) {
+                    this.#Pending_LevelUp = false;
+                    this.#Level++;
+                    this.#UI_Level_1.innerHTML = "Level: " + this.#Level;
+                    Ball_1.Set_Difficulty(this.#Level);
+                    PaperCup_1.Set_Difficulty(this.#Level);
+                }
+
                 this.#State = "WaitingStart";
                 this.#UI_Start_1.innerHTML = "START";
                 this.#UI_Clear_1.innerHTML = "";
                 Ball_1.Initialize();
+                PaperCup_1.Set_Difficulty(this.#Level);
                 Progress_1.Initialize();
+                this.Update_Action_UI();
             }
             Start() {
                 this.#State = "Playing";
                 this.#UI_Start_1.innerHTML = "";
+                this.Update_Action_UI();
             }
             Clear() {
                 this.#State = "Goal";
                 this.#UI_Clear_1.innerHTML = "WOOOW! Level Up!";
-                this.#Level++;
-                this.#UI_Level_1.innerHTML = "Level: " + this.#Level;
-                Ball_1.Set_Difficulty(this.#Level);
-                PaperCup_1.Set_Difficulty(this.#Level);
+                this.#Pending_LevelUp = true;
+                this.Update_Action_UI();
+            }
+            Update_Action_UI() {
+                const isPlaying = this.#State === "Playing";
+                const isLocked = Progress_1.Get_Is_Locked();
+                const canShoot = isPlaying && isLocked;
+
+                if (this.#UI_Power_1) {
+                    this.#UI_Power_1.classList.toggle("is-disabled", !isPlaying);
+                    this.#UI_Power_1.classList.toggle("is-active", isPlaying && isLocked);
+                    this.#UI_Power_1.innerHTML = isLocked ? "UNLOCK POWER" : "LOCK POWER";
+                }
+                if (this.#UI_Shoot_1) {
+                    this.#UI_Shoot_1.classList.toggle("is-disabled", !canShoot);
+                    if (!isPlaying) {
+                        this.#UI_Shoot_1.innerHTML = "SHOOT";
+                    } else if (canShoot) {
+                        this.#UI_Shoot_1.innerHTML = "SHOOT";
+                    } else {
+                        this.#UI_Shoot_1.innerHTML = "SET POWER FIRST";
+                    }
+                }
             }
         }
 
-        // ボール
+        // 繝懊・繝ｫ
         class Ball_1_CLASS {
             #Bounce_Count = 0;
             #Bounce_Max = 3;
@@ -321,13 +376,13 @@
                 this.#ElapsedFrame_Gravity += DeltaTime;
                 if (this.#ElapsedFrame_Gravity >= CalculationError_Time) {
                     this.#ElapsedFrame_Gravity = 0;
-                    this.#Velocity_Y -= Gravity * DeltaTime * 2; // 少し重めに
+                    this.#Velocity_Y -= Gravity * DeltaTime * 2; // 蟆代＠驥阪ａ縺ｫ
                 }
 
-                // 床との衝突（y=0）
+                // 蠎翫→縺ｮ陦晉ｪ・ｼ・=0・・
                 if (this.#Y <= this.#Radius) {
                     this.#Y = this.#Radius;
-                    this.#Velocity_Y *= -this.#Ground_Bounce; // バウンド減衰
+                    this.#Velocity_Y *= -this.#Ground_Bounce; // 繝舌え繝ｳ繝画ｸ幄｡ｰ
                     this.#Bounce_Count++;
 
                     if (this.#Bounce_Count >= this.#Bounce_Max) {
@@ -336,14 +391,15 @@
                     }
                 }
 
-                // カップに入ったか
+                // 繧ｫ繝・・縺ｫ蜈･縺｣縺溘°
                 if (PaperCup_1.Get_Object()) {
                     const cupObj = PaperCup_1.Get_Object();
                     const goalY = PaperCup_1.Get_Collision_Y();
                     const collisionRadius = PaperCup_1.Get_Collision_Radius();
                     const prevBottomY = this.#Previous_Y - this.#Radius;
                     const currBottomY = this.#Y - this.#Radius;
-                    const crossedGoalPlane = (prevBottomY > goalY) && (currBottomY <= goalY);
+                    const eps = 1e-4;
+                    const crossedGoalPlane = (prevBottomY >= goalY - eps) && (currBottomY <= goalY + eps);
 
                     if (PaperCup_1.Resolve_Side_Collision(
                         this,
@@ -352,7 +408,6 @@
                     )) {
                         return;
                     }
-
                     let isGoal = false;
                     if (!this.#Flag_Cup && crossedGoalPlane) {
                         const denom = prevBottomY - currBottomY;
@@ -369,6 +424,15 @@
                         this.#Flag_Cup = true;
                         Base_Manager_1.Clear();
                         Base_InputControler_1.Set_Timer(2.5);
+                        return;
+                    }
+
+                    if (PaperCup_1.Resolve_Bottom_Collision(
+                        this,
+                        this.#Previous_X, this.#Previous_Y, this.#Previous_Z,
+                        this.#X, this.#Y, this.#Z
+                    )) {
+                        return;
                     }
                 }
             }
@@ -379,11 +443,13 @@
             Get_Y() { return this.#Y; }
             Get_Z() { return this.#Z; }
             Get_Velocity_X() { return this.#Velocity_X; }
+            Get_Velocity_Y() { return this.#Velocity_Y; }
             Get_Velocity_Z() { return this.#Velocity_Z; }
             Set_X(x) { this.#X = x; }
             Set_Y(y) { this.#Y = y; }
             Set_Z(z) { this.#Z = z; }
             Set_Velocity_X(vx) { this.#Velocity_X = vx; }
+            Set_Velocity_Y(vy) { this.#Velocity_Y = vy; }
             Set_Velocity_Z(vz) { this.#Velocity_Z = vz; }
             Get_Side_Bounce() { return this.#Side_Bounce; }
             Set_Shadow_Size(size) {
@@ -411,7 +477,7 @@
             }
         }
 
-        // 紙コップ
+        // 邏吶さ繝・・
         class PaperCup_1_CLASS {
             #Height = 0.5;
             #Collision_Mesh = null;
@@ -423,7 +489,13 @@
             #Side_Collision_Height = 0.42;
             #Object = null;
             #Radius = 1;
-            #X = 0; #Y = 0; #Z = 2;
+            #X; #Y; #Z;
+            #Base_X = 0; #Base_Y = 0; #Base_Z = 2;
+            #Move_Axis = "none";
+            #Move_Direction = 1;
+            #Move_Offset = 0;
+            #Move_Range = 0;
+            #Move_Speed = 0;
 
             #Scale = 0.05;
 
@@ -485,6 +557,7 @@
                 this.#Side_Collision_Bottom_Radius = Math.max(0.01, bottomRadius);
                 this.#Side_Collision_Top_Radius = Math.max(0.01, topRadius);
                 this.#Side_Collision_Height = Math.max(0.01, height);
+                this.#Collision_Radius = this.#Side_Collision_Top_Radius * 0.9;
 
                 if (this.#Collision_Mesh && this.#Collision_Mesh.geometry) {
                     this.#Collision_Mesh.geometry.dispose();
@@ -504,8 +577,114 @@
                 this.Update_Collision_Position();
             }
             Set_Difficulty(level) {
-                if (this.#Object) this.#Object.position.z = this.#Z;
+                const designLevel = Math.min(5, Math.max(1, level));
+
+                this.#Move_Axis = "none";
+                this.#Move_Direction = 1;
+                this.#Move_Offset = 0;
+                this.#Move_Range = 0;
+                this.#Move_Speed = 0;
+
+                if (designLevel === 1) {
+                    this.#Base_X = 0;
+                    this.#Base_Y = 0;
+                    this.#Base_Z = -2;
+                } else if (designLevel === 2) {
+                    this.#Base_X = 1.2;
+                    this.#Base_Y = 0;
+                    this.#Base_Z = -1.6;
+                } else if (designLevel === 3) {
+                    this.#Base_X = -1.8;
+                    this.#Base_Y = 0;
+                    this.#Base_Z = 1.9;
+                } else if (designLevel === 4) {
+                    this.#Base_X = 0;
+                    this.#Base_Y = 0;
+                    this.#Base_Z = 2;
+                    this.#Move_Axis = "x";
+                    this.#Move_Range = 0.5;
+                    this.#Move_Speed = 0.1;
+                } else if (designLevel === 5) {
+                    this.#Base_X = 0;
+                    this.#Base_Y = 0;
+                    this.#Base_Z = 2;
+                    this.#Move_Axis = "y";
+                    this.#Move_Range = 0.5;
+                    this.#Move_Speed = 0.1;
+                    this.#Move_Offset = this.#Move_Range;
+                    this.#Move_Direction = -1;
+                }
+
+                this.#X = this.#Base_X;
+                this.#Y = this.#Base_Y;
+                this.#Z = this.#Base_Z;
+                if (this.#Move_Axis === "y") this.#Y += this.#Move_Offset;
+                if (this.#Object) this.#Object.position.set(this.#X, this.#Y, this.#Z);
                 this.Update_Collision_Position();
+            }
+            Update() {
+                if (this.#Move_Axis === "none") return;
+                if (Base_Manager_1.Get_State() !== "Playing") return;
+
+                this.#Move_Offset += this.#Move_Direction * this.#Move_Speed * DeltaTime;
+                if (this.#Move_Axis === "y") {
+                    if (this.#Move_Offset > this.#Move_Range) {
+                        this.#Move_Offset = this.#Move_Range;
+                        this.#Move_Direction = -1;
+                    } else if (this.#Move_Offset < 0) {
+                        this.#Move_Offset = 0;
+                        this.#Move_Direction = 1;
+                    }
+                } else {
+                    if (this.#Move_Offset > this.#Move_Range) {
+                        this.#Move_Offset = this.#Move_Range;
+                        this.#Move_Direction = -1;
+                    } else if (this.#Move_Offset < -this.#Move_Range) {
+                        this.#Move_Offset = -this.#Move_Range;
+                        this.#Move_Direction = 1;
+                    }
+                }
+
+                this.#X = this.#Base_X;
+                this.#Y = this.#Base_Y;
+                this.#Z = this.#Base_Z;
+                if (this.#Move_Axis === "x") this.#X += this.#Move_Offset;
+                if (this.#Move_Axis === "y") this.#Y += this.#Move_Offset;
+
+                if (this.#Object) this.#Object.position.set(this.#X, this.#Y, this.#Z);
+                this.Update_Collision_Position();
+            }
+            Resolve_Bottom_Collision(ball, prevX, prevY, prevZ, currX, currY, currZ) {
+                const ballRadius = ball.Get_Radius();
+                const cupBottomY = this.#Y;
+                const prevBottomY = prevY - ballRadius;
+                const currBottomY = currY - ballRadius;
+                const crossedBottom = (prevBottomY > cupBottomY) && (currBottomY <= cupBottomY);
+                if (!crossedBottom) return false;
+
+                const denom = prevBottomY - currBottomY;
+                const t = Math.max(0, Math.min(1, Math.abs(denom) > 1e-6 ? (prevBottomY - cupBottomY) / denom : 1));
+                const hitX = prevX + (currX - prevX) * t;
+                const hitY = prevY + (currY - prevY) * t;
+                const hitZ = prevZ + (currZ - prevZ) * t;
+                const localY = Math.max(0, Math.min(this.#Side_Collision_Height, hitY - this.#Y));
+                const yRate = this.#Side_Collision_Height > 0 ? (localY / this.#Side_Collision_Height) : 0;
+                const sideRadiusAtY = this.#Side_Collision_Bottom_Radius +
+                    (this.#Side_Collision_Top_Radius - this.#Side_Collision_Bottom_Radius) * yRate;
+
+                const dx = hitX - this.#X;
+                const dz = hitZ - this.#Z;
+                const distXZ = Math.hypot(dx, dz);
+                const inBottomArea = distXZ <= Math.max(0.01, sideRadiusAtY - ballRadius * 0.2);
+                if (!inBottomArea) return false;
+
+                ball.Set_Y(cupBottomY + ballRadius + 0.001);
+
+                const vy = ball.Get_Velocity_Y();
+                if (vy < 0) {
+                    ball.Set_Velocity_Y(-vy * 0.55);
+                }
+                return true;
             }
             Resolve_Side_Collision(ball, prevX, prevY, prevZ, currX, currY, currZ) {
                 const eps = 1e-5;
@@ -636,16 +815,18 @@
             }
         }
 
-        // パワーゲージ
+        // 繝代Ρ繝ｼ繧ｲ繝ｼ繧ｸ
         class Progress_1_CLASS {
             #Element;
+            #Is_Locked = false;
+            #Locked_Percentage = 0;
             #MoveDirection = 1;
             #Speed = 0.5;
             constructor() {
                 this.#Element = document.getElementById('Progress_1');
             }
             Update() {
-                if (Base_Manager_1.Get_State() === "Playing") {
+                if (Base_Manager_1.Get_State() === "Playing" && !this.#Is_Locked) {
                     this.#Element.value += this.#MoveDirection * this.#Speed;
                     if (this.#Element.value >= 100) {
                         this.#Element.value = 100;
@@ -656,11 +837,29 @@
                     }
                 }
             }
-            Initialize() { this.#Element.value = 0; }
-            Get_Percentage() { return this.#Element.value; }
+            Initialize() {
+                this.#Element.value = 0;
+                this.#MoveDirection = 1;
+                this.#Is_Locked = false;
+                this.#Locked_Percentage = 0;
+                this.#Element.classList.remove("is-locked");
+            }
+            Lock() {
+                this.#Is_Locked = true;
+                this.#Locked_Percentage = this.#Element.value;
+                this.#Element.classList.add("is-locked");
+            }
+            Unlock() {
+                this.#Is_Locked = false;
+                this.#Element.classList.remove("is-locked");
+            }
+            Get_Is_Locked() { return this.#Is_Locked; }
+            Get_Percentage() {
+                return this.#Is_Locked ? this.#Locked_Percentage : this.#Element.value;
+            }
         }
 
-        // 床（大きな板）
+        // 蠎奇ｼ亥､ｧ縺阪↑譚ｿ・・
         function CreateFloor() {
             const geometry = new THREE.PlaneGeometry(30, 30);
             const material = new THREE.MeshStandardMaterial({ 
@@ -674,7 +873,7 @@
             Scene.add(floor);
         }
 
-        // インスタンス生成
+        // 繧､繝ｳ繧ｹ繧ｿ繝ｳ繧ｹ逕滓・
         const Base_Camera_1       = new Base_Camera_1_CLASS();
         const Base_InputControler_1 = new Base_InputControler_1_CLASS();
         new Base_Light_Ambient_1_CLASS();
@@ -685,14 +884,15 @@
         const Progress_1          = new Progress_1_CLASS();
 
         PaperCup_1.Set_Side_Collision();
-        CreateFloor();           // 床追加
+        CreateFloor();           // 蠎願ｿｽ蜉
 
         Base_Manager_1.Ready();
 
-        // アニメーションループ
+        // 繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ繝ｫ繝ｼ繝・
         function Loop() {
             Base_InputControler_1.Update();
 
+            PaperCup_1.Update();
             Ball_1.Update();
             if (Base_Manager_1.Get_State() === "Playing") {
                 Progress_1.Update();
@@ -841,12 +1041,12 @@
         }
 
         #UI_Level_1 {
-            top: 16px;
+            top: 18px;
             left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.96rem;
+            transform: translateX(-50%) !important;
+            font-size: 0.95rem;
             color: var(--ink);
-            padding: 10px 24px;
+            padding: 10px 18px;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             animation-delay: 0.1s;
@@ -897,63 +1097,118 @@
             50% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
         }
 
+        #UI_Power_1,
         #UI_Shoot_1 {
             position: absolute;
-            bottom: 34px;
-            left: 50%;
             transform: translateX(-50%);
             z-index: 4;
-            min-width: 210px;
+            min-width: 196px;
             text-align: center;
             font-family: "Space Grotesk", "Outfit", sans-serif;
-            font-size: 1.2rem;
+            font-size: 0.96rem;
             font-weight: 700;
             color: var(--accent-ink);
-            background: linear-gradient(120deg, var(--accent), var(--accent-2));
-            padding: 15px 34px;
+            padding: 12px 20px;
             border-radius: 16px;
             border: 1px solid rgba(255, 255, 255, 0.35);
-            box-shadow:
-                0 14px 28px rgba(120, 44, 20, 0.36),
-                inset 0 1px 0 rgba(255, 255, 255, 0.45);
             user-select: none;
             cursor: pointer;
             transition: transform 0.14s ease, filter 0.2s ease, box-shadow 0.18s ease;
             animation: uiRise 0.55s ease both 0.14s;
         }
+        #UI_Power_1 {
+            left: calc(50% - 132px);
+            bottom: 34px;
+            background: linear-gradient(130deg, #1454d9, #24a2ff);
+            box-shadow:
+                0 12px 26px rgba(18, 72, 171, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        }
+        #UI_Power_1.is-active {
+            background: linear-gradient(130deg, #0f9471, #1cc6a0);
+            box-shadow:
+                0 14px 30px rgba(16, 121, 96, 0.4),
+                0 0 0 2px rgba(174, 255, 237, 0.32),
+                inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        }
+
+        #UI_Shoot_1 {
+            left: calc(50% + 132px);
+            bottom: 34px;
+            background: linear-gradient(120deg, var(--accent), var(--accent-2));
+            box-shadow:
+                0 14px 28px rgba(120, 44, 20, 0.36),
+                inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        }
+        #UI_Power_1:hover,
         #UI_Shoot_1:hover {
             filter: saturate(1.08) brightness(1.03);
             box-shadow:
                 0 18px 36px rgba(120, 44, 20, 0.42),
                 inset 0 1px 0 rgba(255, 255, 255, 0.55);
         }
+        #UI_Power_1:hover {
+            box-shadow:
+                0 18px 36px rgba(23, 74, 186, 0.42),
+                inset 0 1px 0 rgba(255, 255, 255, 0.55);
+        }
+        #UI_Power_1:active,
         #UI_Shoot_1:active {
             transform: translateX(-50%) scale(0.96);
+        }
+        #UI_Power_1.is-disabled,
+        #UI_Shoot_1.is-disabled {
+            opacity: 0.45;
+            filter: grayscale(0.2) saturate(0.7);
+            box-shadow: 0 8px 16px rgba(20, 20, 20, 0.2);
+        }
+        #UI_Power_1.need-power {
+            animation: needPowerPulse 0.26s ease 0s 2;
         }
 
         #Progress_1 {
             position: absolute;
-            bottom: 102px;
+            bottom: 112px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 4;
             width: min(420px, calc(100vw - 40px));
-            height: 18px;
+            height: 24px;
             border-radius: 99px;
-            border: 1px solid rgba(255, 255, 255, 0.45);
-            background: rgba(255, 255, 255, 0.3);
-            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.52);
+            background: rgba(238, 248, 255, 0.35);
+            box-shadow:
+                0 14px 30px rgba(7, 30, 71, 0.28),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                inset 0 -5px 10px rgba(5, 25, 58, 0.12);
             overflow: hidden;
             animation: uiRise 0.55s ease both 0.12s;
         }
+        #Progress_1.is-locked {
+            box-shadow:
+                0 16px 34px rgba(4, 95, 76, 0.35),
+                0 0 0 2px rgba(133, 255, 221, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                inset 0 -5px 10px rgba(5, 25, 58, 0.12);
+        }
         #Progress_1::-webkit-progress-bar {
-            background: rgba(255, 255, 255, 0.28);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(205, 226, 255, 0.35));
             border-radius: 99px;
         }
         #Progress_1::-webkit-progress-value {
-            background: linear-gradient(90deg, #ff6a3a, #ffbe1d 55%, #ffd85f);
+            background: linear-gradient(90deg, #ff6432 0%, #ffae2a 45%, #ffe37b 100%);
+            background-size: min(420px, calc(100vw - 40px)) 100%;
+            background-position: left center;
+            background-repeat: no-repeat;
             border-radius: 99px;
             transition: width 0.08s linear;
+        }
+        #Progress_1::-moz-progress-bar {
+            background: linear-gradient(90deg, #ff6432 0%, #ffae2a 45%, #ffe37b 100%);
+            background-size: min(420px, calc(100vw - 40px)) 100%;
+            background-position: left center;
+            background-repeat: no-repeat;
+            border-radius: 99px;
         }
 
         @keyframes uiSlide {
@@ -963,6 +1218,13 @@
         @keyframes uiRise {
             from { opacity: 0; transform: translateX(-50%) translateY(10px); }
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes needPowerPulse {
+            0% { transform: translateX(-50%) translateX(0); }
+            25% { transform: translateX(-50%) translateX(-5px); }
+            50% { transform: translateX(-50%) translateX(5px); }
+            75% { transform: translateX(-50%) translateX(-4px); }
+            100% { transform: translateX(-50%) translateX(0); }
         }
 
         @media (max-width: 768px) {
@@ -975,19 +1237,27 @@
             #UI_Home_1 { right: 12px; }
             #UI_Reset_1 { left: 12px; }
             #UI_Level_1 {
-                top: 56px;
-                font-size: 0.76rem;
-                padding: 7px 14px;
+                top: 12px;
+                font-size: 0.82rem;
+                padding: 9px 14px;
+            }
+            #UI_Power_1 {
+                left: 50%;
+                bottom: 74px;
+                min-width: 154px;
+                padding: 11px 16px;
+                font-size: 0.88rem;
             }
             #UI_Shoot_1 {
+                left: 50%;
                 bottom: 22px;
-                min-width: 170px;
-                padding: 13px 24px;
-                font-size: 1.02rem;
+                min-width: 154px;
+                padding: 11px 16px;
+                font-size: 0.9rem;
             }
             #Progress_1 {
-                bottom: 80px;
-                height: 16px;
+                bottom: 126px;
+                height: 20px;
             }
         }
     </style>
