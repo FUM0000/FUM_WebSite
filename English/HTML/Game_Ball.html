@@ -8,6 +8,9 @@
     <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
 
@@ -50,9 +53,13 @@
         // カメラクラス
         class Base_Camera_1_CLASS {
             #Object;
+            #X = 0;
+            #Y = 1.5;
+            #Z = 0;
+
             constructor() {
                 this.#Object = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 30);
-                this.#Object.position.set(0, 1.5, -1.5);
+                this.#Object.position.set(this.#X, this.#Y, this.#Z);
                 this.#Object.lookAt(0, 0, 2);
             }
             Update() {
@@ -194,9 +201,12 @@
             #Object = null;
             #Shadow_Object = null;
             #Shadow_Size = 0.02;
+            #Previous_X = 0;
             #Previous_Y = 1;
+            #Previous_Z = 0;
+            #Ground_Bounce = 0.5;
             #Radius = 0.08;
-            #Side_Bounce = 0.75;
+            #Side_Bounce = 0.38;
             #Speed = 5;
             #Speed_Max = 8;
             #Speed_Base = 1;
@@ -258,7 +268,9 @@
                 this.#Velocity_X = this.#Velocity_Y = this.#Velocity_Z = 0;
                 this.#Speed = this.#Speed_Base;
                 this.#X = 0; this.#Y = 1; this.#Z = 0;
+                this.#Previous_X = this.#X;
                 this.#Previous_Y = this.#Y;
+                this.#Previous_Z = this.#Z;
                 if (this.#Object) this.#Object.position.set(0,1,0);
                 if (this.#Shadow_Object) {
                     this.#Shadow_Object.scale.set(this.#Shadow_Size, this.#Shadow_Size, 1);
@@ -295,7 +307,9 @@
             }
 
             Update_Shoot() {
+                this.#Previous_X = this.#X;
                 this.#Previous_Y = this.#Y;
+                this.#Previous_Z = this.#Z;
 
                 this.#Velocity_X *= Resistance;
                 this.#Velocity_Z *= Resistance;
@@ -313,7 +327,7 @@
                 // 床との衝突（y=0）
                 if (this.#Y <= this.#Radius) {
                     this.#Y = this.#Radius;
-                    this.#Velocity_Y *= -0.75; // バウンド減衰
+                    this.#Velocity_Y *= -this.#Ground_Bounce; // バウンド減衰
                     this.#Bounce_Count++;
 
                     if (this.#Bounce_Count >= this.#Bounce_Max) {
@@ -323,24 +337,35 @@
                 }
 
                 // カップに入ったか
-                if (PaperCup_1.Get_Object() && !this.#Flag_Cup) {
+                if (PaperCup_1.Get_Object()) {
                     const cupObj = PaperCup_1.Get_Object();
                     const goalY = PaperCup_1.Get_Collision_Y();
                     const collisionRadius = PaperCup_1.Get_Collision_Radius();
-                    const dx = this.#X - cupObj.position.x;
-                    const dz = this.#Z - cupObj.position.z;
-                    const distXZ = Math.hypot(dx, dz);
+                    const prevBottomY = this.#Previous_Y - this.#Radius;
+                    const currBottomY = this.#Y - this.#Radius;
+                    const crossedGoalPlane = (prevBottomY > goalY) && (currBottomY <= goalY);
 
-                    const isDescending = this.#Velocity_Y < 0;
-                    const touchedFromAbove =
-                        (this.#Previous_Y - this.#Radius > goalY) &&
-                        (this.#Y - this.#Radius <= goalY);
-
-                    if (PaperCup_1.Resolve_Side_Collision(this)) {
+                    if (PaperCup_1.Resolve_Side_Collision(
+                        this,
+                        this.#Previous_X, this.#Previous_Y, this.#Previous_Z,
+                        this.#X, this.#Y, this.#Z
+                    )) {
                         return;
                     }
 
-                    if (isDescending && touchedFromAbove && distXZ <= collisionRadius) {
+                    let isGoal = false;
+                    if (!this.#Flag_Cup && crossedGoalPlane) {
+                        const denom = prevBottomY - currBottomY;
+                        const t = Math.max(0, Math.min(1, Math.abs(denom) > 1e-6 ? (prevBottomY - goalY) / denom : 1));
+                        const hitX = this.#Previous_X + (this.#X - this.#Previous_X) * t;
+                        const hitZ = this.#Previous_Z + (this.#Z - this.#Previous_Z) * t;
+                        const hitDX = hitX - cupObj.position.x;
+                        const hitDZ = hitZ - cupObj.position.z;
+                        const hitDistXZ = Math.hypot(hitDX, hitDZ);
+                        isGoal = hitDistXZ <= collisionRadius;
+                    }
+
+                    if (isGoal) {
                         this.#Flag_Cup = true;
                         Base_Manager_1.Clear();
                         Base_InputControler_1.Set_Timer(2.5);
@@ -356,6 +381,7 @@
             Get_Velocity_X() { return this.#Velocity_X; }
             Get_Velocity_Z() { return this.#Velocity_Z; }
             Set_X(x) { this.#X = x; }
+            Set_Y(y) { this.#Y = y; }
             Set_Z(z) { this.#Z = z; }
             Set_Velocity_X(vx) { this.#Velocity_X = vx; }
             Set_Velocity_Z(vz) { this.#Velocity_Z = vz; }
@@ -389,11 +415,12 @@
         class PaperCup_1_CLASS {
             #Height = 0.5;
             #Collision_Mesh = null;
+            #Side_Collision_Mesh = null;
             #Collision_Offset_Y = 0.35;
             #Collision_Radius = 0.15;
             #Side_Collision_Bottom_Radius = 0.14;
-            #Side_Collision_Top_Radius = 0.15;
-            #Side_Collision_Height = 0.35;
+            #Side_Collision_Top_Radius = 0.19;
+            #Side_Collision_Height = 0.42;
             #Object = null;
             #Radius = 1;
             #X = 0; #Y = 0; #Z = 2;
@@ -405,7 +432,7 @@
                     obj => {
                         this.#Object = obj;
                         this.#Object.scale.set(this.#Scale, this.#Scale, this.#Scale);
-                        this.#Object.position.set(0, 0, 2);
+                        this.#Object.position.set(this.#X, this.#Y, this.#Z);
                         Scene.add(this.#Object);
                         this.Update_Collision_Position();
                     },
@@ -423,6 +450,25 @@
                 this.#Collision_Mesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
                 this.#Collision_Mesh.rotation.x = -Math.PI / 2;
                 Scene.add(this.#Collision_Mesh);
+
+                const sideCollisionGeometry = new THREE.CylinderGeometry(
+                    this.#Side_Collision_Top_Radius,
+                    this.#Side_Collision_Bottom_Radius,
+                    this.#Side_Collision_Height,
+                    48,
+                    1,
+                    true
+                );
+                const sideCollisionMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x3399ff,
+                    transparent: true,
+                    opacity: 0.25,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                });
+                this.#Side_Collision_Mesh = new THREE.Mesh(sideCollisionGeometry, sideCollisionMaterial);
+                Scene.add(this.#Side_Collision_Mesh);
+
                 this.Update_Collision_Position();
             }
 
@@ -431,59 +477,138 @@
             Get_Collision_Y() { return this.#Y + this.#Collision_Offset_Y; }
             Get_Radius() { return this.#Radius; }
             Get_Height() { return this.#Height; }
-            Set_Side_Collision(bottomRadius, topRadius, height) {
+            Set_Side_Collision(
+                bottomRadius = this.#Side_Collision_Bottom_Radius,
+                topRadius = this.#Side_Collision_Top_Radius,
+                height = this.#Side_Collision_Height
+            ) {
                 this.#Side_Collision_Bottom_Radius = Math.max(0.01, bottomRadius);
                 this.#Side_Collision_Top_Radius = Math.max(0.01, topRadius);
                 this.#Side_Collision_Height = Math.max(0.01, height);
-
-                this.#Collision_Radius = this.#Side_Collision_Top_Radius * 0.9;
-                this.#Collision_Offset_Y = this.#Side_Collision_Height;
 
                 if (this.#Collision_Mesh && this.#Collision_Mesh.geometry) {
                     this.#Collision_Mesh.geometry.dispose();
                     this.#Collision_Mesh.geometry = new THREE.CircleGeometry(this.#Collision_Radius, 48);
                 }
+                if (this.#Side_Collision_Mesh && this.#Side_Collision_Mesh.geometry) {
+                    this.#Side_Collision_Mesh.geometry.dispose();
+                    this.#Side_Collision_Mesh.geometry = new THREE.CylinderGeometry(
+                        this.#Side_Collision_Top_Radius,
+                        this.#Side_Collision_Bottom_Radius,
+                        this.#Side_Collision_Height,
+                        48,
+                        1,
+                        true
+                    );
+                }
                 this.Update_Collision_Position();
             }
             Set_Difficulty(level) {
-                this.#Z = 2;
                 if (this.#Object) this.#Object.position.z = this.#Z;
                 this.Update_Collision_Position();
             }
-            Resolve_Side_Collision(ball) {
-                const localY = ball.Get_Y() - this.#Y;
-                if (localY < 0 || localY > this.#Side_Collision_Height) return false;
-
-                const t = Math.max(0, Math.min(1, localY / this.#Side_Collision_Height));
-                const sideRadius = this.#Side_Collision_Bottom_Radius +
-                    (this.#Side_Collision_Top_Radius - this.#Side_Collision_Bottom_Radius) * t;
-
-                const dx = ball.Get_X() - this.#X;
-                const dz = ball.Get_Z() - this.#Z;
-                const distXZ = Math.hypot(dx, dz);
+            Resolve_Side_Collision(ball, prevX, prevY, prevZ, currX, currY, currZ) {
+                const eps = 1e-5;
                 const ballRadius = ball.Get_Radius();
+                const minY = this.#Y - ballRadius;
+                const maxY = this.#Y + this.#Side_Collision_Height + ballRadius;
+                const segVY = currY - prevY;
 
-                if (Math.abs(distXZ - sideRadius) > ballRadius) return false;
-
-                let nx = 1;
-                let nz = 0;
-                if (distXZ > 0.0001) {
-                    nx = dx / distXZ;
-                    nz = dz / distXZ;
+                let tMin = 0;
+                let tMax = 1;
+                if (Math.abs(segVY) < eps) {
+                    if (prevY < minY || prevY > maxY) return false;
+                } else {
+                    const tA = (minY - prevY) / segVY;
+                    const tB = (maxY - prevY) / segVY;
+                    tMin = Math.max(0, Math.min(tA, tB));
+                    tMax = Math.min(1, Math.max(tA, tB));
+                    if (tMax < tMin) return false;
                 }
 
-                const isOutside = distXZ >= sideRadius;
-                const targetDist = isOutside
-                    ? sideRadius + ballRadius
-                    : Math.max(0.001, sideRadius - ballRadius);
+                const dx0 = prevX - this.#X;
+                const dz0 = prevZ - this.#Z;
+                const vxSeg = currX - prevX;
+                const vzSeg = currZ - prevZ;
 
-                ball.Set_X(this.#X + nx * targetDist);
-                ball.Set_Z(this.#Z + nz * targetDist);
+                const radiusSlope = (this.#Side_Collision_Top_Radius - this.#Side_Collision_Bottom_Radius) / this.#Side_Collision_Height;
+                const rAt0 = this.#Side_Collision_Bottom_Radius + radiusSlope * (prevY - this.#Y);
+                const rVel = radiusSlope * segVY;
+
+                const signedAt = (_t) => {
+                    const x = prevX + vxSeg * _t;
+                    const y = prevY + segVY * _t;
+                    const z = prevZ + vzSeg * _t;
+                    const radius = this.#Side_Collision_Bottom_Radius + radiusSlope * (y - this.#Y);
+                    const dist = Math.hypot(x - this.#X, z - this.#Z);
+                    return dist - radius;
+                };
+
+                const startSigned = signedAt(0);
+                const startOutside = startSigned >= 0;
+                const radiusOffset = startOutside ? ballRadius : -ballRadius;
+                const effectiveRAt0 = rAt0 + radiusOffset;
+
+                const A = (vxSeg * vxSeg + vzSeg * vzSeg) - (rVel * rVel);
+                const B = 2 * (dx0 * vxSeg + dz0 * vzSeg - effectiveRAt0 * rVel);
+                const C = (dx0 * dx0 + dz0 * dz0) - (effectiveRAt0 * effectiveRAt0);
+
+                const roots = [];
+                if (Math.abs(A) < eps) {
+                    if (Math.abs(B) > eps) {
+                        roots.push(-C / B);
+                    }
+                } else {
+                    const D = B * B - 4 * A * C;
+                    if (D >= 0) {
+                        const sqrtD = Math.sqrt(D);
+                        roots.push((-B - sqrtD) / (2 * A));
+                        roots.push((-B + sqrtD) / (2 * A));
+                    }
+                }
+
+                roots.sort((a, b) => a - b);
+
+                let hitT = null;
+                for (const t of roots) {
+                    if (t < tMin - eps || t > tMax + eps) continue;
+                    const clampedT = Math.max(tMin, Math.min(tMax, t));
+                    const s = signedAt(clampedT);
+                    const targetSigned = startOutside ? ballRadius : -ballRadius;
+                    if (Math.abs(s - targetSigned) > 0.005) continue;
+                    hitT = clampedT;
+                    break;
+                }
+
+                if (hitT === null) return false;
+
+                const hitX = prevX + vxSeg * hitT;
+                const hitY = prevY + segVY * hitT;
+                const hitZ = prevZ + vzSeg * hitT;
+                const hitRadius = this.#Side_Collision_Bottom_Radius + radiusSlope * (hitY - this.#Y);
+                const hitDX = hitX - this.#X;
+                const hitDZ = hitZ - this.#Z;
+                const hitDist = Math.hypot(hitDX, hitDZ);
+                let nx = 1;
+                let nz = 0;
+                if (hitDist > eps) {
+                    nx = hitDX / hitDist;
+                    nz = hitDZ / hitDist;
+                }
+
+                const sBefore = signedAt(Math.max(tMin, hitT - 1e-4));
+                const hitFromOutside = sBefore >= 0;
+                const wallNx = hitFromOutside ? nx : -nx;
+                const wallNz = hitFromOutside ? nz : -nz;
+
+                const push = 0.001;
+                const centerDist = hitRadius + (hitFromOutside ? ballRadius : -ballRadius);
+                ball.Set_X(this.#X + nx * centerDist + wallNx * push);
+                ball.Set_Y(hitY);
+                ball.Set_Z(this.#Z + nz * centerDist + wallNz * push);
 
                 const vx = ball.Get_Velocity_X();
                 const vz = ball.Get_Velocity_Z();
-                const wallNx = isOutside ? nx : -nx;
-                const wallNz = isOutside ? nz : -nz;
                 const dot = vx * wallNx + vz * wallNz;
                 if (dot < 0) {
                     const bounce = ball.Get_Side_Bounce();
@@ -498,6 +623,13 @@
                     this.#Collision_Mesh.position.set(
                         this.#X,
                         this.#Y + this.#Collision_Offset_Y,
+                        this.#Z
+                    );
+                }
+                if (this.#Side_Collision_Mesh) {
+                    this.#Side_Collision_Mesh.position.set(
+                        this.#X,
+                        this.#Y + (this.#Side_Collision_Height * 0.5),
                         this.#Z
                     );
                 }
@@ -552,7 +684,7 @@
         const PaperCup_1          = new PaperCup_1_CLASS();
         const Progress_1          = new Progress_1_CLASS();
 
-        PaperCup_1.Set_Side_Collision(0.14, 0.22, 0.42);
+        PaperCup_1.Set_Side_Collision();
         CreateFloor();           // 床追加
 
         Base_Manager_1.Ready();
@@ -614,117 +746,249 @@
     </script>
 
     <style>
-        body { margin:0; overflow:hidden; }
-        #Canvas_1 { display:block; }
+        :root {
+            --ink: #0f172a;
+            --panel: rgba(255, 255, 255, 0.68);
+            --panel-border: rgba(255, 255, 255, 0.62);
+            --accent: #ff5b30;
+            --accent-2: #ff9f1f;
+            --accent-ink: #ffffff;
+            --info: #1689ff;
+            --success: #00a97f;
+            --shadow: 0 12px 32px rgba(11, 20, 36, 0.26);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: "Outfit", "Space Grotesk", sans-serif;
+            color: var(--ink);
+            letter-spacing: 0.02em;
+        }
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::before {
+            background:
+                radial-gradient(45% 40% at 15% 12%, rgba(255, 230, 170, 0.34), transparent 70%),
+                radial-gradient(55% 50% at 84% 86%, rgba(255, 146, 120, 0.35), transparent 72%);
+        }
+        body::after {
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+            background-size: 28px 28px;
+            mix-blend-mode: soft-light;
+            opacity: 0.5;
+        }
+
+        #Canvas_1 {
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        #UI_Home_1,
+        #UI_Reset_1,
+        #UI_Level_1 {
+            position: absolute;
+            z-index: 3;
+            backdrop-filter: blur(9px);
+            -webkit-backdrop-filter: blur(9px);
+            border: 1px solid var(--panel-border);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+            border-radius: 999px;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-weight: 700;
+            user-select: none;
+            animation: uiSlide 0.55s cubic-bezier(.2,.75,.2,1) both;
+        }
+
+        #UI_Home_1,
+        #UI_Reset_1 {
+            top: 18px;
+            font-size: 0.95rem;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.2s ease;
+        }
 
         #UI_Home_1 {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #e00;
-            cursor: pointer;
-            user-select: none;
+            right: 18px;
+            color: var(--accent);
         }
 
         #UI_Reset_1 {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #0066cc;
-            cursor: pointer;
-            user-select: none;
-            background: rgba(255,255,255,0.7);
-            padding: 4px 12px;
-            border-radius: 8px;
+            left: 18px;
+            color: var(--info);
+            animation-delay: 0.05s;
         }
+
+        #UI_Home_1:hover,
+        #UI_Reset_1:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 34px rgba(11, 20, 36, 0.3);
+        }
+        #UI_Home_1:active,
         #UI_Reset_1:active {
-            transform: scale(0.95);
+            transform: translateY(1px) scale(0.97);
         }
 
         #UI_Level_1 {
-            position: absolute;
             top: 16px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 1.6em;
-            font-weight: bold;
-            color: #222;
-            background: rgba(255,255,255,0.7);
-            padding: 4px 16px;
-            border-radius: 8px;
+            font-size: 0.96rem;
+            color: var(--ink);
+            padding: 10px 24px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            animation-delay: 0.1s;
         }
 
         #UI_Clear_1 {
             position: absolute;
-            top: 45%;
+            top: 42%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 3.2em;
-            font-weight: bold;
-            color: #ff4444;
-            text-shadow: 3px 3px 6px #0008;
+            z-index: 4;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: clamp(2rem, 6vw, 4rem);
+            font-weight: 700;
+            color: #ffeede;
+            text-shadow:
+                0 10px 28px rgba(65, 22, 11, 0.45),
+                0 0 20px rgba(255, 133, 92, 0.45);
             pointer-events: none;
-            animation: pop 0.6s infinite alternate;
+            letter-spacing: 0.06em;
+            animation: clearPulse 0.85s ease-in-out infinite alternate;
         }
-        @keyframes pop {
+        @keyframes clearPulse {
             from { transform: translate(-50%, -50%) scale(1); }
-            to   { transform: translate(-50%, -50%) scale(1.12); }
+            to   { transform: translate(-50%, -50%) scale(1.08); }
         }
 
         #UI_Start_1 {
             position: absolute;
-            top: 55%;
+            top: 54%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 3em;
-            font-weight: bold;
-            color: #e00;
-            text-shadow: 2px 2px 5px #0006;
+            z-index: 4;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: clamp(2.2rem, 7vw, 4.6rem);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: rgba(255, 244, 234, 0.97);
+            text-shadow:
+                0 12px 30px rgba(53, 15, 6, 0.48),
+                0 0 18px rgba(255, 144, 106, 0.52);
             pointer-events: none;
+            animation: startBreath 1.45s ease-in-out infinite;
+        }
+        @keyframes startBreath {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+            50% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
         }
 
         #UI_Shoot_1 {
             position: absolute;
-            bottom: 40px;
+            bottom: 34px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 1.9em;
-            font-weight: bold;
-            color: white;
-            background: #ff4444;
-            padding: 16px 48px;
-            border-radius: 12px;
-            box-shadow: 0 5px 12px #0006;
+            z-index: 4;
+            min-width: 210px;
+            text-align: center;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-ink);
+            background: linear-gradient(120deg, var(--accent), var(--accent-2));
+            padding: 15px 34px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            box-shadow:
+                0 14px 28px rgba(120, 44, 20, 0.36),
+                inset 0 1px 0 rgba(255, 255, 255, 0.45);
             user-select: none;
             cursor: pointer;
+            transition: transform 0.14s ease, filter 0.2s ease, box-shadow 0.18s ease;
+            animation: uiRise 0.55s ease both 0.14s;
+        }
+        #UI_Shoot_1:hover {
+            filter: saturate(1.08) brightness(1.03);
+            box-shadow:
+                0 18px 36px rgba(120, 44, 20, 0.42),
+                inset 0 1px 0 rgba(255, 255, 255, 0.55);
         }
         #UI_Shoot_1:active {
-            transform: translateX(-50%) scale(0.94);
-            box-shadow: 0 2px 6px #0004;
+            transform: translateX(-50%) scale(0.96);
         }
 
         #Progress_1 {
             position: absolute;
-            bottom: 110px;
+            bottom: 102px;
             left: 50%;
             transform: translateX(-50%);
-            width: 260px;
+            z-index: 4;
+            width: min(420px, calc(100vw - 40px));
             height: 18px;
-            border-radius: 9px;
-            background: rgba(0,0,0,0.3);
+            border-radius: 99px;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            animation: uiRise 0.55s ease both 0.12s;
         }
         #Progress_1::-webkit-progress-bar {
-            background: rgba(255,255,255,0.25);
-            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.28);
+            border-radius: 99px;
         }
         #Progress_1::-webkit-progress-value {
-            background: linear-gradient(90deg, #ff4444, #ffaa00);
-            border-radius: 9px;
+            background: linear-gradient(90deg, #ff6a3a, #ffbe1d 55%, #ffd85f);
+            border-radius: 99px;
             transition: width 0.08s linear;
+        }
+
+        @keyframes uiSlide {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes uiRise {
+            from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            #UI_Home_1,
+            #UI_Reset_1 {
+                top: 12px;
+                padding: 9px 14px;
+                font-size: 0.82rem;
+            }
+            #UI_Home_1 { right: 12px; }
+            #UI_Reset_1 { left: 12px; }
+            #UI_Level_1 {
+                top: 56px;
+                font-size: 0.76rem;
+                padding: 7px 14px;
+            }
+            #UI_Shoot_1 {
+                bottom: 22px;
+                min-width: 170px;
+                padding: 13px 24px;
+                font-size: 1.02rem;
+            }
+            #Progress_1 {
+                bottom: 80px;
+                height: 16px;
+            }
         }
     </style>
 </head>
