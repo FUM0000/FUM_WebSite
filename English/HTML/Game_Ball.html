@@ -192,8 +192,11 @@
             #Flag_Cup = false;
             #Flag_Shoot = false;
             #Object = null;
+            #Shadow_Object = null;
+            #Shadow_Size = 0.02;
             #Previous_Y = 1;
             #Radius = 0.08;
+            #Side_Bounce = 0.75;
             #Speed = 5;
             #Speed_Max = 8;
             #Speed_Base = 1;
@@ -211,6 +214,39 @@
                     undefined,
                     err => console.error(err)
                 );
+
+                const shadowGeometry = new THREE.CircleGeometry(1, 48);
+                const shadowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x000000,
+                    transparent: true,
+                    opacity: 0.32,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                });
+                const shadowTexture = this.CreateShadowTexture();
+                shadowMaterial.map = shadowTexture;
+                this.#Shadow_Object = new THREE.Mesh(shadowGeometry, shadowMaterial);
+                this.#Shadow_Object.rotation.x = -Math.PI / 2;
+                this.#Shadow_Object.scale.set(this.#Shadow_Size, this.#Shadow_Size, 1);
+                this.#Shadow_Object.position.set(0, 0.05, 0);
+                Scene.add(this.#Shadow_Object);
+            }
+
+            CreateShadowTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+                gradient.addColorStop(0, 'rgba(0, 0, 0, 1.0)');
+                gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.5)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 256, 256);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                return texture;
             }
 
             Initialize() {
@@ -224,6 +260,10 @@
                 this.#X = 0; this.#Y = 1; this.#Z = 0;
                 this.#Previous_Y = this.#Y;
                 if (this.#Object) this.#Object.position.set(0,1,0);
+                if (this.#Shadow_Object) {
+                    this.#Shadow_Object.scale.set(this.#Shadow_Size, this.#Shadow_Size, 1);
+                    this.#Shadow_Object.position.set(0, 0.05, 0);
+                }
             }
 
             Update() {
@@ -248,6 +288,9 @@
 
                 if (this.#Object) {
                     this.#Object.position.set(this.#X, this.#Y, this.#Z);
+                }
+                if (this.#Shadow_Object) {
+                    this.#Shadow_Object.position.set(this.#X, 0.05, this.#Z);
                 }
             }
 
@@ -293,6 +336,10 @@
                         (this.#Previous_Y - this.#Radius > goalY) &&
                         (this.#Y - this.#Radius <= goalY);
 
+                    if (PaperCup_1.Resolve_Side_Collision(this)) {
+                        return;
+                    }
+
                     if (isDescending && touchedFromAbove && distXZ <= collisionRadius) {
                         this.#Flag_Cup = true;
                         Base_Manager_1.Clear();
@@ -302,6 +349,23 @@
             }
 
             Get_Object() { return this.#Object; }
+            Get_Radius() { return this.#Radius; }
+            Get_X() { return this.#X; }
+            Get_Y() { return this.#Y; }
+            Get_Z() { return this.#Z; }
+            Get_Velocity_X() { return this.#Velocity_X; }
+            Get_Velocity_Z() { return this.#Velocity_Z; }
+            Set_X(x) { this.#X = x; }
+            Set_Z(z) { this.#Z = z; }
+            Set_Velocity_X(vx) { this.#Velocity_X = vx; }
+            Set_Velocity_Z(vz) { this.#Velocity_Z = vz; }
+            Get_Side_Bounce() { return this.#Side_Bounce; }
+            Set_Shadow_Size(size) {
+                this.#Shadow_Size = Math.max(0, size);
+                if (this.#Shadow_Object) {
+                    this.#Shadow_Object.scale.set(this.#Shadow_Size, this.#Shadow_Size, 1);
+                }
+            }
             Set_Difficulty(level) {
                 this.#Speed_Base = 1;
             }
@@ -325,8 +389,11 @@
         class PaperCup_1_CLASS {
             #Height = 0.5;
             #Collision_Mesh = null;
-            #Collision_Offset_Y = 0.4;
-            #Collision_Radius = 0.2;
+            #Collision_Offset_Y = 0.35;
+            #Collision_Radius = 0.15;
+            #Side_Collision_Bottom_Radius = 0.14;
+            #Side_Collision_Top_Radius = 0.15;
+            #Side_Collision_Height = 0.35;
             #Object = null;
             #Radius = 1;
             #X = 0; #Y = 0; #Z = 2;
@@ -364,10 +431,67 @@
             Get_Collision_Y() { return this.#Y + this.#Collision_Offset_Y; }
             Get_Radius() { return this.#Radius; }
             Get_Height() { return this.#Height; }
+            Set_Side_Collision(bottomRadius, topRadius, height) {
+                this.#Side_Collision_Bottom_Radius = Math.max(0.01, bottomRadius);
+                this.#Side_Collision_Top_Radius = Math.max(0.01, topRadius);
+                this.#Side_Collision_Height = Math.max(0.01, height);
+
+                this.#Collision_Radius = this.#Side_Collision_Top_Radius * 0.9;
+                this.#Collision_Offset_Y = this.#Side_Collision_Height;
+
+                if (this.#Collision_Mesh && this.#Collision_Mesh.geometry) {
+                    this.#Collision_Mesh.geometry.dispose();
+                    this.#Collision_Mesh.geometry = new THREE.CircleGeometry(this.#Collision_Radius, 48);
+                }
+                this.Update_Collision_Position();
+            }
             Set_Difficulty(level) {
                 this.#Z = 2;
                 if (this.#Object) this.#Object.position.z = this.#Z;
                 this.Update_Collision_Position();
+            }
+            Resolve_Side_Collision(ball) {
+                const localY = ball.Get_Y() - this.#Y;
+                if (localY < 0 || localY > this.#Side_Collision_Height) return false;
+
+                const t = Math.max(0, Math.min(1, localY / this.#Side_Collision_Height));
+                const sideRadius = this.#Side_Collision_Bottom_Radius +
+                    (this.#Side_Collision_Top_Radius - this.#Side_Collision_Bottom_Radius) * t;
+
+                const dx = ball.Get_X() - this.#X;
+                const dz = ball.Get_Z() - this.#Z;
+                const distXZ = Math.hypot(dx, dz);
+                const ballRadius = ball.Get_Radius();
+
+                if (Math.abs(distXZ - sideRadius) > ballRadius) return false;
+
+                let nx = 1;
+                let nz = 0;
+                if (distXZ > 0.0001) {
+                    nx = dx / distXZ;
+                    nz = dz / distXZ;
+                }
+
+                const isOutside = distXZ >= sideRadius;
+                const targetDist = isOutside
+                    ? sideRadius + ballRadius
+                    : Math.max(0.001, sideRadius - ballRadius);
+
+                ball.Set_X(this.#X + nx * targetDist);
+                ball.Set_Z(this.#Z + nz * targetDist);
+
+                const vx = ball.Get_Velocity_X();
+                const vz = ball.Get_Velocity_Z();
+                const wallNx = isOutside ? nx : -nx;
+                const wallNz = isOutside ? nz : -nz;
+                const dot = vx * wallNx + vz * wallNz;
+                if (dot < 0) {
+                    const bounce = ball.Get_Side_Bounce();
+                    ball.Set_Velocity_X(vx - (1 + bounce) * dot * wallNx);
+                    ball.Set_Velocity_Z(vz - (1 + bounce) * dot * wallNz);
+                }
+
+                return true;
             }
             Update_Collision_Position() {
                 if (this.#Collision_Mesh) {
@@ -428,6 +552,7 @@
         const PaperCup_1          = new PaperCup_1_CLASS();
         const Progress_1          = new Progress_1_CLASS();
 
+        PaperCup_1.Set_Side_Collision(0.14, 0.22, 0.42);
         CreateFloor();           // 床追加
 
         Base_Manager_1.Ready();
@@ -436,8 +561,8 @@
         function Loop() {
             Base_InputControler_1.Update();
 
+            Ball_1.Update();
             if (Base_Manager_1.Get_State() === "Playing") {
-                Ball_1.Update();
                 Progress_1.Update();
             }
 
