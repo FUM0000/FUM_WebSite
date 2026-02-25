@@ -192,6 +192,7 @@
             #Flag_Cup = false;
             #Flag_Shoot = false;
             #Object = null;
+            #Previous_Y = 1;
             #Radius = 0.08;
             #Speed = 5;
             #Speed_Max = 8;
@@ -200,10 +201,11 @@
             #X = 0; #Y = 1; #Z = 0;
 
             constructor() {
+                const size = 0.01;
                 Loader_FBX.load('../../Asset/Model/Ball_PinPon_1.fbx', 
                     obj => {
                         this.#Object = obj;
-                        this.#Object.scale.set(0.0016, 0.0016, 0.0016);
+                        this.#Object.scale.set(size, size, size);
                         Scene.add(this.#Object);
                     },
                     undefined,
@@ -220,6 +222,7 @@
                 this.#Velocity_X = this.#Velocity_Y = this.#Velocity_Z = 0;
                 this.#Speed = this.#Speed_Base;
                 this.#X = 0; this.#Y = 1; this.#Z = 0;
+                this.#Previous_Y = this.#Y;
                 if (this.#Object) this.#Object.position.set(0,1,0);
             }
 
@@ -249,6 +252,8 @@
             }
 
             Update_Shoot() {
+                this.#Previous_Y = this.#Y;
+
                 this.#Velocity_X *= Resistance;
                 this.#Velocity_Z *= Resistance;
 
@@ -276,10 +281,19 @@
 
                 // カップに入ったか
                 if (PaperCup_1.Get_Object() && !this.#Flag_Cup) {
-                    const dist = this.#Object.position.distanceTo(PaperCup_1.Get_Object().position);
-                    if (dist <= PaperCup_1.Get_Radius() + this.#Radius &&
-                        this.#Y >= PaperCup_1.Get_Height() - 0.12 &&
-                        this.#Velocity_Y < 0) {
+                    const cupObj = PaperCup_1.Get_Object();
+                    const goalY = PaperCup_1.Get_Collision_Y();
+                    const collisionRadius = PaperCup_1.Get_Collision_Radius();
+                    const dx = this.#X - cupObj.position.x;
+                    const dz = this.#Z - cupObj.position.z;
+                    const distXZ = Math.hypot(dx, dz);
+
+                    const isDescending = this.#Velocity_Y < 0;
+                    const touchedFromAbove =
+                        (this.#Previous_Y - this.#Radius > goalY) &&
+                        (this.#Y - this.#Radius <= goalY);
+
+                    if (isDescending && touchedFromAbove && distXZ <= collisionRadius) {
                         this.#Flag_Cup = true;
                         Base_Manager_1.Clear();
                         Base_InputControler_1.Set_Timer(2.5);
@@ -310,6 +324,9 @@
         // 紙コップ
         class PaperCup_1_CLASS {
             #Height = 0.5;
+            #Collision_Mesh = null;
+            #Collision_Offset_Y = 0.4;
+            #Collision_Radius = 0.2;
             #Object = null;
             #Radius = 1;
             #X = 0; #Y = 0; #Z = 2;
@@ -323,18 +340,43 @@
                         this.#Object.scale.set(this.#Scale, this.#Scale, this.#Scale);
                         this.#Object.position.set(0, 0, 2);
                         Scene.add(this.#Object);
+                        this.Update_Collision_Position();
                     },
                     undefined,
                     err => console.error(err)
                 );
+
+                const collisionGeometry = new THREE.CircleGeometry(this.#Collision_Radius, 48);
+                const collisionMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x33ff99,
+                    transparent: true,
+                    opacity: 0.45,
+                    side: THREE.DoubleSide
+                });
+                this.#Collision_Mesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+                this.#Collision_Mesh.rotation.x = -Math.PI / 2;
+                Scene.add(this.#Collision_Mesh);
+                this.Update_Collision_Position();
             }
 
             Get_Object() { return this.#Object; }
+            Get_Collision_Radius() { return this.#Collision_Radius; }
+            Get_Collision_Y() { return this.#Y + this.#Collision_Offset_Y; }
             Get_Radius() { return this.#Radius; }
             Get_Height() { return this.#Height; }
             Set_Difficulty(level) {
                 this.#Z = 2;
                 if (this.#Object) this.#Object.position.z = this.#Z;
+                this.Update_Collision_Position();
+            }
+            Update_Collision_Position() {
+                if (this.#Collision_Mesh) {
+                    this.#Collision_Mesh.position.set(
+                        this.#X,
+                        this.#Y + this.#Collision_Offset_Y,
+                        this.#Z
+                    );
+                }
             }
         }
 
@@ -342,12 +384,13 @@
         class Progress_1_CLASS {
             #Element;
             #MoveDirection = 1;
+            #Speed = 0.5;
             constructor() {
                 this.#Element = document.getElementById('Progress_1');
             }
             Update() {
                 if (Base_Manager_1.Get_State() === "Playing") {
-                    this.#Element.value += this.#MoveDirection * 2.2;
+                    this.#Element.value += this.#MoveDirection * this.#Speed;
                     if (this.#Element.value >= 100) {
                         this.#Element.value = 100;
                         this.#MoveDirection = -1;
@@ -365,7 +408,7 @@
         function CreateFloor() {
             const geometry = new THREE.PlaneGeometry(30, 30);
             const material = new THREE.MeshStandardMaterial({ 
-                color: 0x000000,
+                color: 0xFFFFFF,
                 roughness: 0.9 
             });
             const floor = new THREE.Mesh(geometry, material);
