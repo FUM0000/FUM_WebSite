@@ -714,7 +714,25 @@
                 const prevBottomY = adjustedPrevY - ballRadius;
                 const currBottomY = currY - ballRadius;
                 const crossedBottom = (prevBottomY > cupBottomY) && (currBottomY <= cupBottomY);
-                if (!crossedBottom) return false;
+                if (!crossedBottom) {
+                    const currLocalY = Math.max(0, Math.min(this.#Side_Collision_Height, currY - this.#Y));
+                    const currYRate = this.#Side_Collision_Height > 0 ? (currLocalY / this.#Side_Collision_Height) : 0;
+                    const currSideRadius = this.#Side_Collision_Bottom_Radius +
+                        (this.#Side_Collision_Top_Radius - this.#Side_Collision_Bottom_Radius) * currYRate;
+                    const currDX = currX - this.#X;
+                    const currDZ = currZ - this.#Z;
+                    const currDistXZ = Math.hypot(currDX, currDZ);
+                    const inBottomAreaNow = currDistXZ <= Math.max(0.01, currSideRadius - ballRadius * 0.2);
+                    const isPenetratingBottom = currBottomY < cupBottomY - 1e-5;
+                    if (!isPenetratingBottom || !inBottomAreaNow) return false;
+
+                    ball.Set_Y(cupBottomY + ballRadius + 0.001);
+                    const vy = ball.Get_Velocity_Y();
+                    if (vy < 0) {
+                        ball.Set_Velocity_Y(-vy * 0.55);
+                    }
+                    return true;
+                }
 
                 const denom = prevBottomY - currBottomY;
                 const t = Math.max(0, Math.min(1, Math.abs(denom) > 1e-6 ? (prevBottomY - cupBottomY) / denom : 1));
@@ -819,7 +837,39 @@
                     break;
                 }
 
-                if (hitT === null) return false;
+                if (hitT === null) {
+                    const currLocalY = Math.max(0, Math.min(this.#Side_Collision_Height, currY - this.#Y));
+                    const currYRate = this.#Side_Collision_Height > 0 ? (currLocalY / this.#Side_Collision_Height) : 0;
+                    const currRadius = this.#Side_Collision_Bottom_Radius +
+                        (this.#Side_Collision_Top_Radius - this.#Side_Collision_Bottom_Radius) * currYRate;
+                    const currDX = currX - this.#X;
+                    const currDZ = currZ - this.#Z;
+                    const currDist = Math.hypot(currDX, currDZ);
+                    const outsideOverlap = currDist > currRadius && currDist < (currRadius + ballRadius);
+                    if (!outsideOverlap) return false;
+
+                    let nx = 1;
+                    let nz = 0;
+                    if (currDist > eps) {
+                        nx = currDX / currDist;
+                        nz = currDZ / currDist;
+                    }
+
+                    const push = 0.001;
+                    ball.Set_X(this.#X + nx * (currRadius + ballRadius + push));
+                    ball.Set_Y(currY);
+                    ball.Set_Z(this.#Z + nz * (currRadius + ballRadius + push));
+
+                    const vx = ball.Get_Velocity_X();
+                    const vz = ball.Get_Velocity_Z();
+                    const dot = vx * nx + vz * nz;
+                    if (dot < 0) {
+                        const bounce = ball.Get_Side_Bounce();
+                        ball.Set_Velocity_X(vx - (1 + bounce) * dot * nx);
+                        ball.Set_Velocity_Z(vz - (1 + bounce) * dot * nz);
+                    }
+                    return true;
+                }
 
                 const hitX = adjustedPrevX + vxSeg * hitT;
                 const hitY = adjustedPrevY + segVY * hitT;
