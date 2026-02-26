@@ -293,7 +293,7 @@
                 this.#Shadow_Object = new THREE.Mesh(shadowGeometry, shadowMaterial);
                 this.#Shadow_Object.rotation.x = -Math.PI / 2;
                 this.#Shadow_Object.scale.set(this.#Shadow_Size, this.#Shadow_Size, 1);
-                this.#Shadow_Object.position.set(0, 0.05, 0);
+                this.#Shadow_Object.position.set(0, 0.001, 0);
                 Scene.add(this.#Shadow_Object);
             }
 
@@ -329,7 +329,7 @@
                 if (this.#Object) this.#Object.position.set(0,1,0);
                 if (this.#Shadow_Object) {
                     this.#Shadow_Object.scale.set(this.#Shadow_Size, this.#Shadow_Size, 1);
-                    this.#Shadow_Object.position.set(0, 0.05, 0);
+                    this.#Shadow_Object.position.set(0, 0.001, 0);
                 }
             }
 
@@ -357,7 +357,7 @@
                     this.#Object.position.set(this.#X, this.#Y, this.#Z);
                 }
                 if (this.#Shadow_Object) {
-                    this.#Shadow_Object.position.set(this.#X, 0.05, this.#Z);
+                    this.#Shadow_Object.position.set(this.#X, 0.001, this.#Z);
                 }
             }
 
@@ -482,6 +482,9 @@
             #Height = 0.5;
             #Collision_Mesh = null;
             #Side_Collision_Mesh = null;
+            #Shadow_Object = null;
+            #Shadow_Size = 0.18;
+            #Shadow_Height = 0.001;
             #Collision_Offset_Y = 0.35;
             #Collision_Radius = 0.15;
             #Side_Collision_Bottom_Radius = 0.14;
@@ -541,7 +544,40 @@
                 this.#Side_Collision_Mesh = new THREE.Mesh(sideCollisionGeometry, sideCollisionMaterial);
                 Scene.add(this.#Side_Collision_Mesh);
 
+                const shadowGeometry = new THREE.CircleGeometry(1, 48);
+                const shadowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x000000,
+                    transparent: true,
+                    opacity: 0.75,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                });
+                const shadowTexture = this.CreateShadowTexture();
+                shadowMaterial.map = shadowTexture;
+                this.#Shadow_Object = new THREE.Mesh(shadowGeometry, shadowMaterial);
+                this.#Shadow_Object.rotation.x = -Math.PI / 2;
+                this.#Shadow_Object.scale.set(this.#Shadow_Size, this.#Shadow_Size, 1);
+                this.#Shadow_Object.position.set(this.#Base_X, this.#Shadow_Height, this.#Base_Z);
+                Scene.add(this.#Shadow_Object);
+
                 this.Update_Collision_Position();
+            }
+
+            CreateShadowTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+                gradient.addColorStop(0, 'rgba(0, 0, 0, 1.0)');
+                gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.5)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 256, 256);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                return texture;
             }
 
             Get_Object() { return this.#Object; }
@@ -558,6 +594,7 @@
                 this.#Side_Collision_Top_Radius = Math.max(0.01, topRadius);
                 this.#Side_Collision_Height = Math.max(0.01, height);
                 this.#Collision_Radius = this.#Side_Collision_Top_Radius * 0.9;
+                this.#Shadow_Size = this.#Side_Collision_Top_Radius;
 
                 if (this.#Collision_Mesh && this.#Collision_Mesh.geometry) {
                     this.#Collision_Mesh.geometry.dispose();
@@ -573,6 +610,9 @@
                         1,
                         true
                     );
+                }
+                if (this.#Shadow_Object) {
+                    this.#Shadow_Object.scale.set(this.#Shadow_Size, this.#Shadow_Size, 1);
                 }
                 this.Update_Collision_Position();
             }
@@ -809,6 +849,13 @@
                     this.#Side_Collision_Mesh.position.set(
                         this.#X,
                         this.#Y + (this.#Side_Collision_Height * 0.5),
+                        this.#Z
+                    );
+                }
+                if (this.#Shadow_Object) {
+                    this.#Shadow_Object.position.set(
+                        this.#X,
+                        this.#Shadow_Height,
                         this.#Z
                     );
                 }
