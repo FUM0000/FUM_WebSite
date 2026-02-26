@@ -493,6 +493,7 @@
             #Object = null;
             #Radius = 1;
             #X; #Y; #Z;
+            #Previous_X = 0; #Previous_Y = 0; #Previous_Z = 2;
             #Base_X = 0; #Base_Y = 0; #Base_Z = 2;
             #Move_Axis = "none";
             #Move_Direction = 1;
@@ -659,10 +660,17 @@
                 this.#Y = this.#Base_Y;
                 this.#Z = this.#Base_Z;
                 if (this.#Move_Axis === "y") this.#Y += this.#Move_Offset;
+                this.#Previous_X = this.#X;
+                this.#Previous_Y = this.#Y;
+                this.#Previous_Z = this.#Z;
                 if (this.#Object) this.#Object.position.set(this.#X, this.#Y, this.#Z);
                 this.Update_Collision_Position();
             }
             Update() {
+                this.#Previous_X = this.#X;
+                this.#Previous_Y = this.#Y;
+                this.#Previous_Z = this.#Z;
+
                 if (this.#Move_Axis === "none") return;
                 if (Base_Manager_1.Get_State() !== "Playing") return;
 
@@ -695,18 +703,24 @@
                 this.Update_Collision_Position();
             }
             Resolve_Bottom_Collision(ball, prevX, prevY, prevZ, currX, currY, currZ) {
+                const cupDeltaX = this.#X - this.#Previous_X;
+                const cupDeltaY = this.#Y - this.#Previous_Y;
+                const cupDeltaZ = this.#Z - this.#Previous_Z;
+                const adjustedPrevX = prevX + cupDeltaX;
+                const adjustedPrevY = prevY + cupDeltaY;
+                const adjustedPrevZ = prevZ + cupDeltaZ;
                 const ballRadius = ball.Get_Radius();
                 const cupBottomY = this.#Y;
-                const prevBottomY = prevY - ballRadius;
+                const prevBottomY = adjustedPrevY - ballRadius;
                 const currBottomY = currY - ballRadius;
                 const crossedBottom = (prevBottomY > cupBottomY) && (currBottomY <= cupBottomY);
                 if (!crossedBottom) return false;
 
                 const denom = prevBottomY - currBottomY;
                 const t = Math.max(0, Math.min(1, Math.abs(denom) > 1e-6 ? (prevBottomY - cupBottomY) / denom : 1));
-                const hitX = prevX + (currX - prevX) * t;
-                const hitY = prevY + (currY - prevY) * t;
-                const hitZ = prevZ + (currZ - prevZ) * t;
+                const hitX = adjustedPrevX + (currX - adjustedPrevX) * t;
+                const hitY = adjustedPrevY + (currY - adjustedPrevY) * t;
+                const hitZ = adjustedPrevZ + (currZ - adjustedPrevZ) * t;
                 const localY = Math.max(0, Math.min(this.#Side_Collision_Height, hitY - this.#Y));
                 const yRate = this.#Side_Collision_Height > 0 ? (localY / this.#Side_Collision_Height) : 0;
                 const sideRadiusAtY = this.#Side_Collision_Bottom_Radius +
@@ -728,36 +742,42 @@
             }
             Resolve_Side_Collision(ball, prevX, prevY, prevZ, currX, currY, currZ) {
                 const eps = 1e-5;
+                const cupDeltaX = this.#X - this.#Previous_X;
+                const cupDeltaY = this.#Y - this.#Previous_Y;
+                const cupDeltaZ = this.#Z - this.#Previous_Z;
+                const adjustedPrevX = prevX + cupDeltaX;
+                const adjustedPrevY = prevY + cupDeltaY;
+                const adjustedPrevZ = prevZ + cupDeltaZ;
                 const ballRadius = ball.Get_Radius();
                 const minY = this.#Y - ballRadius;
                 const maxY = this.#Y + this.#Side_Collision_Height + ballRadius;
-                const segVY = currY - prevY;
+                const segVY = currY - adjustedPrevY;
 
                 let tMin = 0;
                 let tMax = 1;
                 if (Math.abs(segVY) < eps) {
-                    if (prevY < minY || prevY > maxY) return false;
+                    if (adjustedPrevY < minY || adjustedPrevY > maxY) return false;
                 } else {
-                    const tA = (minY - prevY) / segVY;
-                    const tB = (maxY - prevY) / segVY;
+                    const tA = (minY - adjustedPrevY) / segVY;
+                    const tB = (maxY - adjustedPrevY) / segVY;
                     tMin = Math.max(0, Math.min(tA, tB));
                     tMax = Math.min(1, Math.max(tA, tB));
                     if (tMax < tMin) return false;
                 }
 
-                const dx0 = prevX - this.#X;
-                const dz0 = prevZ - this.#Z;
-                const vxSeg = currX - prevX;
-                const vzSeg = currZ - prevZ;
+                const dx0 = adjustedPrevX - this.#X;
+                const dz0 = adjustedPrevZ - this.#Z;
+                const vxSeg = currX - adjustedPrevX;
+                const vzSeg = currZ - adjustedPrevZ;
 
                 const radiusSlope = (this.#Side_Collision_Top_Radius - this.#Side_Collision_Bottom_Radius) / this.#Side_Collision_Height;
-                const rAt0 = this.#Side_Collision_Bottom_Radius + radiusSlope * (prevY - this.#Y);
+                const rAt0 = this.#Side_Collision_Bottom_Radius + radiusSlope * (adjustedPrevY - this.#Y);
                 const rVel = radiusSlope * segVY;
 
                 const signedAt = (_t) => {
-                    const x = prevX + vxSeg * _t;
-                    const y = prevY + segVY * _t;
-                    const z = prevZ + vzSeg * _t;
+                    const x = adjustedPrevX + vxSeg * _t;
+                    const y = adjustedPrevY + segVY * _t;
+                    const z = adjustedPrevZ + vzSeg * _t;
                     const radius = this.#Side_Collision_Bottom_Radius + radiusSlope * (y - this.#Y);
                     const dist = Math.hypot(x - this.#X, z - this.#Z);
                     return dist - radius;
@@ -801,9 +821,9 @@
 
                 if (hitT === null) return false;
 
-                const hitX = prevX + vxSeg * hitT;
-                const hitY = prevY + segVY * hitT;
-                const hitZ = prevZ + vzSeg * hitT;
+                const hitX = adjustedPrevX + vxSeg * hitT;
+                const hitY = adjustedPrevY + segVY * hitT;
+                const hitZ = adjustedPrevZ + vzSeg * hitT;
                 const hitRadius = this.#Side_Collision_Bottom_Radius + radiusSlope * (hitY - this.#Y);
                 const hitDX = hitX - this.#X;
                 const hitDZ = hitZ - this.#Z;
