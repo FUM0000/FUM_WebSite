@@ -183,32 +183,6 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
                 
-                <v-list-item href="./Service_Constellation.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Constellation</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-creation</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Service_Health.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Health</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-meditation</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Service_Journey.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Journey</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-bag-personal</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Service_QRCode.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>QR Code</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-qrcode-scan</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Service_Roulette.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Roulette</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-cheese</v-icon></v-list-item-icon>
-                </v-list-item>
-
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Company</v-list-item-title>
@@ -247,11 +221,15 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Image Layout</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_QRCode.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>QR Code</v-list-item-title>
+                    </v-list-item>
                 </v-list-group sub-group>
 
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
-                        <v-list-item-title>Game</v-list-item-title>
+                        <v-list-item-title>Enjoy</v-list-item-title>
                         <v-list-item-icon><v-icon>mdi-gamepad-left</v-icon></v-list-item-icon>
                     </template>
 
@@ -259,17 +237,33 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Counter Pick</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_Journey.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Journey</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Service_Roulette.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Roulette</v-list-item-title>
+                    </v-list-item>
                 </v-list-group sub-group>
 
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
-                        <v-list-item-title>Other</v-list-item-title>
+                        <v-list-item-title>Learning</v-list-item-title>
                         <v-list-item-icon><v-icon>mdi-toolbox</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Service_Calendar.html">
                         <v-list-item-icon />
                         <v-list-item-title>Calendar</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Service_Constellation.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Constellation</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Service_Health.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Health</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Service_VariousConverters.html">
                         <v-list-item-icon />
