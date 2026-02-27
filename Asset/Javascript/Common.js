@@ -896,15 +896,20 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Kitty Hopper</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-cat</v-icon></v-list-item-icon>
                 </v-list-item>
-                <v-list-item href="./Game_Ball.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Ping Pong</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-circle-outline</v-icon></v-list-item-icon>
-                </v-list-item>
                 <v-list-item href="./Game_Checkbox.html">
                     <v-list-item-icon />
                     <v-list-item-title>Checkman</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-checkbox-outline</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Game_Market.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Market</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-cart-outline</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Game_Ball.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Ping Pong</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-circle-outline</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Game_ReflexSpeed.html">
                     <v-list-item-icon />

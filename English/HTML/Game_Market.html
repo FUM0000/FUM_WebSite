@@ -1,0 +1,1462 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+    <title>Global Trading Exchange</title>
+
+    <style>
+        :root {
+            --bg: #070707;
+            --panel: #111111;
+            --line: #2b2b2b;
+            --text: #f2f2f2;
+            --muted: #9a9a9a;
+            --green: #6cff7d;
+            --yellow: #ffd84d;
+            --danger: #ff7777;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 0%, #161616 0%, var(--bg) 45%);
+            color: var(--text);
+            font-family: "Consolas", "Courier New", monospace;
+            letter-spacing: 0.02em;
+        }
+
+        #UI_Home_1 {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 30;
+            border: 1px solid var(--green);
+            padding: 7px 12px;
+            cursor: pointer;
+            color: var(--green);
+            background: #0d0d0d;
+        }
+
+        #UI_Home_1:hover {
+            background: #142015;
+        }
+
+        #btnDeleteSave {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 30;
+        }
+
+        .wrap {
+            width: min(1200px, 96vw);
+            margin: auto;
+            padding-top: 50px;
+        }
+
+        .title {
+            margin: 0 0 4px;
+            font-size: clamp(18px, 2.4vw, 26px);
+            color: var(--green);
+            text-shadow: 0 0 12px rgba(108, 255, 125, 0.35);
+        }
+
+        .subtitle {
+            margin: 0 0 12px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .box {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            padding: 8px 10px;
+            min-height: 58px;
+        }
+
+        .box .k {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .box .v {
+            margin-top: 2px;
+            font-size: 16px;
+            color: var(--green);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        button,
+        select,
+        input {
+            font: inherit;
+            border: 1px solid var(--line);
+            background: #0f0f0f;
+            color: var(--text);
+            padding: 6px 8px;
+        }
+
+        button {
+            cursor: pointer;
+            color: var(--yellow);
+            border-color: #665a28;
+        }
+
+        button:hover {
+            background: #1b1b1b;
+        }
+
+        .danger {
+            color: var(--danger);
+            border-color: #6d2d2d;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 2.1fr) minmax(300px, 1fr);
+            gap: 12px;
+            align-items: start;
+        }
+
+        main,
+        aside {
+            min-width: 0;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            background: rgba(16, 16, 16, 0.95);
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+
+        .panel h2 {
+            margin: 0 0 8px;
+            font-size: 14px;
+            color: var(--yellow);
+        }
+
+        .filter-row,
+        .inline-row {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .inline-row {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .table-wrap {
+            border: 1px solid var(--line);
+            max-height: 360px;
+            overflow: auto;
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid #1e1e1e;
+            padding: 6px 6px;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .table-market {
+            table-layout: fixed;
+        }
+
+        .table-inventory {
+            table-layout: fixed;
+            width: 100%;
+            font-size: 11px;
+        }
+
+        .table-inventory th,
+        .table-inventory td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .table-inventory select,
+        .table-inventory input,
+        .table-inventory button {
+            font-size: 11px;
+            padding: 4px 6px;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: #131313;
+            color: var(--green);
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .sort-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .refresh-note {
+            color: var(--muted);
+            font-size: 12px;
+            margin: 0 0 8px;
+        }
+
+        .ask-input {
+            width: 96px;
+        }
+
+        .ask-input:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .row-selectable {
+            cursor: pointer;
+        }
+
+        .row-selectable:hover {
+            background: rgba(108, 255, 125, 0.08);
+        }
+
+        .fav-btn {
+            padding: 0;
+            min-width: auto;
+            color: #7f7f7f;
+            border: none;
+            background: transparent;
+            font-size: 20px;
+            transform: scaleX(1.15);
+            line-height: 1;
+        }
+
+        .fav-btn.is-on {
+            color: #ff7f9a;
+            background: transparent;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 16px;
+        }
+
+        .modal.is-open {
+            display: flex;
+        }
+
+        .modal-card {
+            width: min(680px, 96vw);
+            border: 1px solid #7dff9a;
+            background: #070b07;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(108, 255, 125, 0.18) inset;
+            padding: 14px;
+        }
+
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .modal-title {
+            color: var(--green);
+            font-size: 20px;
+            margin: 0;
+            line-height: 1.15;
+        }
+
+        .modal-feature {
+            border: 1px solid #275231;
+            background: rgba(108, 255, 125, 0.08);
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .modal-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 10px;
+            font-size: 12px;
+        }
+
+        .modal-meta div:nth-child(odd) {
+            color: var(--muted);
+        }
+
+        .modal-foot {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        .modal-fav-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid #5c5c5c;
+            background: #111;
+            color: #9e9e9e;
+            font-size: 20px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .modal-fav-btn.is-on {
+            color: #ff7f9a;
+            border-color: #9f4258;
+            background: rgba(255, 127, 154, 0.1);
+        }
+
+        #btnCreateFolder,
+        #btnDeleteFolder {
+            min-height: 34px;
+        }
+
+        .rarity-common {
+            color: #d7d7d7;
+        }
+
+        .rarity-uncommon {
+            color: #8ef29f;
+        }
+
+        .rarity-rare {
+            color: #66c2ff;
+        }
+
+        .rarity-legend {
+            color: #ffd84d;
+        }
+
+        .log {
+            border: 1px solid var(--line);
+            background: #0d0d0d;
+            min-height: 130px;
+            max-height: 220px;
+            overflow: auto;
+            padding: 8px;
+            font-size: 12px;
+        }
+
+        .log-buy {
+            color: #7cc7ff;
+        }
+
+        .log-sell {
+            color: #8ef29f;
+        }
+
+        .log-list {
+            color: #ffd84d;
+        }
+
+        .log-cancel {
+            color: #ff9a9a;
+        }
+
+        .log-error {
+            color: #ff9a9a;
+        }
+
+        .folder-tree {
+            max-height: 180px;
+            overflow: auto;
+            border: 1px solid var(--line);
+            padding: 6px;
+            font-size: 12px;
+            background: #0d0d0d;
+            margin-bottom: 8px;
+            white-space: pre;
+        }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .filter-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .inline-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="UI_Home_1">HOME</div>
+    <button id="btnDeleteSave" class="danger">DELETE SAVE</button>
+
+    <div class="wrap">
+        <h1 class="title">GLOBAL TRADING EXCHANGE</h1>
+        <p class="subtitle">Buy low, repair smart, and sell high. Grow your cash and build your wealth.</p>
+
+        <section class="stats">
+            <div class="box"><div class="k">DAY</div><div class="v" id="statDay">1</div></div>
+            <div class="box"><div class="k">CASH</div><div class="v" id="statCash">$0</div></div>
+            <div class="box"><div class="k">ASSETS (EST.)</div><div class="v" id="statAssets">$0</div></div>
+            <div class="box"><div class="k">NET WORTH</div><div class="v" id="statNet">$0</div></div>
+        </section>
+
+        <div class="layout">
+            <main>
+                <section class="panel">
+                    <h2>[ MARKET LISTINGS ]</h2>
+                    <div class="panel-actions">
+                        <button id="btnNextDay">NEXT DAY</button>
+                        <button id="btnRefreshMarket">↺ REFRESH LISTINGS</button>
+                    </div>
+                    <p class="refresh-note" id="refreshNote">refresh left today: 3 / 3</p>
+                    <div class="filter-row">
+                        <input id="filterKeyword" placeholder="keyword">
+                        <select id="filterCategory"></select>
+                        <input id="filterPriceMin" type="number" min="0" placeholder="price min">
+                        <input id="filterPriceMax" type="number" min="0" placeholder="price max">
+                        <select id="marketSort">
+                            <option value="priceDesc">Price ↓</option>
+                            <option value="priceAsc">Price ↑</option>
+                            <option value="condDesc">Cond. ↑</option>
+                            <option value="rarityDesc">Rarity</option>
+                            <option value="nameAsc">Name A-Z</option>
+                            <option value="categoryAsc">Category A-Z</option>
+                        </select>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table-market">
+                            <colgroup>
+                                <col style="width: 31%">
+                                <col style="width: 17%">
+                                <col style="width: 12%">
+                                <col style="width: 14%">
+                                <col style="width: 14%">
+                                <col style="width: 12%">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Price</th>
+                                    <th>Cond.</th>
+                                    <th>Rarity</th>
+                                    <th>Category</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="marketBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <h2>[ INVENTORY / COLLECTION ]</h2>
+                    <div class="sort-row">
+                        <select id="inventorySort">
+                            <option value="nameAsc">Name A-Z</option>
+                            <option value="priceDesc">Price ↓</option>
+                            <option value="priceAsc">Price ↑</option>
+                            <option value="condDesc">Cond. ↑</option>
+                            <option value="rarityDesc">Rarity ★</option>
+                            <option value="categoryAsc">Category A-Z</option>
+                            <option value="favFirst">Favorite ♥</option>
+                        </select>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table-inventory">
+                            <colgroup>
+                                <col style="width: 5%">
+                                <col style="width: 16%">
+                                <col style="width: 12%">
+                                <col style="width: 8%">
+                                <col style="width: 10%">
+                                <col style="width: 10%">
+                                <col style="width: 15%">
+                                <col style="width: 12%">
+                                <col style="width: 12%">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Fav</th>
+                                    <th>Name</th>
+                                    <th>Price</th>
+                                    <th>Cond.</th>
+                                    <th>Rarity</th>
+                                    <th>Category</th>
+                                    <th>Folder</th>
+                                    <th>Ask Price</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+
+            <aside>
+                <section class="panel">
+                    <h2>[ FOLDER MANAGER ]</h2>
+                    <div class="folder-tree" id="folderTree"></div>
+                    <div class="inline-row">
+                        <input id="newFolderName" placeholder="new folder name">
+                        <select id="newFolderParent"></select>
+                        <button id="btnCreateFolder">CREATE</button>
+                    </div>
+                    <div class="inline-row">
+                        <select id="deleteFolderSelect"></select>
+                        <div></div>
+                        <button id="btnDeleteFolder" class="danger">DELETE</button>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <h2>[ REPAIR STATION ]</h2>
+                    <div class="inline-row">
+                        <select id="repairToolSelect"></select>
+                        <select id="repairTargetSelect"></select>
+                        <button id="btnRepair">USE TOOL</button>
+                    </div>
+                    <p class="muted" id="repairInfo">tools: 0</p>
+                </section>
+
+                <section class="panel">
+                    <h2>[ LOG ]</h2>
+                    <div class="log" id="logBox"></div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <div id="itemModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3 class="modal-title" id="modalTitle">Item Detail</h3>
+                <button id="modalClose">CLOSE</button>
+            </div>
+            <div class="modal-feature" id="modalFeature">Feature</div>
+            <div class="modal-meta" id="modalMeta"></div>
+            <div class="modal-foot">
+                <button id="modalFavBtn" class="modal-fav-btn">♡</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const STORAGE_KEY = "fum_market_terminal_v1";
+            const ROOT_FOLDER_ID = "root";
+            const MAX_DAILY_REFRESH = 3;
+            const DAILY_LIVING_COST = 120;
+            const MONTHLY_FIXED_COST = 2400;
+
+            const itemTemplates = [
+                { id: "retro-console", category: "Electronics", name: "Retro Console", desc: "Limited shell color", base: 620 },
+                { id: "camera-35mm", category: "Electronics", name: "35mm Camera", desc: "Manual focus body", base: 410 },
+                { id: "mech-keyboard", category: "Electronics", name: "Mechanical Keyboard", desc: "Hot-swappable", base: 170 },
+                { id: "vintage-jacket", category: "Fashion", name: "Vintage Jacket", desc: "Hand-stitched lining", base: 280 },
+                { id: "sneaker-low", category: "Fashion", name: "Low-top Sneaker", desc: "Discontinued colorway", base: 220 },
+                { id: "tcg-box", category: "Collectible", name: "Trading Card Box", desc: "Factory sealed", base: 560 },
+                { id: "figure-robot", category: "Collectible", name: "Robot Figure", desc: "Original parts", base: 350 },
+                { id: "handheld-rpg", category: "Games", name: "Handheld RPG Cart", desc: "Save battery replaced", base: 145 },
+                { id: "arcade-stick", category: "Games", name: "Arcade Stick", desc: "Custom lever", base: 260 }
+            ];
+
+            const ultraItemTemplates = [
+                { id: "luxury-watch", category: "Collectible", name: "Luxury Chronograph", desc: "Auction-grade certified piece", base: 58000 },
+                { id: "sports-car", category: "Vehicle", name: "Vintage Sports Car", desc: "Low mileage restoration base", base: 220000 },
+                { id: "city-condo", category: "RealAsset", name: "Prime City Condo", desc: "High-demand central district unit", base: 980000 },
+                { id: "master-art", category: "Collectible", name: "Masterpiece Canvas", desc: "Museum-quality provenance", base: 1600000 }
+            ];
+
+            const toolTemplates = [
+                { id: "tool-cloth", category: "Tool", name: "Cleaning Cloth Kit", desc: "+10 condition for all items", targetMode: "all", restore: 10, uses: 4, base: 340 },
+                { id: "tool-electro", category: "Tool", name: "Electro Repair Set", desc: "+16 for Electronics", targetMode: "category", targetCategory: "Electronics", restore: 16, uses: 4, base: 300 },
+                { id: "tool-fashion", category: "Tool", name: "Textile Care Pack", desc: "+15 for Fashion", targetMode: "category", targetCategory: "Fashion", restore: 15, uses: 4, base: 285 },
+                { id: "tool-collect", category: "Tool", name: "Collector Preservation Oil", desc: "+18 for Collectible", targetMode: "category", targetCategory: "Collectible", restore: 18, uses: 3, base: 380 },
+                { id: "tool-rpg", category: "Tool", name: "Cartridge Contact Kit", desc: "+22 for Handheld RPG Cart", targetMode: "item", targetTemplateId: "handheld-rpg", restore: 22, uses: 3, base: 360 }
+            ];
+
+            const rarityWeights = [
+                { key: "Common", factor: 1, weight: 62 },
+                { key: "Uncommon", factor: 1.2, weight: 24 },
+                { key: "Rare", factor: 1.55, weight: 11 },
+                { key: "Legend", factor: 2.1, weight: 3 }
+            ];
+
+            const dom = {
+                statDay: document.getElementById("statDay"),
+                statCash: document.getElementById("statCash"),
+                statAssets: document.getElementById("statAssets"),
+                statNet: document.getElementById("statNet"),
+                filterKeyword: document.getElementById("filterKeyword"),
+                filterCategory: document.getElementById("filterCategory"),
+                filterPriceMin: document.getElementById("filterPriceMin"),
+                filterPriceMax: document.getElementById("filterPriceMax"),
+                marketSort: document.getElementById("marketSort"),
+                inventorySort: document.getElementById("inventorySort"),
+                marketBody: document.getElementById("marketBody"),
+                inventoryBody: document.getElementById("inventoryBody"),
+                folderTree: document.getElementById("folderTree"),
+                newFolderName: document.getElementById("newFolderName"),
+                newFolderParent: document.getElementById("newFolderParent"),
+                deleteFolderSelect: document.getElementById("deleteFolderSelect"),
+                repairToolSelect: document.getElementById("repairToolSelect"),
+                repairTargetSelect: document.getElementById("repairTargetSelect"),
+                repairInfo: document.getElementById("repairInfo"),
+                logBox: document.getElementById("logBox"),
+                refreshNote: document.getElementById("refreshNote"),
+                itemModal: document.getElementById("itemModal"),
+                modalTitle: document.getElementById("modalTitle"),
+                modalFeature: document.getElementById("modalFeature"),
+                modalMeta: document.getElementById("modalMeta"),
+                modalFavBtn: document.getElementById("modalFavBtn"),
+                modalClose: document.getElementById("modalClose")
+            };
+
+            const state = {
+                day: 1,
+                money: 1200,
+                marketListings: [],
+                inventory: [],
+                folders: [{ id: ROOT_FOLDER_ID, name: "Storage", parentId: null }],
+                nextId: 1,
+                nextFolderId: 1,
+                refreshesUsedToday: 0,
+                lastSoldPriceByTemplate: {},
+                askDraftById: {},
+                logs: ["System: New session started."]
+            };
+            let modalItemId = null;
+
+            function rand(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            function randInt(min, max) {
+                return Math.floor(rand(min, max + 1));
+            }
+
+            function clamp(v, min, max) {
+                return Math.max(min, Math.min(max, v));
+            }
+
+            function pickWeighted(items, weightKey) {
+                const total = items.reduce((sum, it) => sum + it[weightKey], 0);
+                let r = Math.random() * total;
+                for (const it of items) {
+                    r -= it[weightKey];
+                    if (r <= 0) return it;
+                }
+                return items[items.length - 1];
+            }
+
+            function formatMoney(value) {
+                return `$${Math.round(value).toLocaleString()}`;
+            }
+
+            function getRarityClass(rarity) {
+                const key = String(rarity || "").toLowerCase();
+                if (key === "common") return "rarity-common";
+                if (key === "uncommon") return "rarity-uncommon";
+                if (key === "rare") return "rarity-rare";
+                if (key === "legend") return "rarity-legend";
+                if (key === "utility") return "rarity-common";
+                return "rarity-common";
+            }
+
+            function raritySpan(rarity) {
+                return `<span class="${getRarityClass(rarity)}">${rarity || "-"}</span>`;
+            }
+
+            function log(message) {
+                state.logs.unshift(`[Day ${state.day}] ${message}`);
+                state.logs = state.logs.slice(0, 120);
+            }
+
+            function logTypeClass(message) {
+                if (message.includes("Bought ")) return "log-buy";
+                if (message.includes("Sold ")) return "log-sell";
+                if (message.includes("Listed ")) return "log-list";
+                if (message.includes("Canceled sale")) return "log-cancel";
+                if (message.includes("failed") || message.includes("Cannot ")) return "log-error";
+                return "";
+            }
+
+            function createId(prefix) {
+                const id = `${prefix}-${state.nextId}`;
+                state.nextId += 1;
+                return id;
+            }
+
+            function createFolderId() {
+                const id = `folder-${state.nextFolderId}`;
+                state.nextFolderId += 1;
+                return id;
+            }
+
+            function folderDepth(folderId) {
+                let depth = 0;
+                let current = state.folders.find(f => f.id === folderId);
+                while (current && current.parentId) {
+                    depth += 1;
+                    current = state.folders.find(f => f.id === current.parentId);
+                }
+                return depth;
+            }
+
+            function makeMarketItemFromTemplate(template, options = {}) {
+                const rarity = options.forcedRarity || pickWeighted(rarityWeights, "weight");
+                const condition = randInt(35, 100);
+                const special = Math.random() < 0.12 ? "Serial match" : (Math.random() < 0.08 ? "Signed" : "None");
+                const specialFactor = special === "None" ? 1 : 1.32;
+                const intrinsicBaseValue = template.base * rarity.factor * specialFactor * rand(0.94, 1.08);
+                const hiddenMarketValue = intrinsicBaseValue * (condition / 100);
+                const listingPrice = hiddenMarketValue * rand(0.72, 1.3);
+                const desc = special === "None" ? template.desc : `${template.desc} / feature:${special}`;
+
+                return {
+                    id: createId("mk"),
+                    type: "item",
+                    templateId: template.id,
+                    category: template.category,
+                    name: template.name,
+                    desc,
+                    condition,
+                    rarity: rarity.key,
+                    rarityFactor: rarity.factor,
+                    intrinsicBaseValue,
+                    hiddenMarketValue,
+                    price: Math.max(30, Math.round(listingPrice)),
+                    folderId: ROOT_FOLDER_ID,
+                    isForSale: false,
+                    askPrice: 0
+                };
+            }
+            function makeMarketTool(template) {
+                const hiddenMarketValue = template.base * rand(0.9, 1.15);
+                const listingPrice = hiddenMarketValue * rand(0.78, 1.26);
+
+                return {
+                    id: createId("mk"),
+                    type: "tool",
+                    templateId: template.id,
+                    category: "Tool",
+                    name: template.name,
+                    desc: template.desc,
+                    condition: 100,
+                    rarity: "Utility",
+                    rarityFactor: 1,
+                    hiddenMarketValue,
+                    price: Math.max(40, Math.round(listingPrice)),
+                    folderId: ROOT_FOLDER_ID,
+                    isForSale: false,
+                    askPrice: 0,
+                    usesRemaining: template.uses,
+                    maxUses: template.uses,
+                    toolSpec: {
+                        targetMode: template.targetMode,
+                        targetCategory: template.targetCategory || null,
+                        targetTemplateId: template.targetTemplateId || null,
+                        restore: template.restore,
+                        uses: template.uses
+                    }
+                };
+            }
+
+            function generateListings(count = 16) {
+                const listings = [];
+                for (let i = 0; i < count; i += 1) {
+                    const roll = Math.random();
+                    if (roll < 0.03) {
+                        const ultra = ultraItemTemplates[randInt(0, ultraItemTemplates.length - 1)];
+                        const forced = Math.random() < 0.7
+                            ? { key: "Legend", factor: 2.1, weight: 0 }
+                            : { key: "Rare", factor: 1.55, weight: 0 };
+                        listings.push(makeMarketItemFromTemplate(ultra, { forcedRarity: forced }));
+                    } else if (roll < 0.25) {
+                        const tool = toolTemplates[randInt(0, toolTemplates.length - 1)];
+                        listings.push(makeMarketTool(tool));
+                    } else {
+                        const item = itemTemplates[randInt(0, itemTemplates.length - 1)];
+                        listings.push(makeMarketItemFromTemplate(item));
+                    }
+                }
+                state.marketListings = listings;
+                log(`Market refreshed with ${count} listings.`);
+            }
+
+            function estimatedAssetValue() {
+                return state.inventory.reduce((sum, item) => {
+                    const base = item.hiddenMarketValue || item.price || 0;
+                    const mod = item.type === "tool" ? 1 : (0.92 + (item.condition / 100) * 0.08);
+                    return sum + base * mod;
+                }, 0);
+            }
+
+            function canToolRepair(tool, target) {
+                if (!tool || !tool.toolSpec || !target || target.type !== "item") return false;
+                if (target.condition >= 100) return false;
+                if (tool.toolSpec.targetMode === "all") return true;
+                if (tool.toolSpec.targetMode === "category") return tool.toolSpec.targetCategory === target.category;
+                if (tool.toolSpec.targetMode === "item") return tool.toolSpec.targetTemplateId === target.templateId;
+                return false;
+            }
+
+            function simulateSales() {
+                const sellers = state.inventory.filter(it => it.isForSale && it.askPrice > 0);
+                for (const item of sellers) {
+                    const rarityKey = String(item.rarity || "").toLowerCase();
+                    const isHighRarity = rarityKey === "rare" || rarityKey === "legend";
+                    item.hiddenMarketValue *= rand(0.96, 1.05) * (isHighRarity ? rand(1.003, 1.02) : 1);
+                    const ratio = item.askPrice / Math.max(1, item.hiddenMarketValue);
+                    const daysOnMarket = Math.max(1, state.day - (item.listedAtDay ?? state.day) + 1);
+                    let chance = 0;
+                    if (ratio <= 0.9) chance = 0.86;
+                    else if (ratio <= 1.0) chance = 0.67;
+                    else if (ratio <= 1.1) chance = 0.47;
+                    else if (ratio <= 1.25) chance = 0.2;
+                    else if (ratio <= 1.4) chance = 0.06;
+
+                    if (isHighRarity) {
+                        const bought = Math.max(1, item.boughtAt || item.price || 1);
+                        const premium = item.askPrice / bought;
+                        if (premium >= 1.05 && premium <= 1.65) {
+                            const dailyLift = rarityKey === "legend" ? 0.07 : 0.045;
+                            chance += Math.min(0.62, daysOnMarket * dailyLift);
+                        }
+                    }
+
+                    chance = Math.min(0.95, chance);
+                    if (Math.random() < chance) {
+                        state.money += item.askPrice;
+                        if (item.templateId) {
+                            state.lastSoldPriceByTemplate[item.templateId] = item.askPrice;
+                        }
+                        delete state.askDraftById[item.id];
+                        item._sold = true;
+                        log(`Sold ${item.name} for ${formatMoney(item.askPrice)}.`);
+                    }
+                }
+                state.inventory = state.inventory.filter(it => !it._sold);
+            }
+
+            function buy(listingId) {
+                const idx = state.marketListings.findIndex(m => m.id === listingId);
+                if (idx < 0) return;
+                const listing = state.marketListings[idx];
+                if (state.money < listing.price) {
+                    log(`Buy failed: not enough cash for ${listing.name}.`);
+                    render();
+                    return;
+                }
+
+                state.money -= listing.price;
+                const owned = { ...listing, id: createId("own"), boughtAt: listing.price, folderId: ROOT_FOLDER_ID };
+                if (typeof owned.isFavorite !== "boolean") owned.isFavorite = false;
+                state.inventory.push(owned);
+                state.marketListings.splice(idx, 1);
+                log(`Bought ${owned.name} for ${formatMoney(listing.price)}.`);
+                saveGame();
+                render();
+            }
+
+            function setForSale(itemId) {
+                const item = state.inventory.find(i => i.id === itemId);
+                if (!item) return;
+                if (item.isFavorite) {
+                    log(`Cannot list favorite item: ${item.name}.`);
+                    render();
+                    return;
+                }
+                if (item.isForSale) {
+                    state.askDraftById[item.id] = item.askPrice;
+                    item.isForSale = false;
+                    item.askPrice = 0;
+                    item.listedAtDay = null;
+                    log(`Canceled sale: ${item.name}.`);
+                    saveGame();
+                    render();
+                    return;
+                }
+                const input = document.getElementById(`ask-${itemId}`);
+                const price = Math.round(Number(input ? input.value : 0));
+                if (!Number.isFinite(price) || price <= 0) {
+                    log(`Invalid ask price for ${item.name}.`);
+                    render();
+                    return;
+                }
+                state.askDraftById[item.id] = price;
+                item.askPrice = price;
+                item.isForSale = true;
+                item.listedAtDay = state.day;
+                log(`Listed ${item.name} at ${formatMoney(price)}.`);
+                saveGame();
+                render();
+            }
+
+            function cancelSale(itemId) {
+                const item = state.inventory.find(i => i.id === itemId);
+                if (!item) return;
+                item.isForSale = false;
+                item.askPrice = 0;
+                item.listedAtDay = null;
+                log(`Canceled sale: ${item.name}.`);
+                saveGame();
+                render();
+            }
+
+            function toggleFavorite(itemId) {
+                const item = state.inventory.find(i => i.id === itemId);
+                if (!item) return;
+                item.isFavorite = !item.isFavorite;
+                if (item.isFavorite && item.isForSale) {
+                    state.askDraftById[item.id] = item.askPrice;
+                    item.isForSale = false;
+                    item.askPrice = 0;
+                    item.listedAtDay = null;
+                    log(`Canceled sale: ${item.name}.`);
+                }
+                saveGame();
+                render();
+            }
+
+            function toggleFavoriteFromModal() {
+                if (!modalItemId) return;
+                const item = state.inventory.find(i => i.id === modalItemId);
+                if (!item) return;
+                toggleFavorite(modalItemId);
+                const refreshed = state.inventory.find(i => i.id === modalItemId);
+                if (refreshed) openItemModal(refreshed);
+            }
+
+            function moveFolder(itemId, folderId) {
+                const item = state.inventory.find(i => i.id === itemId);
+                if (!item) return;
+                item.folderId = folderId;
+                saveGame();
+                render();
+            }
+
+            function createFolder() {
+                const name = (dom.newFolderName.value || "").trim();
+                if (!name) return;
+                const parentId = dom.newFolderParent.value || ROOT_FOLDER_ID;
+                state.folders.push({ id: createFolderId(), name, parentId });
+                dom.newFolderName.value = "";
+                log(`Folder created: ${name}.`);
+                saveGame();
+                render();
+            }
+
+            function deleteFolder() {
+                const folderId = dom.deleteFolderSelect.value;
+                if (!folderId) {
+                    log("Delete failed: no folder selected.");
+                    render();
+                    return;
+                }
+                if (folderId === ROOT_FOLDER_ID) {
+                    log("Delete failed: root folder cannot be deleted.");
+                    render();
+                    return;
+                }
+
+                const target = state.folders.find(f => f.id === folderId);
+                if (!target) {
+                    log("Delete failed: folder not found.");
+                    render();
+                    return;
+                }
+
+                const hasItems = state.inventory.some(i => i.folderId === folderId);
+                if (hasItems) {
+                    log("Delete failed: folder must be empty.");
+                    render();
+                    return;
+                }
+
+                // Keep child folders by promoting them one level up.
+                for (const folder of state.folders) {
+                    if (folder.parentId === folderId) {
+                        folder.parentId = target.parentId || ROOT_FOLDER_ID;
+                    }
+                }
+                state.folders = state.folders.filter(f => f.id !== folderId);
+                log(`Folder deleted: ${target ? target.name : folderId}.`);
+                saveGame();
+                render();
+            }
+
+            function useRepairTool() {
+                const toolId = dom.repairToolSelect.value;
+                const targetId = dom.repairTargetSelect.value;
+                const tool = state.inventory.find(i => i.id === toolId && i.type === "tool");
+                const target = state.inventory.find(i => i.id === targetId && i.type === "item");
+                if (!tool || !target) {
+                    log("Repair failed: missing tool or target.");
+                    render();
+                    return;
+                }
+                if (!canToolRepair(tool, target)) {
+                    log(`Repair failed: ${tool.name} is not valid for ${target.name}.`);
+                    render();
+                    return;
+                }
+
+                const before = target.condition;
+                target.condition = clamp(target.condition + tool.toolSpec.restore, 0, 100);
+                const base = target.intrinsicBaseValue || (target.hiddenMarketValue / Math.max(0.2, before / 100));
+                target.intrinsicBaseValue = base;
+                target.hiddenMarketValue = base * (target.condition / 100) * rand(0.995, 1.01);
+                tool.usesRemaining = Math.max(0, (tool.usesRemaining ?? tool.maxUses ?? tool.toolSpec.uses ?? 1) - 1);
+                if (tool.usesRemaining === 0) {
+                    state.inventory = state.inventory.filter(i => i.id !== toolId);
+                    log(`Repaired ${target.name}: ${before}% -> ${target.condition}%. ${tool.name} is now empty.`);
+                } else {
+                    log(`Repaired ${target.name}: ${before}% -> ${target.condition}%. ${tool.name} uses left: ${tool.usesRemaining}.`);
+                }
+                saveGame();
+                render();
+            }
+
+            function nextDay() {
+                state.day += 1;
+                state.refreshesUsedToday = 0;
+                state.money -= DAILY_LIVING_COST;
+                log(`Daily living cost paid: -${formatMoney(DAILY_LIVING_COST)}.`);
+                if (state.day % 30 === 0) {
+                    state.money -= MONTHLY_FIXED_COST;
+                    log(`Monthly fixed cost paid: -${formatMoney(MONTHLY_FIXED_COST)}.`);
+                }
+                simulateSales();
+                generateListings(randInt(14, 19));
+                saveGame();
+                render();
+            }
+
+            function saveGame() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            }
+
+            function normalizeState() {
+                for (const list of [state.marketListings, state.inventory]) {
+                    for (const it of list) {
+                        if (it.type === "item" && !it.intrinsicBaseValue) {
+                            it.intrinsicBaseValue = (it.hiddenMarketValue || it.price || 100) / Math.max(0.2, (it.condition || 50) / 100);
+                        }
+                        if (it.type === "tool") {
+                            const fallbackUses = it.toolSpec?.uses ?? 3;
+                            if (typeof it.maxUses !== "number") it.maxUses = fallbackUses;
+                            if (typeof it.usesRemaining !== "number") it.usesRemaining = it.maxUses;
+                        }
+                        if (typeof it.isFavorite !== "boolean") it.isFavorite = false;
+                        if (it.isFavorite && it.isForSale) {
+                            it.isForSale = false;
+                            it.askPrice = 0;
+                            it.listedAtDay = null;
+                        }
+                        if (it.isForSale && typeof it.listedAtDay !== "number") {
+                            it.listedAtDay = state.day;
+                        }
+                    }
+                }
+                if (typeof state.refreshesUsedToday !== "number") state.refreshesUsedToday = 0;
+                if (!state.lastSoldPriceByTemplate || typeof state.lastSoldPriceByTemplate !== "object") {
+                    state.lastSoldPriceByTemplate = {};
+                }
+                if (!state.askDraftById || typeof state.askDraftById !== "object") {
+                    state.askDraftById = {};
+                }
+            }
+
+            function deleteSave() {
+                localStorage.removeItem(STORAGE_KEY);
+                state.day = 1;
+                state.money = 1200;
+                state.marketListings = [];
+                state.inventory = [];
+                state.folders = [{ id: ROOT_FOLDER_ID, name: "Storage", parentId: null }];
+                state.nextId = 1;
+                state.nextFolderId = 1;
+                state.refreshesUsedToday = 0;
+                state.lastSoldPriceByTemplate = {};
+                state.askDraftById = {};
+                state.logs = ["System: Save deleted and game reset."];
+                generateListings(16);
+                render();
+            }
+
+            function getAskInputValue(item) {
+                if (item.isForSale && item.askPrice > 0) return item.askPrice;
+                const draft = state.askDraftById[item.id];
+                if (Number.isFinite(draft) && draft > 0) return draft;
+                if (item.askPrice > 0) return item.askPrice;
+                return Math.max(1, Math.round(item.hiddenMarketValue || item.price || 1));
+            }
+
+            function openItemModal(item) {
+                const lastSold = item.templateId ? state.lastSoldPriceByTemplate[item.templateId] : null;
+                const rows = [
+                    ["Price", formatMoney(item.price || 0)],
+                    ["Condition", `${item.condition}%`],
+                    ["Rarity", raritySpan(item.rarity || "-")],
+                    ["Category", item.category],
+                    ["Last Sold", Number.isFinite(lastSold) ? formatMoney(lastSold) : "-"]
+                ];
+                if (item.type === "tool") {
+                    rows.push(["Uses", `${item.usesRemaining ?? 0} / ${item.maxUses ?? item.toolSpec?.uses ?? 0}`]);
+                    rows.push(["Repair", `+${item.toolSpec?.restore || 0}`]);
+                }
+                dom.modalTitle.textContent = item.name;
+                dom.modalFeature.textContent = item.desc || "-";
+                dom.modalMeta.innerHTML = rows.map(([k, v]) => `<div>${k}</div><div>${v}</div>`).join("");
+                const invItem = state.inventory.find(i => i.id === item.id);
+                if (invItem) {
+                    modalItemId = invItem.id;
+                    dom.modalFavBtn.style.visibility = "visible";
+                    dom.modalFavBtn.classList.toggle("is-on", !!invItem.isFavorite);
+                    dom.modalFavBtn.textContent = "❤";
+                } else {
+                    modalItemId = null;
+                    dom.modalFavBtn.style.visibility = "hidden";
+                }
+                dom.itemModal.classList.add("is-open");
+            }
+
+            function closeItemModal() {
+                modalItemId = null;
+                dom.itemModal.classList.remove("is-open");
+            }
+            function renderFolderSelect(selectEl, selectedId) {
+                selectEl.innerHTML = state.folders
+                    .map(f => {
+                        const selected = selectedId === f.id ? "selected" : "";
+                        return `<option value="${f.id}" ${selected}>${f.name}</option>`;
+                    })
+                    .join("");
+            }
+
+            function renderFolderTree() {
+                const lines = [];
+                for (const folder of state.folders) {
+                    const depth = folderDepth(folder.id);
+                    lines.push(`${" ".repeat(depth * 2)}|- ${folder.name}`);
+                }
+                dom.folderTree.textContent = lines.join("\n");
+            }
+
+            function filterListings(listings) {
+                const keyword = dom.filterKeyword.value.trim().toLowerCase();
+                const category = dom.filterCategory.value;
+                const pMin = Number(dom.filterPriceMin.value || 0);
+                const pMax = Number(dom.filterPriceMax.value || Number.MAX_SAFE_INTEGER);
+
+                return listings.filter(item => {
+                    if (category !== "ALL" && item.category !== category) return false;
+                    if (item.price < pMin || item.price > pMax) return false;
+                    if (keyword && !`${item.name} ${item.desc}`.toLowerCase().includes(keyword)) return false;
+                    return true;
+                });
+            }
+
+            function rarityRank(rarity) {
+                const key = String(rarity || "").toLowerCase();
+                if (key === "legend") return 4;
+                if (key === "rare") return 3;
+                if (key === "uncommon") return 2;
+                return 1;
+            }
+
+            function sortedMarketListings(listings) {
+                const mode = dom.marketSort.value || "priceAsc";
+                const copy = [...listings];
+                copy.sort((a, b) => {
+                    if (mode === "priceAsc") return a.price - b.price;
+                    if (mode === "priceDesc") return b.price - a.price;
+                    if (mode === "condDesc") return a.condition - b.condition;
+                    if (mode === "rarityDesc") return rarityRank(b.rarity) - rarityRank(a.rarity);
+                    if (mode === "categoryAsc") return String(a.category).localeCompare(String(b.category));
+                    return String(a.name).localeCompare(String(b.name));
+                });
+                return copy;
+            }
+
+            function sortedInventoryItems(listings) {
+                const mode = dom.inventorySort.value || "nameAsc";
+                const copy = [...listings];
+                copy.sort((a, b) => {
+                    if (mode === "favFirst") {
+                        if ((b.isFavorite ? 1 : 0) !== (a.isFavorite ? 1 : 0)) return (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+                        return String(a.name).localeCompare(String(b.name));
+                    }
+                    if (mode === "priceAsc") return (a.hiddenMarketValue || a.price || 0) - (b.hiddenMarketValue || b.price || 0);
+                    if (mode === "priceDesc") return (b.hiddenMarketValue || b.price || 0) - (a.hiddenMarketValue || a.price || 0);
+                    if (mode === "condDesc") return a.condition - b.condition;
+                    if (mode === "rarityDesc") return rarityRank(b.rarity) - rarityRank(a.rarity);
+                    if (mode === "categoryAsc") return String(a.category).localeCompare(String(b.category));
+                    return String(a.name).localeCompare(String(b.name));
+                });
+                return copy;
+            }
+
+            function renderMarket() {
+                const rows = sortedMarketListings(filterListings(state.marketListings)).map(item => `
+                    <tr class="row-selectable" data-open-market="${item.id}">
+                        <td>${item.name}</td>
+                        <td>${formatMoney(item.price)}</td>
+                        <td>${item.condition}%</td>
+                        <td>${raritySpan(item.rarity)}</td>
+                        <td>${item.category}</td>
+                        <td><button data-buy="${item.id}">BUY</button></td>
+                    </tr>
+                `);
+                dom.marketBody.innerHTML = rows.join("") || `<tr><td colspan="6" class="muted">No listings.</td></tr>`;
+
+                dom.marketBody.querySelectorAll("button[data-buy]").forEach(btn => {
+                    btn.addEventListener("click", () => buy(btn.dataset.buy));
+                });
+                dom.marketBody.querySelectorAll("tr[data-open-market]").forEach(row => {
+                    row.addEventListener("click", e => {
+                        if (e.target.closest("button,input,select")) return;
+                        const item = state.marketListings.find(it => it.id === row.dataset.openMarket);
+                        if (item) openItemModal(item);
+                    });
+                });
+            }
+
+            function renderInventory() {
+                const rows = sortedInventoryItems(state.inventory).map(item => {
+                    const folderOptions = state.folders.map(folder => {
+                        const selected = item.folderId === folder.id ? "selected" : "";
+                        return `<option value="${folder.id}" ${selected}>${folder.name}</option>`;
+                    }).join("");
+
+                    return `
+                        <tr class="row-selectable" data-open-own="${item.id}">
+                            <td><button class="fav-btn ${item.isFavorite ? "is-on" : ""}" data-fav="${item.id}">❤</button></td>
+                            <td title="${item.type === "tool" ? `${item.name} (${item.usesRemaining ?? 0})` : item.name}">${item.type === "tool" ? `${item.name} (${item.usesRemaining ?? 0})` : item.name}</td>
+                            <td>${formatMoney(item.hiddenMarketValue || item.price || 0)}</td>
+                            <td>${item.condition}%</td>
+                            <td>${raritySpan(item.rarity)}</td>
+                            <td title="${item.category}">${item.category}</td>
+                            <td><select data-move="${item.id}" title="${(state.folders.find(f => f.id === item.folderId) || { name: "" }).name}">${folderOptions}</select></td>
+                            <td><input class="ask-input" id="ask-${item.id}" data-ask="${item.id}" type="number" min="1" value="${getAskInputValue(item)}" ${item.isForSale ? "disabled" : ""}></td>
+                            <td>
+                                ${item.isFavorite ? "" : `<button data-sell="${item.id}" class="${item.isForSale ? "danger" : ""}">${item.isForSale ? "CANCEL" : "SELL"}</button>`}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                dom.inventoryBody.innerHTML = rows.join("") || `<tr><td colspan="9" class="muted">Inventory is empty.</td></tr>`;
+
+                dom.inventoryBody.querySelectorAll("button[data-sell]").forEach(btn => {
+                    btn.addEventListener("click", () => setForSale(btn.dataset.sell));
+                });
+                dom.inventoryBody.querySelectorAll("button[data-fav]").forEach(btn => {
+                    btn.addEventListener("click", () => toggleFavorite(btn.dataset.fav));
+                });
+                dom.inventoryBody.querySelectorAll("input[data-ask]").forEach(input => {
+                    input.addEventListener("input", () => {
+                        const id = input.dataset.ask;
+                        const v = Number(input.value);
+                        if (Number.isFinite(v) && v > 0) {
+                            state.askDraftById[id] = Math.round(v);
+                        }
+                    });
+                });
+
+                dom.inventoryBody.querySelectorAll("select[data-move]").forEach(sel => {
+                    sel.addEventListener("change", () => moveFolder(sel.dataset.move, sel.value));
+                });
+                dom.inventoryBody.querySelectorAll("tr[data-open-own]").forEach(row => {
+                    row.addEventListener("click", e => {
+                        if (e.target.closest("button,input,select")) return;
+                        const item = state.inventory.find(it => it.id === row.dataset.openOwn);
+                        if (item) openItemModal(item);
+                    });
+                });
+            }
+
+            function renderRepairPanel() {
+                const tools = state.inventory.filter(i => i.type === "tool");
+                const targets = state.inventory.filter(i => i.type === "item");
+
+                dom.repairToolSelect.innerHTML = tools
+                    .map(t => `<option value="${t.id}">${t.name} (+${t.toolSpec.restore}, uses:${t.usesRemaining ?? 0})</option>`)
+                    .join("") || `<option value="">No tools</option>`;
+
+                dom.repairTargetSelect.innerHTML = targets
+                    .map(t => `<option value="${t.id}">${t.name} (${t.condition}%)</option>`)
+                    .join("") || `<option value="">No targets</option>`;
+
+                dom.repairInfo.textContent = `tools: ${tools.length} / targets: ${targets.length}`;
+            }
+
+            function renderStats() {
+                const assets = estimatedAssetValue();
+                dom.statDay.textContent = String(state.day);
+                dom.statCash.textContent = formatMoney(state.money);
+                dom.statAssets.textContent = formatMoney(assets);
+                dom.statNet.textContent = formatMoney(state.money + assets);
+            }
+
+            function renderFolderPanel() {
+                renderFolderSelect(dom.newFolderParent, ROOT_FOLDER_ID);
+                const deletable = state.folders.filter(f => f.id !== ROOT_FOLDER_ID);
+                dom.deleteFolderSelect.innerHTML = deletable.length
+                    ? deletable.map(f => {
+                        return `<option value="${f.id}">${f.name}</option>`;
+                    }).join("")
+                    : `<option value="">No deletable folder</option>`;
+                renderFolderTree();
+            }
+
+            function renderLog() {
+                dom.logBox.innerHTML = state.logs.map(line => `<div class="${logTypeClass(line)}">${line}</div>`).join("");
+            }
+
+            function render() {
+                renderStats();
+                renderMarket();
+                renderInventory();
+                renderRepairPanel();
+                renderFolderPanel();
+                renderLog();
+                const left = Math.max(0, MAX_DAILY_REFRESH - state.refreshesUsedToday);
+                dom.refreshNote.textContent = `refresh left today: ${left} / ${MAX_DAILY_REFRESH}`;
+            }
+
+            function setupCategoryFilter() {
+                const categories = ["ALL", ...new Set([...itemTemplates.map(t => t.category), ...ultraItemTemplates.map(t => t.category), "Tool"])];
+                dom.filterCategory.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join("");
+            }
+
+            function bindEvents() {
+                document.getElementById("UI_Home_1").addEventListener("click", () => {
+                    window.location.href = "../../English/HTML/index.html";
+                });
+
+                dom.filterKeyword.addEventListener("input", render);
+                dom.filterCategory.addEventListener("change", render);
+                dom.filterPriceMin.addEventListener("input", render);
+                dom.filterPriceMax.addEventListener("input", render);
+                dom.marketSort.addEventListener("change", render);
+                dom.inventorySort.addEventListener("change", render);
+
+                document.getElementById("btnNextDay").addEventListener("click", nextDay);
+                document.getElementById("btnRefreshMarket").addEventListener("click", () => {
+                    if (state.refreshesUsedToday >= MAX_DAILY_REFRESH) {
+                        log(`Refresh limit reached for Day ${state.day}. Next reset is next day.`);
+                        render();
+                        return;
+                    }
+                    state.refreshesUsedToday += 1;
+                    generateListings(randInt(12, 18));
+                    saveGame();
+                    render();
+                });
+                document.getElementById("btnDeleteSave").addEventListener("click", () => {
+                    if (window.confirm("Delete save data and reset game?")) {
+                        deleteSave();
+                    }
+                });
+                document.getElementById("btnCreateFolder").addEventListener("click", createFolder);
+                document.getElementById("btnDeleteFolder").addEventListener("click", deleteFolder);
+                document.getElementById("btnRepair").addEventListener("click", useRepairTool);
+                dom.modalClose.addEventListener("click", closeItemModal);
+                dom.modalFavBtn.addEventListener("click", e => {
+                    e.stopPropagation();
+                    toggleFavoriteFromModal();
+                });
+                dom.itemModal.addEventListener("click", e => {
+                    if (e.target === dom.itemModal) closeItemModal();
+                });
+            }
+
+            function initialize() {
+                setupCategoryFilter();
+                bindEvents();
+
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    try {
+                        const data = JSON.parse(raw);
+                        Object.assign(state, data);
+                        normalizeState();
+                        log("Auto-loaded save.");
+                    } catch (_err) {
+                        state.logs = ["System: Save was corrupted. New session started."];
+                        generateListings(16);
+                    }
+                } else {
+                    generateListings(16);
+                }
+
+                render();
+            }
+
+            initialize();
+        })();
+    </script>
+</body>
+</html>
