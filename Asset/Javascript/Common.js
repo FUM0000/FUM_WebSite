@@ -971,6 +971,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>数学</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Note_Sience_Chemistry.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>化学</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
                 
             </v-list-group>
