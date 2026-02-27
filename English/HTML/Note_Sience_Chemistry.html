@@ -1,5 +1,4 @@
-<html>
-
+﻿<html>
 <head>
   <meta charset="UTF-8">
   <meta name="author" content="F U M">
@@ -7,7 +6,6 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -15,80 +13,117 @@
     gtag('js', new Date());
     gtag('config', 'G-B89KY0993B');
   </script>
-
   <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
-    rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
   <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
   <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
-
   <title>Chemistry</title>
+  <style>
+    .periodic-wrap { width: 100%; overflow: hidden; }
+    .periodic-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+    .periodic-table th, .periodic-table td { border: 1px solid #e0e0e0; text-align: center; padding: 2px; }
+    .group-cell { font-size: clamp(9px, 1.2vw, 12px); background: #f5f5f5; font-weight: 700; }
+    .period-cell { width: 36px; font-size: clamp(9px, 1.2vw, 12px); background: #f5f5f5; font-weight: 700; }
+    .element-cell { height: clamp(26px, 3.2vw, 46px); }
+    .element-btn {
+      width: 100%; min-width: 0 !important; height: 100% !important;
+      font-size: clamp(8px, 1vw, 11px) !important; font-weight: 700; color: #111 !important;
+      padding: 0 !important; border-radius: 4px !important; border: 1px solid rgba(0, 0, 0, 0.08) !important; box-shadow: none !important;
+    }
+    .empty-cell { background: #fafafa; }
+    .cat-alkali { background: #ffccbc !important; }
+    .cat-alkaline { background: #ffe0b2 !important; }
+    .cat-transition { background: #fff9c4 !important; }
+    .cat-post-transition { background: #dcedc8 !important; }
+    .cat-metalloid { background: #b2dfdb !important; }
+    .cat-nonmetal { background: #bbdefb !important; }
+    .cat-halogen { background: #d1c4e9 !important; }
+    .cat-noble { background: #f8bbd0 !important; }
+    .cat-lanthanide { background: #c5cae9 !important; }
+    .cat-actinide { background: #b2ebf2 !important; }
+  </style>
 </head>
-
 <body>
   <v-app id="App" v-cloak>
     <template>
       <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > Sience > Chemistry</main-system-bar>
-
       <v-main id="Main">
         <transition name="Fade_Page">
           <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            
             <v-row justify="center">
               <v-col xs="12" md="6">
                 <v-card class="mt-6">
-                  <v-card-title class="content-text">化学</v-card-title>
+                  <v-card-title class="content-text">Periodic Table</v-card-title>
                   <v-card-text>
-                    <v-text-field v-model="searchQuery" label="化学ノートを検索" prepend-inner-icon="mdi-magnify" clearable outlined dense
-                      class="mb-4" @input="filterTreeview"></v-text-field>
+                    <div class="periodic-wrap">
+                      <table class="periodic-table">
+                        <thead>
+                          <tr>
+                            <th class="group-cell">Period\\Group</th>
+                            <th v-for="group in groupHeaders" :key="'group-' + group" class="group-cell">{{ group }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(row, rowIndex) in periodicTable" :key="'row-' + rowIndex">
+                            <th class="period-cell">{{ periodLabels[rowIndex] }}</th>
+                            <td v-for="(symbol, colIndex) in row" :key="'cell-' + rowIndex + '-' + colIndex" class="element-cell" :class="{ 'empty-cell': !symbol }">
+                              <v-btn v-if="symbol" class="element-btn" :class="getElementCategoryClass(symbol)" depressed @click="openElementDetail(symbol)">
+                                {{ symbol }}
+                              </v-btn>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="mt-3">
+                      <v-chip v-for="legend in categoryLegend" :key="legend.key" class="ma-1" small :color="legend.color" text-color="#111">
+                        {{ legend.label }}
+                      </v-chip>
+                    </div>
+                    <div class="mt-2 text-caption">Click an element for detailed information.</div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
 
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">Chemistry</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="Search chemistry notes" prepend-inner-icon="mdi-magnify" clearable outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
                     <v-stepper v-model="Count_Step_1">
                       <v-stepper-header>
-                        <v-stepper-step :complete="Count_Step_1 > 1" step="1"
-                          @click="Count_Step_1 = 1">基礎</v-stepper-step>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1">Basics</v-stepper-step>
                         <v-divider></v-divider>
-                        <v-stepper-step :complete="Count_Step_1 > 2" step="2"
-                          @click="Count_Step_1 = 2">反応と計算</v-stepper-step>
-                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2">Reactions</v-stepper-step>
                       </v-stepper-header>
-
                       <v-stepper-items>
                         <v-stepper-content step="1">
                           <v-card class="mb-12">
                             <v-card-text>
-                              <v-card-title class="text-subtitle-2 font-weight-bold">物質・原子・結合</v-card-title>
-                              <v-treeview :items="filteredChemistryBasics" item-key="name" activatable open-on-click dense
-                                :open.sync="openNodesChemistryBasics" @update:open="updateOpenNodesChemistryBasics">
-                                <template v-slot:label="{ item }">
-                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
-                                </template>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">Matter, Atoms, Bonds</v-card-title>
+                              <v-treeview :items="filteredChemistryBasics" item-key="name" activatable open-on-click dense :open.sync="openNodesChemistryBasics" @update:open="updateOpenNodesChemistryBasics">
+                                <template v-slot:label="{ item }"><span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span></template>
                               </v-treeview>
                             </v-card-text>
                           </v-card>
-                          <div class="button-container">
-                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
-                          </div>
+                          <div class="button-container"><v-btn color="primary" @click="Count_Step_1 = 2">Next</v-btn></div>
                         </v-stepper-content>
-
                         <v-stepper-content step="2">
                           <v-card class="mb-12">
                             <v-card-text>
-                              <v-card-title class="text-subtitle-2 font-weight-bold">酸塩基・酸化還元・モル計算</v-card-title>
-                              <v-treeview :items="filteredChemistryReactions" item-key="name" activatable open-on-click dense
-                                :open.sync="openNodesChemistryReactions" @update:open="updateOpenNodesChemistryReactions">
-                                <template v-slot:label="{ item }">
-                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
-                                </template>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">Acid/Base, Redox, Mole</v-card-title>
+                              <v-treeview :items="filteredChemistryReactions" item-key="name" activatable open-on-click dense :open.sync="openNodesChemistryReactions" @update:open="updateOpenNodesChemistryReactions">
+                                <template v-slot:label="{ item }"><span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span></template>
                               </v-treeview>
                             </v-card-text>
                           </v-card>
-                          <div class="button-container">
-                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
-                          </div>
+                          <div class="button-container"><v-btn text @click="Count_Step_1 = 1">Back</v-btn></div>
                         </v-stepper-content>
                       </v-stepper-items>
                     </v-stepper>
@@ -96,10 +131,26 @@
                 </v-card>
               </v-col>
             </v-row>
+
+            <v-dialog v-model="elementDialog" max-width="760">
+              <v-card v-if="selectedElement">
+                <v-card-title class="headline">{{ selectedElement.symbol }} - {{ selectedElement.name }}</v-card-title>
+                <v-card-text>
+                  <div><strong>Atomic Number:</strong> {{ selectedElement.atomicNumber }}</div>
+                  <div><strong>Atomic Weight:</strong> {{ selectedElement.atomicWeight }}</div>
+                  <div><strong>Group:</strong> {{ selectedElement.groupNumber }}</div>
+                  <div><strong>Period:</strong> {{ selectedElement.periodNumber }}</div>
+                  <div><strong>Category:</strong> {{ selectedElement.categoryLabel }}</div>
+                  <div><strong>Commonly Found In:</strong> {{ selectedElement.containsIn }}</div>
+                  <div><strong>Common Uses:</strong> {{ selectedElement.usedFor }}</div>
+                  <div><strong>Note:</strong> {{ selectedElement.note }}</div>
+                </v-card-text>
+                <v-card-actions><v-spacer></v-spacer><v-btn text color="primary" @click="elementDialog = false">Close</v-btn></v-card-actions>
+              </v-card>
+            </v-dialog>
           </v-container>
         </transition>
       </v-main>
-
       <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
       <main-footer></main-footer>
     </template>
@@ -109,7 +160,6 @@
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
-
   <script>
     new Vue({
       el: '#App',
@@ -117,104 +167,182 @@
       mixins: [window.Mixins_Common],
       data: {
         Count_Step_1: 1,
-        dialog: false,
         searchQuery: '',
+        elementDialog: false,
+        selectedElement: null,
+        groupHeaders: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],
+        periodLabels: ['1','2','3','4','5','6','7','6*','7*'],
+        periodicTable: [
+          ['H','','','','','','','','','','','','','','','','','He'],
+          ['Li','Be','','','','','','','','','','','B','C','N','O','F','Ne'],
+          ['Na','Mg','','','','','','','','','','','Al','Si','P','S','Cl','Ar'],
+          ['K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr'],
+          ['Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe'],
+          ['Cs','Ba','La','Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn'],
+          ['Fr','Ra','Ac','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'],
+          ['','','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','',''],
+          ['','','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr','','']
+        ],
+        categoryLegend: [
+          { key: 'alkali', label: 'Alkali Metals', color: '#ffccbc' },
+          { key: 'alkaline', label: 'Alkaline Earth Metals', color: '#ffe0b2' },
+          { key: 'transition', label: 'Transition Metals', color: '#fff9c4' },
+          { key: 'post-transition', label: 'Post-transition Metals', color: '#dcedc8' },
+          { key: 'metalloid', label: 'Metalloids', color: '#b2dfdb' },
+          { key: 'nonmetal', label: 'Nonmetals', color: '#bbdefb' },
+          { key: 'halogen', label: 'Halogens', color: '#d1c4e9' },
+          { key: 'noble', label: 'Noble Gases', color: '#f8bbd0' },
+          { key: 'lanthanide', label: 'Lanthanides', color: '#c5cae9' },
+          { key: 'actinide', label: 'Actinides', color: '#b2ebf2' }
+        ],
+        elementDetails: {
+          H:{name:'Hydrogen',atomicWeight:'1.008'},He:{name:'Helium',atomicWeight:'4.0026'},Li:{name:'Lithium',atomicWeight:'6.94'},Be:{name:'Beryllium',atomicWeight:'9.0122'},B:{name:'Boron',atomicWeight:'10.81'},C:{name:'Carbon',atomicWeight:'12.011'},N:{name:'Nitrogen',atomicWeight:'14.007'},O:{name:'Oxygen',atomicWeight:'15.999'},F:{name:'Fluorine',atomicWeight:'18.998'},Ne:{name:'Neon',atomicWeight:'20.180'},
+          Na:{name:'Sodium',atomicWeight:'22.990'},Mg:{name:'Magnesium',atomicWeight:'24.305'},Al:{name:'Aluminium',atomicWeight:'26.982'},Si:{name:'Silicon',atomicWeight:'28.085'},P:{name:'Phosphorus',atomicWeight:'30.974'},S:{name:'Sulfur',atomicWeight:'32.06'},Cl:{name:'Chlorine',atomicWeight:'35.45'},Ar:{name:'Argon',atomicWeight:'39.948'},K:{name:'Potassium',atomicWeight:'39.098'},Ca:{name:'Calcium',atomicWeight:'40.078'},
+          Sc:{name:'Scandium',atomicWeight:'44.956'},Ti:{name:'Titanium',atomicWeight:'47.867'},V:{name:'Vanadium',atomicWeight:'50.942'},Cr:{name:'Chromium',atomicWeight:'51.996'},Mn:{name:'Manganese',atomicWeight:'54.938'},Fe:{name:'Iron',atomicWeight:'55.845'},Co:{name:'Cobalt',atomicWeight:'58.933'},Ni:{name:'Nickel',atomicWeight:'58.693'},Cu:{name:'Copper',atomicWeight:'63.546'},Zn:{name:'Zinc',atomicWeight:'65.38'},
+          Ga:{name:'Gallium',atomicWeight:'69.723'},Ge:{name:'Germanium',atomicWeight:'72.630'},As:{name:'Arsenic',atomicWeight:'74.922'},Se:{name:'Selenium',atomicWeight:'78.971'},Br:{name:'Bromine',atomicWeight:'79.904'},Kr:{name:'Krypton',atomicWeight:'83.798'},Rb:{name:'Rubidium',atomicWeight:'85.468'},Sr:{name:'Strontium',atomicWeight:'87.62'},Y:{name:'Yttrium',atomicWeight:'88.906'},Zr:{name:'Zirconium',atomicWeight:'91.224'},
+          Nb:{name:'Niobium',atomicWeight:'92.906'},Mo:{name:'Molybdenum',atomicWeight:'95.95'},Tc:{name:'Technetium',atomicWeight:'[98]'},Ru:{name:'Ruthenium',atomicWeight:'101.07'},Rh:{name:'Rhodium',atomicWeight:'102.91'},Pd:{name:'Palladium',atomicWeight:'106.42'},Ag:{name:'Silver',atomicWeight:'107.87'},Cd:{name:'Cadmium',atomicWeight:'112.41'},In:{name:'Indium',atomicWeight:'114.82'},Sn:{name:'Tin',atomicWeight:'118.71'},
+          Sb:{name:'Antimony',atomicWeight:'121.76'},Te:{name:'Tellurium',atomicWeight:'127.60'},I:{name:'Iodine',atomicWeight:'126.90'},Xe:{name:'Xenon',atomicWeight:'131.29'},Cs:{name:'Cesium',atomicWeight:'132.91'},Ba:{name:'Barium',atomicWeight:'137.33'},La:{name:'Lanthanum',atomicWeight:'138.91'},Ce:{name:'Cerium',atomicWeight:'140.12'},Pr:{name:'Praseodymium',atomicWeight:'140.91'},Nd:{name:'Neodymium',atomicWeight:'144.24'},
+          Pm:{name:'Promethium',atomicWeight:'[145]'},Sm:{name:'Samarium',atomicWeight:'150.36'},Eu:{name:'Europium',atomicWeight:'151.96'},Gd:{name:'Gadolinium',atomicWeight:'157.25'},Tb:{name:'Terbium',atomicWeight:'158.93'},Dy:{name:'Dysprosium',atomicWeight:'162.50'},Ho:{name:'Holmium',atomicWeight:'164.93'},Er:{name:'Erbium',atomicWeight:'167.26'},Tm:{name:'Thulium',atomicWeight:'168.93'},Yb:{name:'Ytterbium',atomicWeight:'173.05'},
+          Lu:{name:'Lutetium',atomicWeight:'174.97'},Hf:{name:'Hafnium',atomicWeight:'178.49'},Ta:{name:'Tantalum',atomicWeight:'180.95'},W:{name:'Tungsten',atomicWeight:'183.84'},Re:{name:'Rhenium',atomicWeight:'186.21'},Os:{name:'Osmium',atomicWeight:'190.23'},Ir:{name:'Iridium',atomicWeight:'192.22'},Pt:{name:'Platinum',atomicWeight:'195.08'},Au:{name:'Gold',atomicWeight:'196.97'},Hg:{name:'Mercury',atomicWeight:'200.59'},
+          Tl:{name:'Thallium',atomicWeight:'204.38'},Pb:{name:'Lead',atomicWeight:'207.2'},Bi:{name:'Bismuth',atomicWeight:'208.98'},Po:{name:'Polonium',atomicWeight:'[209]'},At:{name:'Astatine',atomicWeight:'[210]'},Rn:{name:'Radon',atomicWeight:'[222]'},Fr:{name:'Francium',atomicWeight:'[223]'},Ra:{name:'Radium',atomicWeight:'[226]'},Ac:{name:'Actinium',atomicWeight:'[227]'},Th:{name:'Thorium',atomicWeight:'232.04'},
+          Pa:{name:'Protactinium',atomicWeight:'231.04'},U:{name:'Uranium',atomicWeight:'238.03'},Np:{name:'Neptunium',atomicWeight:'[237]'},Pu:{name:'Plutonium',atomicWeight:'[244]'},Am:{name:'Americium',atomicWeight:'[243]'},Cm:{name:'Curium',atomicWeight:'[247]'},Bk:{name:'Berkelium',atomicWeight:'[247]'},Cf:{name:'Californium',atomicWeight:'[251]'},Es:{name:'Einsteinium',atomicWeight:'[252]'},Fm:{name:'Fermium',atomicWeight:'[257]'},
+          Md:{name:'Mendelevium',atomicWeight:'[258]'},No:{name:'Nobelium',atomicWeight:'[259]'},Lr:{name:'Lawrencium',atomicWeight:'[266]'},Rf:{name:'Rutherfordium',atomicWeight:'[267]'},Db:{name:'Dubnium',atomicWeight:'[268]'},Sg:{name:'Seaborgium',atomicWeight:'[269]'},Bh:{name:'Bohrium',atomicWeight:'[270]'},Hs:{name:'Hassium',atomicWeight:'[277]'},Mt:{name:'Meitnerium',atomicWeight:'[278]'},Ds:{name:'Darmstadtium',atomicWeight:'[281]'},
+          Rg:{name:'Roentgenium',atomicWeight:'[282]'},Cn:{name:'Copernicium',atomicWeight:'[285]'},Nh:{name:'Nihonium',atomicWeight:'[286]'},Fl:{name:'Flerovium',atomicWeight:'[289]'},Mc:{name:'Moscovium',atomicWeight:'[290]'},Lv:{name:'Livermorium',atomicWeight:'[293]'},Ts:{name:'Tennessine',atomicWeight:'[294]'},Og:{name:'Oganesson',atomicWeight:'[294]'}
+        },
         filteredChemistryBasics: [],
         filteredChemistryReactions: [],
         openNodesChemistryBasics: [],
         openNodesChemistryReactions: [],
         ChemistryBasics: [
-          {
-            name: "物質の基本",
-            children: [
-              { name: "すべての物質は原子で構成される。" },
-              { name: "原子は原子核（陽子・中性子）と電子からなる。" },
-              { name: "元素は同じ陽子数をもつ原子の集まり。" }
-            ]
-          },
-          {
-            name: "周期表の見方",
-            children: [
-              { name: "同じ族は似た化学的性質を示す。" },
-              { name: "左ほど金属性が強く、右ほど非金属性が強い。" },
-              { name: "原子番号は陽子数と一致する。" }
-            ]
-          },
-          {
-            name: "化学結合",
-            children: [
-              { name: "イオン結合: 電子の受け渡しで生じる。" },
-              { name: "共有結合: 電子対を共有して生じる。" },
-              { name: "金属結合: 自由電子で結びつき、電気を通しやすい。" }
-            ]
-          },
-          {
-            name: "状態変化とエネルギー",
-            children: [
-              { name: "融解・凝固・蒸発・凝縮・昇華は粒子運動で説明できる。" },
-              { name: "発熱反応は熱を放出し、吸熱反応は熱を吸収する。" },
-              { name: "温度、濃度、表面積、触媒は反応速度に影響する。" }
-            ]
-          }
+          { name: 'Matter basics', children: [{ name: 'All matter is made of atoms.' }, { name: 'Atoms contain nucleus and electrons.' }, { name: 'Elements are defined by proton count.' }] },
+          { name: 'Periodic trends', children: [{ name: 'Elements in a group have similar behavior.' }, { name: 'Metallic character increases to the left.' }, { name: 'Atomic number equals proton number.' }] },
+          { name: 'Chemical bonds', children: [{ name: 'Ionic: electron transfer.' }, { name: 'Covalent: electron sharing.' }, { name: 'Metallic: delocalized electrons.' }] },
+          { name: 'Energy and states', children: [{ name: 'Melting, boiling, condensation, sublimation.' }, { name: 'Exothermic vs endothermic reactions.' }, { name: 'Rate factors: temperature, concentration, catalyst.' }] }
         ],
         ChemistryReactions: [
-          {
-            name: "化学式と反応式",
-            children: [
-              { name: "化学反応式では反応前後で原子数が保存される。" },
-              { name: "係数で調整して質量保存則を満たす。" },
-              { name: "例: 2H2 + O2 -> 2H2O" }
-            ]
-          },
-          {
-            name: "モル計算",
-            children: [
-              { name: "1 mol = 6.02 x 10^23 個（アボガドロ定数）。" },
-              { name: "物質量 n = 質量 m / モル質量 M。" },
-              { name: "濃度 c (mol/L) = 物質量 n / 体積 V(L)。" }
-            ]
-          },
-          {
-            name: "酸・塩基",
-            children: [
-              { name: "酸は H+ を与え、塩基は H+ を受け取る。" },
-              { name: "pH < 7 は酸性、pH = 7 は中性、pH > 7 は塩基性。" },
-              { name: "中和: 酸 + 塩基 -> 塩 + 水。" }
-            ]
-          },
-          {
-            name: "酸化還元",
-            children: [
-              { name: "酸化は電子を失う反応、還元は電子を受け取る反応。" },
-              { name: "酸化数の増減で電子移動を追跡できる。" },
-              { name: "電池、燃焼、金属腐食は酸化還元の代表例。" }
-            ]
-          }
-        ],
+          { name: 'Equations', children: [{ name: 'Atoms are conserved in reactions.' }, { name: 'Balance with coefficients.' }, { name: 'Example: 2H2 + O2 -> 2H2O' }] },
+          { name: 'Mole', children: [{ name: '1 mol = 6.02 x 10^23 particles.' }, { name: 'n = m / M' }, { name: 'c = n / V (mol/L)' }] },
+          { name: 'Acid/base', children: [{ name: 'Acids donate H+, bases accept H+.' }, { name: 'pH<7 acid, pH=7 neutral, pH>7 base.' }, { name: 'Neutralization: acid + base -> salt + water.' }] },
+          { name: 'Redox', children: [{ name: 'Oxidation loses electrons.' }, { name: 'Reduction gains electrons.' }, { name: 'Key in batteries, combustion, corrosion.' }] }
+        ]
       },
       created() {
+        Object.keys(this.elementDetails).forEach((symbol) => {
+          const key = this.getElementCategoryKey(symbol);
+          this.elementDetails[symbol].containsIn = this.getDefaultContainsIn(symbol, key);
+          this.elementDetails[symbol].usedFor = this.getDefaultUsedFor(symbol, key);
+          this.elementDetails[symbol].note = this.getDefaultNote(symbol);
+        });
         this.filteredChemistryBasics = JSON.parse(JSON.stringify(this.ChemistryBasics));
         this.filteredChemistryReactions = JSON.parse(JSON.stringify(this.ChemistryReactions));
       },
       methods: {
         collectAllNodeIds(items) {
           const ids = [];
-          const collect = (nodes) => {
-            nodes.forEach((node) => {
-              ids.push(node.name);
-              if (node.children) {
-                collect(node.children);
-              }
-            });
-          };
+          const collect = (nodes) => nodes.forEach((node) => { ids.push(node.name); if (node.children) collect(node.children); });
           collect(items);
           return ids;
         },
-        updateOpenNodesChemistryBasics(newOpen) {
-          this.openNodesChemistryBasics = newOpen;
+        updateOpenNodesChemistryBasics(v) { this.openNodesChemistryBasics = v; },
+        updateOpenNodesChemistryReactions(v) { this.openNodesChemistryReactions = v; },
+        getElementPosition(symbol) {
+          for (let r = 0; r < this.periodicTable.length; r += 1) {
+            const c = this.periodicTable[r].indexOf(symbol);
+            if (c !== -1) return { period: this.periodLabels[r], group: c + 1 };
+          }
+          return { period: '-', group: '-' };
         },
-        updateOpenNodesChemistryReactions(newOpen) {
-          this.openNodesChemistryReactions = newOpen;
+        getElementCategoryKey(symbol) {
+          const alkali = ['Li','Na','K','Rb','Cs','Fr'];
+          const alkaline = ['Be','Mg','Ca','Sr','Ba','Ra'];
+          const halogen = ['F','Cl','Br','I','At','Ts'];
+          const noble = ['He','Ne','Ar','Kr','Xe','Rn','Og'];
+          const nonmetal = ['H','C','N','O','P','S','Se'];
+          const metalloid = ['B','Si','Ge','As','Sb','Te','Po'];
+          const postTransition = ['Al','Ga','In','Tl','Sn','Pb','Bi','Nh','Fl','Mc','Lv'];
+          const lanthanide = ['La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu'];
+          const actinide = ['Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr'];
+          if (alkali.includes(symbol)) return 'alkali';
+          if (alkaline.includes(symbol)) return 'alkaline';
+          if (halogen.includes(symbol)) return 'halogen';
+          if (noble.includes(symbol)) return 'noble';
+          if (nonmetal.includes(symbol)) return 'nonmetal';
+          if (metalloid.includes(symbol)) return 'metalloid';
+          if (postTransition.includes(symbol)) return 'post-transition';
+          if (lanthanide.includes(symbol)) return 'lanthanide';
+          if (actinide.includes(symbol)) return 'actinide';
+          return symbol ? 'transition' : 'unknown';
+        },
+        getElementCategoryLabel(key) {
+          const map = {
+            alkali: 'Alkali Metal', alkaline: 'Alkaline Earth Metal', transition: 'Transition Metal',
+            'post-transition': 'Post-transition Metal', metalloid: 'Metalloid', nonmetal: 'Nonmetal',
+            halogen: 'Halogen', noble: 'Noble Gas', lanthanide: 'Lanthanide', actinide: 'Actinide', unknown: 'Unknown'
+          };
+          return map[key] || map.unknown;
+        },
+        getElementCategoryClass(symbol) { return `cat-${this.getElementCategoryKey(symbol)}`; },
+        getDefaultContainsIn(symbol, key) {
+          const synthetic = ['Tc','Pm','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'];
+          if (synthetic.includes(symbol)) return 'Mostly synthetic; trace or no natural abundance.';
+          const map = {
+            alkali: 'Mineral salts and seawater.',
+            alkaline: 'Carbonate and sulfate minerals.',
+            transition: 'Ore minerals in the crust.',
+            'post-transition': 'Crustal ores and industrial by-products.',
+            metalloid: 'Silicate and oxide ores.',
+            nonmetal: 'Atmosphere, hydrosphere, biosphere, and nonmetal minerals.',
+            halogen: 'Halide salts in seawater and evaporites.',
+            noble: 'Trace gases in atmosphere or decay products.',
+            lanthanide: 'Rare-earth minerals like monazite.',
+            actinide: 'Radioactive ores or reactor products.'
+          };
+          return map[key] || 'Natural minerals or industrial production streams.';
+        },
+        getDefaultUsedFor(symbol, key) {
+          const synthetic = ['Tc','Pm','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'];
+          if (synthetic.includes(symbol)) return 'Nuclear science, research, and specialized instrumentation.';
+          const map = {
+            alkali: 'Batteries, chemicals, heat transfer media.',
+            alkaline: 'Alloys, construction materials, desiccants.',
+            transition: 'Alloys, catalysts, electronics, machinery.',
+            'post-transition': 'Coatings, solders, semiconductors, shielding.',
+            metalloid: 'Semiconductors, optics, specialty alloys.',
+            nonmetal: 'Fertilizers, fuels, polymers, biochemistry.',
+            halogen: 'Disinfection, polymers, etching, synthesis.',
+            noble: 'Lighting, inert shielding gas, cryogenics.',
+            lanthanide: 'Magnets, phosphors, lasers, catalysts.',
+            actinide: 'Nuclear fuel cycle and radiation sources.'
+          };
+          return map[key] || 'Materials and chemical industry.';
+        },
+        getDefaultNote(symbol) {
+          const radioactiveLike = ['Tc','Pm','Po','At','Rn','Fr','Ra','Ac','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'];
+          if (radioactiveLike.includes(symbol)) return 'No stable isotopes or very short-lived isotopes; strict handling required.';
+          return 'Properties depend on isotopic composition and chemical state.';
+        },
+        openElementDetail(symbol) {
+          const base = this.elementDetails[symbol] || {};
+          const pos = this.getElementPosition(symbol);
+          const key = this.getElementCategoryKey(symbol);
+          this.selectedElement = {
+            symbol,
+            name: base.name || 'Data pending',
+            atomicNumber: this.getAtomicNumber(symbol),
+            atomicWeight: base.atomicWeight || 'Data pending',
+            groupNumber: pos.group,
+            periodNumber: pos.period,
+            categoryLabel: this.getElementCategoryLabel(key),
+            containsIn: base.containsIn || this.getDefaultContainsIn(symbol, key),
+            usedFor: base.usedFor || this.getDefaultUsedFor(symbol, key),
+            note: base.note || this.getDefaultNote(symbol)
+          };
+          this.elementDialog = true;
+        },
+        getAtomicNumber(symbol) {
+          const order = ['H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar','K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr','Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe','Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'];
+          const idx = order.indexOf(symbol);
+          return idx === -1 ? '-' : idx + 1;
         },
         filterTreeview() {
           const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
@@ -225,26 +353,15 @@
             this.openNodesChemistryReactions = [];
             return;
           }
-
-          const filterTree = (items) => {
-            return items.reduce((acc, item) => {
-              const itemCopy = { ...item };
-              const matches = item.name.toLowerCase().includes(query);
-
-              if (item.children) {
-                itemCopy.children = filterTree(item.children);
-                if (itemCopy.children.length > 0 || matches) {
-                  itemCopy.matches = matches;
-                  acc.push(itemCopy);
-                }
-              } else if (matches) {
-                itemCopy.matches = true;
-                acc.push(itemCopy);
-              }
-              return acc;
-            }, []);
-          };
-
+          const filterTree = (items) => items.reduce((acc, item) => {
+            const copy = { ...item };
+            const matches = item.name.toLowerCase().includes(query);
+            if (item.children) {
+              copy.children = filterTree(item.children);
+              if (copy.children.length > 0 || matches) { copy.matches = matches; acc.push(copy); }
+            } else if (matches) { copy.matches = true; acc.push(copy); }
+            return acc;
+          }, []);
           this.filteredChemistryBasics = filterTree(JSON.parse(JSON.stringify(this.ChemistryBasics)));
           this.openNodesChemistryBasics = this.collectAllNodeIds(this.filteredChemistryBasics);
           this.filteredChemistryReactions = filterTree(JSON.parse(JSON.stringify(this.ChemistryReactions)));
@@ -254,5 +371,4 @@
     });
   </script>
 </body>
-
 </html>
