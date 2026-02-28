@@ -1,4 +1,5 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
@@ -19,7 +20,6 @@
   <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-
   <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
   <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
@@ -27,38 +27,116 @@
   <title>Various Statistics</title>
 
   <style>
-    .v-card {
-      margin-bottom: 16px;
+    :root {
+      --vs-bg: #eef2f4;
+      --vs-hero-a: #0f766e;
+      --vs-hero-b: #155e75;
+      --vs-card-bg: #f9fbfc;
+      --vs-border: #d5e3e7;
+      --vs-text-strong: #12323b;
+      --vs-text-soft: #53727a;
+      --vs-accent: #0ea5a4;
     }
 
-    .stat-container {
+    #Main,
+    #Main .v-main__wrap {
+      background: linear-gradient(160deg, #e7eff1 0%, #f6fafb 100%);
+    }
+
+    .vs-wrap {
+      max-width: 1100px;
+    }
+
+    .vs-hero {
+      border-radius: 20px;
+      padding: 28px;
+      background: linear-gradient(130deg, var(--vs-hero-a) 0%, var(--vs-hero-b) 100%);
+      color: #fff;
+      box-shadow: 0 16px 36px rgba(9, 48, 60, 0.28);
+      margin-bottom: 22px;
+    }
+
+    .vs-hero-title {
+      font-size: clamp(26px, 4vw, 36px);
+      line-height: 1.2;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .vs-hero-sub {
+      color: rgba(231, 250, 255, 0.92);
+      font-size: 15px;
+      max-width: 760px;
+    }
+
+    .vs-panel {
+      border-radius: 16px;
+      border: 1px solid var(--vs-border);
+      background: #ffffff;
+      box-shadow: 0 8px 20px rgba(16, 33, 40, 0.08);
+      margin-bottom: 20px;
+    }
+
+    .vs-panel .v-card__text {
+      padding: 18px 20px;
+    }
+
+    .vs-meta {
+      color: var(--vs-text-soft);
+      font-size: 14px;
       display: flex;
-      flex-direction: column;
-      gap: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
     }
 
-    .stat-block {
-      background-color: #f5f5f5;
-      padding: 20px;
-      border-radius: 8px;
+    .vs-stat-card {
+      height: 100%;
+      border-radius: 14px !important;
+      border: 1px solid var(--vs-border);
+      background: var(--vs-card-bg);
+      box-shadow: 0 8px 18px rgba(18, 50, 59, 0.08);
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
     }
 
-    .stat-title {
-      font-size: 1.2em;
-      font-weight: bold;
+    .vs-stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 14px 24px rgba(18, 50, 59, 0.14);
+    }
+
+    .vs-title {
+      color: var(--vs-text-strong);
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.45;
       margin-bottom: 10px;
-      color: #1976d2;
     }
 
-    .stat-hack {
-      font-style: italic;
-      color: #666;
-      margin-bottom: 10px;
+    .vs-item {
+      display: flex;
+      gap: 8px;
+      color: #2e4951;
+      font-size: 0.94rem;
+      margin-bottom: 8px;
+      align-items: flex-start;
     }
 
-    .stat-source {
-      font-size: 0.9em;
-      color: #888;
+    .vs-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .vs-item .v-icon {
+      color: var(--vs-accent);
+      margin-top: 1px;
+    }
+
+    .vs-source {
+      color: #52727b;
+      font-size: 0.82rem;
+      padding-top: 8px;
+      border-top: 1px dashed #c8dbe0;
+      margin-top: 12px;
     }
 
     [v-cloak] {
@@ -68,39 +146,73 @@
 </head>
 
 <body>
-
   <v-app id="App" v-cloak>
     <template>
-
       <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Various Statistics</main-system-bar>
 
       <v-main id="Main">
         <transition name="Fade_Page">
-          <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
-            <v-row justify="center">
-              <v-col xs="12" md="8">
-                <v-select v-model="selectedCategory" :items="categories" label="Category"></v-select>
-              </v-col>
-            </v-row>
-
-            <v-row justify="center">
-              <v-col xs="12" md="8">
-                <div class="stat-container">
-                  <div v-for="(stat, index) in filteredStats" :key="index" class="stat-block">
-                    <div class="stat-title">{{ stat.title }}</div>
-                    <div class="stat-hack">{{ stat.hack }}</div>
-                    <div class="stat-source">Source: {{ stat.source }}</div>
-                  </div>
+          <v-container v-show="Ready_Page" class="pa-4 pa-md-6">
+            <div class="vs-wrap mx-auto">
+              <section class="vs-hero">
+                <div class="vs-hero-title">Various Statistics</div>
+                <div class="vs-hero-sub">
+                  生活・健康・仕事・デジタル習慣に関する知見を、根拠と実践ポイント付きで整理する。各カードは「事実・背景・実践・出典」の同一形式とする。
                 </div>
-              </v-col>
-            </v-row>
+              </section>
+
+              <v-card class="vs-panel">
+                <v-card-text>
+                  <v-row align="center" dense>
+                    <v-col cols="12" md="6">
+                      <v-select v-model="selectedCategory" :items="categories" item-text="text" item-value="value"
+                        label="カテゴリー" outlined dense hide-details></v-select>
+                    </v-col>
+                    <v-col cols="12" md="6">
+                      <div class="vs-meta">
+                        <span><v-icon small class="mr-1">mdi-view-grid-outline</v-icon>{{ filteredStats.length }}件</span>
+                        <span><v-icon small class="mr-1">mdi-filter-outline</v-icon>{{ categoryLabel }}</span>
+                      </div>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+
+              <v-row>
+                <v-col cols="12" md="6" v-for="(stat, index) in filteredStats" :key="index">
+                  <v-card class="vs-stat-card">
+                    <v-card-text>
+                      <v-chip small :color="categoryMeta(stat.category).color" dark class="mb-3">
+                        {{ categoryMeta(stat.category).text }}
+                      </v-chip>
+
+                      <div class="vs-title">{{ stat.title }}</div>
+
+                      <div class="vs-item">
+                        <v-icon small>mdi-chart-line</v-icon>
+                        <div><strong>事実:</strong> {{ stat.fact }}</div>
+                      </div>
+                      <div class="vs-item">
+                        <v-icon small>mdi-lightbulb-on-outline</v-icon>
+                        <div><strong>背景:</strong> {{ stat.why }}</div>
+                      </div>
+                      <div class="vs-item">
+                        <v-icon small>mdi-wrench-outline</v-icon>
+                        <div><strong>実践:</strong> {{ stat.tip }}</div>
+                      </div>
+
+                      <div class="vs-source">出典: {{ stat.source }}</div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </div>
           </v-container>
         </transition>
       </v-main>
 
       <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
       <main-footer></main-footer>
-
     </template>
   </v-app>
 
@@ -115,100 +227,194 @@
       vuetify: new Vuetify(),
       mixins: [window.Mixins_Common],
       data: {
-        selectedCategory: 'life',
+        selectedCategory: 'all',
         categories: [
-          { text: 'Life', value: 'life' },
-          { text: 'Health', value: 'health' },
-          { text: 'Work', value: 'work' },
-          { text: 'Technology', value: 'technology' }
+          { text: 'すべて', value: 'all', color: 'blue-grey darken-1' },
+          { text: '生活習慣', value: 'daily-habits', color: 'teal darken-1' },
+          { text: '健康', value: 'health', color: 'green darken-1' },
+          { text: '仕事・学習', value: 'work-study', color: 'indigo darken-1' },
+          { text: 'デジタル生活', value: 'digital-life', color: 'deep-orange darken-1' }
         ],
-        stats: {
-          life: [
-            {
-              title: "The time period when concentration is highest is from 10am to 11am",
-              hack: "Focusing on important work or studying during this time period can increase efficiency",
-              source: "Stanford University brain wave research"
-            },
-            {
-              title: "Brushing teeth is better before breakfast",
-              hack: "Brushing teeth immediately after meals can risk damaging enamel",
-              source: "ADA (American Dental Association) guidelines"
-            },
-            {
-              title: "Standing while on the phone makes conversations shorter (average 25% decrease)",
-              hack: "When you want to reduce unnecessary chatter, stand while on the phone",
-              source: "Harvard Business School research"
-            },
-            {
-              title: "Humans touch their faces an average of 23 times a day (44% of which are the mouth, nose, and eyes)",
-              hack: "For infection control, it is more important to be aware of 'not touching your face' than washing your hands",
-              source: "2015 Sydney University observational study"
-            },
-            {
-              title: "The dirtiest part of the refrigerator is the vegetable compartment",
-              hack: "Wrapping vegetables in bags and regularly disinfecting can reduce the risk of food poisoning",
-              source: "Japan Food Hygiene Association survey"
-            },
-            {
-              title: "The tempo of the music you listen to during morning commutes affects your mood for the day",
-              hack: "Listening to songs with a BPM of 100-120 in the morning can lead to positive thinking",
-              source: "Music psychology research (London University)"
-            },
-            {
-              title: "People 'can't choose when there are too many options' (jam experiment)",
-              hack: "Limiting menus or shopping options to 3-5 choices can reduce regret",
-              source: "Sheena Iyengar's psychology of choice (Columbia University)"
-            },
-            {
-              title: "Weekly cleaning reduces dust mites by about 90%",
-              hack: "Thorough cleaning once a week is more effective than cleaning a little every day",
-              source: "Japan Allergy Association data"
-            }
-          ],
-          health: [
-            {
-              title: "You don't actually need 8 hours of sleep a day",
-              hack: "6-7 hours of sleep is often sufficient",
-              source: "University of California, San Diego research"
-            },
-            {
-              title: "You don't need to drink 2 liters of water a day",
-              hack: "Drinking according to thirst is optimal",
-              source: "Harvard University Medical School research"
-            }
-          ],
-          work: [
-            {
-              title: "15 minutes of rest after 1 hour of focused work is optimal",
-              hack: "Using the Pomodoro Technique can increase productivity",
-              source: "Stanford University research"
-            },
-            {
-              title: "Meetings are most effective within 45 minutes",
-              hack: "Long meetings can decrease concentration and productivity",
-              source: "MIT research"
-            }
-          ],
-          technology: [
-            {
-              title: "The average smartphone usage time is 3 hours a day",
-              hack: "Using apps that limit usage time can be effective",
-              source: "Digital Wellbeing Institute"
-            },
-            {
-              title: "Blue light affects sleep",
-              hack: "Turn on blue light cut-off function 2 hours before bedtime",
-              source: "Harvard University Medical School research"
-            }
-          ]
-        }
+        stats: [
+          {
+            category: 'daily-habits',
+            title: '朝の光と体内リズム',
+            fact: '起床後に屋外の光を浴びると、体内時計が整いやすくなる。',
+            why: '朝の強い光は、夜のメラトニン分泌タイミングを調整する主要な手がかりになる。',
+            tip: '起床後1時間以内に、10〜20分ほど外で光を浴びる時間を作る。',
+            source: '睡眠・時間生物学分野のガイドライン'
+          },
+          {
+            category: 'daily-habits',
+            title: '選択肢の多さは行動を鈍らせる',
+            fact: '選択肢が多すぎると、意思決定の質が下がり、先延ばしが増える傾向がある。',
+            why: '比較に必要な認知負荷が上がり、決めるまでのコストが大きくなるためだ。',
+            tip: '服・昼食・優先タスクなど、日常の高頻度な選択は3〜5案に絞る。',
+            source: '行動科学における選択過多と意思決定疲れの研究'
+          },
+          {
+            category: 'health',
+            title: '週あたりの運動目安',
+            fact: '成人は中強度の身体活動を週150分以上行うことが推奨されている。',
+            why: 'この水準は、心血管疾患や代謝リスクの低下と一貫して関連する。',
+            tip: '30分×5回、または少し長めの運動を週3回に分けて実施する。',
+            source: 'WHOおよび各国公衆衛生ガイドライン'
+          },
+          {
+            category: 'health',
+            title: '就寝・起床時刻の一貫性',
+            fact: '寝る時刻と起きる時刻を一定にすると、気分や代謝指標が安定しやすくなる。',
+            why: '体内時計のズレが小さいほど、睡眠の質と日中の覚醒度が保たれやすくなる。',
+            tip: '平日と休日の起床時刻の差は、できるだけ1時間以内に抑える。',
+            source: '時間生物学と睡眠品質研究'
+          },
+          {
+            category: 'work-study',
+            title: '集中ブロックで成果を上げる',
+            fact: '短時間でも中断されない集中時間を確保すると、難易度の高い作業の完了率が上がる。',
+            why: 'タスク切り替えには再集中コストがあり、細切れ作業は効率を落とす。',
+            tip: '45〜60分の集中作業と、5〜15分の休憩を1セットで運用する。',
+            source: '注意資源と生産性に関する研究'
+          },
+          {
+            category: 'work-study',
+            title: '会議は短く、決定は明確に',
+            fact: '会議時間を短く設定しても、意思決定の質を保ったまま疲労を下げられることがある。',
+            why: '長時間会議は受け身の時間が増え、参加者の集中力を下げやすいためだ。',
+            tip: '会議は25分または50分を基本にし、最後に行動項目を3つ明文化する。',
+            source: '組織行動論・会議効率化研究'
+          },
+          {
+            category: 'digital-life',
+            title: '夜間の画面光と入眠遅延',
+            fact: '就寝前に明るい画面を見続けると、寝つきが遅れやすくなる。',
+            why: '青色成分の多い光はメラトニン分泌を抑え、睡眠位相を後ろにずらす。',
+            tip: '就寝1〜2時間前からナイトモードを有効化し、画面輝度を下げる。',
+            source: '睡眠医学における夜間光曝露研究'
+          },
+          {
+            category: 'digital-life',
+            title: '通知は集中時間を分断する',
+            fact: '通知が頻繁に入る環境では、深い集中に使える時間が短くなりやすい。',
+            why: '短い割り込みでも注意が残留し、元の作業への復帰に時間がかかる。',
+            tip: '通知確認は1日2〜3回の時間帯にまとめ、常時受信を減らす。',
+            source: 'HCI分野の割り込みと注意研究'
+          },
+          {
+            category: 'daily-habits',
+            title: '座りすぎと体調低下',
+            fact: '長時間座位は、腰痛や代謝低下のリスク上昇と関連する。',
+            why: '筋活動が少ない時間が続くと、血流やエネルギー代謝が落ちやすくなる。',
+            tip: '30〜60分ごとに1〜2分立ち上がり、軽く体を動かす。',
+            source: '運動生理学・公衆衛生研究'
+          },
+          {
+            category: 'daily-habits',
+            title: '朝食のたんぱく質と満腹感',
+            fact: '朝食でたんぱく質を十分に取ると、日中の空腹感が抑えられやすくなる。',
+            why: 'たんぱく質は満腹ホルモンに関与し、血糖の急上昇も緩やかにしやすいからだ。',
+            tip: '卵・ヨーグルト・豆製品などを朝食に1品追加する。',
+            source: '栄養学・食欲調整研究'
+          },
+          {
+            category: 'daily-habits',
+            title: '書き出しは不安軽減に有効',
+            fact: 'やることを紙やメモに書き出すと、主観的な不安が下がることがある。',
+            why: '頭の中の未整理情報を外在化することで、処理負荷が下がるためだ。',
+            tip: '就寝前か始業前に、翌日のタスクを3〜5件に整理する。',
+            source: '認知心理学・タスク管理研究'
+          },
+          {
+            category: 'health',
+            title: '筋力トレーニングの頻度',
+            fact: '主要筋群の筋力トレーニングは週2回以上が推奨されることが多い。',
+            why: '筋量維持は加齢に伴う機能低下を抑え、日常動作の質を支える。',
+            tip: '自重スクワット、プッシュアップ、ヒップヒンジを短時間で継続する。',
+            source: '運動ガイドラインとレジスタンス運動研究'
+          },
+          {
+            category: 'health',
+            title: '食物繊維の摂取と腸内環境',
+            fact: '食物繊維の摂取量が多いほど、腸内環境と代謝指標が良好な傾向がある。',
+            why: '腸内細菌が食物繊維を利用して短鎖脂肪酸を産生し、腸機能を支える。',
+            tip: '野菜・海藻・豆類・全粒穀物を毎食に少しずつ組み込む。',
+            source: '栄養疫学・腸内細菌叢研究'
+          },
+          {
+            category: 'health',
+            title: 'アルコールと睡眠の質',
+            fact: '就寝前の飲酒は、入眠を早めても睡眠後半の質を下げることがある。',
+            why: '代謝過程で睡眠構造が乱れ、中途覚醒が増えるためだ。',
+            tip: '飲酒は就寝直前を避け、量を控えめにする。',
+            source: '睡眠医学とアルコール代謝研究'
+          },
+          {
+            category: 'work-study',
+            title: '想起学習は定着率を高める',
+            fact: '読むだけより、思い出す練習を挟む方が記憶の保持率が高まりやすい。',
+            why: '想起行為そのものが記憶痕跡を強化し、取り出し経路を作るためだ。',
+            tip: '学習後に3分だけ、見ずに要点を箇条書きする。',
+            source: '認知科学におけるテスト効果研究'
+          },
+          {
+            category: 'work-study',
+            title: 'マルチタスクの見かけ効率',
+            fact: '同時進行は速く見えても、総作業時間やミス率の面で不利になりやすい。',
+            why: '脳は並列処理より高速な切り替えをしており、切替コストが蓄積する。',
+            tip: '1ブロック内では主タスクを1つに固定し、完了後に次へ移る。',
+            source: '実験心理学・業務効率研究'
+          },
+          {
+            category: 'work-study',
+            title: '休憩の質は生産性を左右する',
+            fact: '短い休憩でも、姿勢変更や視線移動を伴うと回復効果が高まる。',
+            why: '同じ姿勢・同じ刺激を続けると疲労感と注意散漫が進みやすいためだ。',
+            tip: '休憩時は席を離れ、遠くを見る・歩く・伸ばすをセットで行う。',
+            source: '作業疲労と回復行動研究'
+          },
+          {
+            category: 'digital-life',
+            title: '受動スクロールと満足度',
+            fact: '目的のない受動的なSNS閲覧は、気分低下と関連する報告がある。',
+            why: '比較情報への過剰曝露や、達成感の乏しい時間消費が影響しやすいためだ。',
+            tip: '閲覧前に「何を確認するか」を1つ決め、目的達成後に終了する。',
+            source: 'デジタル行動と主観的幸福感の研究'
+          },
+          {
+            category: 'digital-life',
+            title: '端末を寝室に持ち込まない効果',
+            fact: '寝室内の端末使用を減らすと、睡眠時間が延びる傾向が見られる。',
+            why: '光刺激と情報刺激の双方を減らせるため、入眠前の覚醒を抑えられる。',
+            tip: '充電場所を寝室外に固定し、目覚ましは専用機器を使う。',
+            source: '睡眠衛生介入研究'
+          },
+          {
+            category: 'digital-life',
+            title: 'ショート動画の連続視聴',
+            fact: '短尺動画を連続視聴すると、体感時間が想定より長くなりやすい。',
+            why: '次々と刺激が供給される設計により、停止判断のタイミングを失いやすくなる。',
+            tip: '視聴開始前に終了時刻を決め、タイマーを設定してから見るようにする。',
+            source: 'メディア利用行動研究'
+          }
+        ]
       },
       computed: {
         filteredStats() {
-          return this.stats[this.selectedCategory] || [];
+          if (this.selectedCategory === 'all') {
+            return this.stats;
+          }
+          return this.stats.filter((item) => item.category === this.selectedCategory);
+        },
+        categoryLabel() {
+          return this.categoryMeta(this.selectedCategory).text;
+        }
+      },
+      methods: {
+        categoryMeta(category) {
+          return this.categories.find((c) => c.value === category) || this.categories[0];
         }
       }
-    })
+    });
   </script>
 </body>
 
