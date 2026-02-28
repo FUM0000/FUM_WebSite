@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -27,12 +27,45 @@
     <title>Introduction</title>
 
     <style>
+        html,
+        body {
+            background: #000 !important;
+            color: #e6f4ff;
+            min-height: 100%;
+        }
+
         #interactive-ring {
             position: fixed;
             top: 0;
             left: 0;
-            z-index: 1;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 0;
             pointer-events: none;
+        }
+
+        #App,
+        #App.v-application,
+        #App.v-application.theme--light,
+        #App .v-application--wrap {
+            position: relative;
+            background: transparent !important;
+        }
+
+        #Main,
+        #Main.v-main,
+        #Main .v-main__wrap {
+            background: transparent !important;
+        }
+
+        .v-application,
+        .v-application--wrap,
+        .v-main,
+        .v-main__wrap,
+        .container,
+        .container.fill-height {
+            background: transparent !important;
         }
 
         #interactive-space {
@@ -40,31 +73,49 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            pointer-events: none;
+        }
+
+        .intro-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(220, 241, 255, 0.82);
+            font-size: clamp(26px, 4vw, 52px);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-align: center;
+            text-shadow: 0 0 14px rgba(120, 190, 230, 0.25);
+            pointer-events: none;
+            z-index: 1;
         }
 
         .theme-bubble {
             position: absolute;
             padding: 20px 30px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            background: rgba(136, 185, 220, 0.16);
+            box-shadow: 0 8px 28px rgba(48, 121, 182, 0.20);
             cursor: pointer;
             transition: transform 0.3s ease-out, background-color 0.3s;
             font-weight: 500;
-            color: #333;
+            color: #dff0ff;
             display: flex;
             font-size: 15px;
             align-items: center;
             justify-content: center;
             text-align: center;
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(175, 222, 255, 0.28);
             will-change: transform;
+            pointer-events: auto;
+            z-index: 2;
         }
 
         .theme-bubble:hover {
-            background-color: rgba(255, 255, 255, 1);
+            background-color: rgba(156, 210, 245, 0.26);
         }
 
         .theme-bubble.is-dragging {
@@ -182,68 +233,6 @@
             }
         }
 
-        @keyframes fast-flap {
-            0% {
-                transform: scaleY(1);
-                opacity: 0.5;
-            }
-
-            50% {
-                transform: scaleY(0.1);
-                opacity: 0.2;
-            }
-
-            100% {
-                transform: scaleY(1);
-                opacity: 0.5;
-            }
-        }
-
-        #bug {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            pointer-events: none;
-            z-index: 5;
-            will-change: transform;
-        }
-
-        #bug::before {
-            content: '';
-            position: absolute;
-            width: 10px;
-            height: 1px;
-            background: #333;
-            border-radius: 2px;
-            top: 9px;
-            left: 0;
-            transform: rotate(40deg);
-        }
-
-        #bug::after {
-            content: '';
-            position: absolute;
-            width: 1px;
-            height: 3px;
-            background: #333;
-            top: 3px;
-            left: -2px;
-            box-shadow: 2px 0px 0 0 #333;
-            transform: rotate(60deg);
-        }
-
-        .bug-wing {
-            position: absolute;
-            width: 10px;
-            height: 30px;
-            background-color: rgba(0, 0, 0, 0.2);
-            border-radius: 50%;
-            top: -15px;
-            left: 0px;
-            transform-origin: bottom center;
-            animation: fast-flap 0.06s linear infinite;
-        }
-
         .chat-widget-container {
             position: fixed;
             bottom: 50px;
@@ -294,7 +283,7 @@
             border-radius: 18px;
             line-height: 1.5;
             white-space: pre-wrap;
-            /* 改行を反映させる */
+            /* Keep line breaks in chat bubbles */
         }
 
         .chat-message.user {
@@ -323,6 +312,12 @@
             border-top: 1px solid #e0e0e0;
             background-color: white;
         }
+
+        .v-navigation-drawer,
+        .v-menu__content,
+        .v-overlay {
+            z-index: 3000 !important;
+        }
     </style>
 </head>
 
@@ -330,39 +325,37 @@
 
     <canvas id="interactive-ring"></canvas>
 
-    <v-app id="App">
+    <v-app id="App" style="background: transparent !important;">
         <template>
 
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">About Me > Introduction</main-system-bar>
 
             <v-main id="Main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid fill-height class="pa-0" style="background-color: #f5f5f5;">
+                    <v-container v-show="Ready_Page" fluid fill-height class="pa-0" style="background: transparent;">
                         <div id="interactive-space">
+                            <div class="intro-message">Thanks for Coming!</div>
                             <div v-for="bubble in bubbles" :key="bubble.theme" class="theme-bubble"
                                 :class="{ 'is-dragging': bubble.isDragging }" :style="bubble.style"
                                 @click="handleBubbleClick(bubble)" @mousedown.prevent="dragStart(bubble, $event)"
                                 @touchstart.prevent="dragStart(bubble, $event)">
                                 {{ bubble.theme }}
                             </div>
-                            <div v-if="bug.state !== 'inactive'" id="bug" :style="bug.style">
-                                <div class="bug-wing"></div>
-                            </div>
                         </div>
 
                         <transition name="Fade_Page">
                             <div v-if="modal.visible" class="modal-overlay" @click.self="closeModal">
                                 <div class="modal-content" @click.stop>
-                                    <button class="close-button" @click="closeModal" title="Close">×</button>
+                                    <button class="close-button" @click="closeModal" title="Close">&times;</button>
                                     <h2>{{ modal.theme }}</h2>
                                     <div class="content-body" v-html="modal.currentText"></div>
                                     <div v-if="ThemeContents[modal.theme] && ThemeContents[modal.theme].length > 1"
                                         class="modal-nav">
                                         <button @click="changeModalPage(-1)"
-                                            :disabled="modal.pageIndex === 0">◀</button>
+                                            :disabled="modal.pageIndex === 0">&#9664;</button>
                                         <span>{{ modal.pageIndex + 1 }} / {{ ThemeContents[modal.theme].length }}</span>
                                         <button @click="changeModalPage(1)"
-                                            :disabled="modal.pageIndex >= ThemeContents[modal.theme].length - 1">▶</button>
+                                            :disabled="modal.pageIndex >= ThemeContents[modal.theme].length - 1">&#9654;</button>
                                     </div>
                                 </div>
                             </div>
@@ -374,13 +367,13 @@
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
             <main-footer-simple></main-footer-simple>
 
-            <!-- ▼▼▼ ここからチャットボットのUIを追加 ▼▼▼ -->
+            <!-- Chat widget UI (currently disabled) -->
             <!-- <div v-if="Ready_Page" class="chat-widget-container">
                 <v-slide-y-reverse-transition>
                     <v-card v-if="chat.visible" class="chat-window">
                         <v-system-bar window dark color="primary">
                             <v-icon>mdi-robot-happy</v-icon>
-                            <span>AIアシスタント</span>
+                            <span>AI Assistant</span>
                             <v-spacer></v-spacer>
                             <v-btn icon @click="toggleChat">
                                 <v-icon>mdi-close</v-icon>
@@ -393,7 +386,7 @@
                             </div>
                         </div>
                         <div class="chat-input pa-2">
-                            <v-text-field v-model="chat.inputText" placeholder="メッセージを入力..." outlined dense hide-details
+                            <v-text-field v-model="chat.inputText" placeholder="Type your message..." outlined dense hide-details
                                 :disabled="chat.loading" @keydown.enter="sendMessage">
                                 <template v-slot:append>
                                     <v-btn icon color="primary" :disabled="!chat.inputText.trim() || chat.loading"
@@ -408,7 +401,7 @@
 
                 <v-fab-transition>
                     <v-btn v-show="!chat.visible" color="primary" fab large dark @click="toggleChat"
-                        title="AIアシスタントに質問する" style="position: fixed; bottom: 50px; left: 20px;">
+                        title="Ask AI Assistant" style="position: fixed; bottom: 50px; left: 20px;">
                         <v-icon>mdi-chat-question</v-icon>
                     </v-btn>
                 </v-fab-transition>
@@ -450,7 +443,7 @@
                     loading: false,
                     inputText: '',
                     messages: [
-                        { from: 'bot', text: 'こんにちは！<br>このサイトについて何か質問はありますか？' }
+                        { from: 'bot', text: 'Hello!<br>Please ask me anything about this site.' }
                     ]
                 }
             },
@@ -469,7 +462,6 @@
                     this.isMobile = window.innerWidth < 768;
                     this.setupBubbles();
                     this.animateScene();
-                    this.spawnBug();
                 }, 150);
             },
             methods: {
@@ -494,7 +486,6 @@
                 },
                 animateScene() {
                     this.updateBubbles();
-                    this.updateBug();
                     requestAnimationFrame(this.animateScene);
                 },
                 updateBubbles() {
@@ -656,16 +647,16 @@
                         return;
                     }
 
-                    // 1. ユーザーのメッセージを画面に追加
+                    // 1. Add user message to chat history
                     this.chat.messages.push({ from: 'user', text: inputText });
                     this.chat.inputText = '';
                     this.chat.loading = true;
 
-                    // 2. ボットの返信待機中メッセージを追加
+                    // 2. Add temporary bot placeholder
                     this.chat.messages.push({ from: 'bot', text: '...' });
                     const botMessageIndex = this.chat.messages.length - 1;
 
-                    // 3. バックエンドAPIを呼び出す
+                    // 3. Call backend API
                     const backendUrl = 'https://gemini-proxy-632002457565.asia-northeast1.run.app';
 
                     try {
@@ -677,7 +668,7 @@
 
                         if (!response.ok) {
                             const errorData = await response.json();
-                            throw new Error(errorData.error || 'サーバーでエラーが発生しました。');
+                            throw new Error(errorData.error || 'Server returned an error.');
                         }
 
                         const data = await response.json();
@@ -685,123 +676,291 @@
 
                     } catch (error) {
                         console.error('Error sending message:', error);
-                        this.$set(this.chat.messages, botMessageIndex, { from: 'bot', text: `エラーが発生しました: ${error.message}` });
+                        this.$set(this.chat.messages, botMessageIndex, { from: 'bot', text: `An error occurred: ${error.message}` });
                     } finally {
                         this.chat.loading = false;
                     }
                 }
             }
         })
-
         document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.getElementById('interactive-ring');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
 
-            let width, height;
-            let currentFontSize;
+            let width = 0;
+            let height = 0;
+            const particles = [];
+            const rubberRings = [];
+
+            function randomParticle() {
+                return {
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.3,
+                    size: 0.5 + Math.random() * 1.2,
+                    alpha: 0.2 + Math.random() * 0.35,
+                    phase: Math.random() * Math.PI * 2,
+                    age: 0,
+                    life: 260 + Math.random() * 380
+                };
+            }
+
+            function resetParticle(p) {
+                p.x = Math.random() * width;
+                p.y = Math.random() * height;
+                p.vx = (Math.random() - 0.5) * 0.3;
+                p.vy = (Math.random() - 0.5) * 0.3;
+                p.size = 0.5 + Math.random() * 1.2;
+                p.alpha = 0.2 + Math.random() * 0.35;
+                p.phase = Math.random() * Math.PI * 2;
+                p.age = 0;
+                p.life = 260 + Math.random() * 380;
+            }
+
+            function createScene() {
+                particles.length = 0;
+                const isMobile = width < 768;
+                const particleCount = isMobile ? 105 : 170;
+                for (let i = 0; i < particleCount; i++) {
+                    const p = randomParticle();
+                    p.age = Math.random() * p.life;
+                    particles.push(p);
+                }
+            }
+
+            function buildRubberRings() {
+                rubberRings.length = 0;
+                const isMobile = width < 768;
+                const spacing = Math.min(width, height) * (isMobile ? 0.18 : 0.128);
+                const yStep = spacing * 0.86;
+                const radiusBase = spacing * 0.24;
+                const xPad = spacing * 0.7;
+                const yPad = spacing * 0.8;
+                const rows = Math.ceil((height + yPad * 2) / yStep);
+                const cols = Math.ceil((width + xPad * 2) / spacing);
+
+                for (let row = 0; row < rows; row++) {
+                    const y = row * yStep - yPad;
+                    const xOffset = (row % 2) * spacing * 0.5;
+                    for (let col = 0; col < cols; col++) {
+                        const x = col * spacing + xOffset - xPad;
+                        if (x < -spacing || x > width + spacing || y < -spacing || y > height + spacing) continue;
+
+                        rubberRings.push({
+                            x,
+                            y,
+                            vx: (Math.random() - 0.5) * 0.45,
+                            vy: (Math.random() - 0.5) * 0.45,
+                            radius: radiusBase * (0.5 + Math.random() * 2.4),
+                            hue: 188 + Math.random() * 28,
+                            phaseA: Math.random() * Math.PI * 2,
+                            phaseB: Math.random() * Math.PI * 2,
+                            quant: 6 + Math.floor(Math.random() * 4)
+                        });
+                    }
+                }
+            }
+
+            function updateRubberRings(t) {
+                const maxSpeed = 0.85;
+
+                // Soft local separation to keep ring overlap moderate.
+                for (let i = 0; i < rubberRings.length; i++) {
+                    const a = rubberRings[i];
+                    for (let j = i + 1; j < rubberRings.length; j++) {
+                        const b = rubberRings[j];
+                        const dx = b.x - a.x;
+                        const dy = b.y - a.y;
+                        const distSq = dx * dx + dy * dy;
+                        const minDist = (a.radius + b.radius) * 1.02;
+                        if (distSq <= 0 || distSq > minDist * minDist) continue;
+                        const dist = Math.sqrt(distSq);
+                        const overlap = (minDist - dist);
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        // Position correction first, then velocity impulse (prevents persistent overlap).
+                        const correction = overlap * 0.5;
+                        a.x -= nx * correction;
+                        a.y -= ny * correction;
+                        b.x += nx * correction;
+                        b.y += ny * correction;
+
+                        const impulse = overlap * 0.010;
+                        a.vx -= nx * impulse;
+                        a.vy -= ny * impulse;
+                        b.vx += nx * impulse;
+                        b.vy += ny * impulse;
+                    }
+                }
+
+                for (let i = 0; i < rubberRings.length; i++) {
+                    const ring = rubberRings[i];
+                    const driftX = Math.sin(t * 0.38 + ring.phaseA) * 0.009;
+                    const driftY = Math.cos(t * 0.33 + ring.phaseB) * 0.009;
+                    ring.vx += driftX;
+                    ring.vy += driftY;
+                    ring.vx *= 0.986;
+                    ring.vy *= 0.986;
+
+                    const speed = Math.hypot(ring.vx, ring.vy);
+                    if (speed > maxSpeed) {
+                        ring.vx = (ring.vx / speed) * maxSpeed;
+                        ring.vy = (ring.vy / speed) * maxSpeed;
+                    }
+
+                    ring.x += ring.vx;
+                    ring.y += ring.vy;
+
+                    const margin = ring.radius * 1.1;
+                    if (ring.x < margin) {
+                        ring.x = margin;
+                        ring.vx *= -0.86;
+                    } else if (ring.x > width - margin) {
+                        ring.x = width - margin;
+                        ring.vx *= -0.86;
+                    }
+                    if (ring.y < margin) {
+                        ring.y = margin;
+                        ring.vy *= -0.86;
+                    } else if (ring.y > height - margin) {
+                        ring.y = height - margin;
+                        ring.vy *= -0.86;
+                    }
+                }
+            }
 
             function resize() {
                 width = canvas.width = window.innerWidth;
                 height = canvas.height = window.innerHeight;
-                const idealFontSize = width * 0.025;
-                currentFontSize = Math.max(18, Math.min(idealFontSize, 50));
+                createScene();
+                buildRubberRings();
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            function fieldForce(x, y, t) {
+                const c1x = width * (0.5 + Math.sin(t * 0.28) * 0.24);
+                const c1y = height * (0.5 + Math.cos(t * 0.34) * 0.20);
+                const c2x = width * (0.5 + Math.sin(t * 0.41 + 1.3) * 0.27);
+                const c2y = height * (0.5 + Math.cos(t * 0.23 + 0.7) * 0.22);
+
+                const dx1 = c1x - x;
+                const dy1 = c1y - y;
+                const dx2 = c2x - x;
+                const dy2 = c2y - y;
+
+                const d1 = dx1 * dx1 + dy1 * dy1 + 140;
+                const d2 = dx2 * dx2 + dy2 * dy2 + 140;
+
+                // Attractive field + rotational field + low-frequency standing wave
+                const g = 90;
+                const f1x = (dx1 / d1) * g;
+                const f1y = (dy1 / d1) * g;
+                const f2x = -(dx2 / d2) * g * 0.75;
+                const f2y = -(dy2 / d2) * g * 0.75;
+
+                const rot = Math.sin(t * 0.52) * 0.06;
+                const rx = -(y - height * 0.5) * rot / Math.max(height, 1);
+                const ry = (x - width * 0.5) * rot / Math.max(width, 1);
+
+                const wave = Math.sin((x * 0.008) + (y * 0.006) + t * 1.4) * 0.04;
+                const wx = Math.cos(t * 0.8 + y * 0.004) * wave;
+                const wy = Math.sin(t * 0.9 + x * 0.004) * wave;
+
+                return { x: f1x + f2x + rx + wx, y: f1y + f2y + ry + wy };
+            }
+
+            function drawContourField(t) {
+                const segments = width < 768 ? 52 : 66;
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'screen';
+                for (let r = 0; r < rubberRings.length; r++) {
+                    const ring = rubberRings[r];
+                    const pulse = 0.82 + Math.sin(t * 0.9 + ring.phaseA) * 0.18;
+                    const lineAlpha = 0.012 + Math.random() * 0.01;
+                    const lineWidth = 0.5 + Math.random() * 1;
+
+                    ctx.beginPath();
+                    for (let i = 0; i <= segments; i++) {
+                        const a = (i / segments) * Math.PI * 2;
+                        const harmonic =
+                            Math.sin(a * 2.0 + t * 0.75 + ring.phaseA) * 0.55 +
+                            Math.cos(a * 3.0 - t * 0.52 + ring.phaseB) * 0.45;
+                        const stepped = Math.round(harmonic * ring.quant) / ring.quant;
+                        const distortion = ring.radius * stepped;
+                        const radius = ring.radius * pulse + distortion;
+                        const x = ring.x + Math.cos(a) * radius;
+                        const y = ring.y + Math.sin(a) * radius;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.lineWidth = lineWidth;
+                    ctx.strokeStyle = `hsla(${ring.hue}, 60%, 66%, ${lineAlpha})`;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function animate(now) {
+                requestAnimationFrame(animate);
+                const t = now * 0.001;
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+                ctx.fillRect(0, 0, width, height);
+                ctx.globalCompositeOperation = 'screen';
+                updateRubberRings(t);
+                drawContourField(t);
+
+                const phasePulse = 0.55 + Math.sin(t * 0.42) * 0.45;
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    const prevX = p.x;
+                    const prevY = p.y;
+                    const f = fieldForce(p.x, p.y, t + p.phase);
+                    p.age += 1;
+
+                    const lifeProgress = p.age / p.life;
+                    if (lifeProgress >= 1) {
+                        resetParticle(p);
+                        continue;
+                    }
+
+                    const fadeIn = Math.min(1, lifeProgress / 0.18);
+                    const fadeOut = Math.min(1, (1 - lifeProgress) / 0.24);
+                    const lifeEnvelope = Math.max(0, Math.min(fadeIn, fadeOut));
+
+                    p.vx = (p.vx + f.x) * 0.965;
+                    p.vy = (p.vy + f.y) * 0.965;
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < -20 || p.x > width + 20 || p.y < -20 || p.y > height + 20) {
+                        resetParticle(p);
+                        continue;
+                    }
+
+                    ctx.beginPath();
+                    ctx.moveTo(prevX, prevY);
+                    ctx.lineTo(p.x, p.y);
+                    ctx.lineWidth = p.size;
+                    ctx.strokeStyle = `hsla(${205 + phasePulse * 30}, 85%, ${48 + phasePulse * 16}%, ${p.alpha * (0.6 + phasePulse * 0.4) * lifeEnvelope})`;
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = `hsla(${200 + phasePulse * 40}, 95%, 62%, ${0.24 * lifeEnvelope})`;
+                    ctx.stroke();
+                }
+
+                ctx.shadowBlur = 0;
+                ctx.globalCompositeOperation = 'source-over';
             }
 
             window.addEventListener('resize', resize);
             resize();
-
-            const numPoints = 150;
-            const baseRadius = Math.min(width, height) * 0.3;
-            let angle = 0;
-            let spaceRect = null;
-
-            // アニメーション
-            function animate() {
-                requestAnimationFrame(animate);
-                ctx.clearRect(0, 0, width, height);
-
-                ctx.font = `600 ${currentFontSize}px "Poppins", sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                const isMobile = width < 768;
-
-                const waveAmplitude = isMobile ? 12.5 : 25;
-
-                if (isMobile) {
-                    ctx.shadowColor = 'transparent';
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = 'rgba(63, 81, 181, 0.8)';
-                    ctx.fillText('Thanks for coming!', width / 2, height / 2);
-                } else {
-                    ctx.shadowColor = 'rgba(121, 134, 203, 0.7)';
-                    ctx.shadowBlur = 20;
-                    ctx.fillStyle = 'rgba(232, 234, 246, 0.9)';
-                    ctx.fillText('Thanks for coming!', width / 2, height / 2);
-                    ctx.fillText('Thanks for coming!', width / 2, height / 2);
-                }
-
-                ctx.shadowColor = 'transparent';
-                ctx.shadowBlur = 0;
-
-                const spaceEl = document.getElementById('interactive-space');
-                if (spaceEl) {
-                    spaceRect = spaceEl.getBoundingClientRect();
-                }
-
-                const points = [];
-                for (let i = 0; i <= numPoints; i++) {
-                    const t = (i / numPoints) * Math.PI * 2;
-                    const wave = Math.sin(t * 6 + angle) * waveAmplitude;
-                    let r = baseRadius + wave;
-
-                    if (vue && vue.bubbles && vue.bubbles.length > 0 && spaceRect) {
-                        const pointX = width / 2 + Math.cos(t) * r;
-                        const pointY = height / 2 + Math.sin(t) * r;
-                        let totalDisplacement = 0;
-
-                        vue.bubbles.forEach(bubble => {
-                            const bubbleX = spaceRect.left + bubble.x;
-                            const bubbleY = spaceRect.top + bubble.y;
-                            const interactionRadius = bubble.size / 2 + 70;
-
-                            const dx = pointX - bubbleX;
-                            const dy = pointY - bubbleY;
-                            const dist = Math.sqrt(dx * dx + dy * dy);
-
-                            if (dist < interactionRadius) {
-                                const force = Math.pow(1 - (dist / interactionRadius), 2);
-                                totalDisplacement += force * 100;
-                            }
-                        });
-                        r += totalDisplacement;
-                    }
-
-                    points.push({
-                        x: width / 2 + Math.cos(t) * r,
-                        y: height / 2 + Math.sin(t) * r
-                    });
-                }
-
-                ctx.beginPath();
-                ctx.moveTo((points[numPoints - 1].x + points[0].x) / 2, (points[numPoints - 1].y + points[0].y) / 2);
-
-                for (let i = 0; i < numPoints; i++) {
-                    const p_curr = points[i];
-                    const p_next = points[i + 1];
-
-                    const midPointX = (p_curr.x + p_next.x) / 2;
-                    const midPointY = (p_curr.y + p_next.y) / 2;
-
-                    ctx.quadraticCurveTo(p_curr.x, p_curr.y, midPointX, midPointY);
-                }
-
-                ctx.strokeStyle = 'rgba(63, 81, 181, 0.5)';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                angle += 0.02;
-            }
-            animate();
+            requestAnimationFrame(animate);
         });
 
     </script>
@@ -809,3 +968,6 @@
 </body>
 
 </html>
+
+
+
