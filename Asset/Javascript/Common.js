@@ -592,6 +592,15 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Verb ▲ ------------------------------------------------------------------------------------->
                 
+                <!-- ▼ Quiz ▼ ------------------------------------------------------------------------------------->
+                <v-list-item href="./Japanese_Quiz.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Quiz</v-list-item-title>
+
+                    <v-list-item-icon><v-icon>mdi-help-box-multiple-outline</v-icon></v-list-item-icon>
+                </v-list-item>
+                <!-- ▲ Quiz ▲ ------------------------------------------------------------------------------------->
+
                 <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
                 <v-list-item href="./Japanese_Recommend_Learning.html">
                     <v-list-item-icon />
@@ -600,10 +609,11 @@ Vue.component('main-navigation', {
                     <v-list-item-icon><v-icon>mdi-hand-heart-outline</v-icon></v-list-item-icon>
                 </v-list-item>
                 <!-- ▲ Recommend ▲ -------------------------------------------------------------------------------->
-
+                
             </v-list-group>
             <!-- ▲ Japanese Language ▲ ------------------------------------------------------------------------>
 
+            
 
             <!-- ▼ Japanese Culture ▼ ------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-checkbox-blank-circle">

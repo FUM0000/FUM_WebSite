@@ -1,0 +1,389 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+    <title>Japanese Quiz</title>
+
+    <style>
+        .quiz-card {
+            border-left: 6px solid #1565c0;
+        }
+
+        .result-box {
+            border-radius: 8px;
+            border: 1px solid #cfd8dc;
+            background: #fafcfe;
+        }
+
+        .choice-btn {
+            justify-content: flex-start;
+            text-transform: none;
+            white-space: normal;
+            height: auto !important;
+            min-height: 44px;
+            line-height: 1.5;
+            padding: 10px 14px !important;
+        }
+    </style>
+</head>
+
+<body>
+    <v-app id="App">
+        <template>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Japanese Quiz</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container v-show="Ready_Page" fluid class="pa-5">
+                        <v-row justify="center">
+                            <v-col cols="12" md="9" lg="8">
+                                <v-card>
+                                    <v-system-bar>Quiz Settings</v-system-bar>
+                                    <v-card-text>
+                                        <v-row dense>
+                                            <v-col cols="12" md="7">
+                                                <div class="text-subtitle-1 mb-2">難易度を選択</div>
+                                                <v-btn-toggle v-model="SelectedLevel" mandatory>
+                                                    <v-btn value="all">All</v-btn>
+                                                    <v-btn value="beginner">初級</v-btn>
+                                                    <v-btn value="intermediate">中級</v-btn>
+                                                    <v-btn value="advanced">上級</v-btn>
+                                                </v-btn-toggle>
+                                            </v-col>
+                                            <v-col cols="12" md="5" class="d-flex align-center">
+                                                <v-switch
+                                                    v-model="FavoritesOnly"
+                                                    hide-details
+                                                    class="mt-0"
+                                                    label="お気に入りのみ出題">
+                                                </v-switch>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-divider class="my-4"></v-divider>
+
+                                        <v-row dense>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">問題数</div>
+                                                    <div class="text-h6">{{ WorkingSet.length }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">正解数</div>
+                                                    <div class="text-h6">{{ CorrectCount }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">解答数</div>
+                                                    <div class="text-h6">{{ AnsweredCount }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">正答率</div>
+                                                    <div class="text-h6">{{ Accuracy }}%</div>
+                                                </v-sheet>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+
+                        <v-row justify="center" class="mt-2">
+                            <v-col cols="12" md="9" lg="8">
+                                <v-card class="quiz-card" v-if="CurrentQuestion">
+                                    <v-card-title class="pb-0">
+                                        <v-chip small :color="LevelColor(CurrentQuestion.level)" dark>{{ LevelText(CurrentQuestion.level) }}</v-chip>
+                                        <v-spacer></v-spacer>
+                                        <v-btn icon @click="ToggleFavorite(CurrentQuestion.id)">
+                                            <v-icon :color="IsFavorite(CurrentQuestion.id) ? 'amber darken-2' : 'grey'">
+                                                {{ IsFavorite(CurrentQuestion.id) ? 'mdi-star' : 'mdi-star-outline' }}
+                                            </v-icon>
+                                        </v-btn>
+                                    </v-card-title>
+
+                                    <v-card-text>
+                                        <div class="text-caption mb-1">{{ ProgressText }}</div>
+                                        <div class="text-h6 mb-4">{{ CurrentQuestion.question }}</div>
+
+                                        <v-row dense>
+                                            <v-col cols="12" v-for="(choice, index) in CurrentQuestion.choices" :key="index">
+                                                <v-btn
+                                                    block
+                                                    outlined
+                                                    class="choice-btn"
+                                                    :color="ChoiceColor(choice)"
+                                                    @click="Choose(choice)"
+                                                    :disabled="Answered">
+                                                    {{ choice }}
+                                                </v-btn>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-expand-transition>
+                                            <v-sheet v-if="Answered" class="result-box pa-3 mt-4">
+                                                <div class="font-weight-bold" :class="ResultOk ? 'green--text text--darken-2' : 'red--text text--darken-2'">
+                                                    {{ ResultOk ? '正解です' : '不正解です' }}
+                                                </div>
+                                                <div class="mt-1">正解: {{ CurrentQuestion.answer }}</div>
+                                                <div class="mt-1 text-body-2">{{ CurrentQuestion.explanation }}</div>
+                                            </v-sheet>
+                                        </v-expand-transition>
+                                    </v-card-text>
+
+                                    <v-card-actions>
+                                        <v-btn text color="primary" @click="ShuffleQuestions">シャッフル</v-btn>
+                                        <v-spacer></v-spacer>
+                                        <v-btn color="primary" @click="NextQuestion" :disabled="!Answered">次の問題</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+
+                                <v-alert v-else type="info" outlined class="mt-4">
+                                    条件に一致する問題がありません。難易度や「お気に入りのみ出題」を変更してください。
+                                </v-alert>
+                            </v-col>
+                        </v-row>
+
+                        <v-row justify="center" class="mt-2">
+                            <v-col cols="12" md="9" lg="8">
+                                <v-card>
+                                    <v-system-bar>Favorites</v-system-bar>
+                                    <v-card-text>
+                                        <div v-if="FavoriteQuestions.length === 0" class="text-body-2">
+                                            まだお気に入りはありません。星アイコンから登録できます。
+                                        </div>
+                                        <v-row dense v-else>
+                                            <v-col cols="12" v-for="item in FavoriteQuestions" :key="item.id">
+                                                <v-sheet outlined rounded class="pa-2 d-flex align-center">
+                                                    <v-chip x-small :color="LevelColor(item.level)" dark class="mr-2">{{ LevelText(item.level) }}</v-chip>
+                                                    <div class="text-body-2 flex-grow-1">{{ item.question }}</div>
+                                                    <v-btn small text color="primary" @click="LoadFavorite(item.id)">この問題を解く</v-btn>
+                                                </v-sheet>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+    <script>
+        let vue = new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                SelectedLevel: 'all',
+                FavoritesOnly: false,
+                QuizBank: [
+                    { id: 1, level: 'beginner', question: '「ありがとう」の丁寧で一般的な表現はどれ？', choices: ['ありがとうございます', 'ありがとうだ', 'ありがたいです', 'ありがとうでした'], answer: 'ありがとうございます', explanation: '「ありがとうございます」が日常で最も一般的な丁寧表現です。' },
+                    { id: 2, level: 'beginner', question: '「水」をひらがなで書くと？', choices: ['みず', 'みづ', 'みす', 'みっず'], answer: 'みず', explanation: '「水」は「みず」と読みます。' },
+                    { id: 3, level: 'beginner', question: '「きれい」の反対に近い意味はどれ？', choices: ['よごれている', 'しずか', 'はやい', 'あかるい'], answer: 'よごれている', explanation: '「きれい」の対義語として「よごれている」が適切です。' },
+                    { id: 4, level: 'beginner', question: '助詞「を」の主な役割は？', choices: ['動作の対象を示す', '場所を示す', '時間を示す', '逆接を示す'], answer: '動作の対象を示す', explanation: '「を」は動作の目的語を示すときに使います。' },
+
+                    { id: 5, level: 'intermediate', question: '「雨が降りそうだ」の「そうだ」は何を表す？', choices: ['様態・推量', '伝聞のみ', '過去の確定', '命令'], answer: '様態・推量', explanation: '見た目や状況からの推量を表す「そうだ」です。' },
+                    { id: 6, level: 'intermediate', question: '「読ませる」はどの活用形？', choices: ['使役形', '受身形', '可能形', '意向形'], answer: '使役形', explanation: '「〜させる」は使役の形です。' },
+                    { id: 7, level: 'intermediate', question: '「もし時間があれば、行きます。」の条件表現はどれ？', choices: ['〜ば', '〜たらこそ', '〜ても', '〜ので'], answer: '〜ば', explanation: '仮定条件の基本形は「〜ば」です。' },
+                    { id: 8, level: 'intermediate', question: '「彼は日本語が上手だ。」で自然な言い換えは？', choices: ['彼は日本語にたけている。', '彼は日本語を高い。', '彼は日本語をうまくいく。', '彼は日本語がのびる。'], answer: '彼は日本語にたけている。', explanation: '「たけている」は能力が高いことを表します。' },
+
+                    { id: 9, level: 'advanced', question: '「〜ざるを得ない」の意味として最も近いものは？', choices: ['そうするしかない', '絶対にしたくない', '自由に選べる', '一度だけする'], answer: 'そうするしかない', explanation: '「〜ざるを得ない」は避けられずそうする必要があるという意味です。' },
+                    { id: 10, level: 'advanced', question: '「恐縮ですが」の機能として最も適切なのは？', choices: ['依頼前のクッション表現', '強い命令', '話題転換のみ', '断定の強調'], answer: '依頼前のクッション表現', explanation: '相手への配慮を示しながら依頼する時に使います。' },
+                    { id: 11, level: 'advanced', question: '「彼の説明は要を得ている」の意味は？', choices: ['要点を的確に押さえている', '説明が長すぎる', '事実と逆である', '感情的すぎる'], answer: '要点を的確に押さえている', explanation: '「要を得る」はポイントを外さないことを意味します。' },
+                    { id: 12, level: 'advanced', question: '「〜に越したことはない」の使い方として自然なのは？', choices: ['早めに準備できるに越したことはない。', '雨に越したことはない。', '食べるに越したことはないですか？', '静かに越したことはない。'], answer: '早めに準備できるに越したことはない。', explanation: '「Aに越したことはない」は「Aが最も望ましい」という意味で使います。' }
+                ],
+                FavoriteIds: [],
+                QuestionOrder: [],
+                CurrentIndex: 0,
+                SelectedChoice: '',
+                Answered: false,
+                ResultOk: false,
+                CorrectCount: 0,
+                AnsweredCount: 0,
+                FavoriteStorageKey: 'japanese-quiz-favorites-v1'
+            },
+            computed: {
+                WorkingSet() {
+                    let rows = this.QuizBank;
+                    if (this.SelectedLevel !== 'all') {
+                        rows = rows.filter(q => q.level === this.SelectedLevel);
+                    }
+                    if (this.FavoritesOnly) {
+                        rows = rows.filter(q => this.FavoriteIds.includes(q.id));
+                    }
+                    return rows;
+                },
+                CurrentQuestion() {
+                    if (!this.WorkingSet.length || !this.QuestionOrder.length) {
+                        return null;
+                    }
+                    const id = this.QuestionOrder[this.CurrentIndex];
+                    return this.WorkingSet.find(q => q.id === id) || null;
+                },
+                FavoriteQuestions() {
+                    return this.QuizBank.filter(q => this.FavoriteIds.includes(q.id));
+                },
+                ProgressText() {
+                    if (!this.CurrentQuestion || !this.WorkingSet.length) {
+                        return '';
+                    }
+                    return `問題 ${this.CurrentIndex + 1} / ${this.WorkingSet.length}`;
+                },
+                Accuracy() {
+                    if (!this.AnsweredCount) {
+                        return 0;
+                    }
+                    return Math.round((this.CorrectCount / this.AnsweredCount) * 100);
+                }
+            },
+            watch: {
+                SelectedLevel() {
+                    this.ResetQuiz();
+                },
+                FavoritesOnly() {
+                    this.ResetQuiz();
+                }
+            },
+            created() {
+                this.LoadFavorites();
+                this.ResetQuiz();
+            },
+            methods: {
+                LevelText(level) {
+                    if (level === 'beginner') return '初級';
+                    if (level === 'intermediate') return '中級';
+                    return '上級';
+                },
+                LevelColor(level) {
+                    if (level === 'beginner') return 'green darken-1';
+                    if (level === 'intermediate') return 'orange darken-2';
+                    return 'red darken-2';
+                },
+                IsFavorite(id) {
+                    return this.FavoriteIds.includes(id);
+                },
+                ToggleFavorite(id) {
+                    if (this.IsFavorite(id)) {
+                        this.FavoriteIds = this.FavoriteIds.filter(v => v !== id);
+                    } else {
+                        this.FavoriteIds.push(id);
+                    }
+                    this.SaveFavorites();
+                    if (this.FavoritesOnly) {
+                        this.ResetQuiz();
+                    }
+                },
+                LoadFavorites() {
+                    try {
+                        const raw = localStorage.getItem(this.FavoriteStorageKey);
+                        this.FavoriteIds = raw ? JSON.parse(raw) : [];
+                    } catch (e) {
+                        this.FavoriteIds = [];
+                    }
+                },
+                SaveFavorites() {
+                    localStorage.setItem(this.FavoriteStorageKey, JSON.stringify(this.FavoriteIds));
+                },
+                ShuffleQuestions() {
+                    this.QuestionOrder = this.WorkingSet.map(q => q.id);
+                    for (let i = this.QuestionOrder.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        const t = this.QuestionOrder[i];
+                        this.QuestionOrder[i] = this.QuestionOrder[j];
+                        this.QuestionOrder[j] = t;
+                    }
+                    this.CurrentIndex = 0;
+                    this.SelectedChoice = '';
+                    this.Answered = false;
+                },
+                ResetQuiz() {
+                    this.CorrectCount = 0;
+                    this.AnsweredCount = 0;
+                    this.ShuffleQuestions();
+                },
+                Choose(choice) {
+                    if (this.Answered || !this.CurrentQuestion) {
+                        return;
+                    }
+                    this.SelectedChoice = choice;
+                    this.Answered = true;
+                    this.AnsweredCount += 1;
+                    this.ResultOk = (choice === this.CurrentQuestion.answer);
+                    if (this.ResultOk) {
+                        this.CorrectCount += 1;
+                    }
+                },
+                ChoiceColor(choice) {
+                    if (!this.Answered) {
+                        return '';
+                    }
+                    if (choice === this.CurrentQuestion.answer) {
+                        return 'green';
+                    }
+                    if (choice === this.SelectedChoice && choice !== this.CurrentQuestion.answer) {
+                        return 'red';
+                    }
+                    return '';
+                },
+                NextQuestion() {
+                    if (!this.WorkingSet.length) {
+                        return;
+                    }
+                    this.CurrentIndex += 1;
+                    if (this.CurrentIndex >= this.QuestionOrder.length) {
+                        this.ShuffleQuestions();
+                    }
+                    this.SelectedChoice = '';
+                    this.Answered = false;
+                },
+                LoadFavorite(id) {
+                    if (!this.WorkingSet.find(q => q.id === id)) {
+                        this.FavoritesOnly = false;
+                        this.SelectedLevel = 'all';
+                    }
+                    this.QuestionOrder = this.WorkingSet.map(q => q.id);
+                    const idx = this.QuestionOrder.indexOf(id);
+                    this.CurrentIndex = idx >= 0 ? idx : 0;
+                    this.SelectedChoice = '';
+                    this.Answered = false;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
