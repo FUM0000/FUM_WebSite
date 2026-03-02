@@ -90,15 +90,22 @@
 
         class C_Elevator {
 
-            get Button_Text() { return this._Button_Text; }
-
-            constructor(scene, floors, floorHeight, elevatorSpeed) {
+            constructor(scene, floors, floorHeight, elevatorSpeed, floorNames = [], floorDescriptions = []) {
                 this.scene = scene;
                 this.floors = floors;
                 this.floorHeight = floorHeight;
                 this.elevatorSpeed = elevatorSpeed;
+                this.floorNames = floorNames.length === floors
+                    ? floorNames
+                    : Array.from({ length: floors }, (_, i) => `F${i + 1}`);
+                this.floorDescriptions = floorDescriptions.length === floors
+                    ? floorDescriptions
+                    : Array.from({ length: floors }, () => "");
                 this.currentFloor = 0;
+                this.targetFloor = 0;
                 this.isMoving = false;
+                this.floorButtons = [];
+                this.floorLabels = [];
                 this.createElevatorPillar();
                 this.createElevator();
             }
@@ -136,30 +143,124 @@
                 this.scene.add(this.mesh);
                 this.mesh.position.set(0, height / 2, 0);
 
-                this.createButton();
+                this.createFloorButtons();
+                this.updateButtonVisuals();
             }
 
-            createButton() {
-                const buttonGeometry = new THREE.SphereGeometry(0.25, 32, 32);
-                const buttonMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.25, });
-                this.button = new THREE.Mesh(buttonGeometry, buttonMaterial);
-                this.button.position.set(0, 0, 0);
-                this.mesh.add(this.button);
-                this.createButtonText();
+            createFloorButtons() {
+                this.buttonPanel = new THREE.Group();
+                this.buttonPanel.position.set(0, 0, 0);
+                this.mesh.add(this.buttonPanel);
+
+                const wallRadius = 0.82;
+                const textRadius = wallRadius - 0.02;
+                const spacing = 0.19;
+                const columns = Math.min(2, this.floors);
+                const rows = Math.ceil(this.floors / columns);
+                const startY = ((rows - 1) * spacing) / 2;
+                const columnThetaSpan = 0.52;
+                const thetaStart = Math.PI + (columns > 1 ? columnThetaSpan / 2 : 0);
+                const thetaStep = columns > 1 ? columnThetaSpan / (columns - 1) : 0;
+                for (let i = 0; i < this.floors; i++) {
+                    const col = Math.floor(i / rows);
+                    const row = i % rows;
+                    const y = startY - row * spacing;
+                    const thetaCenter = thetaStart - col * thetaStep;
+                    const thetaLabelLeft = thetaCenter - 0.06;
+                    const labelText = `${this.floorNames[i]} ${this.floorDescriptions[i]}`;
+                    const labelMesh = this.createCurvedWallLabelMesh(labelText, thetaLabelLeft, y, textRadius, 0.52, 0.05);
+                    this.buttonPanel.add(labelMesh);
+                    this.floorLabels.push(labelMesh);
+
+                    // Place the button using the actual left edge of the rendered label.
+                    const box = new THREE.Box3().setFromObject(labelMesh);
+                    const buttonX = Math.max(-wallRadius + 0.05, Math.min(wallRadius - 0.05, box.min.x - 0.05));
+                    const buttonZ = -Math.sqrt(Math.max(0.0001, wallRadius * wallRadius - buttonX * buttonX));
+                    const buttonGeometry = new THREE.SphereGeometry(0.04, 20, 20);
+                    const buttonMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xaa2222,
+                        transparent: true,
+                        opacity: 0.9,
+                        fog: false,
+                    });
+                    const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
+                    button.position.set(buttonX, y, buttonZ);
+                    button.userData.floor = i;
+                    this.buttonPanel.add(button);
+                    this.floorButtons.push(button);
+                }
+            }
+            createCurvedWallLabelMesh(text, thetaLeft, y, radius, width, height) {
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 1024;
+                canvas.height = 128;
+                const fontSize = 96;
+                context.font = `${fontSize}px Arial`;
+                context.textAlign = 'left';
+                context.textBaseline = 'middle';
+                context.fillStyle = '#CF0000';
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+                context.fillText(text, 24, canvas.height / 2);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const geometry = new THREE.PlaneGeometry(width, height, 40, 1);
+                const positions = geometry.attributes.position;
+
+                for (let i = 0; i < positions.count; i++) {
+                    const localX = positions.getX(i);
+                    const localY = positions.getY(i);
+                    const u = (localX + width / 2) / width;
+                    const theta = thetaLeft + (u * width) / radius;
+                    positions.setX(i, Math.sin(theta) * radius);
+                    positions.setY(i, localY);
+                    positions.setZ(i, Math.cos(theta) * radius);
+                }
+
+                positions.needsUpdate = true;
+                geometry.computeVertexNormals();
+                const material = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                    fog: false,
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(0, y, 0);
+                mesh.rotation.set(0, 0, 0);
+                return mesh;
             }
 
-            createButtonText() {
-                this._Button_Text = new FC_TextPlane(this.scene, Camera, "TAP", "#CF0000", new THREE.Vector2(4, 1).multiplyScalar(0.1));
-                this._Button_Text.Rotating(true);
-                this.button.add(this._Button_Text.Mesh_Front);
-                this.button.add(this._Button_Text.Mesh_Back);
+            updateButtonVisuals() {
+                for (let i = 0; i < this.floorButtons.length; i++) {
+                    let color = 0xaa2222;
+                    if (i === this.currentFloor) color = 0x22aa44;
+                    if (this.isMoving && i === this.targetFloor) color = 0xdddd44;
+                    this.floorButtons[i].material.color.setHex(color);
+                }
             }
 
-            activateElevator(player) {
+            getFloorFromRaycast(raycaster) {
+                const intersects = raycaster.intersectObjects(this.floorButtons, false);
+                if (intersects.length === 0) return null;
+                return intersects[0].object.userData.floor;
+            }
+
+            activateElevator(player, targetFloor = null) {
                 if (this.isMoving) return;
 
+                if (targetFloor === null || targetFloor === undefined) {
+                    targetFloor = (this.currentFloor + 1) % this.floors;
+                }
+                if (targetFloor < 0 || targetFloor >= this.floors) return;
+                if (targetFloor === this.currentFloor) return;
+
                 this.isMoving = true;
-                const targetFloor = (this.currentFloor + 1) % this.floors;
+                this.targetFloor = targetFloor;
+                this.updateButtonVisuals();
                 const targetY = 1.5 + targetFloor * this.floorHeight;
 
                 const moveElevator = () => {
@@ -173,6 +274,7 @@
                         this.currentFloor = targetFloor;
                         this.isMoving = false;
                         player.Control_Enable = true;
+                        this.updateButtonVisuals();
                     } else {
                         requestAnimationFrame(moveElevator);
                     }
@@ -191,11 +293,6 @@
                     Math.pow(playerPosition.z - elevatorPosition.z, 2);
 
                 return distanceSquaredXZ <= 1;
-            }
-
-            checkButtonPressed(raycaster) {
-                const intersects = raycaster.intersectObject(this.button);
-                return intersects.length > 0;
             }
         }
 
@@ -248,6 +345,7 @@
             _Image_Radius_FromCategory = 2;
             _Category_Texts = [];
             _Images = [];
+            _Controller_Curved_Board = null;
 
             get UI_Home() { return this._UI_Home; }
             get UI_Music() { return this._UI_Music; }
@@ -260,7 +358,10 @@
 
                 Camera.Initialize();
                 Camera.Target = Player;
-                Player.Position = new THREE.Vector3(0, 1.74 - 0.08 + 0, 0);
+                Player.Position = new THREE.Vector3(0, 1.74 - 0.08, 2);
+                Camera._Yaw = 0;
+                Camera._Pitch = 0;
+                Camera._Forward = new THREE.Vector3(0, 0, 1);
 
                 this._UI_Home.Initialize();
                 this._UI_Home.Fog = false;
@@ -272,20 +373,21 @@
                 this._UI_Music.Rotation = new THREE.Vector3(0, THREE.MathUtils.degToRad(180), 0);
 
                 this._Text_Controller.Initialize();
-                this._Text_Controller.Position = new THREE.Vector3(0, 2, 2);
+                this._Text_Controller.Position = new THREE.Vector3(0, 2, 5);
                 this._Text_Controller.Rotation = new THREE.Vector3(0, THREE.MathUtils.degToRad(180), 0);
                 this._Text_Controller_Left_1.Initialize();
-                this._Text_Controller_Left_1.Position = new THREE.Vector3(0.5, 1, 2);
+                this._Text_Controller_Left_1.Position = new THREE.Vector3(0.5, 1, 5);
                 this._Text_Controller_Left_1.Rotation = new THREE.Vector3(0, THREE.MathUtils.degToRad(180), 0);
                 this._Text_Controller_Left_2.Initialize();
-                this._Text_Controller_Left_2.Position = new THREE.Vector3(0.5, 0.6, 2);
+                this._Text_Controller_Left_2.Position = new THREE.Vector3(0.5, 0.6, 5);
                 this._Text_Controller_Left_2.Rotation = new THREE.Vector3(0, THREE.MathUtils.degToRad(180), 0);
                 this._Text_Controller_Right_1.Initialize();
-                this._Text_Controller_Right_1.Position = new THREE.Vector3(-0.5, 1, 2);
+                this._Text_Controller_Right_1.Position = new THREE.Vector3(-0.5, 1, 5);
                 this._Text_Controller_Right_1.Rotation = new THREE.Vector3(0, THREE.MathUtils.degToRad(180), 0);
                 this._Text_Controller_Right_2.Initialize();
-                this._Text_Controller_Right_2.Position = new THREE.Vector3(-0.5, 0.6, 2);
+                this._Text_Controller_Right_2.Position = new THREE.Vector3(-0.5, 0.6, 5);
                 this._Text_Controller_Right_2.Rotation = new THREE.Vector3(0, THREE.MathUtils.degToRad(180), 0);
+                this.setupControllerCurvedPanel();
 
                 const main_categories = Object.keys(this._FolderStructure);
                 const angle_each_main_category = (2 * Math.PI) / main_categories.length;
@@ -308,7 +410,7 @@
                         const angle_from_center = main_index * angle_each_main_category;
                         const category_x = Math.cos(angle_from_center) * this._Category_Distance_FromCenter;
                         const category_z = Math.sin(angle_from_center) * this._Category_Distance_FromCenter;
-                        const category_y = main_index * 5;
+                        const category_y = (main_index + 1) * 5;
 
                         const main_category_text = new FC_TextPlane(Scene, Camera, main_category, "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY * 2));
                         main_category_text.Initialize();
@@ -348,6 +450,7 @@
                             const localRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
 
                             quaternion.multiply(localRotation);
+                            scale.copy(this._Images[i]._FrameScale || new THREE.Vector3(1, 1, 1));
                             matrix.compose(position, quaternion, scale);
                             this.instancedMesh.setMatrixAt(i, matrix);
                         }
@@ -357,7 +460,14 @@
                     }
 
 
-                    this._Elevator = new C_Elevator(Scene, 4, 5, 1);
+                    this._Elevator = new C_Elevator(
+                        Scene,
+                        5,
+                        5,
+                        1,
+                        ["F1", "F2", "F3", "F4", "F5"],
+                        ["Guide", "Art", "Cat", "Nature", "Scenery"]
+                    );
                     this._raycaster = new THREE.Raycaster();
 
                     this.Loaded = true;
@@ -419,11 +529,13 @@
                 this._Category_Texts.forEach(_text => {
                     _text.Update();
                 });
-                this._Elevator.Button_Text.Update();
+                this._raycaster.setFromCamera(new THREE.Vector2(0, 0), Camera.Object);
 
-                if (this._Elevator.checkPlayerInElevator(Player) &&
-                    (this._Input_Keyboard.IsPressed('E') || this._Elevator.checkButtonPressed(this._raycaster))) {
-                    this._Elevator.activateElevator(Player);
+                if (this._Elevator.checkPlayerInElevator(Player) && this._Input_Keyboard.IsPressed('E')) {
+                    const selectedFloor = this._Elevator.getFloorFromRaycast(this._raycaster);
+                    if (selectedFloor !== null) {
+                        this._Elevator.activateElevator(Player, selectedFloor);
+                    }
                 }
             }
 
@@ -450,10 +562,13 @@
                         const angle = (img_index * angle_each_image);
                         const image_x = subcategory_x + Math.cos(angle + angle_category) * this._Image_Radius_FromCategory;
                         const image_z = subcategory_z + Math.sin(angle + angle_category) * this._Image_Radius_FromCategory;
-                        const image_obj = new FC_ImagePlane(Scene, Camera, `../../Asset/Image/Gallery/Art/${subcategory}/${image}`, new THREE.Vector2(1, 1));
+                        const image_path = `../../Asset/Image/Gallery/Art/${subcategory}/${image}`;
+                        const image_obj = new FC_ImagePlane(Scene, Camera, image_path, new THREE.Vector2(1, 1));
                         image_obj.Position = new THREE.Vector3(image_x, category_y + 1.74 - 0.08, image_z);
                         image_obj.LookAt(new THREE.Vector3(subcategory_x, category_y + 1.74 - 0.08, subcategory_z));
+                        image_obj._FrameScale = new THREE.Vector3(1, 1, 1);
                         this._Images.push(image_obj);
+                        this.applyAspectRatioToImageObject(image_obj, image_path);
                     });
                 });
 
@@ -493,56 +608,15 @@
                     placedPositions.push({ x: image_x, z: image_z });
 
                     const image_path = `../../Asset/Image/Gallery/${category_name}/${image}`;
-                    // const tempImage = new Image();
-                    // tempImage.onload = () => {
-                    //     const width = tempImage.width;
-                    //     const height = tempImage.height;
-
-                    //     // アスペクト比を計算
-                    //     let finalWidth, finalHeight;
-                    //     if (width > height) {
-                    //         // 横長の画像
-                    //         finalWidth = width / height;
-                    //         finalHeight = 1;
-                    //     } else {
-                    //         // 縦長の画像
-                    //         finalWidth = 1;
-                    //         finalHeight = height / width;
-                    //     }
-
-                    //     // 計算したサイズでFC_ImagePlaneを作成
-                    //     const image_obj = new FC_ImagePlane(
-                    //         Scene,
-                    //         Camera,
-                    //         image_path,
-                    //         new THREE.Vector2(finalWidth, finalHeight)
-                    //     );
-
-                    //     image_obj.Position = new THREE.Vector3(
-                    //         image_x,
-                    //         category_y + 1.74 - 0.08,
-                    //         image_z
-                    //     );
-
-                    //     const random_rotation = new THREE.Euler(0, Math.random() * Math.PI * 2, 0);
-                    //     image_obj.Rotation = random_rotation;
-
-                    //     this._Images.push(image_obj);
-                    // };
-
-                    // tempImage.onerror = (err) => {
-                    //     console.error(`画像の読み込みに失敗しました: ${image_path}`, err);
-                    // };
-
-                    // tempImage.src = image_path;
-
                     const image_obj = new FC_ImagePlane(Scene, Camera, image_path, new THREE.Vector2(1, 1));
                     image_obj.Position = new THREE.Vector3(image_x, category_y + 1.74 - 0.08, image_z);
 
                     const random_rotation = new THREE.Euler(0, Math.random() * Math.PI * 2, 0);
                     image_obj.Rotation = random_rotation;
+                    image_obj._FrameScale = new THREE.Vector3(1, 1, 1);
 
                     this._Images.push(image_obj);
+                    this.applyAspectRatioToImageObject(image_obj, image_path);
                 });
 
                 const material = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 0.1, fog: false });
@@ -558,6 +632,86 @@
                 geometry.setFromPoints(points);
                 const circle = new THREE.Line(geometry, material);
                 Scene.add(circle);
+            }
+            setupControllerCurvedPanel() {
+                const radius = 2.6;
+                const panel_front_z = 3.0;
+
+                this.curveTextPlane(this._Text_Controller, radius);
+                this.curveTextPlane(this._Text_Controller_Left_1, radius);
+                this.curveTextPlane(this._Text_Controller_Left_2, radius);
+                this.curveTextPlane(this._Text_Controller_Right_1, radius);
+                this.curveTextPlane(this._Text_Controller_Right_2, radius);
+
+                this.placeControllerTextOnCurve(this._Text_Controller, 0, 2.0, radius, panel_front_z);
+                this.placeControllerTextOnCurve(this._Text_Controller_Left_1, 0.5, 1.0, radius, panel_front_z);
+                this.placeControllerTextOnCurve(this._Text_Controller_Left_2, 0.5, 0.6, radius, panel_front_z);
+                this.placeControllerTextOnCurve(this._Text_Controller_Right_1, -0.5, 1.0, radius, panel_front_z);
+                this.placeControllerTextOnCurve(this._Text_Controller_Right_2, -0.5, 0.6, radius, panel_front_z);
+            }
+            curveTextPlane(text_plane, radius) {
+                const width = text_plane._Size_Geometry.x;
+                const height = text_plane._Size_Geometry.y;
+                const geometry = new THREE.PlaneGeometry(width, height, 48, 1);
+                const positions = geometry.attributes.position;
+
+                for (let i = 0; i < positions.count; i++) {
+                    const x = positions.getX(i);
+                    const z = radius - Math.sqrt(Math.max(0, radius * radius - x * x));
+                    positions.setZ(i, z);
+                }
+
+                positions.needsUpdate = true;
+                geometry.computeVertexNormals();
+                text_plane.Mesh_Front.geometry = geometry;
+                text_plane.Mesh_Back.geometry = geometry;
+            }
+            placeControllerTextOnCurve(text_plane, x_offset, y, radius, panel_front_z) {
+                const theta = x_offset / radius;
+                const z_offset = radius - Math.cos(theta) * radius;
+                text_plane.Position = new THREE.Vector3(
+                    Math.sin(theta) * radius,
+                    y,
+                    panel_front_z + z_offset + 0.01
+                );
+                text_plane.Rotation = new THREE.Vector3(0, Math.PI + theta, 0);
+            }
+            applyAspectRatioToImageObject(image_obj, image_path) {
+                const temp_image = new Image();
+                temp_image.onload = () => {
+                    const width = temp_image.width;
+                    const height = temp_image.height;
+                    if (!width || !height) return;
+
+                    const scale_x = width >= height ? width / height : 1;
+                    const scale_y = width >= height ? 1 : height / width;
+                    image_obj.Scale = new THREE.Vector2(scale_x, scale_y);
+                    image_obj._FrameScale = new THREE.Vector3(scale_x, 1, scale_y);
+                    this.updateFrameInstanceMatrix(image_obj);
+                };
+                temp_image.onerror = () => {
+                    image_obj.Scale = new THREE.Vector2(1, 1);
+                    image_obj._FrameScale = new THREE.Vector3(1, 1, 1);
+                    this.updateFrameInstanceMatrix(image_obj);
+                };
+                temp_image.src = image_path;
+            }
+            updateFrameInstanceMatrix(image_obj) {
+                if (!this.instancedMesh) return;
+
+                const index = this._Images.indexOf(image_obj);
+                if (index < 0) return;
+
+                const matrix = new THREE.Matrix4();
+                const position = new THREE.Vector3().copy(image_obj.Position);
+                const quaternion = new THREE.Quaternion().setFromEuler(image_obj.Rotation);
+                const local_rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+                quaternion.multiply(local_rotation);
+                const scale = image_obj._FrameScale || new THREE.Vector3(1, 1, 1);
+
+                matrix.compose(position, quaternion, scale);
+                this.instancedMesh.setMatrixAt(index, matrix);
+                this.instancedMesh.instanceMatrix.needsUpdate = true;
             }
 
         }
@@ -613,9 +767,11 @@
                         break;
                 }
 
-                if (Manager.State === "Playing" && Manager._Elevator.checkPlayerInElevator(Player) &&
-                    Manager._Elevator.checkButtonPressed(raycaster)) {
-                    Manager._Elevator.activateElevator(Player);
+                if (Manager.State === "Playing" && Manager._Elevator.checkPlayerInElevator(Player)) {
+                    const selectedFloor = Manager._Elevator.getFloorFromRaycast(raycaster);
+                    if (selectedFloor !== null) {
+                        Manager._Elevator.activateElevator(Player, selectedFloor);
+                    }
                 }
 
                 Manager.Timer_Input.Restart();
