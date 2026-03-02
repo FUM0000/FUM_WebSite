@@ -167,15 +167,15 @@
                     const y = startY - row * spacing;
                     const thetaCenter = thetaStart - col * thetaStep;
                     const thetaLabelLeft = thetaCenter - 0.06;
+                    const thetaButtonCandidateA = thetaCenter - 0.18;
+                    const thetaButtonCandidateB = thetaCenter + 0.18;
+                    const xA = Math.sin(thetaButtonCandidateA) * wallRadius;
+                    const xB = Math.sin(thetaButtonCandidateB) * wallRadius;
+                    const thetaButton = xA < xB ? thetaButtonCandidateA : thetaButtonCandidateB;
                     const labelText = `${this.floorNames[i]} ${this.floorDescriptions[i]}`;
                     const labelMesh = this.createCurvedWallLabelMesh(labelText, thetaLabelLeft, y, textRadius, 0.52, 0.05);
                     this.buttonPanel.add(labelMesh);
                     this.floorLabels.push(labelMesh);
-
-                    // Place the button using the actual left edge of the rendered label.
-                    const box = new THREE.Box3().setFromObject(labelMesh);
-                    const buttonX = Math.max(-wallRadius + 0.05, Math.min(wallRadius - 0.05, box.min.x - 0.05));
-                    const buttonZ = -Math.sqrt(Math.max(0.0001, wallRadius * wallRadius - buttonX * buttonX));
                     const buttonGeometry = new THREE.SphereGeometry(0.04, 20, 20);
                     const buttonMaterial = new THREE.MeshBasicMaterial({
                         color: 0xaa2222,
@@ -184,7 +184,11 @@
                         fog: false,
                     });
                     const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
-                    button.position.set(buttonX, y, buttonZ);
+                    button.position.set(
+                        Math.sin(thetaButton) * wallRadius,
+                        y,
+                        Math.cos(thetaButton) * wallRadius
+                    );
                     button.userData.floor = i;
                     this.buttonPanel.add(button);
                     this.floorButtons.push(button);
@@ -414,9 +418,9 @@
 
                         const main_category_text = new FC_TextPlane(Scene, Camera, main_category, "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY * 2));
                         main_category_text.Initialize();
-                        main_category_text.Rotating(true);
+                        main_category_text.Rotating(false);
                         main_category_text.Fog = false;
-                        main_category_text.Position = new THREE.Vector3(0, category_y + 4, 0);
+                        this.placeMainFloorTextOnElevatorCylinder(main_category_text, category_y + 4);
                         this._Category_Texts.push(main_category_text);
 
                         switch (main_category) {
@@ -648,6 +652,32 @@
                 this.placeControllerTextOnCurve(this._Text_Controller_Left_2, 0.5, 0.6, radius, panel_front_z);
                 this.placeControllerTextOnCurve(this._Text_Controller_Right_1, -0.5, 1.0, radius, panel_front_z);
                 this.placeControllerTextOnCurve(this._Text_Controller_Right_2, -0.5, 0.6, radius, panel_front_z);
+            }
+            placeMainFloorTextOnElevatorCylinder(text_plane, y) {
+                const radius = 0.92;
+                const z_offset = -0.05;
+                const width = text_plane._Size_Geometry.x;
+                const height = text_plane._Size_Geometry.y;
+                const geometry = new THREE.PlaneGeometry(width, height, 48, 1);
+                const positions = geometry.attributes.position;
+
+                for (let i = 0; i < positions.count; i++) {
+                    const localX = positions.getX(i);
+                    const localY = positions.getY(i);
+                    const theta = Math.PI + (localX / radius);
+                    positions.setX(i, Math.sin(theta) * radius);
+                    positions.setY(i, localY);
+                    positions.setZ(i, Math.cos(theta) * radius + z_offset);
+                }
+
+                positions.needsUpdate = true;
+                geometry.computeVertexNormals();
+                text_plane.Mesh_Front.geometry = geometry;
+                text_plane.Mesh_Back.geometry = geometry;
+                text_plane.Mesh_Front.position.set(0, y, 0);
+                text_plane.Mesh_Back.position.set(0, y, 0);
+                text_plane.Mesh_Front.rotation.set(0, 0, 0);
+                text_plane.Mesh_Back.rotation.set(0, 0, 0);
             }
             curveTextPlane(text_plane, radius) {
                 const width = text_plane._Size_Geometry.x;
