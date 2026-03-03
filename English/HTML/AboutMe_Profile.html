@@ -39,11 +39,12 @@
 
             <v-main id="Main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid class="pa-5">
+                    <v-container v-show="Ready_Page" fluid class="pa-5 profile-page">
 
-                        <v-row justify="center">
+                        <v-row justify="center" class="profile-layout-row">
 
-                            <v-col cols="12" md="8">
+                            <v-col cols="12" md="8" class="profile-hud-shell">
+
                                 <v-card class="mb-4 profile-card">
                                     <v-card-title class="text-h5 font-weight-bold py-3 d-flex justify-space-between">
                                         About Me
@@ -219,32 +220,349 @@
     </v-app>
 
     <style>
-        .profile-card,
-        .hobby-card,
-        .life-journey-card,
-        .job-offerings-card {
-            border-radius: 15px;
+        :root {
+            --hud-black: #05070a;
+            --hud-panel: #0c1017;
+            --hud-panel-2: #141923;
+            --hud-text: #f2f7ff;
+            --hud-muted: #c6cfde;
+            --hud-line: #8d98ab;
+            --hud-cyan: #34e7ff;
+            --hud-yellow: #d6bf55;
+        }
+
+        #Main {
+            position: relative;
             overflow: hidden;
-            transition: all 0.3s ease-in-out;
+            background:
+                radial-gradient(1200px 900px at 12% -10%, rgba(52, 231, 255, 0.22), transparent 58%),
+                radial-gradient(1100px 900px at 88% -20%, rgba(214, 191, 85, 0.2), transparent 60%),
+                linear-gradient(145deg, #030406 0%, #0a101a 44%, #05070a 100%);
+            animation: spectralDrift 8s ease-in-out infinite alternate;
         }
 
-        .profile-avatar {
-            border: 5px solid white;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        #Main::before {
+            content: "";
+            position: absolute;
+            inset: -45%;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 24% 30%, rgba(52, 231, 255, 0.2) 0 14%, transparent 32%),
+                radial-gradient(circle at 73% 67%, rgba(120, 143, 255, 0.14) 0 16%, transparent 40%),
+                radial-gradient(circle at 56% 50%, rgba(214, 191, 85, 0.16) 0 12%, transparent 34%);
+            filter: blur(44px) saturate(130%);
+            animation: morphField 13s ease-in-out infinite;
         }
 
-        .v-timeline-item__body {
+        #Main::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 3px),
+                repeating-linear-gradient(90deg, rgba(52, 231, 255, 0.07) 0 1px, transparent 1px 44px),
+                repeating-linear-gradient(0deg, rgba(214, 191, 85, 0.05) 0 1px, transparent 1px 44px);
+            mix-blend-mode: screen;
+            opacity: 0.24;
+            animation: gridWarp 14s linear infinite, glitchJitter 0.21s steps(2, end) infinite;
+        }
+
+        .profile-page {
+            position: relative;
+            z-index: 1;
+            color: var(--hud-text);
+        }
+
+        .profile-page::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                radial-gradient(circle, rgba(255, 255, 255, 0.4) 0.7px, transparent 0.9px),
+                radial-gradient(circle, rgba(245, 96, 132, 0.38) 0.8px, transparent 1px);
+            background-size: 46px 46px, 92px 92px;
+            background-position: 0 0, 18px 26px;
+            opacity: 0.2;
+            animation: starDrift 18s linear infinite;
+        }
+
+        .profile-hud-shell {
+            --cut-tl: 34px;
+            --cut-tr: 46px;
+            --cut-br: 54px;
+            --cut-bl: 44px;
+            --accent-line: 3px;
+            position: relative;
+            padding: 18px;
+            border: 2px solid rgba(214, 191, 85, 0.8);
+            background:
+                linear-gradient(135deg,
+                    transparent calc(var(--cut-tl) - var(--accent-line)),
+                    rgba(214, 191, 85, 0.95) calc(var(--cut-tl) - var(--accent-line)),
+                    rgba(214, 191, 85, 0.95) var(--cut-tl),
+                    transparent var(--cut-tl)) top left / 92px 92px no-repeat,
+                linear-gradient(225deg,
+                    transparent calc(var(--cut-tr) - var(--accent-line)),
+                    rgba(214, 191, 85, 0.95) calc(var(--cut-tr) - var(--accent-line)),
+                    rgba(214, 191, 85, 0.95) var(--cut-tr),
+                    transparent var(--cut-tr)) top right / 112px 112px no-repeat,
+                linear-gradient(315deg,
+                    transparent calc(var(--cut-br) - var(--accent-line)),
+                    rgba(214, 191, 85, 0.95) calc(var(--cut-br) - var(--accent-line)),
+                    rgba(214, 191, 85, 0.95) var(--cut-br),
+                    transparent var(--cut-br)) bottom right / 124px 124px no-repeat,
+                linear-gradient(45deg,
+                    transparent calc(var(--cut-bl) - var(--accent-line)),
+                    rgba(214, 191, 85, 0.95) calc(var(--cut-bl) - var(--accent-line)),
+                    rgba(214, 191, 85, 0.95) var(--cut-bl),
+                    transparent var(--cut-bl)) bottom left / 108px 108px no-repeat,
+                linear-gradient(180deg, rgba(4, 7, 11, 0.86), rgba(6, 10, 16, 0.94));
+            clip-path: polygon(0 var(--cut-tl), var(--cut-tl) 0, calc(100% - var(--cut-tr)) 0, 100% var(--cut-tr), 100% calc(100% - var(--cut-br)), calc(100% - var(--cut-br)) 100%, var(--cut-bl) 100%, 0 calc(100% - var(--cut-bl)));
+            box-shadow:
+                inset 0 0 0 1px rgba(214, 191, 85, 0.35),
+                0 0 24px rgba(214, 191, 85, 0.2),
+                0 0 80px rgba(52, 231, 255, 0.12);
+        }
+
+        .profile-hud-shell::before {
+            content: "";
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .profile-hud-shell::before {
+            left: 14px;
+            top: 54px;
+            bottom: 58px;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--hud-yellow), rgba(214, 191, 85, 0.05));
+            box-shadow: 0 0 12px rgba(214, 191, 85, 0.45);
+        }
+
+        .profile-page .profile-card,
+        .profile-page .hobby-card,
+        .profile-page .life-journey-card,
+        .profile-page .job-offerings-card {
+            position: relative;
+            border: 1px solid rgba(141, 152, 171, 0.82);
+            border-radius: 0;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(14, 19, 27, 0.94), rgba(9, 13, 20, 0.96)) !important;
+            clip-path: polygon(0 13px, 13px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 14px 30px rgba(0, 0, 0, 0.32);
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .profile-page .profile-card::before,
+        .profile-page .hobby-card::before,
+        .profile-page .life-journey-card::before,
+        .profile-page .job-offerings-card::before {
+            content: "";
+            position: absolute;
+            inset: 9px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            clip-path: polygon(0 9px, 9px 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+            pointer-events: none;
+        }
+
+        .profile-page .profile-card:hover,
+        .profile-page .hobby-card:hover,
+        .profile-page .life-journey-card:hover,
+        .profile-page .job-offerings-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(52, 231, 255, 0.8);
+            box-shadow: inset 0 0 0 1px rgba(52, 231, 255, 0.24), 0 18px 36px rgba(0, 0, 0, 0.38);
+        }
+
+        .profile-page .v-card__title {
+            background: linear-gradient(90deg, rgba(56, 62, 74, 0.86) 0 44%, rgba(22, 28, 38, 0.9) 44% 100%);
+            border-bottom: 1px solid rgba(141, 152, 171, 0.5);
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: 0.045em;
+            text-transform: uppercase;
+        }
+
+        .profile-page .v-card__text,
+        .profile-page .v-list-item__title,
+        .profile-page .v-list-item__content,
+        .profile-page .v-subheader,
+        .profile-page .subtitle-1,
+        .profile-page p,
+        .profile-page .text-caption,
+        .profile-page .font-weight-bold {
+            color: var(--hud-text) !important;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+        }
+
+        .profile-page .v-subheader {
+            color: #ffffff !important;
+            letter-spacing: 0.08em;
+        }
+
+        .profile-page a {
+            color: #9edcff !important;
+            text-decoration-color: rgba(158, 220, 255, 0.88);
+            text-underline-offset: 2px;
+        }
+
+        .profile-page .v-divider {
+            border-color: rgba(198, 207, 222, 0.34) !important;
+        }
+
+        .profile-page .profile-avatar {
+            border: 3px solid rgba(52, 231, 255, 0.76);
+            box-shadow: 0 0 0 2px rgba(214, 191, 85, 0.3), 0 0 28px rgba(52, 231, 255, 0.22);
+        }
+
+        .profile-page .v-btn.v-btn--icon {
+            background: linear-gradient(180deg, rgba(34, 41, 52, 0.9), rgba(20, 25, 33, 0.9)) !important;
+            border: 1px solid rgba(141, 152, 171, 0.82);
+            border-radius: 0;
+        }
+
+        .profile-page .v-btn.v-btn--icon .v-icon {
+            color: #f8fbff !important;
+        }
+
+        .profile-page .v-list-item__icon .v-icon {
+            color: var(--hud-cyan) !important;
+        }
+
+        .profile-page .theme--light.v-list,
+        .profile-page .v-list,
+        .profile-page .v-list-item,
+        .profile-page .v-list-item::before {
+            background: transparent !important;
+        }
+
+        .profile-page .v-chip {
+            background: linear-gradient(180deg, rgba(30, 37, 48, 0.96), rgba(20, 26, 35, 0.96)) !important;
+            border: 1px solid rgba(141, 152, 171, 0.74);
+            color: #eef4ff !important;
+            text-shadow: none;
+        }
+
+        .profile-page .v-timeline::before {
+            border-right: 2px solid rgba(52, 231, 255, 0.64);
+        }
+
+        .profile-page .v-timeline-item__dot {
+            box-shadow: 0 0 0 2px rgba(241, 247, 255, 0.52), 0 0 16px rgba(52, 231, 255, 0.35);
+        }
+
+        .profile-page .v-timeline-item__body {
             padding-left: 15px;
         }
 
-        .job-offerings-card .v-list-item__title {
+        .profile-page .job-offerings-card .v-list-item__title {
             white-space: normal;
             overflow: visible;
             text-overflow: clip;
         }
 
-        .subtitle-1 {
+        .profile-page .subtitle-1 {
             margin-bottom: 0 !important;
+        }
+
+        .profile-layout-row {
+            min-height: calc(100vh - 170px);
+            align-items: center;
+        }
+
+        @keyframes spectralDrift {
+            0% {
+                filter: hue-rotate(0deg) contrast(100%);
+            }
+
+            100% {
+                filter: hue-rotate(18deg) contrast(116%);
+            }
+        }
+
+        @keyframes morphField {
+            0% {
+                transform: translate3d(-4%, -2%, 0) scale(1) rotate(0deg);
+                border-radius: 42% 58% 51% 49% / 36% 47% 53% 64%;
+            }
+
+            35% {
+                transform: translate3d(8%, 3%, 0) scale(1.14) rotate(120deg);
+                border-radius: 58% 42% 36% 64% / 52% 36% 64% 48%;
+            }
+
+            70% {
+                transform: translate3d(3%, -7%, 0) scale(0.96) rotate(220deg);
+                border-radius: 44% 56% 61% 39% / 56% 59% 41% 44%;
+            }
+
+            100% {
+                transform: translate3d(-4%, -2%, 0) scale(1) rotate(360deg);
+                border-radius: 42% 58% 51% 49% / 36% 47% 53% 64%;
+            }
+        }
+
+        @keyframes gridWarp {
+            0% {
+                transform: perspective(520px) rotateX(14deg) translateY(0);
+                opacity: 0.22;
+            }
+
+            50% {
+                transform: perspective(560px) rotateX(17deg) translateY(20px);
+                opacity: 0.3;
+            }
+
+            100% {
+                transform: perspective(520px) rotateX(14deg) translateY(0);
+                opacity: 0.22;
+            }
+        }
+
+        @keyframes glitchJitter {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            25% {
+                transform: translate(-0.6%, 0.4%);
+            }
+
+            50% {
+                transform: translate(0.6%, -0.4%);
+            }
+
+            75% {
+                transform: translate(-0.4%, -0.5%);
+            }
+
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        @keyframes starDrift {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(-46px, -46px, 0);
+            }
+        }
+
+        @media (max-width: 960px) {
+            .profile-layout-row {
+                min-height: auto;
+                align-items: stretch;
+            }
+
+            .profile-hud-shell {
+                padding: 14px;
+                clip-path: polygon(0 22px, 22px 0, calc(100% - 26px) 0, 100% 26px, 100% calc(100% - 30px), calc(100% - 30px) 100%, 26px 100%, 0 calc(100% - 26px));
+            }
         }
     </style>
 
