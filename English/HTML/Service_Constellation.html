@@ -229,6 +229,8 @@
 
                         <label>日付: <input type="date" id="date"></label>
                         <label>時間 (現地時): <input type="time" id="time" step="1"></label>
+                        <label><input type="checkbox" id="showHorizon" checked onchange="updateGuideVisibility()"> 地平線を表示</label>
+                        <label><input type="checkbox" id="showDirections" checked onchange="updateGuideVisibility()"> 方角 (N/E/S/W) を表示</label>
                         <button type="button" class="button" onclick="simulate()">表示更新</button>
                     </div>
                 </div>
@@ -1086,6 +1088,8 @@
 
         let scene, camera, renderer, controls, composer;
         let bloomPass;
+        let horizonGroup = null;
+        let directionGroup = null;
 
         // 国ごとのデフォルト設定（東京に変更済み）
         const countryDefaults = {
@@ -1207,8 +1211,100 @@
                 { passive: false }
             );
 
+            createGuides();
+            window.updateGuideVisibility();
+
             window.addEventListener('resize', onWindowResize);
             animate();
+        }
+
+        function createLabelSprite(text, color = '#3c84c6') {
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 160;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = 'bold 86px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = color;
+            ctx.shadowColor = '#00131f';
+            ctx.shadowBlur = 12;
+            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            const material = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                depthTest: false,
+                depthWrite: false
+            });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(300, 150, 1);
+            return sprite;
+        }
+
+        function createGuides() {
+            const guideRadius = 610;
+
+            horizonGroup = new THREE.Group();
+            horizonGroup.name = 'horizonGuide';
+            const horizonPoints = [];
+            const segments = 128;
+            for (let i = 0; i <= segments; i++) {
+                const a = (i / segments) * Math.PI * 2;
+                horizonPoints.push(new THREE.Vector3(
+                    guideRadius * Math.cos(a),
+                    0,
+                    guideRadius * Math.sin(a)
+                ));
+            }
+            const horizonGeometry = new THREE.BufferGeometry().setFromPoints(horizonPoints);
+            const horizonMaterial = new THREE.LineBasicMaterial({
+                color: 0x3c84c6,
+                transparent: true,
+                opacity: 0.8,
+                depthTest: false
+            });
+            horizonGroup.add(new THREE.Line(horizonGeometry, horizonMaterial));
+            scene.add(horizonGroup);
+
+            directionGroup = new THREE.Group();
+            directionGroup.name = 'directionGuide';
+            const dirs = [
+                { label: 'N', az: Math.PI },
+                { label: 'E', az: 1.5 * Math.PI },
+                { label: 'S', az: 0 },
+                { label: 'W', az: 0.5 * Math.PI }
+            ];
+
+            dirs.forEach(dir => {
+                const innerR = guideRadius - 20;
+                const outerR = guideRadius + 20;
+                const x1 = innerR * Math.cos(dir.az);
+                const z1 = innerR * Math.sin(dir.az);
+                const x2 = outerR * Math.cos(dir.az);
+                const z2 = outerR * Math.sin(dir.az);
+                const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(x1, 0, z1),
+                    new THREE.Vector3(x2, 0, z2)
+                ]);
+                const lineMat = new THREE.LineBasicMaterial({
+                    color: 0x7db9f2,
+                    transparent: true,
+                    opacity: 0.9,
+                    depthTest: false
+                });
+                directionGroup.add(new THREE.Line(lineGeo, lineMat));
+
+                const labelR = guideRadius + 38;
+                const sprite = createLabelSprite(dir.label);
+                sprite.position.set(labelR * Math.cos(dir.az), 4, labelR * Math.sin(dir.az));
+                directionGroup.add(sprite);
+            });
+
+            scene.add(directionGroup);
         }
 
         function onWindowResize() {
@@ -1282,6 +1378,13 @@
                 container.classList.add('collapsed');
                 toggleBtn.textContent = '開く ▽';
             }
+        };
+
+        window.updateGuideVisibility = function () {
+            const showHorizon = document.getElementById('showHorizon')?.checked ?? true;
+            const showDirections = document.getElementById('showDirections')?.checked ?? true;
+            if (horizonGroup) horizonGroup.visible = showHorizon;
+            if (directionGroup) directionGroup.visible = showDirections;
         };
 
         // 現在の日時を入力欄にセット（日本時間）
@@ -1451,6 +1554,7 @@
             updateDefaultByCountry();
             setCurrentDateTime();
             simulate();
+            window.updateGuideVisibility();
         });
 
         window.vue = new Vue({
