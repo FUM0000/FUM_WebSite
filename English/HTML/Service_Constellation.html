@@ -78,12 +78,12 @@
             box-sizing: border-box;
             z-index: 100;
             pointer-events: auto;
-            transition: max-height 0.25s ease, padding 0.25s ease;
+            transition: none;
         }
 
         #controls.collapsed {
             max-height: 3rem;
-            padding: 8px 16px;
+            padding: 16px;
             overflow-y: hidden;
             /* 閉じているときはスクロール不可 */
         }
@@ -119,6 +119,84 @@
         /* 閉じているときは中身を非表示にする */
         #controls.collapsed #controls-body {
             display: none;
+        }
+
+        #learn-controls {
+            position: fixed;
+            bottom: 200px;
+            left: 0;
+            right: 0;
+            top: auto;
+            width: 100%;
+            min-width: 300px;
+            max-height: 28vh;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 16px;
+            border-radius: 12px 12px 0 0;
+            box-sizing: border-box;
+            z-index: 100;
+            pointer-events: auto;
+            transition: none;
+        }
+
+        #learn-controls.collapsed {
+            max-height: 3rem;
+            padding: 16px;
+            overflow-y: hidden;
+        }
+
+        #learn-controls-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        #learn-controls-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        #learn-controls-toggle {
+            background: transparent;
+            border: 1px solid #888;
+            color: #fff;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        #learn-controls-body {
+            overflow: hidden;
+        }
+
+        #learn-controls.collapsed #learn-controls-body {
+            display: none;
+        }
+
+        #constellation-learning-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 8px;
+        }
+
+        .constellation-item {
+            border: 1px solid #355a7a;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: rgba(22, 34, 48, 0.6);
+            line-height: 1.35;
+            font-size: 0.92rem;
+        }
+
+        .constellation-item strong {
+            color: #cde8ff;
+            font-size: 0.98rem;
         }
 
         /* ラベルをより読みやすく、指でタップしやすく */
@@ -178,6 +256,24 @@
                 overflow-y: hidden;
             }
 
+            #learn-controls {
+                position: absolute;
+                top: 10px;
+                left: 360px;
+                bottom: auto;
+                right: auto;
+                width: 340px;
+                max-height: 78vh;
+                padding: 12px;
+                border-radius: 8px;
+                background: rgba(0, 0, 0, 0.65);
+            }
+
+            #learn-controls.collapsed {
+                max-height: 3rem;
+                overflow-y: hidden;
+            }
+
             label {
                 display: block;
                 margin: 6px 0;
@@ -232,6 +328,19 @@
                         <label><input type="checkbox" id="showHorizon" checked onchange="updateGuideVisibility()"> 地平線を表示</label>
                         <label><input type="checkbox" id="showDirections" checked onchange="updateGuideVisibility()"> 方角 (N/E/S/W) を表示</label>
                         <button type="button" class="button" onclick="simulate()">表示更新</button>
+                    </div>
+                </div>
+
+                <div id="learn-controls" class="collapsed">
+                    <div id="learn-controls-header" onclick="toggleLearnControls()">
+                        <span id="learn-controls-title">星座を学ぶ (88)</span>
+                        <button id="learn-controls-toggle" type="button">開く ▽</button>
+                    </div>
+                    <div id="learn-controls-body">
+                        <label>星座を選択:
+                            <select id="learn-constellation-select" onchange="selectConstellationForLearning()"></select>
+                        </label>
+                        <div id="constellation-learning-description" class="constellation-item"></div>
                     </div>
                 </div>
             </v-main>
@@ -1380,6 +1489,74 @@
             }
         };
 
+        window.toggleLearnControls = function () {
+            const container = document.getElementById('learn-controls');
+            const toggleBtn = document.getElementById('learn-controls-toggle');
+            const isCollapsed = container.classList.contains('collapsed');
+            if (isCollapsed) {
+                container.classList.remove('collapsed');
+                toggleBtn.textContent = '閉じる △';
+            } else {
+                container.classList.add('collapsed');
+                toggleBtn.textContent = '開く ▽';
+            }
+        };
+
+        const constellationLearningData = [
+            { en: 'Andromeda', abbr: 'And', ja: 'アンドロメダ座' }, { en: 'Antlia', abbr: 'Ant', ja: 'ポンプ座' },
+            { en: 'Apus', abbr: 'Aps', ja: 'ふうちょう座' }, { en: 'Aquarius', abbr: 'Aqr', ja: 'みずがめ座' },
+            { en: 'Aquila', abbr: 'Aql', ja: 'わし座' }, { en: 'Ara', abbr: 'Ara', ja: 'さいだん座' },
+            { en: 'Aries', abbr: 'Ari', ja: 'おひつじ座' }, { en: 'Auriga', abbr: 'Aur', ja: 'ぎょしゃ座' },
+            { en: 'Bootes', abbr: 'Boo', ja: 'うしかい座' }, { en: 'Caelum', abbr: 'Cae', ja: 'ちょうこくぐ座' },
+            { en: 'Camelopardalis', abbr: 'Cam', ja: 'きりん座' }, { en: 'Cancer', abbr: 'Cnc', ja: 'かに座' },
+            { en: 'Canes Venatici', abbr: 'CVn', ja: 'りょうけん座' }, { en: 'Canis Major', abbr: 'CMa', ja: 'おおいぬ座' },
+            { en: 'Canis Minor', abbr: 'CMi', ja: 'こいぬ座' }, { en: 'Capricornus', abbr: 'Cap', ja: 'やぎ座' },
+            { en: 'Carina', abbr: 'Car', ja: 'りゅうこつ座' }, { en: 'Cassiopeia', abbr: 'Cas', ja: 'カシオペヤ座' },
+            { en: 'Centaurus', abbr: 'Cen', ja: 'ケンタウルス座' }, { en: 'Cepheus', abbr: 'Cep', ja: 'ケフェウス座' },
+            { en: 'Cetus', abbr: 'Cet', ja: 'くじら座' }, { en: 'Chamaeleon', abbr: 'Cha', ja: 'カメレオン座' },
+            { en: 'Circinus', abbr: 'Cir', ja: 'コンパス座' }, { en: 'Columba', abbr: 'Col', ja: 'はと座' },
+            { en: 'Coma Berenices', abbr: 'Com', ja: 'かみのけ座' }, { en: 'Corona Australis', abbr: 'CrA', ja: 'みなみのかんむり座' },
+            { en: 'Corona Borealis', abbr: 'CrB', ja: 'かんむり座' }, { en: 'Corvus', abbr: 'Crv', ja: 'からす座' },
+            { en: 'Crater', abbr: 'Crt', ja: 'コップ座' }, { en: 'Crux', abbr: 'Cru', ja: 'みなみじゅうじ座' },
+            { en: 'Cygnus', abbr: 'Cyg', ja: 'はくちょう座' }, { en: 'Delphinus', abbr: 'Del', ja: 'いるか座' },
+            { en: 'Dorado', abbr: 'Dor', ja: 'かじき座' }, { en: 'Draco', abbr: 'Dra', ja: 'りゅう座' },
+            { en: 'Equuleus', abbr: 'Equ', ja: 'こうま座' }, { en: 'Eridanus', abbr: 'Eri', ja: 'エリダヌス座' },
+            { en: 'Fornax', abbr: 'For', ja: 'ろ座' }, { en: 'Gemini', abbr: 'Gem', ja: 'ふたご座' },
+            { en: 'Grus', abbr: 'Gru', ja: 'つる座' }, { en: 'Hercules', abbr: 'Her', ja: 'ヘルクレス座' },
+            { en: 'Horologium', abbr: 'Hor', ja: 'とけい座' }, { en: 'Hydra', abbr: 'Hya', ja: 'うみへび座' },
+            { en: 'Hydrus', abbr: 'Hyi', ja: 'みずへび座' }, { en: 'Indus', abbr: 'Ind', ja: 'インディアン座' },
+            { en: 'Lacerta', abbr: 'Lac', ja: 'とかげ座' }, { en: 'Leo', abbr: 'Leo', ja: 'しし座' },
+            { en: 'Leo Minor', abbr: 'LMi', ja: 'こじし座' }, { en: 'Lepus', abbr: 'Lep', ja: 'うさぎ座' },
+            { en: 'Libra', abbr: 'Lib', ja: 'てんびん座' }, { en: 'Lupus', abbr: 'Lup', ja: 'おおかみ座' },
+            { en: 'Lynx', abbr: 'Lyn', ja: 'やまねこ座' }, { en: 'Lyra', abbr: 'Lyr', ja: 'こと座' },
+            { en: 'Mensa', abbr: 'Men', ja: 'テーブルさん座' }, { en: 'Microscopium', abbr: 'Mic', ja: 'けんびきょう座' },
+            { en: 'Monoceros', abbr: 'Mon', ja: 'いっかくじゅう座' }, { en: 'Musca', abbr: 'Mus', ja: 'はえ座' },
+            { en: 'Norma', abbr: 'Nor', ja: 'じょうぎ座' }, { en: 'Octans', abbr: 'Oct', ja: 'はちぶんぎ座' },
+            { en: 'Ophiuchus', abbr: 'Oph', ja: 'へびつかい座' }, { en: 'Orion', abbr: 'Ori', ja: 'オリオン座' },
+            { en: 'Pavo', abbr: 'Pav', ja: 'くじゃく座' }, { en: 'Pegasus', abbr: 'Peg', ja: 'ペガスス座' },
+            { en: 'Perseus', abbr: 'Per', ja: 'ペルセウス座' }, { en: 'Phoenix', abbr: 'Phe', ja: 'ほうおう座' },
+            { en: 'Pictor', abbr: 'Pic', ja: 'がか座' }, { en: 'Pisces', abbr: 'Psc', ja: 'うお座' },
+            { en: 'Piscis Austrinus', abbr: 'PsA', ja: 'みなみのうお座' }, { en: 'Puppis', abbr: 'Pup', ja: 'とも座' },
+            { en: 'Pyxis', abbr: 'Pyx', ja: 'らしんばん座' }, { en: 'Reticulum', abbr: 'Ret', ja: 'レチクル座' },
+            { en: 'Sagitta', abbr: 'Sge', ja: 'や座' }, { en: 'Sagittarius', abbr: 'Sgr', ja: 'いて座' },
+            { en: 'Scorpius', abbr: 'Sco', ja: 'さそり座' }, { en: 'Sculptor', abbr: 'Scl', ja: 'ちょうこくしつ座' },
+            { en: 'Scutum', abbr: 'Sct', ja: 'たて座' }, { en: 'Serpens', abbr: 'Ser', ja: 'へび座' },
+            { en: 'Sextans', abbr: 'Sex', ja: 'ろくぶんぎ座' }, { en: 'Taurus', abbr: 'Tau', ja: 'おうし座' },
+            { en: 'Telescopium', abbr: 'Tel', ja: 'ぼうえんきょう座' }, { en: 'Triangulum', abbr: 'Tri', ja: 'さんかく座' },
+            { en: 'Triangulum Australe', abbr: 'TrA', ja: 'みなみのさんかく座' }, { en: 'Tucana', abbr: 'Tuc', ja: 'きょしちょう座' },
+            { en: 'Ursa Major', abbr: 'UMa', ja: 'おおぐま座' }, { en: 'Ursa Minor', abbr: 'UMi', ja: 'こぐま座' },
+            { en: 'Vela', abbr: 'Vel', ja: 'ほ座' }, { en: 'Virgo', abbr: 'Vir', ja: 'おとめ座' },
+            { en: 'Volans', abbr: 'Vol', ja: 'とびうお座' }, { en: 'Vulpecula', abbr: 'Vul', ja: 'こぎつね座' }
+        ];
+
+        function renderConstellationLearningList() {
+            const container = document.getElementById('constellation-learning-list');
+            if (!container) return;
+            container.innerHTML = constellationLearningData
+                .map(c => `<div class="constellation-item"><strong>${c.en}</strong><br>${c.ja}<br>IAU: ${c.abbr}</div>`)
+                .join('');
+        }
+
         window.updateGuideVisibility = function () {
             const showHorizon = document.getElementById('showHorizon')?.checked ?? true;
             const showDirections = document.getElementById('showDirections')?.checked ?? true;
@@ -1555,6 +1732,7 @@
             setCurrentDateTime();
             simulate();
             window.updateGuideVisibility();
+            renderConstellationLearningList();
         });
 
         window.vue = new Vue({
