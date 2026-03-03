@@ -61,16 +61,21 @@
             pointer-events: auto;
         }
 
+        :root {
+            --mobile-system-bar-h: 56px;
+            --mobile-footer-h: 56px;
+        }
+
         #controls {
             position: fixed;
-            bottom: 30px;
+            bottom: calc(var(--mobile-footer-h) + env(safe-area-inset-bottom));
             left: 0;
             right: 0;
             top: auto;
             width: 100%;
-            min-width: 300px;
-            max-height: 17vh;
-            overflow-y: auto;
+            min-width: 0;
+            max-height: 3rem;
+            overflow-y: hidden;
             background: rgba(0, 0, 0, 0.75);
             color: white;
             padding: 16px;
@@ -86,6 +91,10 @@
             padding: 16px;
             overflow-y: hidden;
             /* 閉じているときはスクロール不可 */
+        }
+
+        #controls:not(.collapsed) {
+            overflow-y: auto;
         }
 
         #controls-header {
@@ -123,14 +132,14 @@
 
         #learn-controls {
             position: fixed;
-            bottom: 200px;
+            bottom: calc(var(--mobile-footer-h) + env(safe-area-inset-bottom) + 3.2rem + 4px);
             left: 0;
             right: 0;
             top: auto;
             width: 100%;
-            min-width: 300px;
-            max-height: 28vh;
-            overflow-y: auto;
+            min-width: 0;
+            max-height: 3rem;
+            overflow-y: hidden;
             background: rgba(0, 0, 0, 0.75);
             color: white;
             padding: 16px;
@@ -145,6 +154,19 @@
             max-height: 3rem;
             padding: 16px;
             overflow-y: hidden;
+        }
+
+        #learn-controls:not(.collapsed) {
+            overflow-y: auto;
+        }
+
+        #controls.mobile-open,
+        #learn-controls.mobile-open {
+            top: calc(var(--mobile-system-bar-h) + env(safe-area-inset-top));
+            bottom: calc(var(--mobile-footer-h) + env(safe-area-inset-bottom));
+            max-height: calc(100vh - var(--mobile-system-bar-h) - var(--mobile-footer-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            border-radius: 0;
+            z-index: 120;
         }
 
         #learn-controls-header {
@@ -172,31 +194,121 @@
         }
 
         #learn-controls-body {
-            overflow: hidden;
+            overflow: visible;
         }
 
         #learn-controls.collapsed #learn-controls-body {
             display: none;
         }
 
-        #constellation-learning-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 8px;
+        .learn-dropdown {
+            position: relative;
+            margin-top: 6px;
+        }
+
+        .learn-dropdown-toggle {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 1.02rem;
+            text-align: left;
+            color: #fff;
+            background: #111;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .learn-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            max-height: 260px;
+            overflow-y: auto;
+            background: rgba(8, 14, 22, 0.98);
+            border: 1px solid #4f6f8d;
+            border-radius: 8px;
+            z-index: 20;
+        }
+
+        .learn-dropdown.open .learn-dropdown-menu {
+            display: block;
+        }
+
+        .learn-dropdown-search-wrap {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            padding: 8px;
+            background: rgba(10, 18, 28, 0.98);
+            border-bottom: 1px solid rgba(83, 133, 177, 0.35);
+        }
+
+        #learn-constellation-filter {
+            width: 100%;
+            margin: 0;
+        }
+
+        .learn-dropdown-options {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .learn-option {
+            width: 100%;
+            border: none;
+            border-bottom: 1px solid rgba(83, 133, 177, 0.2);
+            background: transparent;
+            color: #e9f3ff;
+            text-align: left;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+
+        .learn-option:hover {
+            background: rgba(63, 103, 140, 0.25);
+        }
+
+        .learn-option.active {
+            background: rgba(92, 149, 197, 0.35);
+            font-weight: 700;
         }
 
         .constellation-item {
             border: 1px solid #355a7a;
-            border-radius: 8px;
-            padding: 8px 10px;
-            background: rgba(22, 34, 48, 0.6);
-            line-height: 1.35;
-            font-size: 0.92rem;
+            border-radius: 10px;
+            padding: 12px;
+            background: linear-gradient(180deg, rgba(20, 32, 46, 0.78), rgba(14, 24, 36, 0.78));
+            line-height: 1.6;
+            font-size: 0.95rem;
+            margin-top: 10px;
         }
 
-        .constellation-item strong {
-            color: #cde8ff;
-            font-size: 0.98rem;
+        .learn-section {
+            padding: 10px 12px;
+            border: 1px solid rgba(83, 133, 177, 0.35);
+            border-radius: 8px;
+            background: rgba(16, 28, 40, 0.62);
+        }
+
+        .learn-section + .learn-section {
+            margin-top: 10px;
+        }
+
+        .learn-heading {
+            display: block;
+            color: #d7ecff;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            font-size: 0.96rem;
+            margin-bottom: 4px;
+        }
+
+        .learn-body {
+            color: #e6f1fb;
+            font-size: 0.93rem;
         }
 
         /* ラベルをより読みやすく、指でタップしやすく */
@@ -210,7 +322,8 @@
         label select,
         label input[type="number"],
         label input[type="date"],
-        label input[type="time"] {
+        label input[type="time"],
+        label input[type="text"] {
             margin-top: 6px;
             padding: 10px 12px;
             font-size: 1.1rem;
@@ -220,6 +333,16 @@
             color: white;
             width: 100%;
             box-sizing: border-box;
+        }
+
+        label select:focus,
+        label input[type="number"]:focus,
+        label input[type="date"]:focus,
+        label input[type="time"]:focus,
+        label input[type="text"]:focus {
+            outline: 2px solid #ffffff;
+            outline-offset: 2px;
+            border-color: #9bc9ff;
         }
 
         /* ボタンも大きく、タップしやすく */
@@ -243,7 +366,7 @@
                 left: 10px;
                 bottom: auto;
                 right: auto;
-                width: auto;
+                width: 330px;
                 max-height: none;
                 padding: 12px;
                 border-radius: 8px;
@@ -259,10 +382,10 @@
             #learn-controls {
                 position: absolute;
                 top: 10px;
-                left: 360px;
+                left: 348px;
                 bottom: auto;
                 right: auto;
-                width: 340px;
+                width: 330px;
                 max-height: 78vh;
                 padding: 12px;
                 border-radius: 8px;
@@ -333,12 +456,22 @@
 
                 <div id="learn-controls" class="collapsed">
                     <div id="learn-controls-header" onclick="toggleLearnControls()">
-                        <span id="learn-controls-title">星座を学ぶ (88)</span>
+                        <span id="learn-controls-title">星座を学ぶ</span>
                         <button id="learn-controls-toggle" type="button">開く ▽</button>
                     </div>
                     <div id="learn-controls-body">
                         <label>星座を選択:
-                            <select id="learn-constellation-select" onchange="selectConstellationForLearning()"></select>
+                            <div id="learn-dropdown" class="learn-dropdown">
+                                <button type="button" id="learn-dropdown-toggle" class="learn-dropdown-toggle"
+                                    onclick="toggleLearnDropdown()">星座を選択</button>
+                                <div id="learn-dropdown-menu" class="learn-dropdown-menu">
+                                    <div class="learn-dropdown-search-wrap">
+                                        <input type="text" id="learn-constellation-filter" placeholder="検索"
+                                            oninput="filterConstellationList()" onclick="event.stopPropagation()">
+                                    </div>
+                                    <div id="learn-constellation-options" class="learn-dropdown-options"></div>
+                                </div>
+                            </div>
                         </label>
                         <div id="constellation-learning-description" class="constellation-item"></div>
                     </div>
@@ -1474,31 +1607,59 @@
                     : `標準子午線: --- (カスタム)`;
         };
 
+        function isMobilePanelMode() {
+            return window.matchMedia('(max-width: 767px)').matches;
+        }
+
+        function closePanel(panelId, toggleId) {
+            const panel = document.getElementById(panelId);
+            const toggle = document.getElementById(toggleId);
+            if (!panel || !toggle) return;
+            panel.classList.add('collapsed');
+            panel.classList.remove('mobile-open');
+            toggle.textContent = '開く ▽';
+        }
+
+        function openPanel(panelId, toggleId, otherPanelId, otherToggleId) {
+            const panel = document.getElementById(panelId);
+            const toggle = document.getElementById(toggleId);
+            if (!panel || !toggle) return;
+            if (isMobilePanelMode()) {
+                closePanel(otherPanelId, otherToggleId);
+                panel.classList.add('mobile-open');
+            } else {
+                panel.classList.remove('mobile-open');
+            }
+            panel.classList.remove('collapsed');
+            toggle.textContent = '閉じる △';
+        }
+
+        function syncPanelLayoutMode() {
+            if (!isMobilePanelMode()) {
+                document.getElementById('controls')?.classList.remove('mobile-open');
+                document.getElementById('learn-controls')?.classList.remove('mobile-open');
+            }
+        }
+
         // コントロールの開閉
         window.toggleControls = function () {
             const container = document.getElementById('controls');
-            const toggleBtn = document.getElementById('controls-toggle');
 
             const isCollapsed = container.classList.contains('collapsed');
             if (isCollapsed) {
-                container.classList.remove('collapsed');
-                toggleBtn.textContent = '閉じる △';
+                openPanel('controls', 'controls-toggle', 'learn-controls', 'learn-controls-toggle');
             } else {
-                container.classList.add('collapsed');
-                toggleBtn.textContent = '開く ▽';
+                closePanel('controls', 'controls-toggle');
             }
         };
 
         window.toggleLearnControls = function () {
             const container = document.getElementById('learn-controls');
-            const toggleBtn = document.getElementById('learn-controls-toggle');
             const isCollapsed = container.classList.contains('collapsed');
             if (isCollapsed) {
-                container.classList.remove('collapsed');
-                toggleBtn.textContent = '閉じる △';
+                openPanel('learn-controls', 'learn-controls-toggle', 'controls', 'controls-toggle');
             } else {
-                container.classList.add('collapsed');
-                toggleBtn.textContent = '開く ▽';
+                closePanel('learn-controls', 'learn-controls-toggle');
             }
         };
 
@@ -1549,12 +1710,216 @@
             { en: 'Volans', abbr: 'Vol', ja: 'とびうお座' }, { en: 'Vulpecula', abbr: 'Vul', ja: 'こぎつね座' }
         ];
 
-        function renderConstellationLearningList() {
-            const container = document.getElementById('constellation-learning-list');
-            if (!container) return;
-            container.innerHTML = constellationLearningData
-                .map(c => `<div class="constellation-item"><strong>${c.en}</strong><br>${c.ja}<br>IAU: ${c.abbr}</div>`)
+        const mainStarByConstellation = {
+            Andromeda: 'Alpheratz (Alpha And)', Antlia: 'Alpha Antliae', Apus: 'Alpha Apodis', Aquarius: 'Sadalsuud',
+            Aquila: 'Altair', Ara: 'Beta Arae', Aries: 'Hamal', Auriga: 'Capella', Bootes: 'Arcturus',
+            Caelum: 'Alpha Caeli A', Camelopardalis: 'Beta Camelopardalis', Cancer: 'Beta Cnc',
+            'Canes Venatici': 'Cor Caroli', 'Canis Major': 'Sirius A', 'Canis Minor': 'Procyon', Capricornus: 'Deneb Algedi',
+            Carina: 'Canopus', Cassiopeia: 'Alpha Cas', Centaurus: 'Rigil Kentaurus', Cepheus: 'Alderamin',
+            Cetus: 'Diphda', Chamaeleon: 'Alpha Chamaeleontis', Circinus: 'Alpha Circini', Columba: 'Phact',
+            'Coma Berenices': 'Beta Comae Berenices', 'Corona Australis': 'Meridiana', 'Corona Borealis': 'Alphecca',
+            Corvus: 'Gienah', Crater: 'Delta Crateris', Crux: 'Mimosa', Cygnus: 'Deneb', Delphinus: 'Rotanev',
+            Dorado: 'Alpha Doradus', Draco: 'Eltanin', Equuleus: 'Kitalpha', Eridanus: 'Achernar', Fornax: 'Dalim',
+            Gemini: 'Pollux', Grus: 'Alnair', Hercules: 'Kornephoros', Horologium: 'Alpha Horologii', Hydra: 'Alphard',
+            Hydrus: 'Beta Hydri', Indus: 'Alpha Indi', Lacerta: 'Alpha Lacertae', Leo: 'Regulus', 'Leo Minor': 'Praecipua',
+            Lepus: 'Alpha Lep', Libra: 'Zubeneschamali', Lupus: 'Alpha Lupi', Lynx: 'Alpha Lyncis', Lyra: 'Vega',
+            Mensa: 'Alpha Mensae', Microscopium: 'Gamma Microscopii', Monoceros: 'Alpha Monocerotis', Musca: 'Alpha Muscae',
+            Norma: 'Gamma2 Normae', Octans: 'Nu Octantis', Ophiuchus: 'Rasalhague', Orion: 'Rigel', Pavo: 'Peacock',
+            Pegasus: 'Enif', Perseus: 'Alpha Per', Phoenix: 'Ankaa', Pictor: 'Alpha Pictoris', Pisces: 'Alpherg',
+            'Piscis Austrinus': 'Fomalhaut', Puppis: 'Naos', Pyxis: 'Alpha Pyxidis', Reticulum: 'Alpha Reticuli',
+            Sagitta: 'Gamma Sagittae', Sagittarius: 'Kaus Australis', Scorpius: 'Antares', Sculptor: 'Alpha Sculptoris',
+            Scutum: 'Alpha Scuti', Serpens: 'Unukalhai', Sextans: 'Alpha Sextantis', Taurus: 'Aldebaran',
+            Telescopium: 'Alpha Telescopii', Triangulum: 'Beta Trianguli A', 'Triangulum Australe': 'Atria', Tucana: 'Alpha Tucanae',
+            'Ursa Major': 'Alioth', 'Ursa Minor': 'Polaris', Vela: 'Gamma2 Velorum WR', Virgo: 'Spica',
+            Volans: 'Gamma2 Volantis', Vulpecula: 'Anser'
+        };
+
+        const representativeObjectByConstellation = {
+            Andromeda: '主星は Alpheratz。M31アンドロメダ銀河も同じ領域で有名です。',
+            Orion: '主星は Rigel。M42オリオン大星雲は代表的な星形成領域です。',
+            Taurus: '主星は Aldebaran。プレアデス星団(M45)とヒアデス星団が目印です。',
+            Perseus: '主星は Alpha Per(Mirfak)。二重星団(h-χ)が見どころです。',
+            'Canis Major': '主星は Sirius A。M41散開星団も観察対象として有名です。',
+            Carina: '主星は Canopus。ηカリーナ星雲(NGC 3372)が代表的です。',
+            Cygnus: '主星は Deneb。北アメリカ星雲(NGC 7000)が近くにあります。',
+            Monoceros: '主星は Alpha Monocerotis。バラ星雲(Rosette)が代表的です。',
+            Sagittarius: '主星は Kaus Australis。M8干潟星雲など星雲・星団が豊富です。',
+            Scorpius: '主星は Antares。M4球状星団が近くで見つけやすいです。',
+            Vela: '主星は Gamma2 Velorum WR。ベラ超新星残骸が有名です。'
+        };
+
+        const greekMythByConstellation = {
+            Andromeda: '王女アンドロメダが海の怪物の生け贄にされ、英雄ペルセウスに救われる物語です。',
+            Aquarius: '神々の給仕となった美少年ガニュメデスを水瓶を持つ姿で表します。',
+            Aquila: 'ゼウスの鷲として描かれ、ガニュメデスを運ぶ役割を担います。',
+            Aries: '金毛の羊クリュソマロスに由来し、アルゴー船以前の王家伝説と結びつきます。',
+            Auriga: '戦車の発明者エリクトニオスを御者として描いた説が広く知られます。',
+            Bootes: '大熊を追う牛飼い（またはアルカス）として語られる星座です。',
+            Cancer: 'ヘラクレスとヒュドラの戦いでヘラが送った蟹が天に上げられた姿です。',
+            Capricornus: '怪物テュポンから逃げる際の牧神パンの半山羊半魚の姿に由来します。',
+            Cassiopeia: '美しさを誇った王妃カシオペヤが罰として天に置かれた物語です。',
+            Cepheus: 'アンドロメダの父王ケフェウスとして同じ神話群に登場します。',
+            Cetus: 'アンドロメダを襲うために遣わされた海の怪物ケートスです。',
+            'Canis Major': '狩人オリオンに付き従う猟犬として伝えられます。',
+            'Canis Minor': 'オリオンに従うもう1匹の猟犬として扱われます。',
+            'Corona Borealis': 'アリアドネがディオニュソスから贈られた冠が天に上がった姿です。',
+            Corvus: 'アポロンの使いのカラスの神話（怠慢と罰）と結びつきます。',
+            Crater: 'アポロン神話でカラスが持つ杯として隣のからす座・うみへび座と並びます。',
+            Cygnus: 'ゼウスの白鳥の姿、またはオルフェウス関連の白鳥として語られることがあります。',
+            Draco: 'ヘスペリデスの園の黄金の林檎を守る竜ラドンに重ねられます。',
+            Eridanus: '太陽神の子パエトンが墜ちた川として語られる天の川です。',
+            Gemini: '双子の兄弟カストルとポルックスの友愛を表す星座です。',
+            Hercules: '英雄ヘラクレスの姿で、12功業の神話群と結びつきます。',
+            Hydra: 'ヘラクレスが戦ったレルネの大蛇ヒュドラに由来します。',
+            Leo: 'ヘラクレスが退治したネメアの獅子を表します。',
+            Lepus: 'オリオンの足元に描かれる兎で、狩りの文脈で語られます。',
+            Libra: '正義の女神アストライア（おとめ座）が持つ天秤とされます。',
+            Lyra: '吟遊詩人オルフェウスの竪琴が天に上がった姿とされます。',
+            Ophiuchus: '名医アスクレピオスが蛇を抱える姿で、蘇生術の神話で有名です。',
+            Orion: '巨人の狩人オリオンで、サソリとの因縁が有名です。',
+            Pegasus: 'ペルセウス神話に登場する翼を持つ天馬ペガサスです。',
+            Perseus: 'メドゥーサを討ち、アンドロメダを救った英雄ペルセウスです。',
+            Pisces: '怪物から逃れるため魚に変じたアフロディーテとエロスの神話です。',
+            Sagittarius: '弓を引くケンタウロスとして描かれ、賢者ケイロン説が有名です。',
+            Scorpius: 'オリオンを倒した大サソリで、両者は天で離れて昇ります。',
+            Serpens: 'へびつかい座の蛇で、アスクレピオス神話とセットで語られます。',
+            Taurus: 'ゼウスが牡牛に姿を変えエウロペを連れ去った神話に由来します。',
+            Virgo: '豊穣や正義の女神（デメテル/アストライア）と結びつけられます。',
+            'Ursa Major': 'ゼウスに愛されたカリストが熊に変えられた姿とされます。',
+            'Ursa Minor': 'カリストの子アルカス（または小熊化した姿）と結び付けられます.'
+        };
+
+        let selectedConstellation = 'Orion';
+
+        function renderConstellationLearningList(applySelection = true) {
+            const options = document.getElementById('learn-constellation-options');
+            const toggle = document.getElementById('learn-dropdown-toggle');
+            if (!options || !toggle) return;
+            const filterWord = (document.getElementById('learn-constellation-filter')?.value || '').trim().toLowerCase();
+            const filtered = constellationLearningData.filter(c =>
+                !filterWord ||
+                c.en.toLowerCase().includes(filterWord) ||
+                c.ja.toLowerCase().includes(filterWord) ||
+                c.abbr.toLowerCase().includes(filterWord)
+            );
+            const beforeValue = selectedConstellation;
+            options.innerHTML = filtered
+                .map(c => `<button type="button" class="learn-option ${c.en === selectedConstellation ? 'active' : ''}" onclick="chooseConstellation('${c.en.replace("'", "\\'")}')">${c.en} / ${c.ja}</button>`)
                 .join('');
+            if (filtered.length === 0) {
+                const container = document.getElementById('constellation-learning-description');
+                if (container && applySelection) {
+                    container.innerHTML = `
+                        <div class="learn-section">
+                            <span class="learn-heading">結果なし</span>
+                            <div class="learn-body">一致する星座がありません。検索語を変えてください。</div>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            if (filtered.some(c => c.en === beforeValue)) {
+                selectedConstellation = beforeValue;
+            } else if (filtered.some(c => c.en === 'Orion')) {
+                selectedConstellation = 'Orion';
+            } else {
+                selectedConstellation = filtered[0].en;
+            }
+            const selectedInfo = constellationLearningData.find(c => c.en === selectedConstellation);
+            toggle.textContent = `${selectedInfo.en} / ${selectedInfo.ja}`;
+            if (applySelection) {
+                window.selectConstellationForLearning();
+            }
+        }
+
+        window.filterConstellationList = function () {
+            renderConstellationLearningList(false);
+        };
+
+        window.toggleLearnDropdown = function () {
+            const dd = document.getElementById('learn-dropdown');
+            if (!dd) return;
+            dd.classList.toggle('open');
+        };
+
+        window.chooseConstellation = function (name) {
+            selectedConstellation = name;
+            renderConstellationLearningList();
+            const dd = document.getElementById('learn-dropdown');
+            if (dd) dd.classList.remove('open');
+        };
+
+        function getObservationContext() {
+            const latDeg = parseFloat(document.getElementById('lat').value) || 35;
+            const lonDeg = parseFloat(document.getElementById('lon').value) || 135;
+            const dateStr = document.getElementById('date').value;
+            const timeStr = document.getElementById('time').value;
+            if (!dateStr || !timeStr) return null;
+
+            const country = document.getElementById('country').value;
+            const tzOffset = countryDefaults[country]?.tzOffset ?? 9;
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const [hour, min] = timeStr.split(':').map(Number);
+            const localDate = new Date(Date.UTC(year, month - 1, day, hour, min, 0));
+            const utcDate = new Date(localDate.getTime() - tzOffset * 3600000);
+            return {
+                lat: degToRad(latDeg),
+                lon: degToRad(lonDeg),
+                jd: JulianDateFromUnixTime(utcDate.getTime())
+            };
+        }
+
+        function getStarWorldPosition(star, context, radius = 600) {
+            const raRad = degToRad(star.ra);
+            const decRad = degToRad(star.dec);
+            const { az, alt } = raDecToAltAz(raRad, decRad, context.lat, context.lon, context.jd);
+            const theta = Math.PI / 2 - alt;
+            const phi = az;
+            const x = radius * Math.sin(theta) * Math.cos(phi);
+            const z = radius * Math.sin(theta) * Math.sin(phi);
+            const y = radius * Math.cos(theta);
+            return new THREE.Vector3(x, y, z);
+        }
+
+        function jumpCameraToConstellationMainStar(constellationName) {
+            const mainStarName = mainStarByConstellation[constellationName];
+            if (!mainStarName) return;
+            const star = stars.find(s => s.name === mainStarName) ||
+                stars.find(s => s.name.toLowerCase().includes(mainStarName.toLowerCase()));
+            if (!star) return;
+
+            const context = getObservationContext();
+            if (!context) return;
+            const starPos = getStarWorldPosition(star, context);
+            const dir = starPos.clone().normalize();
+
+            camera.position.copy(dir.multiplyScalar(-1.2));
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+
+        window.selectConstellationForLearning = function () {
+            const container = document.getElementById('constellation-learning-description');
+            const selected = selectedConstellation;
+            if (!selected || !container) return;
+
+            const mainStar = mainStarByConstellation[selected] || '主要星';
+            const repText = representativeObjectByConstellation[selected] || `主星は ${mainStar} です。観測時刻・場所によって見える位置が変わります。`;
+            const mythText = greekMythByConstellation[selected] || 'この星座は近世に設定された星座で、古代ギリシャ神話に直接対応する固有神話はありません。';
+
+            container.innerHTML = `
+                <div class="learn-section">
+                    <span class="learn-heading">代表する星・星雲</span>
+                    <div class="learn-body">${repText}</div>
+                </div>
+                <div class="learn-section">
+                    <span class="learn-heading">ギリシャ神話</span>
+                    <div class="learn-body">${mythText}</div>
+                </div>
+            `;
+
+            simulate();
+            jumpCameraToConstellationMainStar(selected);
         }
 
         window.updateGuideVisibility = function () {
@@ -1733,6 +2098,15 @@
             simulate();
             window.updateGuideVisibility();
             renderConstellationLearningList();
+            syncPanelLayoutMode();
+            window.addEventListener('resize', syncPanelLayoutMode);
+            document.addEventListener('click', (event) => {
+                const dd = document.getElementById('learn-dropdown');
+                if (!dd) return;
+                if (!dd.contains(event.target)) {
+                    dd.classList.remove('open');
+                }
+            });
         });
 
         window.vue = new Vue({
