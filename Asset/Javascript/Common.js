@@ -961,13 +961,29 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-account-tie</v-icon></v-list-item-icon>
                     </template>
 
+                    <v-list-item href="./Note_Qualification_ColorCoordinator.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>カラーコーディネーター</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Qualification_WebDesignTechnician.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Webデザイン技能士</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Qualification_GTest.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>G検定</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Note_Qualification_AppliedInformation.html">
                         <v-list-item-icon />
                         <v-list-item-title>応用情報技術者試験</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Note_Qualification_Bookkeeping.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>簿記</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Note_Qualification_Makeup.html">
                         <v-list-item-icon />
-                        <v-list-item-title>日本化粧品検定１級</v-list-item-title>
+                        <v-list-item-title>日本化粧品検定</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
                 

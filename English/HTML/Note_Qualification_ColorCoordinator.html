@@ -1,0 +1,484 @@
+﻿<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>Color Coordinator</title>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > カラーコーディネーター</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+
+                <v-card>
+                  <v-card-title class="content-text">試験について</v-card-title>
+                  <v-card-text>
+
+                    <v-stepper v-model="Count_Step_1">
+
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1"
+                          class="step-title">概要</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2"
+                          class="step-title">出題傾向</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">概要</v-card-title>
+                              <v-simple-table>
+                                <template v-slot:default>
+                                  <thead style="background-color: #CFD8DC;">
+                                    <tr>
+                                      <th class="text-left" style="width: 30%; min-width: 120px;">項目</th>
+                                      <th class="text-left" style="width: 70%; min-width: 400px;">説明</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="item in overview" :key="item.name">
+                                      <td style="padding: 12px;">{{ item.name }}</td>
+                                      <td v-html="item.description" style="font-size: 16px; padding: 12px;"></td>
+                                    </tr>
+                                  </tbody>
+                                </template>
+                              </v-simple-table>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <p class="text-subtitle-2 font-weight-bold">出題傾向</p>
+                              <v-simple-table>
+                                <template v-slot:default>
+                                  <thead style="background-color: #CFD8DC;">
+                                    <tr>
+                                      <th class="text-left" style="width: 25%; min-width: 100px;">分野</th>
+                                      <th class="text-left" style="width: 25%; min-width: 100px;">割合</th>
+                                      <th class="text-left" style="width: 50%; min-width: 200px;">傾向</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="item in exam_trend" :key="item.name">
+                                      <td style="padding: 12px;">{{ item.name }}</td>
+                                      <td v-html="item.rate" style="font-size: 16px; padding: 12px;"></td>
+                                      <td v-html="item.description" style="font-size: 16px; padding: 12px;"></td>
+                                    </tr>
+                                  </tbody>
+                                </template>
+                              </v-simple-table>
+                              <p class="mt-4 text-caption" style="color: #666;">
+                                ※上記の割合は、公式テキストや問題集の構成、受験者の報告などを基にした推定値であり、実際の試験では変動する可能性があります。
+                              </p>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">学習</v-card-title>
+                  <v-card-text>
+
+                    <v-text-field v-model="searchQuery" label="学習内容を検索" prepend-inner-icon="mdi-magnify" clearable
+                      outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_2">
+
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_2 > 1" step="1" @click="Count_Step_2 = 1"
+                          class="step-title">色彩理論</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 2" step="2" @click="Count_Step_2 = 2"
+                          class="step-title">配色調和</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 3" step="3" @click="Count_Step_2 = 3"
+                          class="step-title">色彩心理・文化</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 4" step="4" @click="Count_Step_2 = 4"
+                          class="step-title">実務応用</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">色彩理論</v-card-title>
+                              <v-treeview :items="filteredColorTheory" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesColorTheory" @update:open="updateOpenNodesColorTheory">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_2 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">配色調和</v-card-title>
+                              <v-treeview :items="filteredColorHarmony" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesColorHarmony" @update:open="updateOpenNodesColorHarmony">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 3">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">色彩心理・文化</v-card-title>
+                              <v-treeview :items="filteredColorPsychology" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesColorPsychology" @update:open="updateOpenNodesColorPsychology">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">実務応用</v-card-title>
+                              <v-treeview :items="filteredPracticalUse" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesPracticalUse" @update:open="updateOpenNodesPracticalUse">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 3">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        Count_Step_2: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredColorTheory: [],
+        filteredColorHarmony: [],
+        filteredColorPsychology: [],
+        filteredPracticalUse: [],
+        openNodesColorTheory: [],
+        openNodesColorHarmony: [],
+        openNodesColorPsychology: [],
+        openNodesPracticalUse: [],
+        overview: [
+          {
+            name: "試験の目的とメリット",
+            description: "色彩の基礎理論と配色力を証明。デザイン、商品企画、売場づくり、資料作成で説得力のある色提案に直結する。"
+          },
+          {
+            name: "出題形式",
+            description: "IBT方式（PC受験）・多肢選択式。試験時間や出題数は受験クラスにより異なる。"
+          },
+          {
+            name: "合格基準",
+            description: "概ね70％前後（実施回・クラスにより変動）。"
+          },
+          {
+            name: "出題範囲",
+            description: "色彩理論、配色調和、色彩心理・文化、実務応用（商品・空間・コミュニケーション）。"
+          }
+        ],
+        exam_trend: [
+          {
+            name: "色彩理論",
+            rate: "約30%",
+            description: "色の三属性、PCCS、マンセル表色系、視覚の基礎。用語定義と関係性の理解が中心。"
+          },
+          {
+            name: "配色調和",
+            rate: "約30%",
+            description: "トーン、色相環、同一/類似/対照配色。目的に応じた組み合わせ判断が頻出。"
+          },
+          {
+            name: "色彩心理・文化",
+            rate: "約20%",
+            description: "色のイメージ効果、国や時代による色の意味、ユニバーサル視点。"
+          },
+          {
+            name: "実務応用",
+            rate: "約20%",
+            description: "商品・広告・インテリアでの色計画、ターゲットに合わせた配色提案。"
+          }
+        ],
+        ColorTheory: [
+          {
+            name: "1. 色の基本",
+            children: [
+              { name: "色相・明度・彩度（色の三属性）" },
+              { name: "無彩色と有彩色の違い" },
+              { name: "色の見え方（面積効果・同時対比）" }
+            ]
+          },
+          {
+            name: "2. 表色系",
+            children: [
+              { name: "PCCS: トーンと言語化" },
+              { name: "マンセル: H V/C の読み方" },
+              { name: "慣用色名と系統色名" }
+            ]
+          },
+          {
+            name: "3. 光と色",
+            children: [
+              { name: "加法混色（RGB）" },
+              { name: "減法混色（CMY）" },
+              { name: "照明による見えの変化" }
+            ]
+          }
+        ],
+        ColorHarmony: [
+          {
+            name: "1. 配色の基本ルール",
+            children: [
+              { name: "同一・類似・対照配色" },
+              { name: "トーンオントーン/トーンイントーン" },
+              { name: "ベースカラー・アソートカラー・アクセントカラー" }
+            ]
+          },
+          {
+            name: "2. 配色設計",
+            children: [
+              { name: "目的別配色（信頼/高級/親しみ）" },
+              { name: "年齢層・性別・業種別の配色傾向" },
+              { name: "背景色と文字色の視認性" }
+            ]
+          },
+          {
+            name: "3. 試験での判断ポイント",
+            children: [
+              { name: "問題文の目的語を先に特定する" },
+              { name: "不適切な配色（可読性低下）を除外する" },
+              { name: "選択肢のトーン差を比較する" }
+            ]
+          }
+        ],
+        ColorPsychology: [
+          {
+            name: "1. 色彩心理",
+            children: [
+              { name: "暖色・寒色の心理効果" },
+              { name: "進出色・後退色と距離感" },
+              { name: "軽重感・興奮鎮静効果" }
+            ]
+          },
+          {
+            name: "2. 色彩文化",
+            children: [
+              { name: "和色名と伝統色の背景" },
+              { name: "国・地域による象徴色の違い" },
+              { name: "行事・慣習と色の結びつき" }
+            ]
+          },
+          {
+            name: "3. ユニバーサル視点",
+            children: [
+              { name: "色覚特性に配慮した配色" },
+              { name: "色以外の情報（形・文字）併用" },
+              { name: "誤認防止のコントラスト設計" }
+            ]
+          }
+        ],
+        PracticalUse: [
+          {
+            name: "1. 商品と販促",
+            children: [
+              { name: "パッケージ色と購買心理" },
+              { name: "ブランドイメージと色の一貫性" },
+              { name: "売場での視線誘導" }
+            ]
+          },
+          {
+            name: "2. 空間とインテリア",
+            children: [
+              { name: "面積比での配色計画" },
+              { name: "居住空間の目的別カラー計画" },
+              { name: "照明色温度と体感の関係" }
+            ]
+          },
+          {
+            name: "3. 合格のための演習",
+            children: [
+              { name: "過去問で配色理由を言語化する" },
+              { name: "誤答を理論不足/読み違いで分類する" },
+              { name: "頻出語（トーン・対比）を短文で暗記" }
+            ]
+          }
+        ]
+      },
+      created() {
+        this.filteredColorTheory = JSON.parse(JSON.stringify(this.ColorTheory));
+        this.filteredColorHarmony = JSON.parse(JSON.stringify(this.ColorHarmony));
+        this.filteredColorPsychology = JSON.parse(JSON.stringify(this.ColorPsychology));
+        this.filteredPracticalUse = JSON.parse(JSON.stringify(this.PracticalUse));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesColorTheory(newOpen) {
+          this.openNodesColorTheory = newOpen;
+        },
+        updateOpenNodesColorHarmony(newOpen) {
+          this.openNodesColorHarmony = newOpen;
+        },
+        updateOpenNodesColorPsychology(newOpen) {
+          this.openNodesColorPsychology = newOpen;
+        },
+        updateOpenNodesPracticalUse(newOpen) {
+          this.openNodesPracticalUse = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredColorTheory = JSON.parse(JSON.stringify(this.ColorTheory));
+            this.filteredColorHarmony = JSON.parse(JSON.stringify(this.ColorHarmony));
+            this.filteredColorPsychology = JSON.parse(JSON.stringify(this.ColorPsychology));
+            this.filteredPracticalUse = JSON.parse(JSON.stringify(this.PracticalUse));
+            this.openNodesColorTheory = [];
+            this.openNodesColorHarmony = [];
+            this.openNodesColorPsychology = [];
+            this.openNodesPracticalUse = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredColorTheory = filterTree(JSON.parse(JSON.stringify(this.ColorTheory)));
+          this.filteredColorHarmony = filterTree(JSON.parse(JSON.stringify(this.ColorHarmony)));
+          this.filteredColorPsychology = filterTree(JSON.parse(JSON.stringify(this.ColorPsychology)));
+          this.filteredPracticalUse = filterTree(JSON.parse(JSON.stringify(this.PracticalUse)));
+
+          this.openNodesColorTheory = this.collectAllNodeIds(this.filteredColorTheory);
+          this.openNodesColorHarmony = this.collectAllNodeIds(this.filteredColorHarmony);
+          this.openNodesColorPsychology = this.collectAllNodeIds(this.filteredColorPsychology);
+          this.openNodesPracticalUse = this.collectAllNodeIds(this.filteredPracticalUse);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,485 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>Bookkeeping Grade 3</title>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > 簿記</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+
+                <v-card>
+                  <v-card-title class="content-text">試験について</v-card-title>
+                  <v-card-text>
+
+                    <v-stepper v-model="Count_Step_1">
+
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1"
+                          class="step-title">概要</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2"
+                          class="step-title">出題傾向</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">概要</v-card-title>
+                              <v-simple-table>
+                                <template v-slot:default>
+                                  <thead style="background-color: #CFD8DC;">
+                                    <tr>
+                                      <th class="text-left" style="width: 30%; min-width: 120px;">項目</th>
+                                      <th class="text-left" style="width: 70%; min-width: 400px;">説明</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="item in overview" :key="item.name">
+                                      <td style="padding: 12px;">{{ item.name }}</td>
+                                      <td v-html="item.description" style="font-size: 16px; padding: 12px;"></td>
+                                    </tr>
+                                  </tbody>
+                                </template>
+                              </v-simple-table>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <p class="text-subtitle-2 font-weight-bold">出題傾向</p>
+                              <v-simple-table>
+                                <template v-slot:default>
+                                  <thead style="background-color: #CFD8DC;">
+                                    <tr>
+                                      <th class="text-left" style="width: 25%; min-width: 100px;">分野</th>
+                                      <th class="text-left" style="width: 25%; min-width: 100px;">割合</th>
+                                      <th class="text-left" style="width: 50%; min-width: 200px;">傾向</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="item in exam_trend" :key="item.name">
+                                      <td style="padding: 12px;">{{ item.name }}</td>
+                                      <td v-html="item.rate" style="font-size: 16px; padding: 12px;"></td>
+                                      <td v-html="item.description" style="font-size: 16px; padding: 12px;"></td>
+                                    </tr>
+                                  </tbody>
+                                </template>
+                              </v-simple-table>
+                              <p class="mt-4 text-caption" style="color: #666;">
+                                ※上記の割合は、公式テキストや問題集の構成、受験者の報告などを基にした推定値であり、実際の試験では変動する可能性があります。
+                              </p>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">学習</v-card-title>
+                  <v-card-text>
+
+                    <v-text-field v-model="searchQuery" label="学習内容を検索" prepend-inner-icon="mdi-magnify" clearable
+                      outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_2">
+
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_2 > 1" step="1" @click="Count_Step_2 = 1"
+                          class="step-title">仕訳基礎</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 2" step="2" @click="Count_Step_2 = 2"
+                          class="step-title">主要取引</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 3" step="3" @click="Count_Step_2 = 3"
+                          class="step-title">帳簿と試算表</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 4" step="4" @click="Count_Step_2 = 4"
+                          class="step-title">決算整理</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">仕訳基礎</v-card-title>
+                              <v-treeview :items="filteredJournalBasics" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesJournalBasics" @update:open="updateOpenNodesJournalBasics">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_2 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">主要取引</v-card-title>
+                              <v-treeview :items="filteredMainTransactions" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesMainTransactions" @update:open="updateOpenNodesMainTransactions">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 3">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">帳簿と試算表</v-card-title>
+                              <v-treeview :items="filteredBooksAndTrialBalance" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesBooksAndTrialBalance"
+                                @update:open="updateOpenNodesBooksAndTrialBalance">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">決算整理</v-card-title>
+                              <v-treeview :items="filteredClosingEntries" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesClosingEntries" @update:open="updateOpenNodesClosingEntries">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 3">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        Count_Step_2: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredJournalBasics: [],
+        filteredMainTransactions: [],
+        filteredBooksAndTrialBalance: [],
+        filteredClosingEntries: [],
+        openNodesJournalBasics: [],
+        openNodesMainTransactions: [],
+        openNodesBooksAndTrialBalance: [],
+        openNodesClosingEntries: [],
+        overview: [
+          {
+            name: "試験の目的とメリット",
+            description: "商業簿記の基礎知識を証明。経理・会計の基礎力として就職・実務の土台づくりに有利。"
+          },
+          {
+            name: "出題形式",
+            description: "大問3題、試験時間60分。<br>ネット試験: CBT方式（PCで解答） / 統一試験: 筆記方式（紙で解答）。"
+          },
+          {
+            name: "合格基準",
+            description: "100点満点中70点以上。"
+          },
+          {
+            name: "出題範囲",
+            description: "仕訳基礎、主要取引、帳簿と試算表、決算整理。"
+          }
+        ],
+        exam_trend: [
+          {
+            name: "仕訳",
+            rate: "約45%",
+            description: "商品売買、掛取引、手形、固定資産、訂正仕訳、決算整理仕訳。処理速度と基本原則の理解が得点差になる。"
+          },
+          {
+            name: "帳簿・勘定記入",
+            rate: "約20%",
+            description: "補助簿、勘定口座、語句問題。転記方向と残高計算のミス防止が重要。"
+          },
+          {
+            name: "試算表・精算表・財務諸表",
+            rate: "約35%",
+            description: "試算表、精算表、損益計算書、貸借対照表。整理仕訳から財務諸表までの一連処理を問う。"
+          }
+        ],
+        JournalBasics: [
+          {
+            name: "1. 簿記の5要素",
+            children: [
+              { name: "資産: 現金、売掛金、備品など" },
+              { name: "負債: 買掛金、借入金など" },
+              { name: "純資産: 資本金など" },
+              { name: "収益: 売上、受取利息など" },
+              { name: "費用: 仕入、給料、水道光熱費など" }
+            ]
+          },
+          {
+            name: "2. 借方・貸方の増減ルール",
+            children: [
+              { name: "資産・費用: 増加は借方、減少は貸方" },
+              { name: "負債・純資産・収益: 増加は貸方、減少は借方" },
+              { name: "常に 借方金額合計 = 貸方金額合計" }
+            ]
+          },
+          {
+            name: "3. 仕訳の基本手順",
+            children: [
+              { name: "取引を2つ以上の要素に分解する" },
+              { name: "各要素が増えるか減るか判定する" },
+              { name: "科目を決め、借方・貸方に配置する" },
+              { name: "金額一致を最終確認する" }
+            ]
+          }
+        ],
+        MainTransactions: [
+          {
+            name: "1. 商品売買（三分法）",
+            children: [
+              { name: "仕入時: 借方 仕入 / 貸方 現金・買掛金" },
+              { name: "売上時: 借方 現金・売掛金 / 貸方 売上" },
+              { name: "返品・値引・割戻の方向を区別する" }
+            ]
+          },
+          {
+            name: "2. 掛取引と手形",
+            children: [
+              { name: "売掛金・買掛金は後日決済される債権債務" },
+              { name: "受取手形・支払手形は手形決済の科目" },
+              { name: "回収・支払時は収益/費用の再計上をしない" }
+            ]
+          },
+          {
+            name: "3. その他の頻出取引",
+            children: [
+              { name: "固定資産購入: 備品など / 未払金・現金" },
+              { name: "仮払金・仮受金: 内容確定時に本勘定へ振替" },
+              { name: "訂正仕訳: 逆仕訳または差額仕訳で修正" }
+            ]
+          }
+        ],
+        BooksAndTrialBalance: [
+          {
+            name: "1. 主要簿と補助簿",
+            children: [
+              { name: "主要簿: 仕訳帳・総勘定元帳" },
+              { name: "補助簿: 現金出納帳、売掛金元帳、買掛金元帳、商品有高帳" },
+              { name: "補助簿と統制勘定の整合を常に確認する" }
+            ]
+          },
+          {
+            name: "2. 試算表",
+            children: [
+              { name: "合計試算表: 借貸それぞれの合計を確認" },
+              { name: "残高試算表: 科目残高を確認" },
+              { name: "合計残高試算表: 合計と残高を同時に確認" }
+            ]
+          },
+          {
+            name: "3. ミスしやすい箇所",
+            children: [
+              { name: "借方/貸方の転記方向ミス" },
+              { name: "補助簿残高と総勘定元帳残高の不一致" },
+              { name: "残高計算時の符号（増減）ミス" }
+            ]
+          }
+        ],
+        ClosingEntries: [
+          {
+            name: "1. 決算整理の目的",
+            children: [
+              { name: "当期の収益と費用を正しく対応させる" },
+              { name: "期末時点の資産・負債を正確な金額へ修正する" }
+            ]
+          },
+          {
+            name: "2. 頻出の決算整理仕訳",
+            children: [
+              { name: "減価償却: 減価償却費 / 備品減価償却累計額" },
+              { name: "貸倒引当: 貸倒引当金繰入 / 貸倒引当金" },
+              { name: "前払・前受: 未経過分を資産・負債へ振替" },
+              { name: "未払・未収: 発生済未計上を費用・収益へ計上" },
+              { name: "消耗品: 使用分を費用化し、未使用分を資産計上" },
+              { name: "現金過不足: 原因判明時に適切科目へ振替" }
+            ]
+          },
+          {
+            name: "3. 財務諸表作成",
+            children: [
+              { name: "精算表: 試算表 -> 整理記入 -> 財務諸表欄" },
+              { name: "損益計算書: 収益 - 費用 = 当期純利益" },
+              { name: "貸借対照表: 資産合計 = 負債・純資産合計" }
+            ]
+          }
+        ]
+      },
+      created() {
+        this.filteredJournalBasics = JSON.parse(JSON.stringify(this.JournalBasics));
+        this.filteredMainTransactions = JSON.parse(JSON.stringify(this.MainTransactions));
+        this.filteredBooksAndTrialBalance = JSON.parse(JSON.stringify(this.BooksAndTrialBalance));
+        this.filteredClosingEntries = JSON.parse(JSON.stringify(this.ClosingEntries));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesJournalBasics(newOpen) {
+          this.openNodesJournalBasics = newOpen;
+        },
+        updateOpenNodesMainTransactions(newOpen) {
+          this.openNodesMainTransactions = newOpen;
+        },
+        updateOpenNodesBooksAndTrialBalance(newOpen) {
+          this.openNodesBooksAndTrialBalance = newOpen;
+        },
+        updateOpenNodesClosingEntries(newOpen) {
+          this.openNodesClosingEntries = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredJournalBasics = JSON.parse(JSON.stringify(this.JournalBasics));
+            this.filteredMainTransactions = JSON.parse(JSON.stringify(this.MainTransactions));
+            this.filteredBooksAndTrialBalance = JSON.parse(JSON.stringify(this.BooksAndTrialBalance));
+            this.filteredClosingEntries = JSON.parse(JSON.stringify(this.ClosingEntries));
+            this.openNodesJournalBasics = [];
+            this.openNodesMainTransactions = [];
+            this.openNodesBooksAndTrialBalance = [];
+            this.openNodesClosingEntries = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredJournalBasics = filterTree(JSON.parse(JSON.stringify(this.JournalBasics)));
+          this.filteredMainTransactions = filterTree(JSON.parse(JSON.stringify(this.MainTransactions)));
+          this.filteredBooksAndTrialBalance = filterTree(JSON.parse(JSON.stringify(this.BooksAndTrialBalance)));
+          this.filteredClosingEntries = filterTree(JSON.parse(JSON.stringify(this.ClosingEntries)));
+
+          this.openNodesJournalBasics = this.collectAllNodeIds(this.filteredJournalBasics);
+          this.openNodesMainTransactions = this.collectAllNodeIds(this.filteredMainTransactions);
+          this.openNodesBooksAndTrialBalance = this.collectAllNodeIds(this.filteredBooksAndTrialBalance);
+          this.openNodesClosingEntries = this.collectAllNodeIds(this.filteredClosingEntries);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

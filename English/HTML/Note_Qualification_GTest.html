@@ -1,0 +1,484 @@
+﻿<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>G Test</title>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > G検定</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+
+                <v-card>
+                  <v-card-title class="content-text">試験について</v-card-title>
+                  <v-card-text>
+
+                    <v-stepper v-model="Count_Step_1">
+
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1"
+                          class="step-title">概要</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2"
+                          class="step-title">出題傾向</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">概要</v-card-title>
+                              <v-simple-table>
+                                <template v-slot:default>
+                                  <thead style="background-color: #CFD8DC;">
+                                    <tr>
+                                      <th class="text-left" style="width: 30%; min-width: 120px;">項目</th>
+                                      <th class="text-left" style="width: 70%; min-width: 400px;">説明</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="item in overview" :key="item.name">
+                                      <td style="padding: 12px;">{{ item.name }}</td>
+                                      <td v-html="item.description" style="font-size: 16px; padding: 12px;"></td>
+                                    </tr>
+                                  </tbody>
+                                </template>
+                              </v-simple-table>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <p class="text-subtitle-2 font-weight-bold">出題傾向</p>
+                              <v-simple-table>
+                                <template v-slot:default>
+                                  <thead style="background-color: #CFD8DC;">
+                                    <tr>
+                                      <th class="text-left" style="width: 25%; min-width: 100px;">分野</th>
+                                      <th class="text-left" style="width: 25%; min-width: 100px;">割合</th>
+                                      <th class="text-left" style="width: 50%; min-width: 200px;">傾向</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-for="item in exam_trend" :key="item.name">
+                                      <td style="padding: 12px;">{{ item.name }}</td>
+                                      <td v-html="item.rate" style="font-size: 16px; padding: 12px;"></td>
+                                      <td v-html="item.description" style="font-size: 16px; padding: 12px;"></td>
+                                    </tr>
+                                  </tbody>
+                                </template>
+                              </v-simple-table>
+                              <p class="mt-4 text-caption" style="color: #666;">
+                                ※上記の割合は、公式シラバスや問題傾向を基にした推定値であり、実際の試験では変動する可能性があります。
+                              </p>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">学習</v-card-title>
+                  <v-card-text>
+
+                    <v-text-field v-model="searchQuery" label="学習内容を検索" prepend-inner-icon="mdi-magnify" clearable
+                      outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_2">
+
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_2 > 1" step="1" @click="Count_Step_2 = 1"
+                          class="step-title">数理・機械学習基礎</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 2" step="2" @click="Count_Step_2 = 2"
+                          class="step-title">深層学習</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 3" step="3" @click="Count_Step_2 = 3"
+                          class="step-title">法律・倫理</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_2 > 4" step="4" @click="Count_Step_2 = 4"
+                          class="step-title">産業応用</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">数理・機械学習基礎</v-card-title>
+                              <v-treeview :items="filteredMLBasics" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesMLBasics" @update:open="updateOpenNodesMLBasics">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_2 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">深層学習</v-card-title>
+                              <v-treeview :items="filteredDeepLearning" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesDeepLearning" @update:open="updateOpenNodesDeepLearning">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 3">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">法律・倫理</v-card-title>
+                              <v-treeview :items="filteredEthics" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesEthics" @update:open="updateOpenNodesEthics">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_2 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">産業応用</v-card-title>
+                              <v-treeview :items="filteredApplications" item-key="name" activatable open-on-click dense
+                                :open.sync="openNodesApplications" @update:open="updateOpenNodesApplications">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_2 = 3">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        Count_Step_2: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredMLBasics: [],
+        filteredDeepLearning: [],
+        filteredEthics: [],
+        filteredApplications: [],
+        openNodesMLBasics: [],
+        openNodesDeepLearning: [],
+        openNodesEthics: [],
+        openNodesApplications: [],
+        overview: [
+          {
+            name: "試験の目的とメリット",
+            description: "AI・ディープラーニングの基礎知識を証明。企画・開発・運用の共通言語を身につけ、AI活用案件の推進に有利。"
+          },
+          {
+            name: "出題形式",
+            description: "オンライン実施・多肢選択式。試験時間・問題数は実施回の要項に従う。"
+          },
+          {
+            name: "合格基準",
+            description: "正答率おおむね70％前後（実施回により変動）。"
+          },
+          {
+            name: "出題範囲",
+            description: "数理・機械学習基礎、深層学習、法律・倫理・ガバナンス、産業応用。"
+          }
+        ],
+        exam_trend: [
+          {
+            name: "数理・機械学習基礎",
+            rate: "約25%",
+            description: "確率統計、回帰・分類、過学習、評価指標。概念理解と用語定義が中心。"
+          },
+          {
+            name: "深層学習",
+            rate: "約35%",
+            description: "ニューラルネットワーク、CNN、RNN/Transformer、学習最適化。構造と用途の理解が重要。"
+          },
+          {
+            name: "法律・倫理・ガバナンス",
+            rate: "約20%",
+            description: "個人情報保護、著作権、AI倫理、説明責任、リスク管理。"
+          },
+          {
+            name: "産業応用",
+            rate: "約20%",
+            description: "製造・医療・金融・小売などの活用事例、導入時の課題と効果。"
+          }
+        ],
+        MLBasics: [
+          {
+            name: "1. 数学・統計の基礎",
+            children: [
+              { name: "平均・分散・標準偏差" },
+              { name: "条件付き確率とベイズの考え方" },
+              { name: "損失関数と最適化の基本" }
+            ]
+          },
+          {
+            name: "2. 機械学習の基本概念",
+            children: [
+              { name: "教師あり学習と教師なし学習" },
+              { name: "回帰・分類・クラスタリング" },
+              { name: "訓練データ/検証データ/テストデータ" }
+            ]
+          },
+          {
+            name: "3. 評価と改善",
+            children: [
+              { name: "適合率・再現率・F1" },
+              { name: "過学習と汎化性能" },
+              { name: "ハイパーパラメータ調整" }
+            ]
+          }
+        ],
+        DeepLearning: [
+          {
+            name: "1. ニューラルネットワーク",
+            children: [
+              { name: "パーセプトロンと多層NN" },
+              { name: "活性化関数（ReLU, Sigmoid）" },
+              { name: "誤差逆伝播と勾配降下法" }
+            ]
+          },
+          {
+            name: "2. 主要アーキテクチャ",
+            children: [
+              { name: "CNN: 画像認識" },
+              { name: "RNN/LSTM: 時系列・文章" },
+              { name: "Transformer: 自然言語処理" }
+            ]
+          },
+          {
+            name: "3. 学習実務の基礎",
+            children: [
+              { name: "正則化（Dropout, Weight Decay）" },
+              { name: "転移学習とファインチューニング" },
+              { name: "生成AIの基本用語（LLM, Prompt）" }
+            ]
+          }
+        ],
+        Ethics: [
+          {
+            name: "1. 法律",
+            children: [
+              { name: "個人情報保護法の基本" },
+              { name: "著作権と学習データ" },
+              { name: "契約・責任分界の考え方" }
+            ]
+          },
+          {
+            name: "2. 倫理",
+            children: [
+              { name: "公平性（バイアス）" },
+              { name: "透明性・説明可能性" },
+              { name: "人間中心のAI設計" }
+            ]
+          },
+          {
+            name: "3. ガバナンス",
+            children: [
+              { name: "リスク評価とモニタリング" },
+              { name: "運用ルール・監査ログ" },
+              { name: "インシデント対応手順" }
+            ]
+          }
+        ],
+        Applications: [
+          {
+            name: "1. 業界別活用",
+            children: [
+              { name: "製造: 画像検査・需要予測" },
+              { name: "金融: 不正検知・与信" },
+              { name: "小売: レコメンド・在庫最適化" }
+            ]
+          },
+          {
+            name: "2. 導入プロセス",
+            children: [
+              { name: "課題定義とKPI設計" },
+              { name: "PoCから本番展開" },
+              { name: "効果測定と改善サイクル" }
+            ]
+          },
+          {
+            name: "3. 合格のための演習",
+            children: [
+              { name: "用語集で定義を短文暗記" },
+              { name: "誤答を数理/DL/倫理で分類" },
+              { name: "事例問題で目的・課題・効果をセットで整理" }
+            ]
+          }
+        ]
+      },
+      created() {
+        this.filteredMLBasics = JSON.parse(JSON.stringify(this.MLBasics));
+        this.filteredDeepLearning = JSON.parse(JSON.stringify(this.DeepLearning));
+        this.filteredEthics = JSON.parse(JSON.stringify(this.Ethics));
+        this.filteredApplications = JSON.parse(JSON.stringify(this.Applications));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesMLBasics(newOpen) {
+          this.openNodesMLBasics = newOpen;
+        },
+        updateOpenNodesDeepLearning(newOpen) {
+          this.openNodesDeepLearning = newOpen;
+        },
+        updateOpenNodesEthics(newOpen) {
+          this.openNodesEthics = newOpen;
+        },
+        updateOpenNodesApplications(newOpen) {
+          this.openNodesApplications = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredMLBasics = JSON.parse(JSON.stringify(this.MLBasics));
+            this.filteredDeepLearning = JSON.parse(JSON.stringify(this.DeepLearning));
+            this.filteredEthics = JSON.parse(JSON.stringify(this.Ethics));
+            this.filteredApplications = JSON.parse(JSON.stringify(this.Applications));
+            this.openNodesMLBasics = [];
+            this.openNodesDeepLearning = [];
+            this.openNodesEthics = [];
+            this.openNodesApplications = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredMLBasics = filterTree(JSON.parse(JSON.stringify(this.MLBasics)));
+          this.filteredDeepLearning = filterTree(JSON.parse(JSON.stringify(this.DeepLearning)));
+          this.filteredEthics = filterTree(JSON.parse(JSON.stringify(this.Ethics)));
+          this.filteredApplications = filterTree(JSON.parse(JSON.stringify(this.Applications)));
+
+          this.openNodesMLBasics = this.collectAllNodeIds(this.filteredMLBasics);
+          this.openNodesDeepLearning = this.collectAllNodeIds(this.filteredDeepLearning);
+          this.openNodesEthics = this.collectAllNodeIds(this.filteredEthics);
+          this.openNodesApplications = this.collectAllNodeIds(this.filteredApplications);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
