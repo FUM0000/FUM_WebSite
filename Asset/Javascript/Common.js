@@ -253,10 +253,6 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-toolbox</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Service_TimeTravel.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Time Travel</v-list-item-title>
-                    </v-list-item>
                     <v-list-item href="./Service_Constellation.html">
                         <v-list-item-icon />
                         <v-list-item-title>Constellation</v-list-item-title>
@@ -264,6 +260,10 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Service_Health.html">
                         <v-list-item-icon />
                         <v-list-item-title>Health</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Service_TimeTravel.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Time Travel</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Service_VariousConverters.html">
                         <v-list-item-icon />

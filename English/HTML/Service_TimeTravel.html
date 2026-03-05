@@ -49,6 +49,13 @@
     .analog-clock {
       width: 220px;
       height: 220px;
+      min-width: 220px;
+      min-height: 220px;
+      max-width: 220px;
+      max-height: 220px;
+      flex: 0 0 220px;
+      display: block;
+      cursor: grab;
       user-select: none;
       touch-action: none;
     }
@@ -57,6 +64,21 @@
       margin-top: 8px;
       font-size: 0.8rem;
       color: #666;
+    }
+
+    .clock-events-wrap {
+      width: 100%;
+      min-height: 180px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .clock-sticky-title {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background-color: #fff;
+      color: rgba(0, 0, 0, 0.87);
     }
   </style>
 </head>
@@ -121,40 +143,47 @@
                 </v-card>
 
                 <v-card class="mx-auto clock-card" max-width="600">
-                  <v-card-text class="d-flex flex-column align-center">
+                  <v-card-text>
+                    <div class="d-flex flex-column align-center">
+                      <svg
+                        ref="clockFace"
+                        class="analog-clock"
+                        :style="{ cursor: isDialDragging ? 'grabbing' : 'grab' }"
+                        viewBox="0 0 220 220"
+                        @mousedown.prevent="startDialDrag($event)"
+                        @touchstart.prevent="startDialDrag($event)"
+                      >
+                        <circle cx="110" cy="110" r="102" fill="#fff" stroke="#c7c7c7" stroke-width="2"></circle>
+                        <line v-for="tick in 12" :key="'tick-' + tick" x1="110" y1="18" x2="110" y2="30" stroke="#666"
+                          stroke-width="2" :transform="'rotate(' + (tick * 30) + ' 110 110)'"></line>
 
-                    <svg ref="clockFace" class="analog-clock" viewBox="0 0 220 220">
-                      <circle cx="110" cy="110" r="102" fill="#fff" stroke="#c7c7c7" stroke-width="2"></circle>
-                      <line v-for="tick in 12" :key="'tick-' + tick" x1="110" y1="18" x2="110" y2="30" stroke="#666"
-                        stroke-width="2" :transform="'rotate(' + (tick * 30) + ' 110 110)'"></line>
+                        <line x1="110" y1="110" x2="110" y2="60" stroke="transparent" stroke-width="34"
+                          stroke-linecap="round"
+                          :transform="'rotate(' + hourAngle + ' 110 110)'"></line>
+                        <line x1="110" y1="110" x2="110" y2="60" stroke="#2f2f2f" stroke-width="6" stroke-linecap="round"
+                          :transform="'rotate(' + hourAngle + ' 110 110)'"></line>
 
-                      <line x1="110" y1="110" x2="110" y2="60" stroke="transparent" stroke-width="16"
-                        :transform="'rotate(' + hourAngle + ' 110 110)'"
-                        @mousedown.prevent="startClockDrag('hour', $event)"
-                        @touchstart.prevent="startClockDrag('hour', $event)"></line>
-                      <line x1="110" y1="110" x2="110" y2="60" stroke="#2f2f2f" stroke-width="6" stroke-linecap="round"
-                        :transform="'rotate(' + hourAngle + ' 110 110)'"></line>
+                        <line x1="110" y1="110" x2="110" y2="38" stroke="#5f5f5f" stroke-width="4" stroke-linecap="round"
+                          :transform="'rotate(' + minuteAngle + ' 110 110)'"></line>
 
-                      <line x1="110" y1="110" x2="110" y2="38" stroke="#5f5f5f" stroke-width="4" stroke-linecap="round"
-                        :transform="'rotate(' + minuteAngle + ' 110 110)'"></line>
-
-                      <circle cx="110" cy="110" r="5" fill="#444"></circle>
-                    </svg>
-
-                    <div class="clock-readout">{{ clockLabel }}</div>
-
+                        <circle cx="110" cy="110" r="5" fill="#444"></circle>
+                      </svg>
+                      <div class="clock-readout">{{ clockLabel }}</div>
+                    </div>
                     <v-divider class="my-3" style="width: 100%;"></v-divider>
-                    <v-card-title class="px-0 pt-0">{{ clockHour }}時台の出来事</v-card-title>
-                    <v-list dense class="py-0" style="width: 100%;">
-                      <template v-if="clockEvents.length">
-                        <v-list-item v-for="(event, index) in clockEvents" :key="'clock-' + index">
-                          <v-list-item-content class="event-item-text">{{ event }}</v-list-item-content>
+                    <div class="clock-events-wrap">
+                      <v-card-title class="clock-sticky-title">{{ clockHour }}時台の出来事</v-card-title>
+                      <v-list dense class="py-0" style="width: 100%;">
+                        <template v-if="clockEvents.length">
+                          <v-list-item v-for="(event, index) in clockEvents" :key="'clock-' + index">
+                            <v-list-item-content class="event-item-text">{{ event }}</v-list-item-content>
+                          </v-list-item>
+                        </template>
+                        <v-list-item v-else>
+                          <v-list-item-content class="event-item-text">この時刻の出来事はありません。</v-list-item-content>
                         </v-list-item>
-                      </template>
-                      <v-list-item v-else>
-                        <v-list-item-content class="event-item-text">この時刻の出来事はありません。</v-list-item-content>
-                      </v-list-item>
-                    </v-list>
+                      </v-list>
+                    </div>
                   </v-card-text>
                 </v-card>
 
@@ -175,17 +204,24 @@
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
 
   <script>
+    const nowLocal = new Date();
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const localDateText = `${nowLocal.getFullYear()}-${pad2(nowLocal.getMonth() + 1)}-${pad2(nowLocal.getDate())}`;
+    const localMonthText = `${nowLocal.getFullYear()}-${pad2(nowLocal.getMonth() + 1)}`;
+
     new Vue({
       el: '#App',
       vuetify: new Vuetify(),
       mixins: [window.Mixins_Common],
       data: () => ({
-        selectedDate: new Date().toISOString().substr(0, 10),
-        pickerDate: new Date().toISOString().substr(0, 7),
-        selectedYearValue: new Date().getFullYear(),
-        clockHour: 10,
-        clockMinute: 10,
-        draggingHand: null,
+        selectedDate: localDateText,
+        pickerDate: localMonthText,
+        selectedYearValue: nowLocal.getFullYear(),
+        clockHour: nowLocal.getHours(),
+        clockMinute: nowLocal.getMinutes(),
+        isDialDragging: false,
+        lastDialAngle: null,
+        dragMinuteRemainder: 0,
         japan_list: {
           "1926": [
             "大正天皇崩御・昭和に改元",
@@ -3775,17 +3811,20 @@
         document.removeEventListener('touchend', this.stopClockDrag);
       },
       methods: {
-        startClockDrag(hand, event) {
-          this.draggingHand = hand;
-          this.updateClockFromEvent(event);
+        startDialDrag(event) {
+          this.isDialDragging = true;
+          this.lastDialAngle = this.getDialAngle(event);
+          this.dragMinuteRemainder = 0;
         },
         stopClockDrag() {
-          this.draggingHand = null;
+          this.isDialDragging = false;
+          this.lastDialAngle = null;
+          this.dragMinuteRemainder = 0;
         },
         onClockDragMove(event) {
-          if (!this.draggingHand) return;
+          if (!this.isDialDragging) return;
           if (event.cancelable) event.preventDefault();
-          this.updateClockFromEvent(event);
+          this.updateClockFromDialDelta(event);
         },
         getPointerPosition(event) {
           if (event.touches && event.touches.length > 0) {
@@ -3793,9 +3832,9 @@
           }
           return { x: event.clientX, y: event.clientY };
         },
-        updateClockFromEvent(event) {
+        getDialAngle(event) {
           const face = this.$refs.clockFace;
-          if (!face) return;
+          if (!face) return null;
 
           const rect = face.getBoundingClientRect();
           const pointer = this.getPointerPosition(event);
@@ -3803,18 +3842,32 @@
           const y = pointer.y - rect.top - rect.height / 2;
           let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
           if (angle < 0) angle += 360;
-
-          if (this.draggingHand === 'hour') {
-            const totalMinutes = Math.round(angle * 2);
-            const hour12 = Math.floor(totalMinutes / 60) % 12;
-            this.clockMinute = totalMinutes % 60;
-
-            const optionA = hour12;
-            const optionB = hour12 + 12;
-            const diffA = Math.min(Math.abs(this.clockHour - optionA), 24 - Math.abs(this.clockHour - optionA));
-            const diffB = Math.min(Math.abs(this.clockHour - optionB), 24 - Math.abs(this.clockHour - optionB));
-            this.clockHour = diffA <= diffB ? optionA : optionB;
+          return angle;
+        },
+        applyMinuteDelta(deltaMinutes) {
+          if (!deltaMinutes) return;
+          const total = this.clockHour * 60 + this.clockMinute;
+          const next = ((total + deltaMinutes) % 1440 + 1440) % 1440;
+          this.clockHour = Math.floor(next / 60);
+          this.clockMinute = next % 60;
+        },
+        updateClockFromDialDelta(event) {
+          const currentAngle = this.getDialAngle(event);
+          if (currentAngle === null || this.lastDialAngle === null) {
+            this.lastDialAngle = currentAngle;
+            return;
           }
+
+          let deltaAngle = currentAngle - this.lastDialAngle;
+          if (deltaAngle > 180) deltaAngle -= 360;
+          if (deltaAngle < -180) deltaAngle += 360;
+
+          this.lastDialAngle = currentAngle;
+
+          const minuteFloat = deltaAngle * 2 + this.dragMinuteRemainder;
+          const minuteInt = minuteFloat >= 0 ? Math.floor(minuteFloat) : Math.ceil(minuteFloat);
+          this.dragMinuteRemainder = minuteFloat - minuteInt;
+          this.applyMinuteDelta(minuteInt);
         },
         updateSelectedYear(value) {
           if (typeof value !== 'string') return;
