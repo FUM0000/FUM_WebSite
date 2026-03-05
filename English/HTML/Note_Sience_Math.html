@@ -1,4 +1,4 @@
-<html>
+﻿<html>
 
 <head>
   <meta charset="UTF-8">
@@ -44,6 +44,77 @@
     .code-block code {
       color: #333;
     }
+
+    .note-stepper-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start !important;
+      gap: 12px 10px;
+      align-items: stretch;
+      padding: 8px 0 12px;
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    .note-stepper-header .v-stepper__step {
+      flex: 0 0 calc((100% - 30px) / 4);
+      max-width: calc((100% - 30px) / 4);
+      min-width: 0;
+      border: 0 !important;
+      border-radius: 0;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 10px 28px 10px 8px;
+      position: relative;
+    }
+
+    .note-stepper-header .v-stepper__label {
+      display: inline-block;
+      max-width: calc(100% - 28px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: middle;
+    }
+
+    .note-stepper-header .v-stepper__step::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: 4px;
+      width: 22px;
+      height: 2px;
+      background: #b0bec5;
+      transform: translateY(-50%);
+    }
+
+    .note-stepper-header .v-stepper__step:nth-child(4n)::after,
+    .note-stepper-header .v-stepper__step:last-child::after {
+      display: none;
+    }
+
+    @media (max-width: 780px) {
+      .note-stepper-header .v-stepper__step {
+        flex: 0 0 calc((100% - 10px) / 2);
+        max-width: calc((100% - 10px) / 2);
+        padding-right: 18px;
+      }
+
+      .note-stepper-header .v-stepper__step::after {
+        display: block;
+      }
+
+      .note-stepper-header .v-stepper__step:nth-child(2n)::after,
+      .note-stepper-header .v-stepper__step:last-child::after {
+        display: none;
+      }
+
+      .note-stepper-header .v-stepper__label {
+        display: inline-block !important;
+        max-width: calc(100% - 24px);
+        font-size: 12px;
+      }
+    }
   </style>
 </head>
 
@@ -62,26 +133,20 @@
                   <v-card-text>
                     <v-text-field v-model="searchQuery" label="数学のトピックを検索" prepend-inner-icon="mdi-magnify" clearable
                       outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
-
                     <v-stepper v-model="Count_Step_1">
-                      <v-stepper-header>
-                        <v-stepper-step :complete="Count_Step_1 > 1" step="1"
-                          @click="Count_Step_1 = 1"></v-stepper-step>
-                        <v-divider></v-divider>
-                        <v-stepper-step :complete="Count_Step_1 > 2" step="2"
-                          @click="Count_Step_1 = 2"></v-stepper-step>
-                        <v-divider></v-divider>
+                      <v-stepper-header class="note-stepper-header">
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1" class="step-title">暗算テクニック</v-stepper-step>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2" class="step-title">確率</v-stepper-step>
+                        <v-stepper-step :complete="Count_Step_1 > 3" step="3" @click="Count_Step_1 = 3" class="step-title">統計</v-stepper-step>
+                        <v-stepper-step :complete="Count_Step_1 > 4" step="4" @click="Count_Step_1 = 4" class="step-title">素数判定</v-stepper-step>
                       </v-stepper-header>
 
                       <v-stepper-items>
-
                         <v-stepper-content step="1">
                           <v-card class="mb-12">
                             <v-card-text>
                               <v-card-title class="text-subtitle-2 font-weight-bold">暗算テクニック</v-card-title>
-                              <v-treeview :items="filteredMentalArithmetic" item-key="name" activatable open-on-click
-                                dense :open.sync="openNodesMentalArithmetic"
-                                @update:open="updateOpenNodesMentalArithmetic">
+                              <v-treeview :items="filteredMentalArithmetic" item-key="name" activatable open-on-click dense :open.sync="openNodesMentalArithmetic" @update:open="updateOpenNodesMentalArithmetic">
                                 <template v-slot:label="{ item }">
                                   <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
                                 </template>
@@ -96,13 +161,10 @@
                         <v-stepper-content step="2">
                           <v-card class="mb-12">
                             <v-card-text>
-                              <v-card-title class="text-subtitle-2 font-weight-bold">素数探索</v-card-title>
-                              <v-treeview :items="filteredPrimeNumberSearch" item-key="name" activatable open-on-click
-                                dense :open.sync="openNodesPrimeNumberSearch"
-                                @update:open="updateOpenNodesPrimeNumberSearch">
+                              <v-card-title class="text-subtitle-2 font-weight-bold">確率</v-card-title>
+                              <v-treeview :items="filteredProbabilityTheory" item-key="name" activatable open-on-click dense :open.sync="openNodesProbabilityTheory" @update:open="updateOpenNodesProbabilityTheory">
                                 <template v-slot:label="{ item }">
-                                  <div v-if="item.isCode" v-html="item.name" class="code-block"></div>
-                                  <span v-else :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
                                 </template>
                               </v-treeview>
                             </v-card-text>
@@ -113,8 +175,40 @@
                           </div>
                         </v-stepper-content>
 
-                      </v-stepper-items>
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">統計</v-card-title>
+                              <v-treeview :items="filteredStatisticsTheory" item-key="name" activatable open-on-click dense :open.sync="openNodesStatisticsTheory" @update:open="updateOpenNodesStatisticsTheory">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
 
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">素数判定</v-card-title>
+                              <v-treeview :items="filteredPrimeNumberSearch" item-key="name" activatable open-on-click dense :open.sync="openNodesPrimeNumberSearch" @update:open="updateOpenNodesPrimeNumberSearch">
+                                <template v-slot:label="{ item }">
+                                  <div v-if="item.isCode" v-html="item.name" class="code-block"></div>
+                                  <span v-else :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 3">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
                     </v-stepper>
                   </v-card-text>
                 </v-card>
@@ -144,8 +238,12 @@
         dialog: false,
         searchQuery: '',
         filteredMentalArithmetic: [],
+        filteredProbabilityTheory: [],
+        filteredStatisticsTheory: [],
         filteredPrimeNumberSearch: [],
         openNodesMentalArithmetic: [],
+        openNodesProbabilityTheory: [],
+        openNodesStatisticsTheory: [],
         openNodesPrimeNumberSearch: [],
         MentalArithmetic: [
           {
@@ -180,7 +278,7 @@
             "name": "中心差平方(平均の平方が計算しやすい場合)",
             "children": [
               { "name": "変数：x = (a + b) ÷ 2, d = x - a(a < b)" },
-              { "name": "説明：a  × b   = (x   - d) × (x   + d) = x²   - d²" },
+              { "name": "説明：a × b = (x - d) × (x + d) = x² - d²" },
               { "name": "例　：98 × 102 = (100 - 2) × (100 + 2) = 100² − 2² = 9996" }
             ]
           },
@@ -202,17 +300,275 @@
             "name": "段階計算（累乗利用）",
             "children": [
               { "name": "説明：片方の数を平方や立方の因数に分解して、もう片方を掛けながら段階的に計算する" },
-              { "name": "例　： 7 × 16 → 7 × 2 = 14 → 14 × 2 = 28 → 28 × 2 = 56 → 56 × 2 = 112" },
-              { "name": "例　： 5 × 27 → 5 × 3 = 15 → 15 × 3 = 45 → 45 × 3 = 135" },
+              { "name": "例　：7 × 16 → 7 × 2 = 14 → 14 × 2 = 28 → 28 × 2 = 56 → 56 × 2 = 112" },
+              { "name": "例　：5 × 27 → 5 × 3 = 15 → 15 × 3 = 45 → 45 × 3 = 135" }
+            ]
+          }
+        ],
+        ProbabilityTheory: [
+          {
+            "name": "基礎概念",
+            "children": [
+              {
+                "name": "試行と結果",
+                "children": [
+                  { "name": "試行", "children": [{ "name": "確率的な結果を生む操作。例：サイコロを1回振る、コインを投げるなど。" }] },
+                  { "name": "結果（Outcome）", "children": [{ "name": "試行の1回の実行によって得られる具体的な結果。例：サイコロの出目3。" }] },
+                  { "name": "標本空間", "children": [{ "name": "試行で起こり得るすべての結果の集合。記号Sで表す。例：S={1,2,3,4,5,6}。" }] },
+                  { "name": "事象", "children": [{ "name": "標本空間の部分集合。例：偶数が出る={2,4,6}。" }] }
+                ]
+              },
+              {
+                "name": "事象の種類",
+                "children": [
+                  { "name": "根元事象", "children": [{ "name": "標本空間の1つの結果のみからなる事象。" }] },
+                  { "name": "複合事象", "children": [{ "name": "複数の結果を含む事象。" }] },
+                  { "name": "必然事象", "children": [{ "name": "必ず起こる事象。標本空間そのもの。確率は1。" }] },
+                  { "name": "不可能事象", "children": [{ "name": "決して起こらない事象。空集合。確率は0。" }] }
+                ]
+              }
             ]
           },
+          {
+            "name": "確率の定義",
+            "children": [
+              { "name": "古典的確率", "children": [{ "name": "すべての結果が同様に起こりやすいとき P(A)=|A|/|S|。" }] },
+              { "name": "頻度確率", "children": [{ "name": "相対頻度k/nが試行回数を増やすと近づく値を確率とする考え方。" }] },
+              { "name": "公理的確率", "children": [{ "name": "非負性P(A)>=0、正規化P(S)=1、加法性P(A∪B)=P(A)+P(B)。" }] }
+            ]
+          },
+          {
+            "name": "事象の演算",
+            "children": [
+              { "name": "集合演算", "children": [{ "name": "和事象A∪B、積事象A∩B、差事象A-B、補事象A^c。" }] },
+              { "name": "包除原理", "children": [{ "name": "2事象: P(A∪B)=P(A)+P(B)-P(A∩B)。3事象でも重複分を調整する。" }] }
+            ]
+          },
+          {
+            "name": "条件付き確率",
+            "children": [
+              { "name": "条件付き確率", "children": [{ "name": "P(A|B)=P(A∩B)/P(B)。" }] },
+              { "name": "乗法法則", "children": [{ "name": "P(A∩B)=P(A)P(B|A)。" }] },
+              { "name": "独立事象", "children": [{ "name": "独立: P(A∩B)=P(A)P(B)。相互独立は任意組合せで成立。" }] }
+            ]
+          },
+          {
+            "name": "ベイズ確率",
+            "children": [
+              { "name": "全確率の法則", "children": [{ "name": "P(A)=ΣP(A|Bi)P(Bi)。" }] },
+              { "name": "ベイズ推定", "children": [{ "name": "P(A|B)=P(B|A)P(A)/P(B)。事前確率を観測で事後確率へ更新。" }] }
+            ]
+          },
+          {
+            "name": "確率計算の基礎（組合せ論）",
+            "children": [
+              { "name": "基本計数", "children": [{ "name": "階乗n!、加法原理、乗法原理。" }] },
+              { "name": "順列", "children": [{ "name": "順列nPr=n!/(n-r)!、円順列は(n-1)!。" }] },
+              { "name": "組合せ", "children": [{ "name": "組合せnCr=n!/(r!(n-r)!)、重複組合せは(n+r-1)Cr。" }] }
+            ]
+          },
+          {
+            "name": "確率変数",
+            "children": [
+              { "name": "確率変数の種類", "children": [{ "name": "確率変数、離散確率変数、連続確率変数。" }] }
+            ]
+          },
+          {
+            "name": "確率分布",
+            "children": [
+              { "name": "離散分布", "children": [{ "name": "ベルヌーイ分布、二項分布、幾何分布、ポアソン分布。" }] },
+              { "name": "連続分布", "children": [{ "name": "一様分布、正規分布、指数分布。" }] }
+            ]
+          },
+          {
+            "name": "確率論の理論",
+            "children": [
+              { "name": "極限定理", "children": [{ "name": "大数の法則、中心極限定理。" }] }
+            ]
+          },
+          {
+            "name": "応用",
+            "children": [
+              { "name": "計算手法", "children": [{ "name": "モンテカルロ法、確率アルゴリズム。" }] }
+            ]
+          }
+        ],
+        StatisticsTheory: [
+          {
+            "name": "基礎概念",
+            "children": [
+              {
+                "name": "統計の基本対象",
+                "children": [
+                  { "name": "母集団", "children": [{ "name": "調査や分析の対象となるすべての個体・データの集合。" }] },
+                  { "name": "標本", "children": [{ "name": "母集団から抽出されたデータの集合。母集団の性質を推測するために用いる。" }] },
+                  { "name": "個体", "children": [{ "name": "母集団を構成する一つ一つの対象。" }] },
+                  { "name": "観測値", "children": [{ "name": "個体から取得された具体的な測定結果。" }] }
+                ]
+              },
+              {
+                "name": "データの種類",
+                "children": [
+                  { "name": "質的データ（カテゴリデータ）", "children": [{ "name": "数値ではなく分類で表されるデータ。例：性別、色、職業。" }] },
+                  { "name": "量的データ", "children": [{ "name": "数値で測定されるデータ。例：身長、体重、温度。" }] },
+                  { "name": "離散データ", "children": [{ "name": "整数など飛び飛びの値を取るデータ。例：子供の人数。" }] },
+                  { "name": "連続データ", "children": [{ "name": "実数の範囲を連続的に取るデータ。例：時間、長さ。" }] }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "データ整理",
+            "children": [
+              {
+                "name": "データの分類",
+                "children": [
+                  { "name": "度数", "children": [{ "name": "特定の値や区間に含まれるデータ数。" }] },
+                  { "name": "度数分布表", "children": [{ "name": "データを区間ごとにまとめ、度数を整理した表。" }] },
+                  { "name": "相対度数", "children": [{ "name": "度数を全体数で割った割合。" }] },
+                  { "name": "累積度数", "children": [{ "name": "小さい値から順に度数を合計した値。" }] }
+                ]
+              },
+              {
+                "name": "データの可視化",
+                "children": [
+                  { "name": "ヒストグラム", "children": [{ "name": "度数分布を棒の面積で表すグラフ。" }] },
+                  { "name": "棒グラフ", "children": [{ "name": "カテゴリごとの値を棒の長さで比較する図。" }] },
+                  { "name": "円グラフ", "children": [{ "name": "全体に対する割合を円の角度で表す図。" }] },
+                  { "name": "箱ひげ図", "children": [{ "name": "四分位数と外れ値を用いてデータの分布を示す図。" }] }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "記述統計",
+            "children": [
+              {
+                "name": "代表値",
+                "children": [
+                  { "name": "平均値", "children": [{ "name": "データの合計を個数で割った値。x̄=(1/n)Σxi" }] },
+                  { "name": "中央値", "children": [{ "name": "データを小さい順に並べたとき中央に位置する値。" }] },
+                  { "name": "最頻値", "children": [{ "name": "最も多く出現する値。" }] }
+                ]
+              },
+              {
+                "name": "散布度",
+                "children": [
+                  { "name": "範囲", "children": [{ "name": "最大値 − 最小値。" }] },
+                  { "name": "分散", "children": [{ "name": "平均からの偏差の二乗の平均。σ²=(1/n)Σ(xi-μ)²" }] },
+                  { "name": "標準偏差", "children": [{ "name": "分散の平方根。σ=√σ²" }] },
+                  { "name": "四分位範囲", "children": [{ "name": "第3四分位数 − 第1四分位数。" }] }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "データの関係",
+            "children": [
+              {
+                "name": "相関",
+                "children": [
+                  { "name": "共分散", "children": [{ "name": "2つの変数の変動の関係を示す指標。" }] },
+                  { "name": "相関係数", "children": [{ "name": "変数間の線形関係の強さを表す指標。値は-1〜1。" }] },
+                  { "name": "散布図", "children": [{ "name": "2変数の関係を点で表した図。" }] }
+                ]
+              },
+              {
+                "name": "回帰",
+                "children": [
+                  { "name": "回帰分析", "children": [{ "name": "ある変数から別の変数を予測する統計手法。" }] },
+                  { "name": "単回帰直線", "children": [{ "name": "最小二乗法で求める直線。y=ax+b" }] }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "推測統計",
+            "children": [
+              {
+                "name": "標本抽出",
+                "children": [
+                  { "name": "無作為抽出", "children": [{ "name": "母集団からランダムに標本を選ぶ方法。" }] },
+                  { "name": "層化抽出", "children": [{ "name": "母集団を層に分け、それぞれから標本を抽出する方法。" }] },
+                  { "name": "系統抽出", "children": [{ "name": "一定間隔で標本を選ぶ方法。" }] }
+                ]
+              },
+              {
+                "name": "区間推定",
+                "children": [
+                  { "name": "信頼区間", "children": [{ "name": "母数が一定確率で含まれる区間。" }] },
+                  { "name": "信頼水準", "children": [{ "name": "信頼区間が母数を含む確率。例：95%。" }] }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "仮説検定",
+            "children": [
+              {
+                "name": "仮説設定",
+                "children": [
+                  { "name": "帰無仮説", "children": [{ "name": "検証対象となる基本仮説。" }] },
+                  { "name": "対立仮説", "children": [{ "name": "帰無仮説と対立する仮説。" }] }
+                ]
+              },
+              {
+                "name": "検定",
+                "children": [
+                  { "name": "有意水準", "children": [{ "name": "帰無仮説を棄却する基準となる確率。" }] },
+                  { "name": "p値", "children": [{ "name": "帰無仮説のもとで観測結果が得られる確率。" }] },
+                  { "name": "第一種過誤", "children": [{ "name": "真の帰無仮説を誤って棄却する誤り。" }] },
+                  { "name": "第二種過誤", "children": [{ "name": "誤った帰無仮説を棄却できない誤り。" }] }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "統計モデル",
+            "children": [
+              {
+                "name": "分布モデル",
+                "children": [
+                  { "name": "正規分布モデル", "children": [{ "name": "多くの自然現象で近似される連続確率分布。" }] },
+                  { "name": "二項モデル", "children": [{ "name": "成功回数を扱う確率モデル。" }] }
+                ]
+              },
+              {
+                "name": "パラメータ推定",
+                "children": [
+                  { "name": "最尤推定", "children": [{ "name": "観測データの尤度を最大にするパラメータを推定する方法。" }] },
+                  { "name": "不偏推定量", "children": [{ "name": "期待値が母数に一致する推定量。" }] }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "統計の応用",
+            "children": [
+              {
+                "name": "データ分析",
+                "children": [
+                  { "name": "探索的データ分析", "children": [{ "name": "データの特徴を可視化や統計量で把握する分析方法。" }] },
+                  { "name": "予測分析", "children": [{ "name": "統計モデルを用いて将来の値を予測する分析。" }] }
+                ]
+              },
+              {
+                "name": "応用分野",
+                "children": [
+                  { "name": "機械学習", "children": [{ "name": "データからパターンを学習するアルゴリズムの分野。" }] },
+                  { "name": "品質管理", "children": [{ "name": "統計手法を用いて製品品質を管理する方法。" }] },
+                  { "name": "経済統計", "children": [{ "name": "経済データを統計的に分析する分野。" }] }
+                ]
+              }
+            ]
+          }
         ],
         PrimeNumberSearch: [
           {
             "name": "試し割り",
             "children": [
               { "name": "説明：√nの整数部までnを2以外の偶数を除き奇数で割り切れるか調べていく" },
-              { "name": "例　：29は2,3,5で割り切れないので素数" },
+              { "name": "例　：29は2,3,5で割り切れないので素数" }
             ]
           },
           {
@@ -220,45 +576,49 @@
             "children": [
               {
                 "name": `<pre><code>
-                  import random
-                  def is_prime_miller_rabin(n, k=5):
-                      """
-                      n: 判定したい整数
-                      k: テスト回数（多いほど精度向上）
-                      """
-                      if n < 2:
-                          return False
-                      if n == 2 or n == 3:
-                          return True
-                      if n % 2 == 0:
-                          return False
+import random
 
-                      d = n - 1
-                      s = 0
-                      while d % 2 == 0:
-                          d //= 2
-                          s += 1
+def is_prime_miller_rabin(n, k=5):
+    """
+    n: 判定したい整数
+    k: テスト回数（多いほど精度向上）
+    """
+    if n < 2:
+        return False
+    if n == 2 or n == 3:
+        return True
+    if n % 2 == 0:
+        return False
 
-                      for _ in range(k):
-                          a = random.randrange(2, n - 1)
-                          x = pow(a, d, n)  # a^d % n
-                          if x == 1 or x == n - 1:
-                              continue
-                          for _ in range(s - 1):
-                              x = pow(x, 2, n)
-                              if x == n - 1:
-                                  break
-                          else:
-                              return False
-                      return True  # 高確率で素数
-                  }</code></pre>`, "isCode": true
-              },
+    d = n - 1
+    s = 0
+    while d % 2 == 0:
+        d //= 2
+        s += 1
+
+    for _ in range(k):
+        a = random.randrange(2, n - 1)
+        x = pow(a, d, n)  # a^d % n
+        if x == 1 or x == n - 1:
+            continue
+        for _ in range(s - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+        else:
+            return False
+    return True  # 高確率で素数
+</code></pre>`,
+                "isCode": true
+              }
             ]
-          },
-        ],
+          }
+        ]
       },
       created() {
         this.filteredMentalArithmetic = JSON.parse(JSON.stringify(this.MentalArithmetic));
+        this.filteredProbabilityTheory = JSON.parse(JSON.stringify(this.ProbabilityTheory));
+        this.filteredStatisticsTheory = JSON.parse(JSON.stringify(this.StatisticsTheory));
         this.filteredPrimeNumberSearch = JSON.parse(JSON.stringify(this.PrimeNumberSearch));
       },
       methods: {
@@ -278,6 +638,12 @@
         updateOpenNodesMentalArithmetic(newOpen) {
           this.openNodesMentalArithmetic = newOpen;
         },
+        updateOpenNodesProbabilityTheory(newOpen) {
+          this.openNodesProbabilityTheory = newOpen;
+        },
+        updateOpenNodesStatisticsTheory(newOpen) {
+          this.openNodesStatisticsTheory = newOpen;
+        },
         updateOpenNodesPrimeNumberSearch(newOpen) {
           this.openNodesPrimeNumberSearch = newOpen;
         },
@@ -286,6 +652,10 @@
           if (!query) {
             this.filteredMentalArithmetic = JSON.parse(JSON.stringify(this.MentalArithmetic));
             this.openNodesMentalArithmetic = [];
+            this.filteredProbabilityTheory = JSON.parse(JSON.stringify(this.ProbabilityTheory));
+            this.openNodesProbabilityTheory = [];
+            this.filteredStatisticsTheory = JSON.parse(JSON.stringify(this.StatisticsTheory));
+            this.openNodesStatisticsTheory = [];
             this.filteredPrimeNumberSearch = JSON.parse(JSON.stringify(this.PrimeNumberSearch));
             this.openNodesPrimeNumberSearch = [];
             return;
@@ -312,6 +682,10 @@
 
           this.filteredMentalArithmetic = filterTree(JSON.parse(JSON.stringify(this.MentalArithmetic)));
           this.openNodesMentalArithmetic = this.collectAllNodeIds(this.filteredMentalArithmetic);
+          this.filteredProbabilityTheory = filterTree(JSON.parse(JSON.stringify(this.ProbabilityTheory)));
+          this.openNodesProbabilityTheory = this.collectAllNodeIds(this.filteredProbabilityTheory);
+          this.filteredStatisticsTheory = filterTree(JSON.parse(JSON.stringify(this.StatisticsTheory)));
+          this.openNodesStatisticsTheory = this.collectAllNodeIds(this.filteredStatisticsTheory);
           this.filteredPrimeNumberSearch = filterTree(JSON.parse(JSON.stringify(this.PrimeNumberSearch)));
           this.openNodesPrimeNumberSearch = this.collectAllNodeIds(this.filteredPrimeNumberSearch);
         }
@@ -321,3 +695,5 @@
 </body>
 
 </html>
+
+
