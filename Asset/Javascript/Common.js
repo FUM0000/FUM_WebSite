@@ -963,7 +963,7 @@ Vue.component('main-navigation', {
 
                     <v-list-item href="./Note_Qualification_ColorCoordinator.html">
                         <v-list-item-icon />
-                        <v-list-item-title>カラーコーディネーター</v-list-item-title>
+                        <v-list-item-title>カラーコーディネーター検定</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Note_Qualification_WebDesignTechnician.html">
                         <v-list-item-icon />
