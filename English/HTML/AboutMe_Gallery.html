@@ -174,12 +174,24 @@
                 const wallRadius = 0.82;
                 const textRadius = wallRadius - 0.02;
                 const spacing = 0.19;
+                const buttonRadius = 0.04;
                 const columns = Math.min(2, this.floors);
                 const rows = Math.ceil(this.floors / columns);
                 const startY = ((rows - 1) * spacing) / 2;
                 const columnThetaSpan = 0.52;
                 const thetaStart = Math.PI + (columns > 1 ? columnThetaSpan / 2 : 0);
                 const thetaStep = columns > 1 ? columnThetaSpan / (columns - 1) : 0;
+                let panelShiftX = 0;
+
+                if (columns > 1) {
+                    const leftThetaCenter = thetaStart;
+                    const leftA = leftThetaCenter - 0.18;
+                    const leftB = leftThetaCenter + 0.18;
+                    const leftX = Math.min(Math.sin(leftA) * wallRadius, Math.sin(leftB) * wallRadius);
+                    // Align the right edge of the left button to x = 0.
+                    panelShiftX = -(leftX + buttonRadius);
+                }
+
                 for (let i = 0; i < this.floors; i++) {
                     const col = Math.floor(i / rows);
                     const row = i % rows;
@@ -193,9 +205,10 @@
                     const thetaButton = xA < xB ? thetaButtonCandidateA : thetaButtonCandidateB;
                     const labelText = `${this.floorNames[i]} ${this.floorDescriptions[i]}`;
                     const labelMesh = this.createCurvedWallLabelMesh(labelText, thetaLabelLeft, y, textRadius, 0.52, 0.05);
+                    labelMesh.position.x += panelShiftX;
                     this.buttonPanel.add(labelMesh);
                     this.floorLabels.push(labelMesh);
-                    const buttonGeometry = new THREE.SphereGeometry(0.04, 20, 20);
+                    const buttonGeometry = new THREE.SphereGeometry(buttonRadius, 20, 20);
                     const buttonMaterial = new THREE.MeshBasicMaterial({
                         color: 0xaa2222,
                         transparent: true,
@@ -204,7 +217,7 @@
                     });
                     const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
                     button.position.set(
-                        Math.sin(thetaButton) * wallRadius,
+                        Math.sin(thetaButton) * wallRadius + panelShiftX,
                         y,
                         Math.cos(thetaButton) * wallRadius
                     );
@@ -391,19 +404,19 @@
 
                 this._UI_Home.Initialize();
                 this._UI_Home.Fog = false;
-                this._UI_Home.Position = new THREE.Vector3(0.0, Player.Position.y + 2.76, 0.0);
+                this._UI_Home.Position = new THREE.Vector3(0.0, Player.Position.y + 2.26, 0.0);
                 this._UI_Music.Initialize();
                 this._UI_Music.Fog = false;
-                this._UI_Music.Position = new THREE.Vector3(0.0, Player.Position.y - 3.24, 0.0);
+                this._UI_Music.Position = new THREE.Vector3(0.0, Player.Position.y - 2.74, 0.0);
                 this.updateHomeMusicAnchor();
                 if (this._Button_Home) Scene.remove(this._Button_Home);
                 if (this._Button_Music) Scene.remove(this._Button_Music);
                 this._Button_Home = new THREE.Mesh(
-                    new THREE.SphereGeometry(1, 16, 16),
+                    new THREE.SphereGeometry(0.5, 16, 16),
                     new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.02, depthWrite: false, fog: false })
                 );
                 this._Button_Music = new THREE.Mesh(
-                    new THREE.SphereGeometry(1, 16, 16),
+                    new THREE.SphereGeometry(0.5, 16, 16),
                     new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.02, depthWrite: false, fog: false })
                 );
                 this._Button_Home.position.copy(this._UI_Home.Position);
@@ -561,13 +574,13 @@
                 const homePos = this._UI_Home.Position.clone();
                 homePos.x = 0;
                 homePos.z = 0;
-                homePos.y = Player.Position.y + 2.76;
+                homePos.y = Player.Position.y + 2.26;
                 this._UI_Home.Position = homePos;
 
                 const musicPos = this._UI_Music.Position.clone();
                 musicPos.x = 0;
                 musicPos.z = 0;
-                musicPos.y = Player.Position.y - 3.24;
+                musicPos.y = Player.Position.y - 2.74;
                 this._UI_Music.Position = musicPos;
 
                 if (this._Button_Home) this._Button_Home.position.copy(this._UI_Home.Position);
@@ -686,7 +699,13 @@
                     });
                 });
 
-                const material = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 0.1, fog: false });
+                const material = new THREE.LineBasicMaterial({
+                    color: 0xd3dae6,
+                    transparent: true,
+                    opacity: 0.38,
+                    linewidth: 0.1,
+                    fog: false
+                });
                 const geometry = new THREE.BufferGeometry();
                 const points = [];
                 const segments = 64;
@@ -733,7 +752,13 @@
                     this.applyAspectRatioToImageObject(image_obj, image_path);
                 });
 
-                const material = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 0.1, fog: false });
+                const material = new THREE.LineBasicMaterial({
+                    color: 0xd3dae6,
+                    transparent: true,
+                    opacity: 0.38,
+                    linewidth: 0.1,
+                    fog: false
+                });
                 const geometry = new THREE.BufferGeometry();
                 const points = [];
                 const segments = 64;
