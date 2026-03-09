@@ -162,11 +162,6 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Blog</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-post-outline</v-icon></v-list-item-icon>
                 </v-list-item>
-                <v-list-item href="./AboutMe_Brain.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Brain Archive</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-brain</v-icon></v-list-item-icon>
-                </v-list-item>
 
                 <v-list-item href="./AboutMe_Gallery.html">
                     <v-list-item-icon />
@@ -934,6 +929,12 @@ Vue.component('main-navigation', {
                 <template v-slot:activator>
                     <v-list-item-title>My Notes</v-list-item-title>
                 </template>
+
+                <v-list-item href="./AboutMe_Brain.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>思考</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-brain</v-icon></v-list-item-icon>
+                </v-list-item>
 
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
