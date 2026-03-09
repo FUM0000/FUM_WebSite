@@ -39,14 +39,14 @@
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid class="pa-5 brain-page">
 
-                        <v-row justify="center">
+                        <v-row justify="center" align="center" class="brain-content-row">
                             <v-col cols="12" md="8">
 
                                 <v-card class="pb-2 profile-card">
                                     <v-card-title>
                                         <v-row align="center" no-gutters>
                                             <v-col cols="10" md="4">
-                                                <v-text-field v-model="search" label="Search" prepend-icon="mdi-magnify"
+                                                <v-text-field v-model="search" label="検索" prepend-icon="mdi-magnify"
                                                     single-line hide-details outlined dense clearable
                                                     @input="filterTree"></v-text-field>
                                             </v-col>
@@ -57,7 +57,7 @@
                                             </v-col>
                                         </v-row>
                                     </v-card-title>
-                                    <v-treeview class="custom-treeview mt-4 mb-4" :items="filteredItems" item-key="name"
+                                    <v-treeview class="custom-treeview mt-4 mb-4" :items="filteredItems" item-key="id"
                                         :open="openNodes" activatable open-on-click dense>
                                     </v-treeview>
                                 </v-card>
@@ -96,6 +96,10 @@
         .brain-main .brain-page {
             position: relative;
             z-index: 1;
+        }
+
+        .brain-main .brain-page .brain-content-row {
+            min-height: calc(100vh - 120px);
         }
 
         .brain-page .profile-card {
@@ -3961,6 +3965,7 @@
                 ],
                 filteredItems: [],
                 openNodes: [],
+                nodeIdCounter: 0,
                 matrixCtx: null,
                 matrixCanvas: null,
                 matrixMainEl: null,
@@ -4062,12 +4067,23 @@
                 getAllNodes(items) {
                     let nodes = [];
                     for (let item of items) {
-                        nodes.push(item.name);
+                        nodes.push(item.id);
                         if (item.children) {
                             nodes = nodes.concat(this.getAllNodes(item.children));
                         }
                     }
                     return nodes;
+                },
+                assignNodeIds(items) {
+                    for (const item of items) {
+                        if (!item.id) {
+                            this.nodeIdCounter += 1;
+                            item.id = `brain-node-${this.nodeIdCounter}`;
+                        }
+                        if (item.children && item.children.length) {
+                            this.assignNodeIds(item.children);
+                        }
+                    }
                 },
                 closeAllNodes() {
                     this.openNodes = [];
@@ -4083,6 +4099,7 @@
                 }
             },
             created() {
+                this.assignNodeIds(this.items);
                 this.filteredItems = this.items;
             }
         })
