@@ -34,13 +34,15 @@
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">About Me > Brain Archive</main-system-bar>
 
 
-            <v-main id="Main">
+            <v-main id="Main" class="brain-main">
+                <canvas id="matrix-rain" aria-hidden="true"></canvas>
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid class="pa-5">
+                    <v-container v-show="Ready_Page" fluid class="pa-5 brain-page">
 
                         <v-row justify="center">
                             <v-col cols="12" md="8">
-                                <v-card class="mb-4 profile-card">
+
+                                <v-card class="pb-2 profile-card">
                                     <v-card-title>
                                         <v-row align="center" no-gutters>
                                             <v-col cols="10" md="4">
@@ -59,6 +61,7 @@
                                         :open="openNodes" activatable open-on-click dense>
                                     </v-treeview>
                                 </v-card>
+
                             </v-col>
                         </v-row>
 
@@ -73,54 +76,28 @@
     </v-app>
 
     <style>
-        .profile-card,
-        .hobby-card,
-        .life-journey-card,
-        .job-offerings-card {
-            border-radius: 15px;
+        .brain-main {
+            position: relative;
             overflow: hidden;
-            transition: all 0.3s ease-in-out;
+            background: #000000 !important;
         }
 
-        .profile-card:hover,
-        .hobby-card:hover,
-        .life-journey-card:hover,
-        .job-offerings-card:hover {
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        .brain-main #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            z-index: 0;
+            pointer-events: none;
         }
 
-        .profile-avatar {
-            border: 5px solid white;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        .brain-main .brain-page {
+            position: relative;
+            z-index: 1;
         }
 
-
-        .v-treeview-node__label {
-            white-space: normal;
-            word-break: break-word;
-        }
-
-        .v-treeview-node__content {
-            width: 100%;
-            margin-left: 4px !important;
-        }
-
-        .v-treeview-node__root {
-            width: 100%;
-            min-height: 24px;
-        }
-
-        .v-treeview-node {
-            margin-left: 8px !important;
-        }
-
-        .v-treeview-node__level {
-            width: 8px !important;
-        }
-
-        .v-treeview-node__toggle {
-            width: 16px !important;
-        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -3964,8 +3941,110 @@
                 ],
                 filteredItems: [],
                 openNodes: [],
+                matrixCtx: null,
+                matrixCanvas: null,
+                matrixMainEl: null,
+                matrixColumns: 0,
+                matrixRows: 0,
+                matrixCells: [],
+                matrixFontSize: 20,
+                matrixFrame: 0,
+                matrixTimer: null,
+                matrixResizeHandler: null,
             },
             methods: {
+                randomHexChar() {
+                    return Math.floor(Math.random() * 16).toString(16).toUpperCase();
+                },
+                initMatrixRain() {
+                    this.matrixMainEl = this.$el.querySelector('#Main');
+                    this.matrixCanvas = this.$el.querySelector('#matrix-rain');
+                    if (!this.matrixCanvas) return;
+
+                    this.matrixCtx = this.matrixCanvas.getContext('2d');
+                    this.resizeMatrixRain();
+
+                    this.matrixResizeHandler = () => this.resizeMatrixRain();
+                    window.addEventListener('resize', this.matrixResizeHandler);
+
+                    this.startMatrixRain();
+                },
+                resizeMatrixRain() {
+                    if (!this.matrixCanvas || !this.matrixCtx || !this.matrixMainEl) return;
+
+                    const width = window.innerWidth;
+                    const height = window.innerHeight;
+
+                    this.matrixCanvas.width = width;
+                    this.matrixCanvas.height = height;
+
+                    this.matrixColumns = Math.max(1, Math.ceil(this.matrixCanvas.width / this.matrixFontSize) + 2);
+                    this.matrixRows = Math.max(1, Math.ceil(this.matrixCanvas.height / this.matrixFontSize) + 2);
+                    this.matrixCells = Array.from(
+                        { length: this.matrixColumns * this.matrixRows },
+                        () => this.randomHexChar()
+                    );
+                    this.matrixFrame = 0;
+
+                    this.matrixCtx.fillStyle = '#000000';
+                    this.matrixCtx.fillRect(0, 0, this.matrixCanvas.width, this.matrixCanvas.height);
+                },
+                updateMatrixCells() {
+                    if (!this.matrixCells.length) return;
+                    const total = this.matrixCells.length;
+                    const changesPerFrame = Math.max(1, Math.floor(total * 0.03));
+                    for (let i = 0; i < changesPerFrame; i++) {
+                        const index = Math.floor(Math.random() * total);
+                        this.matrixCells[index] = this.randomHexChar();
+                    }
+                },
+                drawMatrixLayer(offsetX, offsetY) {
+                    if (!this.matrixCtx) return;
+                    this.matrixCtx.font = `${this.matrixFontSize}px Space Mono, monospace`;
+                    this.matrixCtx.textBaseline = 'top';
+
+                    for (let row = 0; row < this.matrixRows; row++) {
+                        for (let col = 0; col < this.matrixColumns; col++) {
+                            const index = row * this.matrixColumns + col;
+                            const x = (col - 1) * this.matrixFontSize + offsetX;
+                            const y = (row - 1) * this.matrixFontSize + offsetY;
+                            this.matrixCtx.fillText(this.matrixCells[index], x, y);
+                        }
+                    }
+                },
+                drawMatrixRain() {
+                    if (!this.matrixCtx || !this.matrixCanvas) return;
+
+                    this.matrixCtx.fillStyle = 'rgba(0, 0, 20, 0.12)';
+                    this.matrixCtx.fillRect(0, 0, this.matrixCanvas.width, this.matrixCanvas.height);
+
+                    const jitterX = Math.sin(this.matrixFrame * 0.11) * 1.2;
+                    const jitterY = Math.cos(this.matrixFrame * 0.09) * 0.9;
+
+                    this.matrixCtx.save();
+                    this.matrixCtx.fillStyle = 'rgba(0, 0, 255, 0.02)';
+                    this.drawMatrixLayer(jitterX, jitterY);
+                    this.matrixCtx.fillStyle = 'rgba(0, 0, 255, 0.01)';
+                    this.drawMatrixLayer(-jitterX * 0.7, -jitterY * 0.7);
+                    this.matrixCtx.restore();
+
+                    this.matrixCtx.fillStyle = 'rgba(238, 245, 255, 0.05)';
+                    this.drawMatrixLayer(0, 0);
+                    this.matrixFrame++;
+                },
+                startMatrixRain() {
+                    this.stopMatrixRain();
+                    this.matrixTimer = setInterval(() => {
+                        this.updateMatrixCells();
+                        this.drawMatrixRain();
+                    }, 80);
+                },
+                stopMatrixRain() {
+                    if (this.matrixTimer) {
+                        clearInterval(this.matrixTimer);
+                        this.matrixTimer = null;
+                    }
+                },
                 filterTree() {
                     if (this.search) {
                         this.filteredItems = this.filterItems(JSON.parse(JSON.stringify(this.items)));
@@ -3999,6 +4078,15 @@
                 },
                 closeAllNodes() {
                     this.openNodes = [];
+                }
+            },
+            mounted() {
+                this.initMatrixRain();
+            },
+            beforeDestroy() {
+                this.stopMatrixRain();
+                if (this.matrixResizeHandler) {
+                    window.removeEventListener('resize', this.matrixResizeHandler);
                 }
             },
             created() {
