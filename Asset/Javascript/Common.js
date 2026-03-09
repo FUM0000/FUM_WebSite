@@ -1271,15 +1271,18 @@ window.Mixins_Common = {
                 if (saved) {
                     const settings = JSON.parse(saved);
                     if (settings.mainColor) {
-                        // htmlの背景色を設定
-                        document.documentElement.style.backgroundColor = settings.mainColor;
+                        // カスタム背景を持つページでは共通背景色の上書きを行わない
+                        const hasCustomBackground =
+                            !!document.querySelector('#ElectronShell, #interactive-ring, #matrix-rain, #CurlNoiseBg');
 
-                        // Vuetifyのv-applicationにも適用（ただしcanvasを使用するページは除く）
+                        if (!hasCustomBackground) {
+                            // htmlの背景色を設定
+                            document.documentElement.style.backgroundColor = settings.mainColor;
+                        }
+
+                        // Vuetifyのv-applicationにも適用（カスタム背景ページは除く）
                         const vApp = document.querySelector('.v-application');
-                        const canvas = document.querySelector('#ElectronShell');
-
-                        // canvasがある場合（index.html）は背景を透明に保つ
-                        if (vApp && !canvas) {
+                        if (vApp && !hasCustomBackground) {
                             vApp.style.setProperty('background-color', settings.mainColor, 'important');
                         }
                     }

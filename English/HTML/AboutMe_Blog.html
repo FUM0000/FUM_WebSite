@@ -58,6 +58,7 @@
 </head>
 
 <body>
+    <canvas id="CurlNoiseBg" aria-hidden="true"></canvas>
     <v-app id="App">
         <template>
 
@@ -181,12 +182,75 @@
     </v-app>
 
     <style>
-        #App {
-            background-color: #CFD8DC !important;
+        html,
+        body {
+            background: #020617 !important;
+            background-color: #020617 !important;
         }
 
-        .v-application {
-            background-color: #CFD8DC !important;
+        body {
+            position: relative;
+            isolation: isolate;
+        }
+
+        #CurlNoiseBg {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 5;
+            pointer-events: none;
+            background:
+                radial-gradient(1200px 700px at 20% 10%, rgba(0, 90, 210, 0.18), transparent 70%),
+                radial-gradient(900px 560px at 80% 85%, rgba(0, 160, 255, 0.14), transparent 68%),
+                linear-gradient(160deg, #01040a 0%, #020617 52%, #03112a 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: 6;
+            pointer-events: none;
+            background: repeating-linear-gradient(0deg,
+                    rgba(120, 200, 255, 0.03) 0px,
+                    rgba(120, 200, 255, 0.03) 1px,
+                    transparent 1px,
+                    transparent 3px);
+            mix-blend-mode: screen;
+        }
+
+        #App,
+        #App.v-application,
+        #App.v-application.theme--light,
+        #App .v-application--wrap {
+            position: relative;
+            z-index: 20;
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+
+        #Main,
+        #Main.v-main,
+        #Main .v-main__wrap {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+
+        .v-application,
+        .v-application.theme--light {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+
+        .v-application--wrap,
+        #Main,
+        .v-main,
+        .v-main__wrap,
+        .container,
+        .container.fluid {
+            background: transparent !important;
+            background-color: transparent !important;
         }
 
         .blog-card {
@@ -1046,6 +1110,185 @@
                 },
             }
         })
+    </script>
+
+    <script>
+        (function () {
+            const canvas = document.getElementById('CurlNoiseBg');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d', { alpha: true });
+            if (!ctx) return;
+
+            let width = 0;
+            let height = 0;
+            let dpr = 1;
+            const isMobile = window.matchMedia('(max-width: 600px)').matches;
+            const particleCount = isMobile ? 170 : 320;
+            const depth = isMobile ? 760 : 980;
+            const focal = isMobile ? 460 : 640;
+            const particles = [];
+            const center = { x: 0, y: 0 };
+            let scrollY = 0;
+            let scrollNorm = 0;
+
+            function resize() {
+                dpr = Math.min(window.devicePixelRatio || 1, 2);
+                width = window.innerWidth;
+                height = window.innerHeight;
+                center.x = width * 0.5;
+                center.y = height * 0.5;
+                canvas.width = Math.floor(width * dpr);
+                canvas.height = Math.floor(height * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+
+            function handleScroll() {
+                scrollY = window.scrollY || window.pageYOffset || 0;
+                scrollNorm = Math.max(-1.2, Math.min(1.2, scrollY / Math.max(1, window.innerHeight)));
+            }
+
+            function scalarNoise3D(x, y, z, t, ox, oy, oz) {
+                const nx = x + ox;
+                const ny = y + oy;
+                const nz = z + oz;
+                const s1 = Math.sin(nx * 0.010 + ny * 0.013 + nz * 0.007 + t * 0.00125);
+                const s2 = Math.cos(nx * 0.012 - ny * 0.011 + nz * 0.009 - t * 0.00105);
+                const s3 = Math.sin((nx + nz) * 0.008 + ny * 0.007 + t * 0.00091);
+                const s4 = Math.cos((ny - nz) * 0.009 + nx * 0.006 - t * 0.00084);
+                return s1 + s2 * 0.9 + s3 * 0.8 + s4 * 0.6;
+            }
+
+            function curl3D(x, y, z, t) {
+                const e = 1.2;
+                const offA = [31.416, -17.0, 9.3];
+                const offB = [-47.2, 23.77, -11.1];
+                const offC = [12.0, 41.8, 27.6];
+
+                const F = (px, py, pz) => ({
+                    x: scalarNoise3D(px, py, pz, t, offA[0], offA[1], offA[2]),
+                    y: scalarNoise3D(px, py, pz, t, offB[0], offB[1], offB[2]),
+                    z: scalarNoise3D(px, py, pz, t, offC[0], offC[1], offC[2]),
+                });
+
+                const fy1 = F(x, y + e, z), fy2 = F(x, y - e, z);
+                const fz1 = F(x, y, z + e), fz2 = F(x, y, z - e);
+                const fx1 = F(x + e, y, z), fx2 = F(x - e, y, z);
+
+                const dFz_dy = (fy1.z - fy2.z) / (2 * e);
+                const dFy_dz = (fz1.y - fz2.y) / (2 * e);
+                const dFx_dz = (fz1.x - fz2.x) / (2 * e);
+                const dFz_dx = (fx1.z - fx2.z) / (2 * e);
+                const dFy_dx = (fx1.y - fx2.y) / (2 * e);
+                const dFx_dy = (fy1.x - fy2.x) / (2 * e);
+
+                return {
+                    x: dFz_dy - dFy_dz,
+                    y: dFx_dz - dFz_dx,
+                    z: dFy_dx - dFx_dy,
+                };
+            }
+
+            function rotateY(x, z, a) {
+                const c = Math.cos(a);
+                const s = Math.sin(a);
+                return { x: x * c - z * s, z: x * s + z * c };
+            }
+
+            function project(x, y, z, time) {
+                const drift = rotateY(x, z, Math.sin((time + scrollY * 7) * 0.00011) * 0.2);
+                const pz = drift.z + depth;
+                if (pz < 20) return null;
+                const scale = focal / pz;
+                return {
+                    x: center.x + drift.x * scale,
+                    y: center.y + y * scale - scrollNorm * 40,
+                    scale
+                };
+            }
+
+            function resetParticle(p) {
+                p.x = (Math.random() - 0.5) * width * 1.6;
+                p.y = (Math.random() - 0.5) * height * 1.4;
+                p.z = -depth * 0.25 + Math.random() * depth * 0.95;
+                p.vx = 0;
+                p.vy = 0;
+                p.vz = 0;
+                p.hue = 208 + (Math.random() - 0.5) * 6;
+            }
+
+            function initParticles() {
+                particles.length = 0;
+                for (let i = 0; i < particleCount; i += 1) {
+                    const p = {};
+                    resetParticle(p);
+                    particles.push(p);
+                }
+            }
+
+            function drawFrame(time) {
+                ctx.fillStyle = 'rgba(2, 8, 20, 0.2)';
+                ctx.fillRect(0, 0, width, height);
+                ctx.globalCompositeOperation = 'source-over';
+
+                for (let i = 0; i < particles.length; i += 1) {
+                    const p = particles[i];
+                    const prev = project(p.x, p.y, p.z, time);
+
+                    const flowTime = time + scrollY * 16;
+                    const c = curl3D(p.x * 0.05, p.y * 0.05 + scrollNorm * 0.9, p.z * 0.045, flowTime);
+                    p.vx = p.vx * 0.9 + c.x * 1.05;
+                    p.vy = p.vy * 0.9 + c.y * 1.05;
+                    p.vz = p.vz * 0.92 + c.z * 1.25;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.z += p.vz;
+
+                    if (p.z > depth * 0.95) {
+                        p.z = -depth * 0.15;
+                        p.vz *= 0.35;
+                    } else if (p.z < -depth * 1.35) {
+                        p.z = depth * 0.75;
+                        p.vz *= 0.35;
+                    }
+
+                    if (p.x > width * 1.25) p.x = -width * 1.25;
+                    else if (p.x < -width * 1.25) p.x = width * 1.25;
+
+                    if (p.y > height * 1.25) p.y = -height * 1.25;
+                    else if (p.y < -height * 1.25) p.y = height * 1.25;
+
+                    const now = project(p.x, p.y, p.z, time);
+                    if (!prev || !now) continue;
+
+                    const speed = Math.min(1, Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz) / 2.6);
+                    const depthAlpha = Math.min(1, Math.max(0, now.scale * 1.5));
+                    ctx.lineWidth = 1.8 + now.scale * 2.8 + speed * 0.35;
+                    ctx.strokeStyle = `hsla(${p.hue}, 90%, 62%, ${0.1 + depthAlpha * 0.18})`;
+                    ctx.beginPath();
+                    ctx.moveTo(prev.x, prev.y);
+                    ctx.lineTo(now.x, now.y);
+                    ctx.stroke();
+                }
+
+                requestAnimationFrame(drawFrame);
+            }
+
+            resize();
+            handleScroll();
+            initParticles();
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, width, height);
+            window.addEventListener('resize', () => {
+                resize();
+                handleScroll();
+                initParticles();
+                ctx.fillStyle = '#020617';
+                ctx.fillRect(0, 0, width, height);
+            });
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            requestAnimationFrame(drawFrame);
+        })();
     </script>
 
 </body>
