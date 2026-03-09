@@ -942,9 +942,9 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-laptop</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Note_Computer_DesignPattern.html">
+                    <v-list-item href="./Note_Computer_Programming.html">
                         <v-list-item-icon />
-                        <v-list-item-title>デザインパターン</v-list-item-title>
+                        <v-list-item-title>プログラミング</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Note_Computer_AI.html">
                         <v-list-item-icon />
