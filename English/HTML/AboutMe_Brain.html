@@ -98,6 +98,26 @@
             z-index: 1;
         }
 
+        .brain-page .profile-card {
+            background: rgba(7, 11, 20, 1) !important;
+            border: 1px solid rgba(230, 238, 255, 0.2);
+        }
+
+        .brain-page .profile-card,
+        .brain-page .profile-card .v-card__title,
+        .brain-page .profile-card .v-card__text,
+        .brain-page .profile-card .v-treeview-node__label,
+        .brain-page .profile-card .v-icon,
+        .brain-page .profile-card .v-label,
+        .brain-page .profile-card input {
+            color: rgba(238, 245, 255, 0.94) !important;
+            caret-color: rgba(238, 245, 255, 0.94) !important;
+        }
+
+        .brain-page .profile-card .theme--light.v-text-field--outlined fieldset {
+            border-color: rgba(238, 245, 255, 0.32);
+        }
+
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -3945,10 +3965,8 @@
                 matrixCanvas: null,
                 matrixMainEl: null,
                 matrixColumns: 0,
-                matrixRows: 0,
-                matrixCells: [],
-                matrixFontSize: 20,
-                matrixFrame: 0,
+                matrixDrops: [],
+                matrixFontSize: 16,
                 matrixTimer: null,
                 matrixResizeHandler: null,
             },
@@ -3979,65 +3997,40 @@
                     this.matrixCanvas.height = height;
 
                     this.matrixColumns = Math.max(1, Math.ceil(this.matrixCanvas.width / this.matrixFontSize) + 2);
-                    this.matrixRows = Math.max(1, Math.ceil(this.matrixCanvas.height / this.matrixFontSize) + 2);
-                    this.matrixCells = Array.from(
-                        { length: this.matrixColumns * this.matrixRows },
-                        () => this.randomHexChar()
+                    const rows = Math.max(1, Math.ceil(this.matrixCanvas.height / this.matrixFontSize));
+                    this.matrixDrops = Array.from(
+                        { length: this.matrixColumns },
+                        () => Math.floor(Math.random() * rows)
                     );
-                    this.matrixFrame = 0;
 
                     this.matrixCtx.fillStyle = '#000000';
                     this.matrixCtx.fillRect(0, 0, this.matrixCanvas.width, this.matrixCanvas.height);
-                },
-                updateMatrixCells() {
-                    if (!this.matrixCells.length) return;
-                    const total = this.matrixCells.length;
-                    const changesPerFrame = Math.max(1, Math.floor(total * 0.03));
-                    for (let i = 0; i < changesPerFrame; i++) {
-                        const index = Math.floor(Math.random() * total);
-                        this.matrixCells[index] = this.randomHexChar();
-                    }
-                },
-                drawMatrixLayer(offsetX, offsetY) {
-                    if (!this.matrixCtx) return;
-                    this.matrixCtx.font = `${this.matrixFontSize}px Space Mono, monospace`;
-                    this.matrixCtx.textBaseline = 'top';
-
-                    for (let row = 0; row < this.matrixRows; row++) {
-                        for (let col = 0; col < this.matrixColumns; col++) {
-                            const index = row * this.matrixColumns + col;
-                            const x = (col - 1) * this.matrixFontSize + offsetX;
-                            const y = (row - 1) * this.matrixFontSize + offsetY;
-                            this.matrixCtx.fillText(this.matrixCells[index], x, y);
-                        }
-                    }
                 },
                 drawMatrixRain() {
                     if (!this.matrixCtx || !this.matrixCanvas) return;
 
                     this.matrixCtx.fillStyle = 'rgba(0, 0, 20, 0.12)';
                     this.matrixCtx.fillRect(0, 0, this.matrixCanvas.width, this.matrixCanvas.height);
+                    this.matrixCtx.font = `${this.matrixFontSize}px Space Mono, monospace`;
+                    this.matrixCtx.fillStyle = 'rgba(232, 240, 255, 0.58)';
 
-                    const jitterX = Math.sin(this.matrixFrame * 0.11) * 1.2;
-                    const jitterY = Math.cos(this.matrixFrame * 0.09) * 0.9;
+                    for (let i = 0; i < this.matrixColumns; i++) {
+                        const hexChar = this.randomHexChar();
+                        const x = (i - 1) * this.matrixFontSize;
+                        const y = this.matrixDrops[i] * this.matrixFontSize;
 
-                    this.matrixCtx.save();
-                    this.matrixCtx.fillStyle = 'rgba(0, 0, 255, 0.02)';
-                    this.drawMatrixLayer(jitterX, jitterY);
-                    this.matrixCtx.fillStyle = 'rgba(0, 0, 255, 0.01)';
-                    this.drawMatrixLayer(-jitterX * 0.7, -jitterY * 0.7);
-                    this.matrixCtx.restore();
+                        this.matrixCtx.fillText(hexChar, x, y);
 
-                    this.matrixCtx.fillStyle = 'rgba(238, 245, 255, 0.05)';
-                    this.drawMatrixLayer(0, 0);
-                    this.matrixFrame++;
+                        if (y > this.matrixCanvas.height && Math.random() > 0.975) {
+                            this.matrixDrops[i] = 0;
+                        } else {
+                            this.matrixDrops[i]++;
+                        }
+                    }
                 },
                 startMatrixRain() {
                     this.stopMatrixRain();
-                    this.matrixTimer = setInterval(() => {
-                        this.updateMatrixCells();
-                        this.drawMatrixRain();
-                    }, 80);
+                    this.matrixTimer = setInterval(() => this.drawMatrixRain(), 55);
                 },
                 stopMatrixRain() {
                     if (this.matrixTimer) {
