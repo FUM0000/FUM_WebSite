@@ -4014,16 +4014,28 @@
                 drawMatrixRain() {
                     if (!this.matrixCtx || !this.matrixCanvas) return;
 
-                    this.matrixCtx.fillStyle = 'rgba(0, 0, 20, 0.12)';
+                    const trailGradient = this.matrixCtx.createLinearGradient(
+                        0,
+                        0,
+                        0,
+                        this.matrixCanvas.height
+                    );
+                    trailGradient.addColorStop(0, 'rgba(2, 8, 20, 0.08)');
+                    trailGradient.addColorStop(0.55, 'rgba(2, 8, 20, 0.11)');
+                    trailGradient.addColorStop(1, 'rgba(2, 8, 20, 0.16)');
+                    this.matrixCtx.fillStyle = trailGradient;
                     this.matrixCtx.fillRect(0, 0, this.matrixCanvas.width, this.matrixCanvas.height);
                     this.matrixCtx.font = `${this.matrixFontSize}px Space Mono, monospace`;
-                    this.matrixCtx.fillStyle = 'rgba(232, 240, 255, 0.58)';
 
                     for (let i = 0; i < this.matrixColumns; i++) {
                         const hexChar = this.randomHexChar();
                         const x = (i - 1) * this.matrixFontSize;
                         const y = this.matrixDrops[i] * this.matrixFontSize;
 
+                        const t = Math.min(1, Math.max(0, y / this.matrixCanvas.height));
+                        const smooth = t * t * (3 - 2 * t); // smoothstep
+                        const alpha = 0.6 - 0.5 * smooth;
+                        this.matrixCtx.fillStyle = `rgba(230, 242, 255, ${alpha})`;
                         this.matrixCtx.fillText(hexChar, x, y);
 
                         if (y > this.matrixCanvas.height && Math.random() > 0.975) {
@@ -4033,16 +4045,17 @@
                         }
                     }
 
-                    // Darker at the top, gradually lighter toward the bottom
+                    // Navy-only gradient overlay to smooth fade without gray shift
                     const fadeGradient = this.matrixCtx.createLinearGradient(
                         0,
                         0,
                         0,
                         this.matrixCanvas.height
                     );
-                    fadeGradient.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
-                    fadeGradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.18)');
-                    fadeGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    fadeGradient.addColorStop(0, 'rgba(2, 8, 20, 0)');
+                    fadeGradient.addColorStop(0.4, 'rgba(2, 8, 20, 0.04)');
+                    fadeGradient.addColorStop(0.75, 'rgba(2, 8, 20, 0.12)');
+                    fadeGradient.addColorStop(1, 'rgba(2, 8, 20, 0.22)');
                     this.matrixCtx.fillStyle = fadeGradient;
                     this.matrixCtx.fillRect(0, 0, this.matrixCanvas.width, this.matrixCanvas.height);
                 },
