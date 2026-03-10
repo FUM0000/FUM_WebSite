@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -466,6 +466,7 @@
         const composer = new THREE.EffectComposer(renderer, msaaTarget || undefined);
         const renderPass = new THREE.RenderPass(scene, camera);
         composer.addPass(renderPass);
+        let blackholeWarpPass;
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -481,6 +482,9 @@
                     1 / (window.innerWidth * nextPixelRatio),
                     1 / (window.innerHeight * nextPixelRatio)
                 );
+            }
+            if (blackholeWarpPass) {
+                blackholeWarpPass.material.uniforms.aspect.value = window.innerWidth / window.innerHeight;
             }
         });
 
@@ -1511,6 +1515,47 @@
             bloomPass.radius = 0.6;
         }
         composer.addPass(bloomPass);
+        const BlackholeWarpShader = {
+            uniforms: {
+                'tDiffuse': { value: null },
+                'center': { value: new THREE.Vector2(0.5, 0.5) },
+                'radius': { value: 0.08 },
+                'strength': { value: 0.08 },
+                'aspect': { value: window.innerWidth / window.innerHeight }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D tDiffuse;
+                uniform vec2 center;
+                uniform float radius;
+                uniform float strength;
+                uniform float aspect;
+                varying vec2 vUv;
+
+                void main() {
+                    vec2 delta = vUv - center;
+                    vec2 deltaAspect = vec2(delta.x * aspect, delta.y);
+                    float r = length(deltaAspect);
+                    float ring = smoothstep(radius * 1.8, radius * 0.9, r);
+                    float falloff = clamp(1.0 - (r / (radius * 1.8)), 0.0, 1.0);
+                    float warp = strength * ring * falloff;
+                    vec2 dir = normalize(deltaAspect + 1e-6);
+                    vec2 offset = dir * warp;
+                    offset.x /= aspect;
+                    vec2 warpedUv = vUv + offset;
+                    gl_FragColor = texture2D(tDiffuse, warpedUv);
+                }
+            `
+        };
+        blackholeWarpPass = new THREE.ShaderPass(BlackholeWarpShader);
+        blackholeWarpPass.renderToScreen = false;
+        composer.addPass(blackholeWarpPass);
         const DigitalGlitchShader = {
             uniforms: {
                 'tDiffuse': { value: null },
@@ -1706,6 +1751,20 @@
             updateFace(delta);
             updateSpeechBubble();
             updateJetParticles();
+            if (blackholeWarpPass && blackhole && blackhole.geometry) {
+                if (!blackhole.geometry.boundingSphere) {
+                    blackhole.geometry.computeBoundingSphere();
+                }
+                const ndc = blackhole.position.clone().project(camera);
+                const centerUv = new THREE.Vector2(ndc.x * 0.5 + 0.5, ndc.y * 0.5 + 0.5);
+                const distance = camera.position.distanceTo(blackhole.position);
+                const worldRadius = blackhole.geometry.boundingSphere.radius * blackhole.scale.x;
+                const ndcRadius = (worldRadius / Math.max(distance, 0.001)) / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+                const uvRadius = Math.min(0.45, Math.max(0.01, ndcRadius * 0.5));
+                blackholeWarpPass.material.uniforms.center.value.copy(centerUv);
+                blackholeWarpPass.material.uniforms.radius.value = uvRadius * 1.1;
+                blackholeWarpPass.material.uniforms.strength.value = isMobile ? 0.05 : 0.08;
+            }
 
             // ポストエフェクト
             updateGlitch();
@@ -1719,3 +1778,4 @@
 </body>
 
 </html>
+
