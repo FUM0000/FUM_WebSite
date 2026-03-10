@@ -366,6 +366,7 @@
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js" defer></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js" defer></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/FXAAShader.js" defer></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js" defer></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js" defer></script>
 
@@ -446,18 +447,41 @@
             antialias: true
         });
         renderer.setClearColor(0x010104, 1);
-        renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 1.5));
+        const pixelRatio = isMobile ? 1 : Math.min(window.devicePixelRatio, 1.5);
+        renderer.setPixelRatio(pixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.toneMapping = THREE.ReinhardToneMapping;
         renderer.toneMappingExposure = 1.5;
-        const composer = new THREE.EffectComposer(renderer);
+        const useMsaa = !isMobile && renderer.capabilities.isWebGL2;
+        const msaaTarget = useMsaa
+            ? new THREE.WebGLMultisampleRenderTarget(
+                window.innerWidth * pixelRatio,
+                window.innerHeight * pixelRatio,
+                { format: THREE.RGBAFormat }
+            )
+            : null;
+        if (msaaTarget) {
+            msaaTarget.samples = 4;
+        }
+        const composer = new THREE.EffectComposer(renderer, msaaTarget || undefined);
         const renderPass = new THREE.RenderPass(scene, camera);
         composer.addPass(renderPass);
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
+            const nextPixelRatio = isMobile ? 1 : Math.min(window.devicePixelRatio, 1.5);
+            renderer.setPixelRatio(nextPixelRatio);
             renderer.setSize(window.innerWidth, window.innerHeight);
+            if (msaaTarget) {
+                msaaTarget.setSize(window.innerWidth * nextPixelRatio, window.innerHeight * nextPixelRatio);
+            }
             composer.setSize(window.innerWidth, window.innerHeight);
+            if (fxaaPass) {
+                fxaaPass.material.uniforms['resolution'].value.set(
+                    1 / (window.innerWidth * nextPixelRatio),
+                    1 / (window.innerHeight * nextPixelRatio)
+                );
+            }
         });
 
 
@@ -1561,10 +1585,19 @@
             return texture;
         }
         let glitchPass;
+        let fxaaPass;
         glitchPass = new THREE.ShaderPass(DigitalGlitchShader);
         glitchPass.uniforms.tDisp.value = generateNoiseTextureForGlitch();
-        glitchPass.renderToScreen = true;
+        glitchPass.renderToScreen = false;
         composer.addPass(glitchPass);
+
+        fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+        fxaaPass.material.uniforms['resolution'].value.set(
+            1 / (window.innerWidth * pixelRatio),
+            1 / (window.innerHeight * pixelRatio)
+        );
+        fxaaPass.renderToScreen = true;
+        composer.addPass(fxaaPass);
         let isGlitching = false;
         let glitchTimeout;
         function updateGlitch() {
