@@ -1427,10 +1427,11 @@
         const velocitiesX = new Float32Array(particleCount);
         const velocitiesY = new Float32Array(particleCount);
         const velocitiesZ = new Float32Array(particleCount);
+        const speedScales = new Float32Array(particleCount);
         for (let i = 0; i < particleCount; i++) {
-            resetParticle(i);
+            resetParticle(i, true);
         }
-        function resetParticle(i) {
+        function resetParticle(i, randomizeStart = false) {
             const isTop = Math.random() > 0.5;
 
             positions[i * 3 + 0] = 0;
@@ -1446,9 +1447,20 @@
 
             const len = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
-            velocitiesX[i] = (vx / len) * jetSpeed;
-            velocitiesY[i] = (vy / len) * jetSpeed;
-            velocitiesZ[i] = (vz / len) * jetSpeed;
+            // Per-particle speed variation to avoid uniform motion
+            speedScales[i] = 0.6 + Math.random() * 1.1; // 0.6 - 1.7
+            velocitiesX[i] = (vx / len) * jetSpeed * speedScales[i];
+            velocitiesY[i] = (vy / len) * jetSpeed * speedScales[i];
+            velocitiesZ[i] = (vz / len) * jetSpeed * speedScales[i];
+
+            // Stagger initial emission so particles don't clump at the start frame
+            if (randomizeStart) {
+                const travel = Math.random() * (jetLength * 0.9);
+                const steps = travel / jetSpeed;
+                positions[i * 3 + 0] += velocitiesX[i] * steps;
+                positions[i * 3 + 1] += velocitiesY[i] * steps;
+                positions[i * 3 + 2] += velocitiesZ[i] * steps;
+            }
 
             lifetimes[i] = Math.random() * 80;
         }
