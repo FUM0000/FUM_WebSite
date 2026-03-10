@@ -930,7 +930,7 @@ Vue.component('main-navigation', {
                     <v-list-item-title>My Notes</v-list-item-title>
                 </template>
 
-                <v-list-item href="./AboutMe_Brain.html">
+                <v-list-item href="./Note_Brain.html">
                     <v-list-item-icon />
                     <v-list-item-title>思考</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-brain</v-icon></v-list-item-icon>
