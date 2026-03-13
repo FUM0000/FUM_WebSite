@@ -1,0 +1,898 @@
+﻿<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+    rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+  <style>
+    .learning-stepper-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start !important;
+      gap: 12px 10px;
+      align-items: stretch;
+      padding: 8px 0 12px;
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    .learning-stepper-header .v-stepper__step {
+      flex: 0 0 calc((100% - 30px) / 4);
+      max-width: calc((100% - 30px) / 4);
+      min-width: 0;
+      border: 0 !important;
+      border-radius: 0;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 10px 28px 10px 8px;
+      position: relative;
+    }
+
+    .learning-stepper-header .v-stepper__label {
+      display: inline-block;
+      max-width: calc(100% - 28px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: middle;
+    }
+
+    .learning-stepper-header .v-stepper__step::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: 4px;
+      width: 22px;
+      height: 2px;
+      background: #b0bec5;
+      transform: translateY(-50%);
+    }
+
+    .learning-stepper-header .v-stepper__step:nth-child(4n)::after,
+    .learning-stepper-header .v-stepper__step:last-child::after {
+      display: none;
+    }
+
+    @media (max-width: 1280px) {
+      .learning-stepper-header .v-stepper__step {
+        padding-right: 24px;
+      }
+    }
+
+    @media (max-width: 780px) {
+      .learning-stepper-header .v-stepper__step {
+        flex: 0 0 calc((100% - 10px) / 2);
+        max-width: calc((100% - 10px) / 2);
+        padding-right: 18px;
+      }
+
+      .learning-stepper-header .v-stepper__step::after {
+        display: block;
+      }
+
+      .learning-stepper-header .v-stepper__step:nth-child(2n)::after,
+      .learning-stepper-header .v-stepper__step:last-child::after {
+        display: none;
+      }
+
+      .learning-stepper-header .v-stepper__label {
+        display: inline-block !important;
+        max-width: calc(100% - 24px);
+        font-size: 12px;
+      }
+    }
+  </style>
+
+  <title>Marketing</title>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > Marketing</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">学習</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="学習内容を検索" prepend-inner-icon="mdi-magnify" clearable
+                      outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_2">
+                      <v-stepper-header class="learning-stepper-header">
+                        <template v-for="(label, index) in learningLabels">
+                          <v-stepper-step :key="'learning-step-' + (index + 1)" :complete="Count_Step_2 > (index + 1)"
+                            :step="index + 1" @click="Count_Step_2 = index + 1" class="step-title">
+                            {{ label }}
+                          </v-stepper-step>
+                        </template>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content v-for="(label, index) in learningLabels"
+                          :key="'learning-content-' + (index + 1)" :step="index + 1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">{{ label }}</v-card-title>
+                              <v-treeview :items="filteredNotes[index]" item-key="name" activatable open-on-click dense
+                                :open="openNotes[index]" @update:open="updateOpen(index, $event)">
+                                <template v-slot:label="{ item }"><span :class="{ 'search-highlight': item.matches }">{{
+                                    item.name }}</span></template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text v-if="index > 0" @click="Count_Step_2 = index">戻る</v-btn>
+                            <v-btn color="primary" v-if="index < learningLabels.length - 1"
+                              @click="Count_Step_2 = index + 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+
+
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_2: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredNotes: [],
+        openNotes: [],
+        learningLabels: [
+          "マーケティング基礎",
+          "市場・顧客分析",
+          "STPとポジショニング",
+          "マーケティングミックス（4P/4C）",
+          "ブランドとコミュニケーション",
+          "デジタルマーケティング",
+          "指標とリサーチ"
+        ],
+        learningNotes: [
+          [
+            {
+              "name": "1.1 マーケティングの定義",
+              "children": [
+                {
+                  "name": "マーケティング",
+                  "children": [
+                    { "name": "説明：顧客に価値を届け、選ばれる仕組みを設計・運用する活動の総称。" }
+                  ]
+                },
+                {
+                  "name": "価値提案（Value Proposition）",
+                  "children": [
+                    { "name": "説明：顧客の課題をどう解決し、どの便益を提供するかを示す中核の約束。" }
+                  ]
+                },
+                {
+                  "name": "交換（Exchange）",
+                  "children": [
+                    { "name": "説明：企業と顧客が価値をやり取りする行為で、購買や契約がその形。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "1.2 顧客価値と関係性",
+              "children": [
+                {
+                  "name": "顧客価値（Customer Value）",
+                  "children": [
+                    { "name": "説明：顧客が得る便益と負担（価格・時間・手間）の差分で評価される価値。" }
+                  ]
+                },
+                {
+                  "name": "顧客満足（CS）",
+                  "children": [
+                    { "name": "説明：期待と実体験の差で決まる満足度。継続利用や推奨意向に影響する。" }
+                  ]
+                },
+                {
+                  "name": "顧客ロイヤルティ",
+                  "children": [
+                    { "name": "説明：継続購入やブランド支持の度合い。関係性の強さを示す。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "1.3 市場と顧客",
+              "children": [
+                {
+                  "name": "市場（Market）",
+                  "children": [
+                    { "name": "説明：特定のニーズを持つ顧客群と、そこに存在する取引機会の集合体。" }
+                  ]
+                },
+                {
+                  "name": "ニーズとウォンツ",
+                  "children": [
+                    { "name": "説明：ニーズは本質的欲求、ウォンツは具体的な商品・サービスへの欲求。" }
+                  ]
+                },
+                {
+                  "name": "ペルソナ",
+                  "children": [
+                    { "name": "説明：代表的な顧客像を具体化した架空人物像。意思決定の基準となる。" }
+                  ]
+                },
+                {
+                  "name": "バリューチェーン",
+                  "children": [
+                    { "name": "説明：価値が生まれる工程の連鎖。差別化ポイントの発見に使われる。" }
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "name": "2.1 市場調査",
+              "children": [
+                {
+                  "name": "定量調査",
+                  "children": [
+                    { "name": "説明：アンケート等で数値化し、傾向や規模を把握する調査。" }
+                  ]
+                },
+                {
+                  "name": "定性調査",
+                  "children": [
+                    { "name": "説明：インタビュー等で理由や背景を深掘りする調査。" }
+                  ]
+                },
+                {
+                  "name": "一次データ / 二次データ",
+                  "children": [
+                    { "name": "説明：一次は自社で新たに収集したデータ、二次は既存の統計や報告書。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "2.2 競合分析",
+              "children": [
+                {
+                  "name": "3C分析",
+                  "children": [
+                    { "name": "説明：Customer（顧客）、Competitor（競合）、Company（自社）の観点で整理する枠組み。" }
+                  ]
+                },
+                {
+                  "name": "SWOT分析",
+                  "children": [
+                    { "name": "説明：強み・弱み・機会・脅威を整理し、戦略の方向性を検討する手法。" }
+                  ]
+                },
+                {
+                  "name": "ポジショニングマップ",
+                  "children": [
+                    { "name": "説明：競合を軸で配置し、差別化余地を可視化する図。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "2.3 顧客理解",
+              "children": [
+                {
+                  "name": "カスタマージャーニー",
+                  "children": [
+                    { "name": "説明：認知から購入・継続までの顧客行動を時系列で整理したもの。" }
+                  ]
+                },
+                {
+                  "name": "インサイト",
+                  "children": [
+                    { "name": "説明：顧客自身も言語化しにくい深層の動機や本音。" }
+                  ]
+                },
+                {
+                  "name": "セグメント",
+                  "children": [
+                    { "name": "説明：共通特性で分けた顧客の集団。施策の最適化に使う。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "2.4 需要予測",
+              "children": [
+                {
+                  "name": "TAM / SAM / SOM",
+                  "children": [
+                    { "name": "説明：市場規模の段階分け。全体市場・実現可能市場・獲得可能市場。" }
+                  ]
+                },
+                {
+                  "name": "季節性",
+                  "children": [
+                    { "name": "説明：時期によって需要が変動する特性。需要計画に影響する。" }
+                  ]
+                },
+                {
+                  "name": "価格弾力性",
+                  "children": [
+                    { "name": "説明：価格変化に対する需要の変化度合い。価格戦略に直結する。" }
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "name": "3.1 セグメンテーション",
+              "children": [
+                {
+                  "name": "地理的セグメント",
+                  "children": [
+                    { "name": "説明：地域・国・気候など地理条件で区分する方法。" }
+                  ]
+                },
+                {
+                  "name": "人口統計的セグメント",
+                  "children": [
+                    { "name": "説明：年齢・性別・所得・職業など属性で区分する方法。" }
+                  ]
+                },
+                {
+                  "name": "心理的セグメント",
+                  "children": [
+                    { "name": "説明：価値観・ライフスタイル・性格などで区分する方法。" }
+                  ]
+                },
+                {
+                  "name": "行動的セグメント",
+                  "children": [
+                    { "name": "説明：購買頻度・利用状況・態度など行動で区分する方法。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "3.2 ターゲティング",
+              "children": [
+                {
+                  "name": "ターゲット選定基準",
+                  "children": [
+                    { "name": "説明：市場規模、成長性、競合度、自社適合性で優先度を判断する。" }
+                  ]
+                },
+                {
+                  "name": "集中戦略（ニッチ）",
+                  "children": [
+                    { "name": "説明：特定の小規模市場に集中し、差別化で勝つ戦略。" }
+                  ]
+                },
+                {
+                  "name": "無差別・差別・集中",
+                  "children": [
+                    { "name": "説明：全体同一施策、複数セグメント別施策、特定セグメント集中の選択肢。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "3.3 ポジショニング",
+              "children": [
+                {
+                  "name": "差別化",
+                  "children": [
+                    { "name": "説明：競合と明確に異なる価値・体験を提供すること。" }
+                  ]
+                },
+                {
+                  "name": "ベネフィット訴求",
+                  "children": [
+                    { "name": "説明：機能ではなく顧客が得る便益を中心に訴求する考え方。" }
+                  ]
+                },
+                {
+                  "name": "ポジショニングステートメント",
+                  "children": [
+                    { "name": "説明：誰に、何を、どのように提供し、競合とどう違うかを一文で表す。" }
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "name": "4.1 4P",
+              "children": [
+                {
+                  "name": "Product（製品）",
+                  "children": [
+                    { "name": "説明：機能・品質・デザイン・ブランド体験など価値の設計。" }
+                  ]
+                },
+                {
+                  "name": "Price（価格）",
+                  "children": [
+                    { "name": "説明：価格設定や割引条件。利益と顧客価値のバランスを決める。" }
+                  ]
+                },
+                {
+                  "name": "Place（流通）",
+                  "children": [
+                    { "name": "説明：販売チャネルや供給体制。顧客が手に入れる経路の設計。" }
+                  ]
+                },
+                {
+                  "name": "Promotion（販促）",
+                  "children": [
+                    { "name": "説明：広告、PR、販売促進など認知・購買を促す施策。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "4.2 4C",
+              "children": [
+                {
+                  "name": "Customer Value",
+                  "children": [
+                    { "name": "説明：顧客が得る価値に焦点を当てる視点。" }
+                  ]
+                },
+                {
+                  "name": "Cost",
+                  "children": [
+                    { "name": "説明：顧客が負担する総コスト（価格＋時間＋手間）。" }
+                  ]
+                },
+                {
+                  "name": "Convenience",
+                  "children": [
+                    { "name": "説明：購入や利用のしやすさ。入手・利用の利便性。" }
+                  ]
+                },
+                {
+                  "name": "Communication",
+                  "children": [
+                    { "name": "説明：顧客との双方向コミュニケーションを重視する視点。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "4.3 価格戦略",
+              "children": [
+                {
+                  "name": "スキミング",
+                  "children": [
+                    { "name": "説明：新商品を高価格で投入し、段階的に価格を下げる戦略。" }
+                  ]
+                },
+                {
+                  "name": "ペネトレーション",
+                  "children": [
+                    { "name": "説明：低価格で一気に普及させ、市場シェアを獲得する戦略。" }
+                  ]
+                },
+                {
+                  "name": "ダイナミックプライシング",
+                  "children": [
+                    { "name": "説明：需要や状況に応じて価格を変動させる戦略。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "4.4 流通チャネル",
+              "children": [
+                {
+                  "name": "直販",
+                  "children": [
+                    { "name": "説明：自社が直接販売する形態。顧客接点をコントロールしやすい。" }
+                  ]
+                },
+                {
+                  "name": "間接販路",
+                  "children": [
+                    { "name": "説明：代理店や小売などを経由して販売する形態。広範な流通に有効。" }
+                  ]
+                },
+                {
+                  "name": "オムニチャネル",
+                  "children": [
+                    { "name": "説明：複数チャネルを統合し、体験を一貫させる戦略。" }
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "name": "5.1 ブランド",
+              "children": [
+                {
+                  "name": "ブランドアイデンティティ",
+                  "children": [
+                    { "name": "説明：ブランドの核となる価値観や個性。言語・デザインで表現される。" }
+                  ]
+                },
+                {
+                  "name": "ブランドエクイティ",
+                  "children": [
+                    { "name": "説明：ブランドが持つ資産価値。認知、好意、忠誠などの総合。" }
+                  ]
+                },
+                {
+                  "name": "ブランドアーキテクチャ",
+                  "children": [
+                    { "name": "説明：企業・製品ブランドの構造設計。親子関係や役割を整理する。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "5.2 コミュニケーション",
+              "children": [
+                {
+                  "name": "IMC（統合的マーケティングコミュニケーション）",
+                  "children": [
+                    { "name": "説明：広告・PR・販促などを一貫したメッセージで統合する考え方。" }
+                  ]
+                },
+                {
+                  "name": "メディアミックス",
+                  "children": [
+                    { "name": "説明：複数の媒体を組み合わせ、到達と効果を最適化する。" }
+                  ]
+                },
+                {
+                  "name": "PR",
+                  "children": [
+                    { "name": "説明：第三者評価を通じて信頼や評判を形成する活動。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "5.3 メッセージ設計",
+              "children": [
+                {
+                  "name": "USP（Unique Selling Proposition）",
+                  "children": [
+                    { "name": "説明：他社にはない独自の売り。訴求の軸になる。" }
+                  ]
+                },
+                {
+                  "name": "ストーリーテリング",
+                  "children": [
+                    { "name": "説明：物語構成で共感を生み、ブランド理解を深める手法。" }
+                  ]
+                },
+                {
+                  "name": "CTA（Call To Action）",
+                  "children": [
+                    { "name": "説明：顧客に次の行動を促す明確な呼びかけ。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "5.4 ブランド体験",
+              "children": [
+                {
+                  "name": "タッチポイント",
+                  "children": [
+                    { "name": "説明：顧客がブランドに接触するあらゆる接点。" }
+                  ]
+                },
+                {
+                  "name": "CX（顧客体験）",
+                  "children": [
+                    { "name": "説明：購入前後を含む体験全体の質。満足と再購入を左右する。" }
+                  ]
+                },
+                {
+                  "name": "オンボーディング",
+                  "children": [
+                    { "name": "説明：初期体験で価値を理解させ、継続利用へ導くプロセス。" }
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "name": "6.1 デジタル基礎",
+              "children": [
+                {
+                  "name": "SEO",
+                  "children": [
+                    { "name": "説明：検索結果で上位表示を狙う最適化。自然検索流入を増やす。" }
+                  ]
+                },
+                {
+                  "name": "SEM",
+                  "children": [
+                    { "name": "説明：検索エンジン上の集客施策全般。主に検索連動型広告を含む。" }
+                  ]
+                },
+                {
+                  "name": "SNSマーケティング",
+                  "children": [
+                    { "name": "説明：SNSでの認知拡大・関係構築・購買促進の活動。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "6.2 コンテンツとファネル",
+              "children": [
+                {
+                  "name": "コンテンツマーケティング",
+                  "children": [
+                    { "name": "説明：有用な情報提供で顧客関係を育て、購買を促す手法。" }
+                  ]
+                },
+                {
+                  "name": "ファネル",
+                  "children": [
+                    { "name": "説明：認知→興味→検討→購入の段階構造。施策設計に使う。" }
+                  ]
+                },
+                {
+                  "name": "リードナーチャリング",
+                  "children": [
+                    { "name": "説明：見込み顧客を育成し、商談・購入へ進める活動。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "6.3 広告運用",
+              "children": [
+                {
+                  "name": "CPC / CPM",
+                  "children": [
+                    { "name": "説明：クリック単価と表示単価。広告費の基本指標。" }
+                  ]
+                },
+                {
+                  "name": "リターゲティング",
+                  "children": [
+                    { "name": "説明：サイト訪問者へ再度広告を配信し、再訪を促す手法。" }
+                  ]
+                },
+                {
+                  "name": "A/Bテスト",
+                  "children": [
+                    { "name": "説明：複数パターンを比較し、成果が高い案を選ぶ検証方法。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "6.4 CRM・MA",
+              "children": [
+                {
+                  "name": "CRM",
+                  "children": [
+                    { "name": "説明：顧客情報を管理し、関係性を強化する仕組み。" }
+                  ]
+                },
+                {
+                  "name": "MA（マーケティングオートメーション）",
+                  "children": [
+                    { "name": "説明：見込み客管理や配信を自動化し、育成を効率化する仕組み。" }
+                  ]
+                },
+                {
+                  "name": "パーソナライズ",
+                  "children": [
+                    { "name": "説明：顧客属性や行動に合わせた情報・体験の最適化。" }
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "name": "7.1 指標",
+              "children": [
+                {
+                  "name": "KGI / KPI",
+                  "children": [
+                    { "name": "説明：KGIは最終目標、KPIは達成に必要な中間指標。" }
+                  ]
+                },
+                {
+                  "name": "CAC",
+                  "children": [
+                    { "name": "説明：顧客獲得コスト。新規顧客1人あたりにかかる費用。" }
+                  ]
+                },
+                {
+                  "name": "LTV",
+                  "children": [
+                    { "name": "説明：顧客が生涯にもたらす利益。投資判断の基準となる。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "7.2 効果測定",
+              "children": [
+                {
+                  "name": "ROI / ROAS",
+                  "children": [
+                    { "name": "説明：投資対効果と広告費用対効果。成果とコストの関係を測る。" }
+                  ]
+                },
+                {
+                  "name": "CVR",
+                  "children": [
+                    { "name": "説明：コンバージョン率。成果に至った割合を示す。" }
+                  ]
+                },
+                {
+                  "name": "アトリビューション",
+                  "children": [
+                    { "name": "説明：成果への各接点の貢献度を配分して評価する考え方。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "7.3 リサーチ設計",
+              "children": [
+                {
+                  "name": "サンプリング",
+                  "children": [
+                    { "name": "説明：調査対象の母集団から対象を抽出する方法。" }
+                  ]
+                },
+                {
+                  "name": "質問設計",
+                  "children": [
+                    { "name": "説明：バイアスを避け、比較可能な回答を得る設問の作り方。" }
+                  ]
+                },
+                {
+                  "name": "NPS",
+                  "children": [
+                    { "name": "説明：推奨意向を測る指標。顧客ロイヤルティの把握に使う。" }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "7.4 事業指標",
+              "children": [
+                {
+                  "name": "チャーン率",
+                  "children": [
+                    { "name": "説明：解約率。継続利用の低下を示す重要指標。" }
+                  ]
+                },
+                {
+                  "name": "ARPU",
+                  "children": [
+                    { "name": "説明：ユーザー平均売上。収益性を把握する指標。" }
+                  ]
+                },
+                {
+                  "name": "コホート分析",
+                  "children": [
+                    { "name": "説明：同時期に獲得した顧客群の行動を追跡し、継続率を評価する手法。" }
+                  ]
+                }
+              ]
+            }
+          ]
+        ]
+      },created() {
+        this.filteredNotes = JSON.parse(JSON.stringify(this.learningNotes));
+        this.openNotes = this.learningNotes.map(() => []);
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) collect(node.children);
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpen(index, newOpen) {
+          this.$set(this.openNotes, index, newOpen);
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredNotes = JSON.parse(JSON.stringify(this.learningNotes));
+            this.openNotes = this.learningNotes.map(() => []);
+            return;
+          }
+          const filterTree = (items) => items.reduce((acc, item) => {
+            const itemCopy = { ...item };
+            const matches = item.name.toLowerCase().includes(query);
+            if (item.children) {
+              if (matches) {
+                // If the parent matches, keep all descendants as-is.
+                itemCopy.children = JSON.parse(JSON.stringify(item.children));
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+                return acc;
+              }
+              itemCopy.children = filterTree(item.children);
+              if (itemCopy.children.length > 0) {
+                itemCopy.matches = matches;
+                acc.push(itemCopy);
+              }
+            } else if (matches) {
+              itemCopy.matches = true;
+              acc.push(itemCopy);
+            }
+            return acc;
+          }, []);
+
+          this.filteredNotes = this.learningNotes.map((chapter) => filterTree(JSON.parse(JSON.stringify(chapter))));
+          this.openNotes = this.filteredNotes.map((chapter) => this.collectAllNodeIds(chapter));
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
+
