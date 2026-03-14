@@ -901,7 +901,23 @@
         ]
       },
       created() {
-        this.filteredNotes = JSON.parse(JSON.stringify(this.learningNotes));
+        const normalizeChapter = (chapter) => (Array.isArray(chapter) ? chapter : [chapter]);
+        const findByName = (nodes, name) => {
+          for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
+            if (node.name === name) return node;
+            if (node.children) {
+              const found = findByName(node.children, name);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        this.filteredNotes = this.learningNotes.map((chapter, index) => {
+          const nodes = normalizeChapter(JSON.parse(JSON.stringify(chapter)));
+          const match = findByName(nodes, this.learningLabels[index]);
+          return match && match.children ? match.children : [];
+        });
         this.openNotes = this.learningNotes.map(() => []);
       },
       methods: {
@@ -921,8 +937,24 @@
         },
         filterTreeview() {
           const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          const normalizeChapter = (chapter) => (Array.isArray(chapter) ? chapter : [chapter]);
+          const findByName = (nodes, name) => {
+            for (let i = 0; i < nodes.length; i++) {
+              const node = nodes[i];
+              if (node.name === name) return node;
+              if (node.children) {
+                const found = findByName(node.children, name);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
           if (!query) {
-            this.filteredNotes = JSON.parse(JSON.stringify(this.learningNotes));
+            this.filteredNotes = this.learningNotes.map((chapter, index) => {
+              const nodes = normalizeChapter(JSON.parse(JSON.stringify(chapter)));
+              const match = findByName(nodes, this.learningLabels[index]);
+              return match && match.children ? match.children : [];
+            });
             this.openNotes = this.learningNotes.map(() => []);
             return;
           }
@@ -949,7 +981,12 @@
             return acc;
           }, []);
 
-          this.filteredNotes = this.learningNotes.map((chapter) => filterTree(JSON.parse(JSON.stringify(chapter))));
+          this.filteredNotes = this.learningNotes.map((chapter, index) => {
+            const nodes = normalizeChapter(JSON.parse(JSON.stringify(chapter)));
+            const match = findByName(nodes, this.learningLabels[index]);
+            const children = match && match.children ? match.children : [];
+            return filterTree(JSON.parse(JSON.stringify(children)));
+          });
           this.openNotes = this.filteredNotes.map((chapter) => this.collectAllNodeIds(chapter));
         }
       }
