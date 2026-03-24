@@ -29,12 +29,12 @@
 
         const Scene = new THREE.Scene();
 
-        // 繝輔か繧ｰ・磯□縺上ｒ縺ｼ縺九☆・・
+        // Fog
         Scene.fog = new THREE.Fog(0xFCA3B7, 3, 12);
 
         const Loader_FBX = new FBXLoader();
 
-        // 繧ｫ繝｡繝ｩ蝗櫁ｻ｢蛻ｶ蠕｡
+        // Camera rotation control
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
         let cameraRotation = { x: 0, y: 0 };
@@ -46,13 +46,15 @@
         document.addEventListener('mousemove',  e => TouchMove (e.clientX, e.clientY));
         document.addEventListener('mouseup',    () => TouchEnd());
 
-        // 螳壽焚
-        let DeltaTime = 1 / 60;
+        // Time step
+        const FixedDeltaTime = 1 / 120;
+        const MaxFrameDeltaTime = 1 / 20;
+        let FrameDeltaTime = 1 / 60;
+        let PhysicsAccumulator = 0;
         const Gravity = 9.8;
-        const CalculationError_Time = 0.1;
         const Resistance = 0.998;
 
-        // 繧ｫ繝｡繝ｩ繧ｯ繝ｩ繧ｹ
+        // Camera class
         class Base_Camera_1_CLASS {
             #Object;
             #X = 0; #Y = 1.5; #Z = 0;
@@ -70,18 +72,14 @@
             Get_Object() { return this.#Object; }
         }
 
-        // 繧ｿ繧､繝槭・蛻ｶ蠕｡繧ｯ繝ｩ繧ｹ
+        // Input controller class
         class Base_InputControler_1_CLASS {
             #Time_Flag_Finishing = true;
             #Time_Flag_Using = false;
             #Time_Timer = 0;
+            #Timer_ID = null;
             Update() {
-                if (this.#Time_Flag_Using) {
-                    setTimeout(() => {
-                        this.#Time_Flag_Using = false;
-                        this.#Time_Flag_Finishing = true;
-                    }, this.#Time_Timer * 1000);
-                }
+                return;
             }
             Get_Time_Flag_Finishing() { return this.#Time_Flag_Finishing; }
             Set_Timer(_time) {
@@ -89,11 +87,16 @@
                     this.#Time_Timer = _time;
                     this.#Time_Flag_Using = true;
                     this.#Time_Flag_Finishing = false;
+                    this.#Timer_ID = window.setTimeout(() => {
+                        this.#Time_Flag_Using = false;
+                        this.#Time_Flag_Finishing = true;
+                        this.#Timer_ID = null;
+                    }, this.#Time_Timer * 1000);
                 }
             }
         }
 
-        // 繝ｩ繧､繝・
+        // Light
         class Base_Light_Ambient_1_CLASS {
             constructor() {
                 const light = new THREE.AmbientLight(0xffffff, 0.7);
@@ -108,7 +111,7 @@
             }
         }
 
-        // 繧ｲ繝ｼ繝繝槭ロ繝ｼ繧ｸ繝｣
+        // Game manager
         class Base_Manager_1_CLASS {
             #State = "Made";
             #Level = 1;
@@ -121,13 +124,13 @@
             #UI_Level_1;
 
             constructor() {
-                // UI菴懈・
+                // UI setup
                 this.#UI_Home_1 = document.createElement('div');
                 this.#UI_Home_1.id = "UI_Home_1";
                 this.#UI_Home_1.innerHTML = "HOME";
                 document.body.appendChild(this.#UI_Home_1);
 
-                // 繝ｪ繧ｻ繝・ヨ繝懊ち繝ｳ繧定ｿｽ蜉
+                // Reset button
                 const UI_Reset_1 = document.createElement('div');
                 UI_Reset_1.id = "UI_Reset_1";
                 UI_Reset_1.innerHTML = "RESET";
@@ -246,13 +249,10 @@
             }
         }
 
-        // 繝懊・繝ｫ
+        // Ball
         class Ball_1_CLASS {
             #Bounce_Count = 0;
             #Bounce_Max = 3;
-            #Direction_Move = new THREE.Vector3();
-            #ElapsedFrame_Firing = 0;
-            #ElapsedFrame_Gravity = 0;
             #Flag_Cup = false;
             #Flag_Shoot = false;
             #Object = null;
@@ -318,8 +318,6 @@
 
             Initialize() {
                 this.#Bounce_Count = 0;
-                this.#ElapsedFrame_Firing = 0;
-                this.#ElapsedFrame_Gravity = 0;
                 this.#Flag_Cup = false;
                 this.#Flag_Shoot = false;
                 this.#Velocity_X = this.#Velocity_Y = this.#Velocity_Z = 0;
@@ -347,14 +345,6 @@
                     if (this.#Object) this.#Object.position.set(this.#X, this.#Y, this.#Z);
                 }
 
-                if (this.#Flag_Shoot) {
-                    this.#ElapsedFrame_Firing += DeltaTime;
-                    if (this.#ElapsedFrame_Firing >= CalculationError_Time) {
-                        this.#ElapsedFrame_Firing = 0;
-                        this.Update_Shoot();
-                    }
-                }
-
                 if (this.#Object) {
                     this.#Object.position.set(this.#X, this.#Y, this.#Z);
                 }
@@ -371,20 +361,16 @@
                 this.#Velocity_X *= Resistance;
                 this.#Velocity_Z *= Resistance;
 
-                this.#X += this.#Velocity_X * DeltaTime;
-                this.#Y += this.#Velocity_Y * DeltaTime;
-                this.#Z += this.#Velocity_Z * DeltaTime;
+                this.#X += this.#Velocity_X * FixedDeltaTime;
+                this.#Y += this.#Velocity_Y * FixedDeltaTime;
+                this.#Z += this.#Velocity_Z * FixedDeltaTime;
 
-                this.#ElapsedFrame_Gravity += DeltaTime;
-                if (this.#ElapsedFrame_Gravity >= CalculationError_Time) {
-                    this.#ElapsedFrame_Gravity = 0;
-                    this.#Velocity_Y -= Gravity * DeltaTime * 2; // 蟆代＠驥阪ａ縺ｫ
-                }
+                this.#Velocity_Y -= Gravity * FixedDeltaTime;
 
-                // 蠎翫→縺ｮ陦晉ｪ・ｼ・=0・・
+                // Floor collision
                 if (this.#Y <= this.#Radius) {
                     this.#Y = this.#Radius;
-                    this.#Velocity_Y *= -this.#Ground_Bounce; // 繝舌え繝ｳ繝画ｸ幄｡ｰ
+                    this.#Velocity_Y *= -this.#Ground_Bounce;
                     this.#Bounce_Count++;
 
                     if (this.#Bounce_Count >= this.#Bounce_Max) {
@@ -393,7 +379,7 @@
                     }
                 }
 
-                // 繧ｫ繝・・縺ｫ蜈･縺｣縺溘°
+                // Cup collision
                 if (PaperCup_1.Get_Object()) {
                     const cupObj = PaperCup_1.Get_Object();
                     const goalY = PaperCup_1.Get_Collision_Y();
@@ -447,6 +433,7 @@
             Get_Velocity_X() { return this.#Velocity_X; }
             Get_Velocity_Y() { return this.#Velocity_Y; }
             Get_Velocity_Z() { return this.#Velocity_Z; }
+            Get_Is_Shooting() { return this.#Flag_Shoot; }
             Set_X(x) { this.#X = x; }
             Set_Y(y) { this.#Y = y; }
             Set_Z(z) { this.#Z = z; }
@@ -479,7 +466,7 @@
             }
         }
 
-        // 邏吶さ繝・・
+        // Paper cup
         class PaperCup_1_CLASS {
             #Height = 0.5;
             #Collision_Mesh = null;
@@ -676,7 +663,7 @@
                 if (this.#Move_Axis === "none") return;
                 if (Base_Manager_1.Get_State() !== "Playing") return;
 
-                this.#Move_Offset += this.#Move_Direction * this.#Move_Speed * DeltaTime;
+                this.#Move_Offset += this.#Move_Direction * this.#Move_Speed * FixedDeltaTime;
                 if (this.#Move_Axis === "y") {
                     if (this.#Move_Offset > this.#Move_Range) {
                         this.#Move_Offset = this.#Move_Range;
@@ -934,7 +921,7 @@
             }
         }
 
-        // 繝代Ρ繝ｼ繧ｲ繝ｼ繧ｸ
+        // Progress gauge
         class Progress_1_CLASS {
             #Element;
             #Is_Locked = false;
@@ -944,9 +931,10 @@
             constructor() {
                 this.#Element = document.getElementById('Progress_1');
             }
-            Update() {
+            Update(deltaTime = FrameDeltaTime) {
                 if (Base_Manager_1.Get_State() === "Playing" && !this.#Is_Locked) {
-                    this.#Element.value += this.#MoveDirection * this.#Speed;
+                    const progressDelta = this.#MoveDirection * this.#Speed * (deltaTime * 60);
+                    this.#Element.value += progressDelta;
                     if (this.#Element.value >= 100) {
                         this.#Element.value = 100;
                         this.#MoveDirection = -1;
@@ -978,7 +966,7 @@
             }
         }
 
-        // 蠎奇ｼ亥､ｧ縺阪↑譚ｿ・・
+        // Create floor
         function CreateFloor() {
             const geometry = new THREE.PlaneGeometry(30, 30);
             const material = new THREE.MeshStandardMaterial({ 
@@ -992,7 +980,7 @@
             Scene.add(floor);
         }
 
-        // 繧､繝ｳ繧ｹ繧ｿ繝ｳ繧ｹ逕滓・
+        // Instance creation
         const Base_Camera_1       = new Base_Camera_1_CLASS();
         const Base_InputControler_1 = new Base_InputControler_1_CLASS();
         new Base_Light_Ambient_1_CLASS();
@@ -1003,26 +991,44 @@
         const Progress_1          = new Progress_1_CLASS();
 
         PaperCup_1.Set_Side_Collision();
-        CreateFloor();           // 蠎願ｿｽ蜉
+        CreateFloor();           // Floor setup
 
         Base_Manager_1.Ready();
 
-        // 繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ繝ｫ繝ｼ繝・
-        function Loop() {
-            Base_InputControler_1.Update();
-
-            PaperCup_1.Update();
-            Ball_1.Update();
+        // Animation loop
+        function StepPhysics(frameDeltaTime) {
             if (Base_Manager_1.Get_State() === "Playing") {
-                Progress_1.Update();
+                Progress_1.Update(frameDeltaTime);
             }
+
+            if (Ball_1.Get_Is_Shooting()) {
+                PhysicsAccumulator = Math.min(PhysicsAccumulator + frameDeltaTime, MaxFrameDeltaTime * 3);
+                while (PhysicsAccumulator >= FixedDeltaTime) {
+                    PaperCup_1.Update();
+                    Ball_1.Update_Shoot();
+                    PhysicsAccumulator -= FixedDeltaTime;
+                }
+            } else {
+                PhysicsAccumulator = 0;
+                PaperCup_1.Update();
+            }
+        }
+
+        function Loop(now = performance.now()) {
+            FrameDeltaTime = Math.min((now - LastFrameTime) / 1000, MaxFrameDeltaTime);
+            LastFrameTime = now;
+
+            Base_InputControler_1.Update();
+            StepPhysics(FrameDeltaTime);
+            Ball_1.Update();
 
             Base_Camera_1.Update();
 
             Renderer.render(Scene, Base_Camera_1.Get_Object());
             requestAnimationFrame(Loop);
         }
-        Loop();
+        let LastFrameTime = performance.now();
+        Loop(LastFrameTime);
 
         function ResizeScreen() {
             const cam = Base_Camera_1.Get_Object();
@@ -1177,15 +1183,18 @@
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 4;
+            width: min(92vw, 640px);
             font-family: "Space Grotesk", "Outfit", sans-serif;
             font-size: clamp(2rem, 6vw, 4rem);
             font-weight: 700;
             color: #ffeede;
+            text-align: center;
             text-shadow:
                 0 10px 28px rgba(65, 22, 11, 0.45),
                 0 0 20px rgba(255, 133, 92, 0.45);
             pointer-events: none;
             letter-spacing: 0.06em;
+            line-height: 1.15;
             animation: clearPulse 0.85s ease-in-out infinite alternate;
         }
         @keyframes clearPulse {
@@ -1359,6 +1368,12 @@
                 top: 12px;
                 font-size: 0.82rem;
                 padding: 9px 14px;
+            }
+            #UI_Clear_1 {
+                top: 38%;
+                width: min(88vw, 420px);
+                font-size: clamp(1.6rem, 8vw, 2.6rem);
+                letter-spacing: 0.03em;
             }
             #UI_Power_1 {
                 left: 50%;
