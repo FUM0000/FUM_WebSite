@@ -31,7 +31,11 @@
     <!-- ローディング画面 -->
     <div id="loading-overlay">
         <div class="intro-circle">
-            <div class="inner-circle"></div>
+            <div class="inner-circle">
+                <div class="loading-galaxy-mask">
+                    <canvas id="loadingGalaxyCanvas" aria-hidden="true"></canvas>
+                </div>
+            </div>
             <div class="text-orbit">
                 <span class="orbit-letter">F</span><span class="orbit-letter">U</span><span
                     class="orbit-letter">M</span><span class="orbit-letter"></span><span
@@ -331,7 +335,46 @@
             background: #111111;
             opacity: 1;
             z-index: 1;
+            overflow: hidden;
             transition: box-shadow 0.2s ease;
+        }
+
+        .loading-galaxy-mask {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 45%,
+                    rgba(255, 255, 255, 0.12) 0%,
+                    rgba(255, 255, 255, 0.03) 28%,
+                    rgba(0, 0, 0, 0) 62%),
+                radial-gradient(circle at 50% 50%,
+                    rgba(8, 16, 30, 0.1) 0%,
+                    rgba(0, 0, 0, 0.28) 72%,
+                    rgba(0, 0, 0, 0.6) 100%);
+        }
+
+        .loading-galaxy-mask::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 50% 50%,
+                    rgba(255, 255, 255, 0) 56%,
+                    rgba(0, 0, 0, 0.18) 75%,
+                    rgba(0, 0, 0, 0.5) 100%);
+            box-shadow:
+                inset 0 0 18px rgba(0, 0, 0, 0.72),
+                inset 0 0 36px rgba(0, 170, 255, 0.08);
+        }
+
+        #loadingGalaxyCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         .text-orbit {
@@ -513,11 +556,208 @@
             const overlay = document.getElementById('loading-overlay');
             const progressBar = document.getElementById('loadingProgress');
             const menuGuide = document.getElementById('menu-guide');
+            const loadingGalaxyCanvas = document.getElementById('loadingGalaxyCanvas');
 
             const orbitContainer = document.querySelector('.text-orbit');
             const introCircle = document.querySelector('.intro-circle');
             const innerCircle = document.querySelector('.inner-circle');
             let menuGuideDismissed = false;
+            let destroyLoadingGalaxy = null;
+
+            const setupLoadingGalaxy = (canvas) => {
+                if (!canvas || !window.THREE) return null;
+
+                const renderer = new THREE.WebGLRenderer({
+                    canvas,
+                    antialias: true,
+                    alpha: true
+                });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+                renderer.setClearColor(0x000000, 0);
+                renderer.outputEncoding = THREE.sRGBEncoding;
+
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+                camera.position.set(0, 5.5, 52);
+                camera.lookAt(0, 0, 0);
+
+                const galaxyGroup = new THREE.Group();
+                scene.add(galaxyGroup);
+
+                const ambientLight = new THREE.AmbientLight(0x88aaff, 0.7);
+                const coreLight = new THREE.PointLight(0xaed0ff, 1.7, 120);
+                coreLight.position.set(0, 0, 10);
+                scene.add(ambientLight, coreLight);
+
+                const starGeometry = new THREE.BufferGeometry();
+                const starCount = 1400;
+                const starPositions = new Float32Array(starCount * 3);
+                const starColors = new Float32Array(starCount * 3);
+
+                for (let i = 0; i < starCount; i++) {
+                    const progress = i / starCount;
+                    const armOffset = (i % 2) * Math.PI;
+                    const radius = 3 + Math.pow(Math.random(), 0.78) * 22;
+                    const branchAngle = radius * 0.48 + armOffset + (Math.random() - 0.5) * 0.95;
+                    const x = Math.cos(branchAngle) * radius + (Math.random() - 0.5) * 2.4;
+                    const y = (Math.random() - 0.5) * (1.8 + radius * 0.04);
+                    const z = Math.sin(branchAngle) * radius * 0.42 + (Math.random() - 0.5) * 2.4;
+
+                    starPositions[i * 3] = x;
+                    starPositions[i * 3 + 1] = y;
+                    starPositions[i * 3 + 2] = z;
+
+                    const color = new THREE.Color().setHSL(
+                        0.55 + Math.random() * 0.12,
+                        0.55,
+                        0.65 + (1 - progress) * 0.18
+                    );
+                    starColors[i * 3] = color.r;
+                    starColors[i * 3 + 1] = color.g;
+                    starColors[i * 3 + 2] = color.b;
+                }
+
+                starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+                starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+                const starMaterial = new THREE.PointsMaterial({
+                    size: 0.42,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.95,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    sizeAttenuation: true
+                });
+                const starField = new THREE.Points(starGeometry, starMaterial);
+                galaxyGroup.add(starField);
+
+                const dustGeometry = new THREE.BufferGeometry();
+                const dustCount = 900;
+                const dustPositions = new Float32Array(dustCount * 3);
+                const dustColors = new Float32Array(dustCount * 3);
+
+                for (let i = 0; i < dustCount; i++) {
+                    const radius = 5 + Math.pow(Math.random(), 0.9) * 26;
+                    const angle = radius * 0.34 + (Math.random() - 0.5) * 1.7;
+                    dustPositions[i * 3] = Math.cos(angle) * radius + (Math.random() - 0.5) * 3.8;
+                    dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 4.6;
+                    dustPositions[i * 3 + 2] = Math.sin(angle) * radius * 0.55 + (Math.random() - 0.5) * 3.8;
+
+                    const color = new THREE.Color().setRGB(0.22, 0.48 + Math.random() * 0.22, 0.95);
+                    dustColors[i * 3] = color.r;
+                    dustColors[i * 3 + 1] = color.g;
+                    dustColors[i * 3 + 2] = color.b;
+                }
+
+                dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+                dustGeometry.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+
+                const dustMaterial = new THREE.PointsMaterial({
+                    size: 0.9,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.16,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    sizeAttenuation: true
+                });
+                const dustField = new THREE.Points(dustGeometry, dustMaterial);
+                galaxyGroup.add(dustField);
+
+                const coreGeometry = new THREE.SphereGeometry(2.6, 32, 32);
+                const coreMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xe4f1ff,
+                    transparent: true,
+                    opacity: 0.92
+                });
+                const core = new THREE.Mesh(coreGeometry, coreMaterial);
+                core.scale.set(1.2, 0.32, 0.84);
+                galaxyGroup.add(core);
+
+                const haloGeometry = new THREE.RingGeometry(5.6, 11.5, 96);
+                const haloMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x6eb8ff,
+                    transparent: true,
+                    opacity: 0.18,
+                    side: THREE.DoubleSide,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+                halo.rotation.x = Math.PI * 0.5;
+                halo.rotation.z = Math.PI * 0.1;
+                galaxyGroup.add(halo);
+
+                const backgroundGeometry = new THREE.BufferGeometry();
+                const backgroundCount = 180;
+                const backgroundPositions = new Float32Array(backgroundCount * 3);
+                for (let i = 0; i < backgroundCount; i++) {
+                    const radius = 45 + Math.random() * 35;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    backgroundPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                    backgroundPositions[i * 3 + 1] = radius * Math.cos(phi);
+                    backgroundPositions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+                }
+                backgroundGeometry.setAttribute('position', new THREE.BufferAttribute(backgroundPositions, 3));
+                const backgroundMaterial = new THREE.PointsMaterial({
+                    color: 0xbfd7ff,
+                    size: 0.55,
+                    transparent: true,
+                    opacity: 0.4,
+                    depthWrite: false
+                });
+                const backgroundStars = new THREE.Points(backgroundGeometry, backgroundMaterial);
+                scene.add(backgroundStars);
+
+                let rafId = 0;
+                let active = true;
+                const clock = new THREE.Clock();
+
+                const resize = () => {
+                    const size = canvas.parentElement?.clientWidth || 198;
+                    renderer.setSize(size, size, false);
+                    camera.aspect = 1;
+                    camera.updateProjectionMatrix();
+                };
+
+                const animateGalaxy = () => {
+                    if (!active) return;
+                    rafId = requestAnimationFrame(animateGalaxy);
+                    const delta = clock.getDelta();
+                    const elapsed = clock.elapsedTime;
+                    galaxyGroup.rotation.y += delta * 0.52;
+                    galaxyGroup.rotation.x = Math.sin(elapsed * 0.6) * 0.08 - 0.24;
+                    halo.rotation.z += delta * 0.18;
+                    dustField.rotation.y -= delta * 0.08;
+                    core.material.opacity = 0.8 + Math.sin(elapsed * 2.2) * 0.08;
+                    renderer.render(scene, camera);
+                };
+
+                resize();
+                animateGalaxy();
+                window.addEventListener('resize', resize);
+
+                return () => {
+                    active = false;
+                    cancelAnimationFrame(rafId);
+                    window.removeEventListener('resize', resize);
+                    starGeometry.dispose();
+                    starMaterial.dispose();
+                    dustGeometry.dispose();
+                    dustMaterial.dispose();
+                    coreGeometry.dispose();
+                    coreMaterial.dispose();
+                    haloGeometry.dispose();
+                    haloMaterial.dispose();
+                    backgroundGeometry.dispose();
+                    backgroundMaterial.dispose();
+                    renderer.dispose();
+                };
+            };
+
+            destroyLoadingGalaxy = setupLoadingGalaxy(loadingGalaxyCanvas);
 
             const findMenuButton = () => {
                 const buttons = Array.from(document.querySelectorAll('#App .v-system-bar .v-btn'));
@@ -603,11 +843,19 @@
                 setTimeout(() => {
                     overlay.classList.add('fade-out');
                     setTimeout(() => {
+                        if (destroyLoadingGalaxy) {
+                            destroyLoadingGalaxy();
+                            destroyLoadingGalaxy = null;
+                        }
                         overlay.remove();
                         tryBindMenuGuide();
                     }, 2000);
                 }, 4000);
             } else {
+                if (destroyLoadingGalaxy) {
+                    destroyLoadingGalaxy();
+                    destroyLoadingGalaxy = null;
+                }
                 tryBindMenuGuide();
             }
 
