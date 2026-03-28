@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -16,7 +16,9 @@
 
     <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
@@ -31,28 +33,199 @@
 
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Basic > Memory Mechanism</main-system-bar>
 
-            <v-main id="Main">
+            <v-main id="Main" class="memory-main">
                 <transition name="Fade_Page">
-                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
+                    <div v-show="Ready_Page" class="memory-page">
+                        <nav class="section-rail" aria-label="Page sections">
+                            <button v-for="section in Sections" :key="section.id" type="button"
+                                :class="['rail-stop', { active: ActiveSection === section.id }]"
+                                @click="scrollToSection(section.id)">
+                                <span class="rail-stop__dot"></span>
+                                <span class="rail-stop__label">{{ section.short }}</span>
+                            </button>
+                        </nav>
 
-                        <v-row justify="center" class="mt-5 Highlight">
-                            <v-col cols="auto" class="font-weight-medium">Introduction</v-col>
-                        </v-row>
-                        <v-row justify="center">
-                            <v-col cols="auto" class="font-weight-medium">
-                                　*Learn how to improve your learning efficiency before you start studying.
-                            </v-col>
-                        </v-row>
+                        <section id="hero" data-section class="hero-shell reveal-block visible">
+                            <div class="hero-grid">
+                                <div class="hero-copy">
+                                    <div class="eyebrow">Intro</div>
+                                    <h1>Make memory easier to keep.</h1>
+                                    <p class="hero-lead">
+                                        A brief guide to how memory works, how it relates to forgetting, and how the
+                                        brain turns complex information into stable long-term memory.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
 
-                        <v-row justify="center" class="mt-5 Highlight">
-                            <v-col cols="auto" class="font-weight-medium">Contents</v-col>
-                        </v-row>
-                        <custom-carousel-left title="Memory Efficiency" :items="List_Efficiency"
-                            :height="Height_Memory"></custom-carousel-left>
-                        <custom-carousel-left title="Brain Structure" :items="List_Structure"
-                            :height="Height_Brain"></custom-carousel-left>
+                        <section id="memory-parade" data-section class="content-section reveal-block">
+                            <div class="section-head">
+                                <div class="eyebrow">5 Items</div>
+                                <h2>Important Items</h2>
+                                <p>These five simple points help make memory stronger.</p>
+                            </div>
 
-                    </v-container>
+                            <div class="memory-route">
+                                <article v-for="item in StrategyCards" :key="item.id"
+                                    :class="['route-stop', `tone-${item.tone}`, item.align]">
+                                    <div class="route-stop__body">
+                                        <div class="route-stop__topline">
+                                            <div class="route-stop__icon"><v-icon>{{ item.icon }}</v-icon></div>
+                                            <div class="route-stop__meta">
+                                                <div class="route-stop__kicker">{{ item.effect }}</div>
+                                                <h3>{{ item.title }}</h3>
+                                            </div>
+                                        </div>
+                                        <div class="route-stop__summary">{{ item.summary }}</div>
+                                        <p>{{ item.description }}</p>
+                                        <div class="route-stop__notes">
+                                            <div class="mini-note">
+                                                <span class="mini-note__label">Why it works</span>
+                                                <span>{{ item.why }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </article>
+                            </div>
+                        </section>
+
+                        <section id="forgetting-drop" data-section class="content-section reveal-block">
+                            <div class="section-head">
+                                <div class="eyebrow">Curve</div>
+                                <h2>The Forgetting Drop</h2>
+                                <p>Without review, memory drops quickly. Early review softens that drop.</p>
+                            </div>
+
+                            <div class="curve-layout">
+                                <div class="curve-stage">
+                                    <div class="curve-card">
+                                        <svg class="curve-graphic" viewBox="0 0 620 300" role="img" aria-label="Illustration of the forgetting curve and spaced review">
+                                            <defs>
+                                                <linearGradient id="dropLine" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                    <stop offset="0%" stop-color="#ffdb6e"></stop>
+                                                    <stop offset="100%" stop-color="#ff7e5f"></stop>
+                                                </linearGradient>
+                                                <linearGradient id="reviewLine" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                    <stop offset="0%" stop-color="#7cf5d7"></stop>
+                                                    <stop offset="100%" stop-color="#49a8ff"></stop>
+                                                </linearGradient>
+                                            </defs>
+                                            <g class="curve-grid">
+                                                <line x1="70" y1="40" x2="70" y2="250"></line>
+                                                <line x1="70" y1="250" x2="560" y2="250"></line>
+                                                <line x1="170" y1="250" x2="170" y2="266"></line>
+                                                <line x1="300" y1="250" x2="300" y2="266"></line>
+                                                <line x1="430" y1="250" x2="430" y2="266"></line>
+                                            </g>
+                                            <path class="curve-line curve-line-drop" d="M70 70 C135 100, 180 150, 230 205 S370 240, 560 246"></path>
+                                            <path class="curve-line curve-line-review" d="M70 70 C140 92, 170 110, 190 145 S250 165, 300 135 S370 160, 430 128 S505 145, 560 120"></path>
+                                            <g class="review-points">
+                                                <circle cx="190" cy="145" r="8"></circle>
+                                                <circle cx="300" cy="135" r="8"></circle>
+                                                <circle cx="430" cy="128" r="8"></circle>
+                                            </g>
+                                            <g class="curve-labels">
+                                                <text x="30" y="48">Retention</text>
+                                                <text x="520" y="286">Time</text>
+                                                <text x="160" y="286">1 day</text>
+                                                <text x="280" y="286">Review</text>
+                                                <text x="412" y="286">Review</text>
+                                                <text x="440" y="90">Spaced review</text>
+                                                <text x="378" y="228">No review</text>
+                                            </g>
+                                        </svg>
+                                    </div>
+                                    <div class="curve-caption">The lesson is simple: review before the memory fades too far.</div>
+                                </div>
+
+                                <div class="curve-sidebar">
+                                    <div class="drop-tip"><span class="drop-tip__step">1</span><div><h3>Learn once</h3><p>Initial study creates a fragile trace, not a permanent memory.</p></div></div>
+                                    <div class="drop-tip"><span class="drop-tip__step">2</span><div><h3>Review early</h3><p>Quick reinforcement keeps the path active before it weakens too much.</p></div></div>
+                                    <div class="drop-tip"><span class="drop-tip__step">3</span><div><h3>Space the reviews</h3><p>Intervals help the brain rebuild the route and make recall easier.</p></div></div>
+                                </div>
+                            </div>
+                        </section>
+                        <section id="brain-express" data-section class="content-section reveal-block">
+                            <div class="section-head">
+                                <div class="eyebrow">Structure</div>
+                                <h2>Brain Express</h2>
+                                <p>New memories move through different brain systems before they settle.</p>
+                            </div>
+
+                            <div class="brain-layout">
+                                <div class="brain-map">
+                                    <div class="brain-shell">
+                                        <div class="brain-wave brain-wave-a"></div>
+                                        <div class="brain-wave brain-wave-b"></div>
+                                        <div class="brain-core">
+                                            <div class="brain-node hippocampus-node">
+                                                <span class="brain-node__title">Hippocampus</span>
+                                                <span class="brain-node__text">Forms new memories</span>
+                                            </div>
+                                            <div class="brain-track"></div>
+                                            <div class="brain-node cortex-node">
+                                                <span class="brain-node__title">Cerebral Cortex</span>
+                                                <span class="brain-node__text">Stores distributed long-term memory</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="brain-panels">
+                                    <article class="brain-panel">
+                                        <div class="brain-panel__icon"><v-icon>mdi-brain</v-icon></div>
+                                        <h3>Short-term memory</h3>
+                                        <p>Useful for temporary items like a phone number, a shopping list, or a note you need right now.</p>
+                                    </article>
+                                    <article class="brain-panel">
+                                        <div class="brain-panel__icon"><v-icon>mdi-train</v-icon></div>
+                                        <h3>Hippocampus</h3>
+                                        <p>Helps encode fresh experience and transfer important information toward longer-lasting storage.</p>
+                                    </article>
+                                    <article class="brain-panel">
+                                        <div class="brain-panel__icon"><v-icon>mdi-city-variant-outline</v-icon></div>
+                                        <h3>Long-term memory</h3>
+                                        <p>Knowledge, repeated experiences, and vivid episodes are stored across the cortex for later recall.</p>
+                                    </article>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="story-lab" data-section class="content-section reveal-block">
+                            <div class="section-head">
+                                <div class="eyebrow">Story</div>
+                                <h2>Story Lab</h2>
+                                <p>Meaning and sound can support each other. These two short flows show both directions.</p>
+                            </div>
+
+                            <div class="story-compare">
+                                <article v-for="mode in StoryModes" :key="mode.id" class="story-column">
+                                    <div class="story-column__header">
+                                        <div class="story-column__label">{{ mode.label }}</div>
+                                        <h3>{{ mode.title }}</h3>
+                                        <p>{{ mode.subtitle }}</p>
+                                    </div>
+                                    <div class="story-lane">
+                                        <article v-for="step in mode.steps" :key="step.title" class="story-step">
+                                            <span class="story-step__number">{{ step.number }}</span>
+                                            <h4>{{ step.title }}</h4>
+                                            <p>{{ step.text }}</p>
+                                        </article>
+                                    </div>
+                                </article>
+                            </div>
+                        </section>
+
+                        <section id="finale" data-section class="content-section reveal-block finale-section">
+                            <div class="finale-grid">
+                                <div class="finale-copy">
+                                    <div class="eyebrow">Finale</div>
+                                    <h2>Memory improves when the process has shape.</h2>
+                                    <p>Keep the flow simple: review on purpose, connect ideas, and give the brain time to settle them.</p>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
                 </transition>
             </v-main>
 
@@ -62,110 +235,236 @@
         </template>
     </v-app>
 
+    <style>
+        :root {
+            --memory-surface: rgba(255, 255, 255, 0.82);
+            --memory-surface-strong: rgba(255, 255, 255, 0.92);
+            --memory-border: rgba(22, 32, 51, 0.12);
+            --memory-text: #162033;
+            --memory-muted: rgba(22, 32, 51, 0.76);
+            --memory-gold: #5b7fd6;
+            --memory-orange: #7f9ae3;
+            --memory-cyan: #8dc4dd;
+            --memory-mint: #9fcfa7;
+            --memory-pink: #e1a9be;
+            --memory-shadow: 0 20px 48px rgba(0, 0, 0, 0.18);
+        }
+
+        .memory-main {
+            position: relative;
+            overflow: hidden;
+            background: transparent !important;
+            color: var(--memory-text);
+        }
+
+        .memory-page { position: relative; z-index: 1; width: min(1040px, calc(100% - 48px)); margin: 0 auto; padding: 40px 0 96px; }
+        .section-rail { position: fixed; top: 50%; right: 10%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 5; }
+        .rail-stop { display: flex; align-items: center; justify-content: flex-end; gap: 10px; border: 0; background: transparent; color: rgba(22, 32, 51, 0.52); cursor: pointer; transition: transform 0.24s ease, color 0.24s ease; }
+        .rail-stop:hover, .rail-stop.active { color: var(--memory-text); transform: translateX(-3px); }
+        .rail-stop__dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(22, 32, 51, 0.2); transition: transform 0.24s ease, background 0.24s ease; }
+        .rail-stop.active .rail-stop__dot { background: var(--memory-gold); transform: scale(1.2); box-shadow: 0 0 0 6px rgba(91, 127, 214, 0.14); }
+        .rail-stop__label { min-width: 84px; text-align: right; font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; font-family: "Outfit", sans-serif; font-weight: 700; }
+        .hero-shell, .content-section { position: relative; padding: 42px 0; }
+        .hero-grid { display: block; }
+        .hero-copy { max-width: 760px; }
+        .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; color: var(--memory-gold); }
+        .hero-copy h1, .section-head h2, .finale-copy h2 { margin: 0; line-height: 1.08; font-family: "Outfit", sans-serif; font-weight: 800; letter-spacing: -0.03em; text-transform: none; }
+        .hero-copy h1 { font-size: clamp(2.7rem, 5vw, 4.6rem); max-width: 8ch; }
+        .hero-lead, .section-head p, .finale-copy p { color: var(--memory-muted); font-size: clamp(1rem, 1.2vw, 1.08rem); line-height: 1.9; max-width: 58ch; }
+        .curve-card, .brain-panel { background: var(--memory-surface-strong); border: 1px solid var(--memory-border); box-shadow: var(--memory-shadow); }
+        .section-head { max-width: 640px; margin-bottom: 26px; }
+        .section-head h2, .finale-copy h2 { font-size: clamp(2rem, 4vw, 3.4rem); }
+        .memory-route { display: grid; gap: 18px; }
+        .route-stop { display: flex; }
+        .route-stop.left { justify-content: flex-start; }
+        .route-stop.right { justify-content: flex-end; }
+        .route-stop__body { width: min(100%, 700px); padding: 24px 26px; border-radius: 22px; background: rgba(255, 255, 255, 0.78); border: 1px solid rgba(22, 32, 51, 0.08); box-shadow: var(--memory-shadow); }
+        .route-stop__topline { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+        .route-stop__icon { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: rgba(91, 127, 214, 0.14); font-size: 1.3rem; }
+        .route-stop__meta { min-width: 0; }
+        .route-stop__summary { margin: 0 0 12px; font-size: 1.04rem; line-height: 1.6; color: #162033; font-weight: 600; max-width: 34ch; }
+        .route-stop__kicker { margin-bottom: 6px; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--memory-gold); font-weight: 700; }
+        .route-stop__body h3 { margin: 0; font-size: 1.28rem; line-height: 1.2; color: #162033; }
+        .route-stop__body p { margin: 0; color: var(--memory-muted); line-height: 1.78; max-width: 42ch; }
+        .route-stop__notes { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 18px; max-width: 260px; }
+        .mini-note { flex: 1 1 240px; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.66); border: 1px solid rgba(22, 32, 51, 0.08); }
+        .mini-note__label { display: block; margin-bottom: 8px; font-size: 0.76rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--memory-gold); font-weight: 700; }
+        .curve-layout, .brain-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr); gap: 24px; align-items: start; }
+        .curve-card { padding: 26px; border-radius: 24px; }
+        .curve-graphic { display: block; width: 100%; height: auto; }
+        .curve-grid line { stroke: rgba(22, 32, 51, 0.18); stroke-width: 2; }
+        .curve-line { fill: none; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+        .curve-line-drop { stroke: url(#dropLine); }
+        .curve-line-review { stroke: url(#reviewLine); }
+        .review-points circle { fill: #fff4b8; stroke: rgba(255, 255, 255, 0.25); stroke-width: 2; animation: pulseGlow 2.2s ease-in-out infinite; }
+        .curve-labels text { fill: rgba(22, 32, 51, 0.76); font-family: "Outfit", sans-serif; font-size: 16px; font-weight: 600; }
+        .curve-caption { margin-top: 14px; color: var(--memory-muted); line-height: 1.75; }
+        .curve-sidebar { display: grid; gap: 14px; align-content: start; }
+        .drop-tip { display: flex; gap: 16px; padding: 20px; border-radius: 20px; background: rgba(255, 255, 255, 0.78); border: 1px solid rgba(22, 32, 51, 0.08); box-shadow: var(--memory-shadow); }
+        .drop-tip__step { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--memory-gold), var(--memory-orange)); color: #ffffff; font-weight: 800; }
+        .drop-tip h3, .brain-panel h3, .story-step h4 { margin: 0 0 8px; font-size: 1.1rem; }
+        .drop-tip p, .brain-panel p, .story-step p { margin: 0; color: var(--memory-muted); line-height: 1.75; }
+        .brain-map { min-height: 0; }
+        .brain-shell { position: relative; min-height: 0; display: grid; place-items: center; border-radius: 24px; overflow: hidden; background: rgba(255, 255, 255, 0.78); border: 1px solid rgba(22, 32, 51, 0.08); box-shadow: var(--memory-shadow); padding: 28px 24px; }
+        .brain-wave { display: none; }
+        .brain-wave-b { width: 52%; animation-delay: -2s; }
+        .brain-core { position: relative; width: min(100%, 560px); display: grid; grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); align-items: center; gap: 14px; }
+        .brain-node { position: relative; width: 100%; padding: 20px; border-radius: 22px; background: rgba(255, 255, 255, 0.64); border: 1px solid rgba(22, 32, 51, 0.08); box-shadow: none; }
+        .brain-node__title { display: block; margin-bottom: 6px; font-size: 1rem; font-weight: 800; color: #162033; }
+        .brain-node__text { display: block; color: var(--memory-muted); line-height: 1.6; font-size: 0.92rem; }
+        .hippocampus-node { top: auto; left: auto; animation: none; }
+        .cortex-node { right: auto; bottom: auto; animation: none; }
+        .brain-track { position: relative; inset: auto; width: 100%; height: 2px; border-radius: 999px; border: 0; background: linear-gradient(90deg, rgba(91, 127, 214, 0.18), rgba(91, 127, 214, 0.82), rgba(141, 196, 221, 0.28)); transform: none; animation: none; }
+        .brain-panels { display: grid; gap: 14px; }
+        .brain-panel { padding: 20px; border-radius: 22px; }
+        .brain-panel__icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 16px; margin-bottom: 14px; background: rgba(91, 127, 214, 0.14); }
+        .brain-panel__icon .v-icon { color: var(--memory-cyan); font-size: 1.6rem; }
+        .story-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+        .story-column { padding: 24px; border-radius: 24px; background: rgba(255, 255, 255, 0.78); border: 1px solid rgba(22, 32, 51, 0.08); box-shadow: var(--memory-shadow); }
+        .story-column__header { margin-bottom: 18px; }
+        .story-column__label { font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--memory-gold); font-weight: 700; }
+        .story-column__header h3 { margin: 10px 0 10px; font-size: 1.55rem; line-height: 1.18; color: #162033; }
+        .story-column__header p { margin: 0; color: var(--memory-muted); line-height: 1.8; }
+        .story-lane { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .story-step { position: relative; padding: 18px 18px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.66); border: 1px solid rgba(22, 32, 51, 0.08); overflow: hidden; }
+        .story-step__number { display: inline-grid; place-items: center; width: 42px; height: 42px; margin-bottom: 14px; border-radius: 50%; background: linear-gradient(135deg, var(--memory-cyan), var(--memory-mint)); color: #09111f; font-weight: 800; }
+        .finale-section { padding-top: 48px; }
+        .finale-grid { display: flex; justify-content: flex-end; }
+        .finale-copy { width: min(100%, 760px); text-align: right; }
+        .finale-copy h2 { margin-left: auto; max-width: 14ch; }
+        .finale-copy p { margin: 18px 0 0 auto; }
+        .tone-gold { --tone-main: #ffd55e; }
+        .tone-cyan { --tone-main: #62e5ff; }
+        .tone-mint { --tone-main: #91f4c8; }
+        .tone-pink { --tone-main: #ff8edb; }
+        .tone-orange { --tone-main: #ff9a68; }
+        .reveal-block { opacity: 0; transform: translateY(18px); transition: opacity 0.42s ease-out, transform 0.42s ease-out; will-change: opacity, transform; }
+        .reveal-block.visible { opacity: 1; transform: translateY(0); }
+        @keyframes floatCard { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+        @keyframes pulseGlow { 0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(255, 193, 86, 0.45); } 50% { transform: scale(1.05); box-shadow: 0 0 68px rgba(255, 193, 86, 0.75); } }
+        @keyframes orbitBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes blinkLights { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+        @keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(20px, 22px, 0); } }
+        @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes floatSpark { 0% { transform: translateY(0) scale(0.85); opacity: 0; } 20%, 80% { opacity: 1; } 100% { transform: translateY(-70px) scale(1.05); opacity: 0; } }
+        @keyframes pulseRing { 0%, 100% { transform: scale(0.96); opacity: 0.38; } 50% { transform: scale(1.04); opacity: 0.82; } }
+        @keyframes dashMove { to { stroke-dashoffset: -160; } }
+        @media (max-width: 1180px) {
+            .section-rail { display: none; }
+            .curve-layout, .brain-layout { grid-template-columns: 1fr; }
+            .hero-copy h1 { max-width: none; }
+            .story-compare { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .memory-page { width: calc(100% - 24px); padding: 28px 0 88px; }
+            .hero-shell, .content-section { padding: 32px 0; }
+            .hero-grid { gap: 18px; }
+            .curve-card, .story-column, .brain-panel, .route-stop__body { padding: 18px; }
+            .memory-route, .story-lane { gap: 14px; }
+            .route-stop,
+            .route-stop.left,
+            .route-stop.right { display: block; }
+            .route-stop__body { width: 100%; }
+            .route-stop__notes { grid-template-columns: 1fr; }
+            .curve-labels text { font-size: 13px; }
+            .drop-tip { padding: 18px; }
+            .brain-shell { padding: 20px 16px; }
+            .brain-core { grid-template-columns: 1fr; gap: 14px; }
+            .brain-track { width: 2px; height: 48px; justify-self: center; }
+            .brain-node { width: 100%; }
+            .finale-grid { justify-content: stretch; }
+            .finale-copy { width: 100%; text-align: left; }
+            .finale-copy h2 { margin-left: 0; }
+            .finale-copy p { margin-left: 0; }
+        }
+
+        @media (max-width: 560px) {
+            .hero-copy h1 { font-size: 2.4rem; }
+            .section-head h2, .finale-copy h2 { font-size: 1.9rem; }
+            .hero-lead, .section-head p, .finale-copy p { font-size: 0.98rem; }
+            .curve-card { padding: 18px; }
+            .story-column { padding: 18px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .review-points circle { animation: none !important; }
+            .reveal-block { opacity: 1; transform: none; transition: none; }
+        }
+    </style>
+
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
 
     <script>
-
-        let vue = new Vue({
+        new Vue({
             el: '#App',
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Common],
             data: {
-                List_Efficiency: [
-                    {
-                        // この項目には明確なタイトルがないため、contentのみ設定します
-                        content: `
-                            <div class="my-auto text-center">The following methods can be used to promote <strong>memory retention</strong>.</div>
-                        `
-                    },
-                    {
-                        title: 'Repetition',
-                        content: `
-                            　Repeatedly reviewing the information you want to remember strengthens the neural pathways in your brain, making it easier to retain.<br>
-                            <br>
-                            <div class="text-center">
-                                Hermann Ebbinghaus's Forgetting curve<br>
-                                <img src="../../Asset/Image/Japanese/ForgettingCurve._1.png" /><br>
-                            </div>
-                            <br>
-                            　Understanding how much you forget in a day and how much memory is retained after review is the first step in making learning more efficient.
-                        `
-                    },
-                    {
-                        title: 'Associate',
-                        content: `
-                            　Associating the information you want to remember with other information creates a memory network that makes it easier to recall.
-                        `
-                    },
-                    {
-                        title: 'Imagery',
-                        content: `
-                            　Imagining the information you want to remember helps you remember it more clearly.
-                        `
-                    },
-                    {
-                        title: 'Sleep',
-                        content: `
-                            　During sleep, the brain is able to consolidate and organize memories. Adequate sleep promotes memory consolidation.
-                        `
-                    },
-                    {
-                        title: 'Exercise',
-                        content: `
-                            　Exercise stimulates blood flow to the brain and improves hippocampal function. Moderate exercise is effective in improving memory.
-                        `
-                    },
-                    {
-                        title: 'Example of my memory method',
-                        content: `
-                            　When I learn a new word, I create a short story using both <strong>"the meaning of the word"</strong> and <strong>"a familiar word that shares a similar sound"</strong>.<br>
-                            　Until the new word becomes fully ingrained, I recall the story each time starting from either its <strong>"meaning"</strong> or its <strong>"sound"</strong> and remember how I created the story. Once the word is firmly memorized, the story is no longer needed.
-                        `
-                    },
+                ActiveSection: 'hero',
+                Observer: null,
+                Sections: [
+                    { id: 'hero', short: 'Intro' },
+                    { id: 'memory-parade', short: '5 Items' },
+                    { id: 'forgetting-drop', short: 'Curve' },
+                    { id: 'brain-express', short: 'Structure' },
+                    { id: 'story-lab', short: 'Story' },
+                    { id: 'finale', short: 'Finale' },
                 ],
-                List_Structure: [
-                    {
-                        // この項目には明確なタイトルがないため、contentのみ設定します
-                        content: `
-                            　Memory can be broadly divided into short-term and long-term memory.<br><br>
-
-                            <strong># Short-term memory:</strong><br>
-                            　It stores temporary information such as a phone number or the contents of a memo.<br>
-
-                            <strong># Long-term memory:</strong><br>
-                            　It stores information that you want to remember for the rest of your life, such as knowledge, experiences, and memories.
-                        `
-                    },
-                    {
-                        // この項目にも明確なタイトルがないため、contentのみ設定します
-                        content: `
-                            　Memories are formed through the involvement of various regions in the brain.
-                            Of particular importance are the hippocampus and cerebral cortex.<br><br>
-
-                            <strong>Hippocampus:</strong><br>
-                            　Involved in the formation of new memories.
-                            By storing experiences in the hippocampus, we move from short-term memory to long-term memory.<br>
-
-                            <strong>Cerebral cortex:</strong><br>
-                            　Retains memories of the past over the long term.
-                            Information stored in the hippocampus is distributed and stored in various areas of the cortex.
-                        `
-                    },
+                StrategyCards: [
+                    { id: 'repetition', title: 'Repetition', icon: 'mdi-repeat', tone: 'gold', align: 'left', effect: 'Builds recall', summary: 'Review at the right timing.', description: 'Short returns are usually better than one long cram session.', why: 'Recall strengthens the route.' },
+                    { id: 'associate', title: 'Association', icon: 'mdi-graph-outline', tone: 'cyan', align: 'right', effect: 'Creates links', summary: 'Attach new ideas to known ones.', description: 'A memory is easier to find when more than one clue can lead to it.', why: 'Connected ideas are easier to retrieve.' },
+                    { id: 'imagery', title: 'Imagery', icon: 'mdi-image-filter-hdr', tone: 'pink', align: 'left', effect: 'Makes it vivid', summary: 'Turn information into a scene.', description: 'Pictures and mini-scenes often stay longer than plain text alone.', why: 'Visual recall is concrete.' },
+                    { id: 'sleep', title: 'Sleep', icon: 'mdi-sleep', tone: 'mint', align: 'right', effect: 'Supports storage', summary: 'Rest helps memories settle.', description: 'Sleep helps recent learning move toward longer-term storage.', why: 'Consolidation needs recovery time.' },
+                    { id: 'exercise', title: 'Exercise', icon: 'mdi-run-fast', tone: 'orange', align: 'left', effect: 'Improves readiness', summary: 'Movement supports learning.', description: 'Light exercise can help the brain stay ready to encode and recall.', why: 'A better state improves learning.' },
+                ],
+                StoryModes: [
+                    { id: 'meaning-first', label: 'Meaning Route', title: 'Start from meaning', subtitle: 'Meaning leads to sound, then to a short story.', steps: [ { number: '01', title: 'Pick the meaning', text: 'Reduce it to one clear image.' }, { number: '02', title: 'Match a sound', text: 'Find a familiar sound cue.' }, { number: '03', title: 'Make a story', text: 'Replay the scene during review.' }, ] },
+                    { id: 'sound-first', label: 'Sound Route', title: 'Start from sound', subtitle: 'Sound leads back to meaning through the same story.', steps: [ { number: '01', title: 'Hear the shape', text: 'Repeat the sound a few times.' }, { number: '02', title: 'Attach a cue', text: 'Use a familiar word or image.' }, { number: '03', title: 'Recover meaning', text: 'Pull the meaning back out.' }, ] }
                 ]
             },
-            computed: {
-                Height_Memory() {
-                    return this.$vuetify.breakpoint.smAndDown ? 750 : 550;
+            methods: {
+                scrollToSection(id) {
+                    const target = document.getElementById(id);
+                    if (!target) return;
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 },
-                Height_Brain() {
-                    return this.$vuetify.breakpoint.smAndDown ? 600 : 350;
+                setupRevealObserver() {
+                    const blocks = this.$el.querySelectorAll('.reveal-block');
+                    const sections = this.$el.querySelectorAll('[data-section]');
+
+                    this.Observer = new IntersectionObserver((entries) => {
+                        entries.forEach((entry) => {
+                            if (entry.target.classList.contains('reveal-block') && entry.isIntersecting) {
+                                entry.target.classList.add('visible');
+                            }
+                            if (entry.target.hasAttribute('data-section') && entry.isIntersecting) {
+                                this.ActiveSection = entry.target.id;
+                            }
+                        });
+                    }, {
+                        threshold: 0.08,
+                        rootMargin: '0px 0px -8% 0px'
+                    });
+
+                    blocks.forEach(block => this.Observer.observe(block));
+                    sections.forEach(section => this.Observer.observe(section));
+                }
+            },
+            mounted() {
+                this.$nextTick(() => {
+                    this.setupRevealObserver();
+                });
+            },
+            beforeDestroy() {
+                if (this.Observer) {
+                    this.Observer.disconnect();
                 }
             }
-        })
-
+        });
     </script>
 
 </body>
