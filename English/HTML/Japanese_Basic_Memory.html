@@ -263,7 +263,7 @@
         .rail-stop:hover, .rail-stop.active { color: var(--memory-text); transform: translateX(-3px); }
         .rail-stop__dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(22, 32, 51, 0.2); transition: transform 0.24s ease, background 0.24s ease; }
         .rail-stop.active .rail-stop__dot { background: var(--memory-gold); transform: scale(1.2); box-shadow: 0 0 0 6px rgba(91, 127, 214, 0.14); }
-        .rail-stop__label { min-width: 84px; text-align: right; font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; font-family: "Outfit", sans-serif; font-weight: 700; }
+        .rail-stop__label { width: 132px; min-width: 132px; text-align: right; font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; font-family: "Outfit", sans-serif; font-weight: 700; }
         .hero-shell, .content-section { position: relative; padding: 42px 0; }
         .hero-grid { display: block; }
         .hero-copy { max-width: 760px; }
@@ -551,11 +551,28 @@
                 scrollToSection(id) {
                     const target = document.getElementById(id);
                     if (!target) return;
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const topOffset = 76;
+                    const targetTop = target.getBoundingClientRect().top + window.pageYOffset - topOffset;
+                    window.scrollTo({
+                        top: Math.max(0, targetTop),
+                        behavior: 'smooth'
+                    });
                 },
                 updateActiveSection() {
                     const sections = Array.from(this.$el.querySelectorAll('[data-section]'));
                     if (!sections.length) return;
+
+                    if (window.scrollY <= 24) {
+                        this.ActiveSection = sections[0].id;
+                        return;
+                    }
+
+                    const scrollBottom = window.scrollY + window.innerHeight;
+                    const documentBottom = document.documentElement.scrollHeight - 4;
+                    if (scrollBottom >= documentBottom) {
+                        this.ActiveSection = sections[sections.length - 1].id;
+                        return;
+                    }
 
                     const activationLine = window.innerHeight * 0.35;
                     let currentSection = sections[0].id;
