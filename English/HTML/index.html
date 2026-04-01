@@ -565,6 +565,8 @@
     <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/FXAAShader.js" defer></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js" defer></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js" defer></script>
+    <script src="https://unpkg.com/fflate@0.8.2/umd/index.js" defer></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/FBXLoader.js" defer></script>
 
     <script>
         window.vue = new Vue({
@@ -1047,6 +1049,187 @@
             return new THREE.CanvasTexture(canvas);
         }
         const particleTexture = createCircleTexture();
+        const tempPetalObject = new THREE.Object3D();
+        let sakuraPetalMesh = null;
+        let sakuraPetalStates = [];
+        let sakuraPetalOpacityAttr = null;
+        let sakuraPetalCount = isMobile ? 18 : 32;
+        function resetSakuraPetalState(index, initial = false) {
+            const spread = isMobile ? 34 : 48;
+            const state = sakuraPetalStates[index] || {};
+            state.spawnX = (Math.random() - 0.5) * spread;
+            state.spawnY = 18 + Math.random() * 26;
+            state.spawnZ = (Math.random() - 0.5) * spread;
+            state.driftX = (Math.random() - 0.5) * 10;
+            state.driftZ = (Math.random() - 0.5) * 10;
+            state.swayPhase = Math.random() * Math.PI * 2;
+            state.swaySpeed = 0.8 + Math.random() * 1.2;
+            state.spinPhase = Math.random() * Math.PI * 2;
+            state.fallDuration = 6.5 + Math.random() * 3.2;
+            state.fadeDuration = 10;
+            state.delay = initial ? Math.random() * (state.fallDuration + state.fadeDuration) : 0;
+            state.elapsed = 0;
+            state.scale = 0.72 + Math.random() * 0.28;
+            state.startRotX = Math.random() * Math.PI * 2;
+            state.startRotY = Math.random() * Math.PI * 2;
+            state.startRotZ = Math.random() * Math.PI * 2;
+            state.targetRotX = (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.18;
+            state.targetRotY = Math.random() * Math.PI * 2;
+            state.targetRotZ = (Math.random() - 0.5) * Math.PI * 2;
+            state.landedX = state.spawnX + state.driftX;
+            state.landedZ = state.spawnZ + state.driftZ;
+            sakuraPetalStates[index] = state;
+        }
+        function createSakuraPetalSystem(sourceMesh) {
+            const baseGeometry = sourceMesh.geometry.clone();
+            baseGeometry.computeVertexNormals();
+            baseGeometry.computeBoundingBox();
+            const bounds = baseGeometry.boundingBox;
+            const size = new THREE.Vector3();
+            bounds.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z, 0.0001);
+            const normalizeScale = 1.35 / maxDim;
+            baseGeometry.scale(normalizeScale, normalizeScale, normalizeScale);
+            baseGeometry.center();
+
+            const baseMaterial = new THREE.MeshPhongMaterial({
+                color: 0xf7c9da,
+                emissive: 0x2b0f18,
+                emissiveIntensity: 0.2,
+                transparent: true,
+                opacity: 0.95,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                shininess: 18
+            });
+            baseMaterial.onBeforeCompile = (shader) => {
+                shader.vertexShader = shader.vertexShader.replace(
+                    '#include <common>',
+                    '#include <common>\nattribute float instanceOpacity;\nvarying float vInstanceOpacity;'
+                ).replace(
+                    '#include <begin_vertex>',
+                    '#include <begin_vertex>\nvInstanceOpacity = instanceOpacity;'
+                );
+                shader.fragmentShader = shader.fragmentShader.replace(
+                    '#include <common>',
+                    '#include <common>\nvarying float vInstanceOpacity;'
+                ).replace(
+                    'vec4 diffuseColor = vec4( diffuse, opacity );',
+                    'vec4 diffuseColor = vec4( diffuse, opacity * vInstanceOpacity );'
+                );
+            };
+
+            sakuraPetalMesh = new THREE.InstancedMesh(baseGeometry, baseMaterial, sakuraPetalCount);
+            sakuraPetalMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            sakuraPetalMesh.frustumCulled = false;
+            sakuraPetalMesh.renderOrder = 2;
+            sakuraPetalOpacityAttr = new THREE.InstancedBufferAttribute(new Float32Array(sakuraPetalCount), 1);
+            baseGeometry.setAttribute('instanceOpacity', sakuraPetalOpacityAttr);
+
+            for (let i = 0; i < sakuraPetalCount; i++) {
+                resetSakuraPetalState(i, true);
+                sakuraPetalOpacityAttr.setX(i, 0);
+                tempPetalObject.position.set(0, -9999, 0);
+                tempPetalObject.rotation.set(0, 0, 0);
+                tempPetalObject.scale.setScalar(0.001);
+                tempPetalObject.updateMatrix();
+                sakuraPetalMesh.setMatrixAt(i, tempPetalObject.matrix);
+            }
+            sakuraPetalOpacityAttr.needsUpdate = true;
+            scene.add(sakuraPetalMesh);
+        }
+        function updateSakuraPetals(delta, elapsedTime) {
+            if (!sakuraPetalMesh || !sakuraPetalOpacityAttr) return;
+
+            for (let i = 0; i < sakuraPetalCount; i++) {
+                const state = sakuraPetalStates[i];
+                state.elapsed += delta;
+
+                if (state.delay > 0) {
+                    state.delay -= delta;
+                    sakuraPetalOpacityAttr.setX(i, 0);
+                    continue;
+                }
+
+                const totalCycle = state.fallDuration + state.fadeDuration;
+                if (state.elapsed >= totalCycle) {
+                    resetSakuraPetalState(i, false);
+                }
+
+                const fallProgress = Math.min(state.elapsed / state.fallDuration, 1);
+                const inFade = state.elapsed > state.fallDuration;
+                const driftEase = 1 - Math.pow(1 - fallProgress, 2);
+                const swayAmount = (1 - fallProgress * 0.55) * (1.1 + state.scale * 4.5);
+                const swayX = Math.sin(elapsedTime * state.swaySpeed + state.swayPhase) * swayAmount;
+                const swayZ = Math.cos(elapsedTime * (state.swaySpeed * 0.9) + state.swayPhase) * swayAmount * 0.8;
+
+                let posX = state.spawnX + state.driftX * driftEase + swayX;
+                let posY = state.spawnY * (1 - Math.pow(fallProgress, 1.18));
+                let posZ = state.spawnZ + state.driftZ * driftEase + swayZ;
+                let opacity = 1;
+
+                if (inFade) {
+                    const fadeProgress = Math.min((state.elapsed - state.fallDuration) / state.fadeDuration, 1);
+                    posX = state.landedX;
+                    posY = 0;
+                    posZ = state.landedZ;
+                    opacity = 1 - fadeProgress;
+                }
+
+                const settleBlend = THREE.MathUtils.smoothstep(fallProgress, 0.68, 1.0);
+                const rotX = THREE.MathUtils.lerp(state.startRotX, state.targetRotX, settleBlend) + Math.sin(elapsedTime * 4.2 + state.spinPhase) * (1 - settleBlend) * 0.85;
+                const rotY = THREE.MathUtils.lerp(state.startRotY, state.targetRotY, settleBlend) + Math.cos(elapsedTime * 2.6 + state.spinPhase) * (1 - settleBlend) * 0.45;
+                const rotZ = THREE.MathUtils.lerp(state.startRotZ, state.targetRotZ, settleBlend) + Math.sin(elapsedTime * 3.4 + state.spinPhase * 0.7) * (1 - settleBlend) * 0.65;
+
+                tempPetalObject.position.set(posX, posY, posZ);
+                tempPetalObject.rotation.set(rotX, rotY, rotZ);
+                tempPetalObject.scale.setScalar(state.scale);
+                tempPetalObject.updateMatrix();
+                sakuraPetalMesh.setMatrixAt(i, tempPetalObject.matrix);
+                sakuraPetalOpacityAttr.setX(i, Math.max(0, opacity));
+            }
+
+            sakuraPetalMesh.instanceMatrix.needsUpdate = true;
+            sakuraPetalOpacityAttr.needsUpdate = true;
+        }
+        if (THREE.FBXLoader) {
+            const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wn8n0sAAAAASUVORK5CYII=';
+            const sakuraLoadingManager = new THREE.LoadingManager();
+            sakuraLoadingManager.setURLModifier((url) => {
+                if (typeof url === 'string' && /\.png($|\?)/i.test(url)) {
+                    return transparentPixel;
+                }
+                return url;
+            });
+            const sakuraLoader = new THREE.FBXLoader(sakuraLoadingManager);
+            const originalConsoleWarn = console.warn;
+            console.warn = (...args) => {
+                const message = String(args[0] || '');
+                if (
+                    message.includes('THREE.FBXLoader: ShininessExponent map is not supported') ||
+                    message.includes('THREE.FBXLoader: ReflectionFactor map is not supported')
+                ) {
+                    return;
+                }
+                originalConsoleWarn.apply(console, args);
+            };
+            sakuraLoader.load(
+                '../../Asset/Model/Sakura_1_1.fbx',
+                (fbx) => {
+                    console.warn = originalConsoleWarn;
+                    const sourceMesh = fbx.getObjectByProperty('type', 'Mesh');
+                    if (!sourceMesh || !sourceMesh.geometry) return;
+                    createSakuraPetalSystem(sourceMesh);
+                },
+                undefined,
+                (error) => {
+                    console.warn = originalConsoleWarn;
+                    console.error('Failed to load Sakura petal model:', error);
+                }
+            );
+        } else {
+            console.warn('THREE.FBXLoader is not available for sakura petals.');
+        }
         function createStarNoiseTexture(size = 1024, density = 0.002) {
             const canvas = document.createElement('canvas');
             canvas.width = canvas.height = size;
@@ -2150,6 +2333,7 @@
             updateFace(delta);
             updateSpeechBubble();
             updateJetParticles();
+            updateSakuraPetals(delta, time);
             if (blackholeWarpPass && blackhole && blackhole.geometry) {
                 if (!blackhole.geometry.boundingSphere) {
                     blackhole.geometry.computeBoundingSphere();
