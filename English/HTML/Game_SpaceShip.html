@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -34,6 +34,55 @@
     <div id="Joystick" class="Joystick_Area"></div>
     <div id="Fade_Game"></div>
     <canvas id="Canvas"></canvas>
+    <div id="Inventory_Window" class="Inventory_Window">
+        <div id="Inventory_Header" class="Inventory_Header">
+            <span>Inventory</span>
+            <button id="Inventory_Collapse" type="button">-</button>
+        </div>
+        <div id="Inventory_Body" class="Inventory_Body">
+            <div id="Inventory_Summary">Loading...</div>
+            <div id="Inventory_Content" class="Inventory_List"></div>
+            <div id="Inventory_Detail" class="Inventory_Detail">Select an item.</div>
+        </div>
+    </div>
+    <div id="Minimap_Window" class="Overlay_Window Overlay_Window_Right">
+        <div id="Minimap_Header" class="Inventory_Header">
+            <span>Minimap</span>
+            <button id="Minimap_Collapse" type="button">-</button>
+        </div>
+        <div id="Minimap_Body" class="Inventory_Body Inventory_Body_Map">
+            <canvas id="Minimap_Canvas" width="180" height="180"></canvas>
+        </div>
+    </div>
+    <div id="Shop_Window" class="Overlay_Window Shop_Window is-hidden">
+        <div id="Shop_Header" class="Inventory_Header">
+            <span>Shop</span>
+            <button id="Shop_Collapse" type="button">-</button>
+        </div>
+        <div id="Shop_Body" class="Inventory_Body">
+            <div id="Shop_Status">Dock at the shop to trade.</div>
+            <div class="Shop_Actions">
+                <button id="Shop_Buy_Energy" type="button">Buy Energy</button>
+                <button id="Shop_Buy_Ammo" type="button">Buy Ammo</button>
+                <button id="Shop_Sell_Metal" type="button">Sell Metal</button>
+                <button id="Shop_Upgrade_Engine" type="button">Upgrade Engine</button>
+                <button id="Shop_Upgrade_Battery" type="button">Upgrade Battery</button>
+            </div>
+        </div>
+    </div>
+    <div id="Inventory_Popup_Backdrop" class="Inventory_Popup_Backdrop is-hidden"></div>
+    <div id="Inventory_Popup" class="Inventory_Popup is-hidden">
+        <div class="Inventory_Popup_Header">
+            <div id="Inventory_Popup_Title" class="Inventory_Popup_Title">Item</div>
+            <button id="Inventory_Close" class="Inventory_Popup_Close" type="button" aria-label="Close">×</button>
+        </div>
+        <div id="Inventory_Popup_Text" class="Inventory_Popup_Text">Choose an action.</div>
+        <div class="Inventory_Popup_Actions">
+            <button id="Inventory_Use" type="button">Use</button>
+            <button id="Inventory_Discard" type="button">Discard</button>
+        </div>
+    </div>
+    <div id="Energy_Warning" class="Energy_Warning is-hidden">WARNING LOW ENERGY</div>
 
     <style>
         .Joystick_Area {
@@ -43,6 +92,280 @@
             height: 100%;
             z-index: 10;
             touch-action: none;
+        }
+
+        .Inventory_Window,
+        .Overlay_Window {
+            position: fixed;
+            left: 16px;
+            top: 16px;
+            width: 220px;
+            background: rgba(8, 14, 24, 0.9);
+            border: 1px solid rgba(168, 200, 255, 0.45);
+            border-radius: 12px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+            color: #dce8ff;
+            z-index: 30;
+            font-family: "Space Mono", monospace;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .Overlay_Window_Right {
+            left: auto;
+            right: 16px;
+        }
+
+        .Shop_Window {
+            left: 16px;
+            top: 260px;
+            width: 240px;
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+
+        .Shop_Window.is-active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .Inventory_Header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px 12px;
+            background: rgba(168, 200, 255, 0.12);
+            cursor: move;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .Inventory_Header button {
+            border: 0;
+            border-radius: 7px;
+            background: rgba(168, 200, 255, 0.2);
+            color: #dce8ff;
+            width: 24px;
+            height: 24px;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .Inventory_Body {
+            padding: 10px 12px 12px;
+            font-size: 12px;
+            line-height: 1.55;
+            white-space: pre-line;
+        }
+
+        .Inventory_List {
+            display: grid;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .Inventory_Item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border: 1px solid rgba(168, 200, 255, 0.18);
+            border-radius: 8px;
+            padding: 6px 8px;
+            background: rgba(168, 200, 255, 0.08);
+            color: #dce8ff;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .Inventory_Item.is-selected {
+            border-color: rgba(0, 255, 136, 0.55);
+            background: rgba(0, 255, 136, 0.12);
+        }
+
+        .Inventory_Detail {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(168, 200, 255, 0.14);
+            min-height: 54px;
+            white-space: pre-line;
+        }
+
+        .Inventory_Window.is-collapsed .Inventory_Body {
+            display: none;
+        }
+
+        .Overlay_Window.is-collapsed .Inventory_Body {
+            display: none;
+        }
+
+        .Overlay_Window.is-hidden,
+        .Inventory_Window.is-hidden {
+            display: none;
+        }
+
+        .Inventory_Body_Map {
+            padding: 10px;
+        }
+
+        #Minimap_Canvas {
+            width: 180px;
+            height: 180px;
+            display: block;
+            border-radius: 10px;
+            background: rgba(4, 8, 14, 0.95);
+            border: 1px solid rgba(168, 200, 255, 0.18);
+        }
+
+        .Shop_Actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .Shop_Actions button {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border: 0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: rgba(168, 200, 255, 0.16);
+            color: #dce8ff;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .Inventory_Item_Label,
+        .Shop_Action_Label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .Inventory_Item_Count,
+        .Shop_Action_Value {
+            margin-left: auto;
+            text-align: right;
+            color: #ffdba0;
+            white-space: nowrap;
+        }
+
+        .Inventory_Popup {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px;
+            padding: 14px;
+            border: 1px solid rgba(255, 214, 128, 0.5);
+            border-radius: 12px;
+            background: rgba(10, 14, 20, 0.94);
+            box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+            z-index: 45;
+            color: #f1f5ff;
+            font-family: "Space Mono", monospace;
+        }
+
+        .Inventory_Popup_Backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 6, 10, 0.3);
+            z-index: 44;
+        }
+
+        .Inventory_Popup_Backdrop.is-hidden,
+        .Inventory_Popup.is-hidden {
+            display: none;
+        }
+
+        .Inventory_Popup_Header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .Inventory_Popup_Title {
+            font-size: 13px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .Inventory_Popup_Close {
+            border: 0;
+            border-radius: 7px;
+            width: 24px;
+            height: 24px;
+            background: rgba(168, 200, 255, 0.16);
+            color: #f1f5ff;
+            font: inherit;
+            font-size: 16px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .Inventory_Popup_Text {
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-line;
+        }
+
+        .Inventory_Popup_Actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .Inventory_Popup_Actions button {
+            border: 0;
+            border-radius: 8px;
+            padding: 7px 8px;
+            background: rgba(168, 200, 255, 0.16);
+            color: #dce8ff;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .Inventory_Popup_Actions button:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+
+        .Energy_Warning {
+            position: fixed;
+            left: 50%;
+            top: 18px;
+            transform: translateX(-50%);
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 110, 110, 0.7);
+            border-radius: 999px;
+            background: rgba(60, 0, 0, 0.82);
+            color: #ff6d6d;
+            font: 700 13px "Space Mono", monospace;
+            letter-spacing: 0.16em;
+            z-index: 40;
+            animation: energyWarningPulse 0.7s infinite alternate;
+        }
+
+        .Energy_Warning.is-hidden {
+            display: none;
+        }
+
+        @keyframes energyWarningPulse {
+            from { opacity: 0.45; }
+            to { opacity: 1; }
         }
     </style>
 
@@ -79,6 +402,36 @@
         const Scene = new THREE.Scene();
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas"), antialias: true });
         const Loader_FBX = new FBXLoader();
+        const InventoryWindow = document.getElementById("Inventory_Window");
+        const InventoryHeader = document.getElementById("Inventory_Header");
+        const InventoryCollapse = document.getElementById("Inventory_Collapse");
+        const InventorySummary = document.getElementById("Inventory_Summary");
+        const InventoryContent = document.getElementById("Inventory_Content");
+        const InventoryDetail = document.getElementById("Inventory_Detail");
+        const InventoryPopupBackdrop = document.getElementById("Inventory_Popup_Backdrop");
+        const InventoryPopup = document.getElementById("Inventory_Popup");
+        const InventoryPopupTitle = document.getElementById("Inventory_Popup_Title");
+        const InventoryPopupText = document.getElementById("Inventory_Popup_Text");
+        const InventoryCloseButton = document.getElementById("Inventory_Close");
+        const InventoryUseButton = document.getElementById("Inventory_Use");
+        const InventoryDiscardButton = document.getElementById("Inventory_Discard");
+        const MinimapWindow = document.getElementById("Minimap_Window");
+        const MinimapHeader = document.getElementById("Minimap_Header");
+        const MinimapCollapse = document.getElementById("Minimap_Collapse");
+        const MinimapCanvas = document.getElementById("Minimap_Canvas");
+        const MinimapContext = MinimapCanvas.getContext("2d");
+        const ShopWindow = document.getElementById("Shop_Window");
+        const ShopHeader = document.getElementById("Shop_Header");
+        const ShopCollapse = document.getElementById("Shop_Collapse");
+        const ShopStatus = document.getElementById("Shop_Status");
+        const ShopBuyEnergy = document.getElementById("Shop_Buy_Energy");
+        const ShopBuyAmmo = document.getElementById("Shop_Buy_Ammo");
+        const ShopSellMetal = document.getElementById("Shop_Sell_Metal");
+        const ShopUpgradeEngine = document.getElementById("Shop_Upgrade_Engine");
+        const ShopUpgradeBattery = document.getElementById("Shop_Upgrade_Battery");
+        const EnergyWarning = document.getElementById("Energy_Warning");
+        let SelectedInventoryItem = "energy_pack";
+        let InventoryPopupItemId = null;
 
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
@@ -94,7 +447,7 @@
 
 
         // =================================================================================
-        // 弾クラス (C_Bullet)
+        // 蠑ｾ繧ｯ繝ｩ繧ｹ (C_Bullet)
         // =================================================================================
         class C_Bullet extends FC_GameObject {
             _Speed = 12; 
@@ -133,46 +486,111 @@
         }
 
         // =================================================================================
-        // ドロップアイテムクラス (C_Item_Drop)
+        // 繝峨Ο繝・・繧｢繧､繝・Β繧ｯ繝ｩ繧ｹ (C_Item_Drop)
         // =================================================================================
         class C_Item_Drop extends FC_GameObject {
-            _Lifespan = 7.0;
+            _Lifespan = 10.0;
             _Timer_Life = new FC_Timer(this._Lifespan);
             _IsActive = true;
             get IsActive() { return this._IsActive; }
             _Radius = 0.3;
-            _Type = 'energy'; // 'energy' or 'ammo'
+            _Type = 'energy'; // 'energy' or 'ammo' or 'metal' or 'money'
             get Type() { return this._Type; }
             _Value = 0;
             get Value() { return this._Value; }
+            _Label;
+            _BlinkPhase = 0;
+            _BlinkVisible = true;
+            _Velocity = new THREE.Vector3();
 
 
-            constructor(_position, _type) {
+            constructor(_position, _type, _value = null, _velocity = null) {
                 super();
                 this._Type = _type;
                 let color;
                 if(this._Type === 'energy') {
-                    color = 0x00FF88; // 緑
-                    this._Value = 10; // エネルギー回復量
+                    color = 0x00FF88;
+                    this._Value = _value ?? 50;
+                } else if (this._Type === 'metal') {
+                    color = 0xA8C8FF;
+                    this._Value = _value ?? 1;
+                } else if (this._Type === 'money') {
+                    color = 0x7CFF7C;
+                    this._Value = _value ?? 12;
                 } else { // ammo
-                    color = 0xFFD700; // 黄
-                    this._Value = 8; // 弾薬回復量
+                    color = 0xFFD700;
+                    this._Value = _value ?? 8;
                 }
 
                 const geometry = new THREE.IcosahedronGeometry(this._Radius, 0);
                 const material = new THREE.MeshBasicMaterial({ color: color });
                 this._Object = new THREE.Mesh(geometry, material);
                 this.Position = _position;
+                if (_velocity) this._Velocity.copy(_velocity);
+                this._Label = this.CreateLabel();
+                this._Label.position.set(0, 0.7, 0);
+                this._Object.add(this._Label);
                 Scene.add(this._Object);
                 this._Timer_Life.Restart();
+            }
+
+            CreateLabel() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 96;
+                const context = canvas.getContext('2d');
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.font = 'bold 38px "Space Mono"';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.lineWidth = 8;
+                context.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+                context.fillStyle = this._Type === 'energy' ? '#00FF88' : this._Type === 'metal' ? '#A8C8FF' : this._Type === 'money' ? '#7CFF7C' : '#FFD700';
+                const label = this._Type === 'energy'
+                    ? `+${this._Value} ENERGY`
+                    : this._Type === 'metal'
+                        ? `+${this._Value} RARE METAL`
+                        : this._Type === 'money'
+                            ? `+${this._Value} CREDITS`
+                        : `+${this._Value} AMMO`;
+                context.strokeText(label, canvas.width / 2, canvas.height / 2);
+                context.fillText(label, canvas.width / 2, canvas.height / 2);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                const material = new THREE.SpriteMaterial({
+                    map: texture,
+                    transparent: true,
+                    depthTest: false,
+                });
+                const sprite = new THREE.Sprite(material);
+                sprite.scale.set(2.1, 0.8, 1);
+                return sprite;
             }
 
             Update() {
                 if (!this._IsActive) return;
 
-                const timeRatio = this._Timer_Life.Time_Current / this._Lifespan;
-                if (timeRatio > 0.7) {
-                    this._Object.visible = Math.floor(this._Timer_Life.Time_Current * 12) % 2 === 0;
+                const timeRemaining = Math.max(0, this._Lifespan - this._Timer_Life.Time_Current);
+                this.Position.add(this._Velocity.clone().multiplyScalar(FC_Environment.TIME_DELTA));
+                this._Velocity.multiplyScalar(0.93);
+                this._Object.rotation.z += FC_Environment.TIME_DELTA * 1.4;
+                if (this._Label) this._Label.material.rotation = 0;
+
+                if (timeRemaining <= 5) {
+                    const blinkProgress = THREE.MathUtils.clamp((5 - timeRemaining) / 5, 0, 1);
+                    const blinkRate = THREE.MathUtils.lerp(1.5, 14, blinkProgress * blinkProgress);
+                    this._BlinkPhase += FC_Environment.TIME_DELTA * blinkRate;
+                    const shouldBeVisible = Math.floor(this._BlinkPhase) % 2 === 0;
+                    if (shouldBeVisible !== this._BlinkVisible) {
+                        this._BlinkVisible = shouldBeVisible;
+                        this._Object.visible = shouldBeVisible;
+                        if (this._Label) this._Label.visible = shouldBeVisible;
+                    }
+                } else {
+                    this._BlinkVisible = true;
+                    this._Object.visible = true;
+                    if (this._Label) this._Label.visible = true;
                 }
 
                 this._Timer_Life.Update();
@@ -183,13 +601,15 @@
                 if (!this._IsActive) return;
                 this._IsActive = false;
                 this._Object.visible = false;
+                if (this._Label?.material?.map) this._Label.material.map.dispose();
+                if (this._Label?.material) this._Label.material.dispose();
                 Scene.remove(this._Object);
             }
         }
 
 
         // =================================================================================
-        // 敵（アステロイド）クラス (C_Enemy_Asteroid)
+        // 謨ｵ・医い繧ｹ繝・Ο繧､繝会ｼ峨け繝ｩ繧ｹ (C_Enemy_Asteroid)
         // =================================================================================
         class C_Enemy_Asteroid extends FC_GameObject {
             _Speed = 1;
@@ -244,6 +664,9 @@
             Destroy() {
                 if (!this._IsActive) return;
                 this._IsActive = false;
+                if (typeof Manager !== "undefined" && Manager?.SpawnEnemyBurst) {
+                    Manager.SpawnEnemyBurst(this.Position.clone(), 0xffa24a);
+                }
                 Scene.remove(this._Object);
             }
         }
@@ -259,7 +682,7 @@
             get UI_Music() { return this._UI_Music; }
 
             _UI_Start = new FC_TextPlane(Scene, Camera, "START", "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
-            _UI_Gameover = new FC_TextPlane(Scene, Camera, "GAMEOVER", "#CF000000", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+            _UI_Gameover = new FC_TextPlane(Scene, Camera, "GAMEOVER", "#CF000000", new THREE.Vector2(20, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
             _UI_Tap = new FC_TextPlane(Scene, Camera, "TAP", "#CF000000", new THREE.Vector2(3, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
 
             _UI_Shoot = new FC_TextPlane(Scene, Camera, "SHOOT", "#0088FF", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
@@ -269,19 +692,20 @@
 
             _UI_Energy = new FC_TextPlane(Scene, Camera, "ENERGY: 100%", "#00FF88", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
             _UI_Ammo = new FC_TextPlane(Scene, Camera, "AMMO: 30", "#FFD700", new THREE.Vector2(7, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
-
             _UI_Boost = new FC_TextPlane(Scene, Camera, "BOOST", "#0000CF", new THREE.Vector2(4, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
             get UI_Boost() { return this._UI_Boost; }
 
             _MotherShip = new C_MotherShip();
+            _Shop = new C_Shop();
             _Particle_Move;
 
             _Bullets = [];
             _EnemyBullets = [];
             _Enemies = [];
             _Drops = [];
-            _Timer_EnemySpawn = new FC_Timer(2.7);
-            _SpawnInterval = 2.7;
+            _Effects = [];
+            _Timer_AsteroidSpawn = new FC_Timer(1.0);
+            _Timer_ShooterSpawn = new FC_Timer(12.0);
             _Boost_Button_Enabled = false;
 
             constructor() {
@@ -324,13 +748,16 @@
                 this._Enemies = [];
                 this._Drops.forEach(d => d.Destroy());
                 this._Drops = [];
+                this._Effects.forEach(effect => effect.Destroy());
+                this._Effects = [];
 
                 this._Score = 0;
                 this._UI_Score.Text = "SCORE: 0";
-                this._SpawnInterval = 2.7;
                 this._Boost_Button_Enabled = false;
-                this._Timer_EnemySpawn.Time_Limit = this._SpawnInterval;
-                this._Timer_EnemySpawn.Restart();
+                this._Timer_AsteroidSpawn.Time_Limit = 1.0;
+                this._Timer_AsteroidSpawn.Restart();
+                this._Timer_ShooterSpawn.Time_Limit = 12.0;
+                this._Timer_ShooterSpawn.Restart();
 
                 this._UI_Start.Position = new THREE.Vector3(0, 0.5, -8);
                 this._UI_Gameover.Hide();
@@ -405,32 +832,37 @@
             }
 
             #SpawnEnemy() {
-                this._Timer_EnemySpawn.Update();
-                if (this._Timer_EnemySpawn.Flag_Finished) {
-                    const enemy = Math.random() < 0.72 ? new C_Enemy_Asteroid() : new C_Enemy_Shooter();
-                    this._Enemies.push(enemy);
+                this._Timer_AsteroidSpawn.Update();
+                const asteroidCount = this._Enemies.filter(enemy => enemy.IsActive && enemy instanceof C_Enemy_Asteroid).length;
+                if (this._Timer_AsteroidSpawn.Flag_Finished && asteroidCount < 1) {
+                    this._Enemies.push(new C_Enemy_Asteroid());
+                    this._Timer_AsteroidSpawn.Restart();
+                }
 
-                    this._SpawnInterval = Math.max(1.2, this._SpawnInterval * 0.992);
-                    this._Timer_EnemySpawn.Time_Limit = this._SpawnInterval;
-                    this._Timer_EnemySpawn.Restart();
+                this._Timer_ShooterSpawn.Update();
+                if (this._Timer_ShooterSpawn.Flag_Finished) {
+                    this._Enemies.push(new C_Enemy_Shooter());
+                    this._Timer_ShooterSpawn.Restart();
                 }
             }
 
             #CheckCollisions() {
-                // 弾 vs 敵
+                // 蠑ｾ vs 謨ｵ
                 for (let i = this._Bullets.length - 1; i >= 0; i--) {
                     const bullet = this._Bullets[i];
                     if (!bullet.IsActive) continue;
+                    if (this._MotherShip.IsShieldBlocking(bullet.Position) || this._Shop.IsShieldBlocking(bullet.Position)) {
+                        bullet.Destroy();
+                        continue;
+                    }
 
                     for (let j = this._Enemies.length - 1; j >= 0; j--) {
-                        const enemy = this._Enemies[j];
+                    const enemy = this._Enemies[j];
                         if (!enemy.IsActive) continue;
 
                         if (bullet.Position.distanceTo(enemy.Position) < enemy._Radius) {
                             bullet.Destroy();
-                            const dropType = Math.random() < 0.6 ? 'ammo' : 'energy';
-                            const drop = new C_Item_Drop(enemy.Position.clone(), dropType);
-                            this._Drops.push(drop);
+                            this.#SpawnDrops(enemy);
                             enemy.Destroy();
 
                             this._Score += 100;
@@ -440,10 +872,14 @@
                     }
                 }
 
-                // プレイヤー vs 敵
+                // 繝励Ξ繧､繝､繝ｼ vs 謨ｵ
                 for (let i = this._Enemies.length - 1; i >= 0; i--) {
                     const enemy = this._Enemies[i];
                     if (!enemy.IsActive) continue;
+                    if (this._MotherShip.IsShieldBlocking(enemy.Position, enemy._Radius * 0.65) || this._Shop.IsShieldBlocking(enemy.Position, enemy._Radius * 0.65)) {
+                        enemy.Destroy();
+                        continue;
+                    }
                     if (Player.Position.distanceTo(enemy.Position) < Player._Radius + enemy._Radius) {
                         enemy.Destroy();
                         Player.TakeDamage(25);
@@ -453,13 +889,17 @@
                 for (let i = this._EnemyBullets.length - 1; i >= 0; i--) {
                     const bullet = this._EnemyBullets[i];
                     if (!bullet.IsActive) continue;
+                    if (this._MotherShip.IsShieldBlocking(bullet.Position, bullet._Radius) || this._Shop.IsShieldBlocking(bullet.Position, bullet._Radius)) {
+                        bullet.Destroy();
+                        continue;
+                    }
                     if (Player.Position.distanceTo(bullet.Position) < Player._Radius + bullet._Radius) {
                         bullet.Destroy();
                         Player.TakeDamage(10);
                     }
                 }
 
-                // プレイヤー vs ドロップアイテム
+                // 繝励Ξ繧､繝､繝ｼ vs 繝峨Ο繝・・繧｢繧､繝・Β
                 for (let i = this._Drops.length - 1; i >= 0; i--) {
                     const drop = this._Drops[i];
                     if (!drop.IsActive) continue;
@@ -515,9 +955,44 @@
 
                 this._UI_Ammo.Place_on_Screen(new THREE.Vector2(-0.5, 0.7), 4);
                 this._UI_Ammo.Rotation_Quaternion = quaternion_2;
-                this._UI_Ammo.Text = `AMMO: ${Player.Ammo.toString().padStart(3, ' ')}`;
+                this._UI_Ammo.Text = `AMMO: ${Math.floor(Player.Ammo).toString().padStart(3, ' ')}`;
                 if (Player.Ammo > 0) this._UI_Ammo.Color = "#FFD700";
                 else this._UI_Ammo.Color = "#CF0000";
+
+                const cargoWeight = Player.GetCurrentCargoWeight();
+                InventorySummary.textContent =
+                    `ENERGY   ${Math.round(Player.Energy_Carbon)}/${Player._Energy_Carbon_Initial}\n` +
+                    `AMMO     ${Math.floor(Player.Ammo)}/${Player._Ammo_Initial}\n` +
+                    `CREDITS  ${Math.round(Player.Credits)}\n` +
+                    `WEIGHT   ${cargoWeight.toFixed(1)}/${Player.CargoCapacity.toFixed(1)}`;
+
+                const inventoryEntries = Player.GetInventoryEntries();
+                if (!inventoryEntries.some(entry => entry.id === SelectedInventoryItem)) {
+                    SelectedInventoryItem = inventoryEntries[0].id;
+                }
+                InventoryContent.innerHTML = inventoryEntries.map(entry => `
+                    <button class="Inventory_Item ${entry.id === SelectedInventoryItem ? 'is-selected' : ''}" data-item-id="${entry.id}" type="button">
+                        <span class="Inventory_Item_Label">${entry.label}</span>
+                        <span class="Inventory_Item_Count">x${Math.round(entry.count)}</span>
+                    </button>
+                `).join('');
+                const selectedEntry = inventoryEntries.find(entry => entry.id === SelectedInventoryItem) || inventoryEntries[0];
+                InventoryDetail.textContent =
+                    `${selectedEntry.label}\nCount ${Math.round(selectedEntry.count)}\n` +
+                    `Weight ${selectedEntry.weight.toFixed(2)} each\n${selectedEntry.detail}\nTap item to manage.`;
+
+                const warningEnergyThreshold = Player._Energy_Carbon_Max * 0.25;
+                EnergyWarning.classList.toggle("is-hidden", this._State !== "Playing" || Player.Energy_Carbon > warningEnergyThreshold);
+
+                ShopStatus.textContent =
+                    `${Player.Flag_InShop ? "Docked at shop" : "Dock at the shop to trade."}\n` +
+                    `Credits: ${Math.round(Player.Credits)}\n` +
+                    `Engine Lv.${Player.Upgrade_Engine_Level}  Battery Lv.${Player.Upgrade_Battery_Level}`;
+                ShopBuyEnergy.innerHTML = `<span class="Shop_Action_Label">Buy Energy</span><span class="Shop_Action_Value">12 cr</span>`;
+                ShopBuyAmmo.innerHTML = `<span class="Shop_Action_Label">Buy Ammo</span><span class="Shop_Action_Value">10 cr</span>`;
+                ShopSellMetal.innerHTML = `<span class="Shop_Action_Label">Sell Metal</span><span class="Shop_Action_Value">30 cr</span>`;
+                ShopUpgradeEngine.innerHTML = `<span class="Shop_Action_Label">Upgrade Engine</span><span class="Shop_Action_Value">${30 + Player.Upgrade_Engine_Level * 25} cr</span>`;
+                ShopUpgradeBattery.innerHTML = `<span class="Shop_Action_Label">Upgrade Battery</span><span class="Shop_Action_Value">${35 + Player.Upgrade_Battery_Level * 30} cr</span>`;
 
 
                 this._UI_Score.Place_on_Screen(new THREE.Vector2(0, 0.85), 4);
@@ -543,6 +1018,9 @@
                 this._UI_Shoot.Place_on_Screen(new THREE.Vector2(0.6, -0.5), 4);
                 this._UI_Shoot.Rotation_Quaternion = quaternion_4;
 
+                UpdateOverlayVisibility(this._State);
+                UpdateMinimap();
+
             }
             #Update_Playing() {
                 Player.Update(this._Input_Move);
@@ -552,7 +1030,9 @@
                 this._UI_Tap.Update();
 
                 this._MotherShip.Update();
-                if (this._MotherShip.Check(Player.Position)) Player.Replenish_at_Base();
+                Player.SetReplenishActive(this._MotherShip.Check(Player.Position));
+                this._Shop.Update();
+                Player.SetShopAvailable(this._Shop.Check(Player.Position));
 
                 this._Particle_Move.Update();
 
@@ -568,6 +1048,7 @@
                 });
                 this._EnemyBullets.forEach(b => b.Update());
                 this._Drops.forEach(d => d.Update());
+                this._Effects.forEach(effect => effect.Update());
 
                 this.#CheckCollisions();
 
@@ -575,15 +1056,42 @@
                 this._EnemyBullets = this._EnemyBullets.filter(b => b.IsActive);
                 this._Enemies = this._Enemies.filter(e => e.IsActive);
                 this._Drops = this._Drops.filter(d => d.IsActive);
+                this._Effects = this._Effects.filter(effect => effect.IsActive);
             }
 
             #UpdateBoostState() {
                 Player.Flag_Boost = this._Boost_Button_Enabled || this._Keyboard.IsPressed('shift');
             }
+
+            #SpawnDrops(_enemy) {
+                let drops = [];
+                if (_enemy instanceof C_Enemy_Asteroid) {
+                    drops = [
+                        { type: 'metal', value: 1 }
+                    ];
+                } else {
+                    drops = [
+                        { type: 'energy', value: 10 },
+                        { type: 'ammo', value: 2 },
+                        { type: 'money', value: Math.round(RandomNumber_Between(12, 20)) }
+                    ];
+                }
+
+                drops.forEach((dropData, index) => {
+                    const angle = (Math.PI * 2 * index) / drops.length + Math.random() * 0.45;
+                    const velocity = new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).multiplyScalar(1.2 + Math.random() * 0.6);
+                    const drop = new C_Item_Drop(_enemy.Position.clone(), dropData.type, dropData.value, velocity);
+                    this._Drops.push(drop);
+                });
+            }
+
+            SpawnEnemyBurst(_position, _color) {
+                this._Effects.push(new C_Destroy_Effect(_position, _color));
+            }
         }
 
         class C_Enemy_Bullet extends FC_GameObject {
-            _Speed = 4.5;
+            _Speed = 3.2;
             _Velocity = new THREE.Vector3();
             _Lifespan = 4;
             _Timer_Life = new FC_Timer(this._Lifespan);
@@ -617,31 +1125,210 @@
             }
         }
 
+        function GetSmoothFactor(_speed) {
+            return 1 - Math.exp(-_speed * FC_Environment.TIME_DELTA);
+        }
+
+        class C_Exhaust_Trail {
+            _Owner;
+            _Color;
+            _Scale;
+            _Particles = [];
+            _SpawnAccumulator = 0;
+
+            constructor(_owner, _color = 0x00ff88, _scale = 1) {
+                this._Owner = _owner;
+                this._Color = new THREE.Color(_color);
+                this._Scale = _scale;
+            }
+
+            Update(_velocity, _facingDirection, _isBoosting = false) {
+                if (_velocity.lengthSq() > 0.0005) {
+                    const spawnRate = _isBoosting ? 38 : 20;
+                    this._SpawnAccumulator += FC_Environment.TIME_DELTA * spawnRate;
+                    while (this._SpawnAccumulator >= 1) {
+                        this._SpawnAccumulator -= 1;
+                        this.#SpawnParticle(_facingDirection, _isBoosting);
+                    }
+                } else {
+                    this._SpawnAccumulator = 0;
+                }
+
+                for (let i = this._Particles.length - 1; i >= 0; i--) {
+                    const particle = this._Particles[i];
+                    particle.life -= FC_Environment.TIME_DELTA;
+                    if (particle.life <= 0) {
+                        Scene.remove(particle.mesh);
+                        this._Particles.splice(i, 1);
+                        continue;
+                    }
+
+                    particle.mesh.position.add(particle.velocity.clone().multiplyScalar(FC_Environment.TIME_DELTA * 60));
+                    const alpha = particle.life / particle.maxLife;
+                    particle.mesh.material.opacity = alpha * 0.65;
+                    particle.mesh.scale.setScalar(particle.size * alpha);
+                }
+            }
+
+            #SpawnParticle(_facingDirection, _isBoosting) {
+                const backward = _facingDirection.clone().normalize().multiplyScalar(-1);
+                const angle = (Math.random() - 0.5) * Math.PI / 9;
+                const rotatedX = backward.x * Math.cos(angle) - backward.y * Math.sin(angle);
+                const rotatedY = backward.x * Math.sin(angle) + backward.y * Math.cos(angle);
+                const speed = _isBoosting ? 0.12 : 0.06;
+                const velocity = new THREE.Vector3(rotatedX * speed, rotatedY * speed, 0);
+                const position = this._Owner.Position.clone().add(backward.multiplyScalar(this._Owner._Radius * 1.25));
+
+                const mesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.08 * this._Scale, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: this._Color, transparent: true, opacity: 0.55 })
+                );
+                mesh.position.copy(position);
+                Scene.add(mesh);
+
+                this._Particles.push({
+                    mesh: mesh,
+                    velocity: velocity,
+                    life: 0.28 * this._Scale,
+                    maxLife: 0.28 * this._Scale,
+                    size: 1 + Math.random() * 0.7
+                });
+            }
+
+            Destroy() {
+                this._Particles.forEach(particle => Scene.remove(particle.mesh));
+                this._Particles = [];
+            }
+        }
+
+        class C_Destroy_Effect {
+            _IsActive = true;
+            get IsActive() { return this._IsActive; }
+            _Particles = [];
+
+            constructor(_position, _color) {
+                const baseColor = new THREE.Color(_color);
+
+                for (let i = 0; i < 10; i++) {
+                    const angle = (Math.PI * 2 * i) / 10 + Math.random() * 0.5;
+                    const speed = 0.05 + Math.random() * 0.08;
+                    const life = 0.45 + Math.random() * 0.2;
+                    const mesh = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.08 + Math.random() * 0.05, 6, 6),
+                        new THREE.MeshBasicMaterial({
+                            color: baseColor,
+                            transparent: true,
+                            opacity: 0.9
+                        })
+                    );
+                    mesh.position.copy(_position);
+                    Scene.add(mesh);
+
+                    this._Particles.push({
+                        mesh: mesh,
+                        velocity: new THREE.Vector3(Math.cos(angle) * speed, Math.sin(angle) * speed, 0),
+                        life: life,
+                        maxLife: life
+                    });
+                }
+            }
+
+            Update() {
+                if (!this._IsActive) return;
+
+                let hasAliveParticle = false;
+                this._Particles.forEach(particle => {
+                    if (particle.life <= 0) return;
+
+                    hasAliveParticle = true;
+                    particle.life -= FC_Environment.TIME_DELTA;
+                    particle.mesh.position.add(particle.velocity.clone().multiplyScalar(FC_Environment.TIME_DELTA * 60));
+                    particle.velocity.multiplyScalar(0.93);
+                    const alpha = Math.max(0, particle.life / particle.maxLife);
+                    particle.mesh.material.opacity = alpha * 0.9;
+                    particle.mesh.scale.setScalar(Math.max(0.12, 0.35 + (1 - alpha) * 0.9));
+                    particle.mesh.visible = alpha > 0;
+                });
+
+                if (!hasAliveParticle) {
+                    this.Destroy();
+                }
+            }
+
+            Destroy() {
+                if (!this._IsActive) return;
+                this._IsActive = false;
+                this._Particles.forEach(particle => {
+                    Scene.remove(particle.mesh);
+                    particle.mesh.geometry.dispose();
+                    particle.mesh.material.dispose();
+                });
+                this._Particles = [];
+            }
+        }
+
+        function CreateShipMesh(_bodyColor, _wingColor, _radius, _cockpitColor = 0xffffff) {
+            const ship = new THREE.Group();
+
+            const bodyShape = new THREE.Shape();
+            bodyShape.moveTo(0, _radius * 1.35);
+            bodyShape.lineTo(_radius * 0.78, _radius * 0.35);
+            bodyShape.lineTo(_radius * 0.46, _radius * 0.08);
+            bodyShape.lineTo(_radius * 0.62, -_radius * 0.9);
+            bodyShape.lineTo(0, -_radius * 0.62);
+            bodyShape.lineTo(-_radius * 0.62, -_radius * 0.9);
+            bodyShape.lineTo(-_radius * 0.46, _radius * 0.08);
+            bodyShape.lineTo(-_radius * 0.78, _radius * 0.35);
+            bodyShape.closePath();
+
+            const body = new THREE.Mesh(
+                new THREE.ShapeGeometry(bodyShape),
+                new THREE.MeshStandardMaterial({ color: _bodyColor, flatShading: true, side: THREE.DoubleSide })
+            );
+
+            const cockpit = new THREE.Mesh(
+                new THREE.SphereGeometry(_radius * 0.28, 8, 8),
+                new THREE.MeshStandardMaterial({ color: _cockpitColor, emissive: _cockpitColor, emissiveIntensity: 0.2, flatShading: true })
+            );
+            cockpit.position.set(0, _radius * 0.25, 0.14);
+
+            const wingLeft = new THREE.Mesh(
+                new THREE.BoxGeometry(_radius * 0.22, _radius * 0.7, _radius * 0.18),
+                new THREE.MeshStandardMaterial({ color: _wingColor, flatShading: true })
+            );
+            wingLeft.position.set(-_radius * 0.58, -_radius * 0.15, 0);
+            wingLeft.rotation.z = THREE.MathUtils.degToRad(10);
+
+            const wingRight = wingLeft.clone();
+            wingRight.position.x = _radius * 0.58;
+            wingRight.rotation.z *= -1;
+
+            ship.add(body);
+            ship.add(cockpit);
+            ship.add(wingLeft);
+            ship.add(wingRight);
+            return ship;
+        }
+
         class C_Enemy_Shooter extends FC_GameObject {
-            _Speed = 0.9;
+            _Speed = 0.62;
             _Velocity = new THREE.Vector3();
             _IsActive = true;
-            _Radius = 0.8;
-            _Shoot_Cooldown = new FC_Timer(RandomNumber_Between(1.6, 2.6));
+            _Radius = 0.5;
+            _Shoot_Cooldown = new FC_Timer(RandomNumber_Between(2.6, 3.8));
+            _FacingDirection = new THREE.Vector3(0, 1, 0);
+            _Trail;
+            _Timer_Wander = new FC_Timer(RandomNumber_Between(1.3, 2.8));
+            _WanderDirection = new THREE.Vector3(0, 1, 0);
+            _AggroRange = 8.5;
+            _AttackRange = 12.5;
             get IsActive() { return this._IsActive; }
 
             constructor() {
                 super();
 
-                const body = new THREE.Group();
-                const core = new THREE.Mesh(
-                    new THREE.OctahedronGeometry(this._Radius, 0),
-                    new THREE.MeshStandardMaterial({ color: 0x66CCFF, flatShading: true, emissive: 0x113355 })
-                );
-                const ring = new THREE.Mesh(
-                    new THREE.TorusGeometry(this._Radius * 0.9, 0.12, 8, 16),
-                    new THREE.MeshStandardMaterial({ color: 0xDDEEFF, flatShading: true })
-                );
-                ring.rotation.x = THREE.MathUtils.degToRad(75);
-                body.add(core);
-                body.add(ring);
-
-                this._Object = body;
+                this._Object = CreateShipMesh(0xFF4444, 0x991111, this._Radius, 0xFFAAAA);
+                this._Trail = new C_Exhaust_Trail(this, 0xff8855, 0.75);
                 Scene.add(this._Object);
                 this.Initialize();
             }
@@ -656,8 +1343,13 @@
                 ));
 
                 this._Velocity = Player.Position.clone().sub(this.Position).normalize();
-                this._Shoot_Cooldown.Time_Limit = RandomNumber_Between(1.2, 2.0);
+                this._FacingDirection.copy(this._Velocity);
+                this._Object.rotation.z = Math.atan2(-this._FacingDirection.x, this._FacingDirection.y);
+                this.#ResetWanderDirection();
+                this._Shoot_Cooldown.Time_Limit = RandomNumber_Between(2.6, 3.8);
                 this._Shoot_Cooldown.Restart();
+                this._Timer_Wander.Time_Limit = RandomNumber_Between(1.3, 2.8);
+                this._Timer_Wander.Restart();
             }
 
             TryShoot() {
@@ -667,11 +1359,23 @@
                 if (!this._Shoot_Cooldown.Flag_Finished) return null;
 
                 const toPlayer = Player.Position.clone().sub(this.Position);
-                if (toPlayer.lengthSq() === 0) return null;
+                if (toPlayer.lengthSq() === 0 || toPlayer.length() > this._AttackRange) return null;
 
-                this._Shoot_Cooldown.Time_Limit = RandomNumber_Between(1.2, 2.0);
+                const playerLag = Player._Velocity.clone().multiplyScalar(-RandomNumber_Between(0.25, 0.8));
+                const randomOffset = new THREE.Vector3(
+                    RandomNumber_Between(-1.2, 1.2),
+                    RandomNumber_Between(-1.2, 1.2),
+                    0
+                );
+                const aimPoint = Player.Position.clone().add(playerLag).add(randomOffset);
+                const aimDirection = aimPoint.sub(this.Position);
+                if (aimDirection.lengthSq() === 0) return null;
+
+                this._Shoot_Cooldown.Time_Limit = RandomNumber_Between(2.6, 3.8);
                 this._Shoot_Cooldown.Restart();
-                return new C_Enemy_Bullet(this.Position.clone(), toPlayer.normalize());
+                const shotDirection = this._FacingDirection.clone().normalize();
+                const shotPosition = this.Position.clone().add(shotDirection.multiplyScalar(this._Radius));
+                return new C_Enemy_Bullet(shotPosition, aimDirection.normalize());
             }
 
             Update() {
@@ -679,33 +1383,132 @@
 
                 const toPlayer = Player.Position.clone().sub(this.Position);
                 const distance = toPlayer.length();
-                if (distance > 0.001) {
-                    const desiredVelocity = toPlayer.normalize();
-                    this._Velocity.lerp(desiredVelocity, 0.03);
-
-                    if (distance > 8) {
-                        this.Position.add(this._Velocity.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
-                    } else if (distance < 5) {
-                        this.Position.add(this._Velocity.clone().multiplyScalar(-this._Speed * 0.7 * FC_Environment.TIME_DELTA));
-                    }
-
-                    this._Object.rotation.z += FC_Environment.TIME_DELTA;
+                this._Timer_Wander.Update();
+                if (this._Timer_Wander.Flag_Finished) {
+                    this.#ResetWanderDirection();
+                    this._Timer_Wander.Time_Limit = RandomNumber_Between(1.3, 2.8);
+                    this._Timer_Wander.Restart();
                 }
 
+                if (distance > 0.001) {
+                    let desiredDirection = this._WanderDirection.clone().multiplyScalar(0.45);
+                    if (distance < this._AggroRange) {
+                        desiredDirection = toPlayer.normalize();
+                    } else if (distance < this._AttackRange) {
+                        desiredDirection = toPlayer.normalize().multiplyScalar(0.55).add(this._WanderDirection.clone().multiplyScalar(0.45));
+                    }
+
+                    if (distance < 3.5) {
+                        desiredDirection.add(toPlayer.normalize().multiplyScalar(-0.8));
+                    }
+
+                    if (desiredDirection.lengthSq() > 0.0001) desiredDirection.normalize();
+
+                    const targetVelocity = desiredDirection.multiplyScalar(this._Speed);
+                    this._Velocity.lerp(targetVelocity, GetSmoothFactor(1.8));
+                    this.Position.add(this._Velocity.clone().multiplyScalar(FC_Environment.TIME_DELTA));
+
+                    if (this._Velocity.lengthSq() > 0.0001) {
+                        const desiredFacing = this._Velocity.clone().normalize();
+                        this._FacingDirection.lerp(desiredFacing, GetSmoothFactor(3.2));
+                        this._FacingDirection.normalize();
+                        this._Object.rotation.z = Math.atan2(-this._FacingDirection.x, this._FacingDirection.y);
+                    }
+                }
+
+                this._Trail.Update(this._Velocity, this._FacingDirection, false);
+
                 if (this.Position.distanceTo(Player.Position) > 60) this.Destroy();
+            }
+
+            #ResetWanderDirection() {
+                this._WanderDirection = new THREE.Vector3(
+                    RandomNumber_Between(-1, 1),
+                    RandomNumber_Between(-1, 1),
+                    0
+                );
+                if (this._WanderDirection.lengthSq() < 0.001) {
+                    this._WanderDirection.set(0, 1, 0);
+                }
+                this._WanderDirection.normalize();
             }
 
             Destroy() {
                 if (!this._IsActive) return;
                 this._IsActive = false;
+                if (typeof Manager !== "undefined" && Manager?.SpawnEnemyBurst) {
+                    Manager.SpawnEnemyBurst(this.Position.clone(), 0xff6666);
+                }
+                this._Trail.Destroy();
                 Scene.remove(this._Object);
+            }
+        }
+
+        class C_Shop extends FC_GameObject {
+            static DOCK_RADIUS = 2.4;
+            static SHIELD_RADIUS = 3.9;
+
+            _Object_Shield;
+
+            constructor() {
+                super();
+
+                const group = new THREE.Group();
+                const base = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.2, 1.2, 0.35, 6),
+                    new THREE.MeshStandardMaterial({ color: 0x4D5E88, flatShading: true })
+                );
+                const core = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.1, 1.1, 0.18),
+                    new THREE.MeshStandardMaterial({ color: 0xA8C8FF, emissive: 0x1A2440, flatShading: true })
+                );
+                const ring = new THREE.Mesh(
+                    new THREE.RingGeometry(C_Shop.DOCK_RADIUS - 0.1, C_Shop.DOCK_RADIUS, 32),
+                    new THREE.MeshBasicMaterial({ color: 0xA8C8FF, side: THREE.DoubleSide, transparent: true, opacity: 0.35 })
+                );
+                const shield = new THREE.Mesh(
+                    new THREE.SphereGeometry(C_Shop.SHIELD_RADIUS, 28, 18),
+                    new THREE.MeshBasicMaterial({
+                        color: 0x7DB7FF,
+                        wireframe: true,
+                        transparent: true,
+                        opacity: 0.16
+                    })
+                );
+                shield.scale.z = 0.18;
+                ring.rotation.x = THREE.MathUtils.degToRad(90);
+                base.rotation.z = THREE.MathUtils.degToRad(90);
+                group.add(base);
+                group.add(core);
+                group.add(ring);
+                group.add(shield);
+
+                this._Object = group;
+                this._Object_Shield = shield;
+                this.Position = new THREE.Vector3(8, -6, 0);
+                Scene.add(this._Object);
+            }
+
+            Update() {
+                this._Object.rotation.z -= FC_Environment.TIME_DELTA * 0.25;
+                this._Object_Shield.material.opacity = 0.08 + Math.sin(performance.now() * 0.005) * 0.08;
+            }
+
+            Check(_position) {
+                return this.Position.distanceTo(_position) <= C_Shop.SHIELD_RADIUS;
+            }
+
+            IsShieldBlocking(_position, _radius = 0) {
+                return this.Position.distanceTo(_position) <= C_Shop.SHIELD_RADIUS + _radius;
             }
         }
 
         class C_MotherShip extends FC_GameObject {
             static REPLENISH_RADIUS = 2.8;
+            static SHIELD_RADIUS = 4.8;
 
             _Object_Field;
+            _Object_Shield;
 
             constructor() {
                 super();
@@ -713,26 +1516,24 @@
                 const container = new THREE.Group();
 
                 const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(1.7, 2.6, 0.8, 6),
-                    new THREE.MeshStandardMaterial({ color: 0xAAB8CC, flatShading: true })
+                    new THREE.BoxGeometry(4.8, 1.2, 0.26),
+                    new THREE.MeshStandardMaterial({ color: 0xAAB8CC, flatShading: true, emissive: 0x18202A })
                 );
-                body.rotation.z = THREE.MathUtils.degToRad(90);
 
                 const bridge = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.42, 0.42, 2.1, 10),
+                    new THREE.BoxGeometry(2.5, 0.6, 0.26),
                     new THREE.MeshStandardMaterial({ color: 0x88E0FF, emissive: 0x113344, flatShading: true })
                 );
-                bridge.rotation.z = THREE.MathUtils.degToRad(90);
+                bridge.position.y = 0.18;
 
                 const wingLeft = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.35, 3.8, 0.18),
+                    new THREE.BoxGeometry(0.8, 3.8, 0.26),
                     new THREE.MeshStandardMaterial({ color: 0x5F6D80, flatShading: true })
                 );
-                wingLeft.position.x = -0.9;
-                wingLeft.rotation.z = THREE.MathUtils.degToRad(90);
+                wingLeft.position.x = -1.5;
 
                 const wingRight = wingLeft.clone();
-                wingRight.position.x = 0.9;
+                wingRight.position.x = 1.5;
 
                 const field = new THREE.Mesh(
                     new THREE.RingGeometry(C_MotherShip.REPLENISH_RADIUS - 0.15, C_MotherShip.REPLENISH_RADIUS, 48),
@@ -740,14 +1541,27 @@
                 );
                 field.rotation.x = THREE.MathUtils.degToRad(90);
 
+                const shield = new THREE.Mesh(
+                    new THREE.SphereGeometry(C_MotherShip.SHIELD_RADIUS, 32, 20),
+                    new THREE.MeshBasicMaterial({
+                        color: 0x55CCFF,
+                        wireframe: true,
+                        transparent: true,
+                        opacity: 0.2
+                    })
+                );
+                shield.scale.z = 0.18;
+
                 container.add(body);
                 container.add(bridge);
                 container.add(wingLeft);
                 container.add(wingRight);
+                container.add(shield);
                 container.add(field);
 
                 this._Object = container;
                 this._Object_Field = field;
+                this._Object_Shield = shield;
                 this.Position = new THREE.Vector3(0, 0, 0);
                 Scene.add(this._Object);
             }
@@ -755,10 +1569,15 @@
             Update() {
                 this._Object.rotation.z += FC_Environment.TIME_DELTA * 0.12;
                 this._Object_Field.material.opacity = 0.28 + Math.sin(performance.now() * 0.004) * 0.12;
+                this._Object_Shield.material.opacity = 0.12 + Math.sin(performance.now() * 0.006) * 0.08;
             }
 
             Check(_position) {
-                return this.Position.distanceTo(_position) <= C_MotherShip.REPLENISH_RADIUS;
+                return this.Position.distanceTo(_position) <= C_MotherShip.SHIELD_RADIUS;
+            }
+
+            IsShieldBlocking(_position, _radius = 0) {
+                return this.Position.distanceTo(_position) <= C_MotherShip.SHIELD_RADIUS + _radius;
             }
         }
 
@@ -773,6 +1592,8 @@
             }
 
             _Speed;
+            _Acceleration;
+            _MaxSpeed;
             _Energy_Carbon;
             _Energy_Carbon_Max;
             _Energy_Carbon_Initial;
@@ -786,22 +1607,39 @@
 
             _Radius = 0.5;
             _Shoot_Cooldown = new FC_Timer(0.18);
+            _Velocity = new THREE.Vector3();
+            _FacingDirection = new THREE.Vector3(0, 1, 0);
+            _Flag_Replenishing = false;
+            _Flag_Thrusting = false;
+            _Replenish_Progress = 0;
+            _Replenish_Energy_Start = 0;
+            _Replenish_Ammo_Start = 0;
 
             _Ammo;
             _Ammo_Max;
             _Ammo_Initial;
             get Ammo() { return this._Ammo; }
+            _Inventory_Energy_Packs = 0;
+            get Inventory_Energy_Packs() { return this._Inventory_Energy_Packs; }
+            _Inventory_Ammo_Packs = 0;
+            get Inventory_Ammo_Packs() { return this._Inventory_Ammo_Packs; }
+            _Inventory_Rare_Metals = 0;
+            get Inventory_Rare_Metals() { return this._Inventory_Rare_Metals; }
+            _Credits = 0;
+            get Credits() { return this._Credits; }
+            _CargoCapacity = 26;
+            get CargoCapacity() { return this._CargoCapacity; }
+            _Flag_InShop = false;
+            get Flag_InShop() { return this._Flag_InShop; }
+            _Upgrade_Engine_Level = 0;
+            get Upgrade_Engine_Level() { return this._Upgrade_Engine_Level; }
+            _Upgrade_Battery_Level = 0;
+            get Upgrade_Battery_Level() { return this._Upgrade_Battery_Level; }
 
             constructor() {
                 super();
 
-                const geometry = new THREE.ConeGeometry(this._Radius, this._Radius * 2, 4);
-                const material = new THREE.MeshStandardMaterial({ color: 0x00ff00, flatShading: true });
-                const mesh = new THREE.Mesh(geometry, material);
-                // ### 修正箇所 ###
-                // お客様のご指定通り、回転の初期値を元に戻しました
-                mesh.rotation.z = Math.PI / 2;
-                this._Object = mesh;
+                this._Object = CreateShipMesh(0x00CC66, 0x008844, this._Radius, 0xAAFFEE);
                 Scene.add(this._Object);
 
                 this.Initialize();
@@ -811,6 +1649,8 @@
             Initialize() {
                 this.Flag_Boost = false;
                 this._Speed = 1.2;
+                this._Acceleration = 3.2;
+                this._MaxSpeed = 3.4;
                 this._Energy_Carbon_Initial = 100;
                 this._Energy_Carbon = this._Energy_Carbon_Initial;
                 this._Energy_Carbon_Max = 100;
@@ -820,43 +1660,85 @@
                 this._Ammo_Initial = 30;
                 this._Ammo = this._Ammo_Initial;
                 this._Ammo_Max = 100;
+                this._Inventory_Energy_Packs = 1;
+                this._Inventory_Ammo_Packs = 0;
+                this._Inventory_Rare_Metals = 0;
+                this._Credits = 0;
+                this._CargoCapacity = 26;
+                this._Flag_Replenishing = false;
+                this._Flag_InShop = false;
+                this._Flag_Thrusting = false;
+                this._Replenish_Progress = 0;
+                this._Replenish_Energy_Start = this._Energy_Carbon_Initial;
+                this._Replenish_Ammo_Start = this._Ammo_Initial;
+                this._Upgrade_Engine_Level = 0;
+                this._Upgrade_Battery_Level = 0;
 
                 this.Position = new THREE.Vector3(0, 0, 0);
+                this._Velocity.set(0, 0, 0);
+                this._FacingDirection.set(0, 1, 0);
+                this._Object.rotation.z = 0;
                 this._Shoot_Cooldown.Finish();
             }
             Update(_input) {
                 this._Shoot_Cooldown.Update();
+                let direction = new THREE.Vector3();
                 if (_input && _input.length() != 0) {
-                    const direction = new THREE.Vector3(-_input.x, _input.y, 0).normalize();
-                    this.Move(direction.clone());
-                    // ### 修正箇所 ###
-                    // お客様のご指定通り、回転の計算式を元に戻しました
-                    this._Object.rotation.z = Math.atan2(direction.y, direction.x) - Math.PI / 2;
+                    direction = new THREE.Vector3(-_input.x, _input.y, 0).normalize();
                 }
+                this.Move(direction);
+                this.#UpdateReplenishment();
             }
 
 
             Move(_direction) {
-                this._Energy_Carbon -= this._Energy_Carbon_Rate_Decrease * FC_Environment.TIME_DELTA;
+                if (_direction.lengthSq() > 0) {
+                    this._Flag_Thrusting = true;
+                    let acceleration = this._Acceleration;
+                    let energyRate = 1.85;
+                    if (this._Flag_Boost) {
+                        acceleration *= 1.85;
+                        energyRate *= 1.8;
+                    }
 
-                let currentSpeed = this._Speed;
-                if (this._Flag_Boost) {
-                    currentSpeed *= 2;
-                    this._Energy_Carbon -= this._Energy_Carbon_Rate_Decrease * this._Energy_Carbon_Rate_Efficiency * FC_Environment.TIME_DELTA;
+                    const thrust = _direction.clone().multiplyScalar(acceleration * FC_Environment.TIME_DELTA);
+                    this._Velocity.add(thrust);
+                    if (this._Velocity.length() > this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1)) {
+                        this._Velocity.setLength(this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1));
+                    }
+
+                    this._Energy_Carbon -= thrust.length() * energyRate;
+                } else {
+                    this._Flag_Thrusting = false;
+                    const speed = this._Velocity.length();
+                    if (speed < 0.14) {
+                        this._Velocity.multiplyScalar(0.72);
+                        if (this._Velocity.length() < 0.018) this._Velocity.set(0, 0, 0);
+                    } else {
+                        this._Velocity.multiplyScalar(0.9988);
+                    }
                 }
 
-                this._Object.position.add(_direction.clone().multiplyScalar(currentSpeed * FC_Environment.TIME_DELTA));
+                this._Object.position.add(this._Velocity.clone().multiplyScalar(FC_Environment.TIME_DELTA));
+
+                const facingSource = this._Velocity.lengthSq() > 0.0001 ? this._Velocity : _direction;
+                if (facingSource.lengthSq() > 0.0001) {
+                    const desiredFacing = facingSource.clone().normalize();
+                    this._FacingDirection.lerp(desiredFacing, GetSmoothFactor(6.2));
+                    this._FacingDirection.normalize();
+                    this._Object.rotation.z = Math.atan2(-this._FacingDirection.x, this._FacingDirection.y);
+                }
 
                 this._Energy_Carbon = Math.max(0, this._Energy_Carbon);
                 if (this._Energy_Carbon <= 0) Manager.GameOver();
             }
 
             Shoot() {
-                if (this._Shoot_Cooldown.Flag_Finished && this._Ammo > 0) {
+                if (this._Shoot_Cooldown.Flag_Finished && this._Ammo >= 1) {
                     this._Ammo--;
                     this._Shoot_Cooldown.Restart();
 
-                    const direction = new THREE.Vector3(0, 1, 0).applyQuaternion(this._Object.quaternion);
+                    const direction = this._FacingDirection.clone().normalize();
                     const bulletPos = this.Position.clone().add(direction.multiplyScalar(this._Radius));
 
                     return new C_Bullet(bulletPos, this._Object.rotation.z);
@@ -871,23 +1753,198 @@
             }
 
             Collect_Item(_item) {
+                if (!this.CanCarryItem(_item.Type, _item.Value)) return false;
                 if(_item.Type === 'energy') {
-                    this._Energy_Carbon += _item.Value;
-                    this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon);
+                    this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon + _item.Value);
+                } else if (_item.Type === 'metal') {
+                    this._Inventory_Rare_Metals += _item.Value;
+                } else if (_item.Type === 'money') {
+                    this._Credits += Math.round(_item.Value);
                 } else { // ammo
-                    this._Ammo += _item.Value;
-                    this._Ammo = Math.min(this._Ammo_Max, this._Ammo);
+                    this._Inventory_Ammo_Packs++;
+                }
+                this._Credits = Math.round(this._Credits);
+                return true;
+            }
+
+            GetItemWeight(_type) {
+                switch (_type) {
+                    case 'energy': return 2.5;
+                    case 'ammo': return 0.6;
+                    case 'metal': return 4.5;
+                    case 'money': return 0.02;
+                    default: return 0;
+                }
+            }
+
+            GetCurrentCargoWeight() {
+                return this._Inventory_Energy_Packs * this.GetItemWeight('energy')
+                    + this._Inventory_Ammo_Packs * this.GetItemWeight('ammo')
+                    + this._Inventory_Rare_Metals * this.GetItemWeight('metal')
+                    + this._Credits * this.GetItemWeight('money');
+            }
+
+            CanCarryItem(_type, _value) {
+                const addedWeight = _type === 'money'
+                    ? Math.round(_value) * this.GetItemWeight('money')
+                    : this.GetItemWeight(_type);
+                return this.GetCurrentCargoWeight() + addedWeight <= this._CargoCapacity;
+            }
+
+            GetInventoryEntries() {
+                return [
+                    {
+                        id: 'energy_pack',
+                        label: 'Energy Pack',
+                        count: this._Inventory_Energy_Packs,
+                        weight: this.GetItemWeight('energy'),
+                        detail: `Use to recover 100 energy.\nWeight ${this.GetItemWeight('energy').toFixed(1)} each.`
+                    },
+                    {
+                        id: 'ammo_pack',
+                        label: 'Ammo Pack',
+                        count: this._Inventory_Ammo_Packs,
+                        weight: this.GetItemWeight('ammo'),
+                        detail: `Use to load 2 ammo.\nWeight ${this.GetItemWeight('ammo').toFixed(1)} each.`
+                    },
+                    {
+                        id: 'rare_metal',
+                        label: 'Rare Metal',
+                        count: this._Inventory_Rare_Metals,
+                        weight: this.GetItemWeight('metal'),
+                        detail: `Valuable upgrade material.\nWeight ${this.GetItemWeight('metal').toFixed(1)} each.`
+                    },
+                    {
+                        id: 'credits',
+                        label: 'Credits',
+                        count: this._Credits,
+                        weight: this.GetItemWeight('money'),
+                        detail: `Used for shop purchases.\nWeight ${this.GetItemWeight('money').toFixed(2)} each.`
+                    }
+                ];
+            }
+
+            SetShopAvailable(_bool) {
+                this._Flag_InShop = _bool;
+            }
+
+            UseInventoryItem(_itemId) {
+                switch (_itemId) {
+                    case 'energy_pack':
+                        if (this._Inventory_Energy_Packs <= 0 || this._Energy_Carbon >= this._Energy_Carbon_Max) return false;
+                        this._Inventory_Energy_Packs--;
+                        this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon + 100);
+                        return true;
+                    case 'ammo_pack':
+                        if (this._Inventory_Ammo_Packs <= 0 || this._Ammo >= this._Ammo_Max) return false;
+                        this._Inventory_Ammo_Packs--;
+                        this._Ammo = Math.min(this._Ammo_Max, this._Ammo + 2);
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            DiscardInventoryItem(_itemId) {
+                switch (_itemId) {
+                    case 'energy_pack':
+                        if (this._Inventory_Energy_Packs <= 0) return false;
+                        this._Inventory_Energy_Packs--;
+                        return true;
+                    case 'ammo_pack':
+                        if (this._Inventory_Ammo_Packs <= 0) return false;
+                        this._Inventory_Ammo_Packs--;
+                        return true;
+                    case 'rare_metal':
+                        if (this._Inventory_Rare_Metals <= 0) return false;
+                        this._Inventory_Rare_Metals--;
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            BuyEnergyPack() {
+                const cost = 12;
+                if (this._Credits < cost) return false;
+                this._Credits -= cost;
+                this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon + 35);
+                this._Credits = Math.round(this._Credits);
+                return true;
+            }
+
+            BuyAmmoPack() {
+                const cost = 10;
+                if (this._Credits < cost) return false;
+                this._Credits -= cost;
+                this._Ammo = Math.min(this._Ammo_Max, this._Ammo + 18);
+                this._Credits = Math.round(this._Credits);
+                return true;
+            }
+
+            SellRareMetal() {
+                if (this._Inventory_Rare_Metals < 1) return false;
+                this._Inventory_Rare_Metals -= 1;
+                this._Credits += 30;
+                this._Credits = Math.round(this._Credits);
+                return true;
+            }
+
+            UpgradeEngine() {
+                const cost = 30 + this._Upgrade_Engine_Level * 25;
+                if (this._Credits < cost) return false;
+                this._Credits -= cost;
+                this._Credits = Math.round(this._Credits);
+                this._Upgrade_Engine_Level++;
+                this._Acceleration += 0.55;
+                this._MaxSpeed += 0.4;
+                return true;
+            }
+
+            UpgradeBattery() {
+                const cost = 35 + this._Upgrade_Battery_Level * 30;
+                if (this._Credits < cost) return false;
+                this._Credits -= cost;
+                this._Credits = Math.round(this._Credits);
+                this._Upgrade_Battery_Level++;
+                this._Energy_Carbon_Max += 20;
+                this._Energy_Carbon_Initial += 20;
+                this._Energy_Carbon = Math.min(this._Energy_Carbon_Max, this._Energy_Carbon + 20);
+                this._Ammo_Max += 10;
+                this._Ammo_Initial += 5;
+                this._Ammo = Math.min(this._Ammo_Max, this._Ammo + 5);
+                return true;
+            }
+
+            SetReplenishActive(_bool) {
+                if (_bool && !this._Flag_Replenishing) {
+                    this._Replenish_Progress = 0;
+                    this._Replenish_Energy_Start = this._Energy_Carbon;
+                    this._Replenish_Ammo_Start = this._Ammo;
+                }
+                this._Flag_Replenishing = _bool;
+            }
+
+            #UpdateReplenishment() {
+                if (!this._Flag_Replenishing) return;
+
+                this._Replenish_Progress = Math.min(1, this._Replenish_Progress + FC_Environment.TIME_DELTA / 1.0);
+                const replenishFactor = this._Replenish_Progress;
+                if (this._Energy_Carbon < this._Energy_Carbon_Initial) {
+                    this._Energy_Carbon = THREE.MathUtils.lerp(this._Replenish_Energy_Start, this._Energy_Carbon_Initial, replenishFactor);
+                }
+                if (this._Ammo < this._Ammo_Initial) {
+                    this._Ammo = THREE.MathUtils.lerp(this._Replenish_Ammo_Start, this._Ammo_Initial, replenishFactor);
                 }
             }
 
             Replenish_at_Base() {
-                this._Energy_Carbon = this._Energy_Carbon_Max;
-                this._Ammo = Math.max(this._Ammo, this._Ammo_Initial);
+                this.SetReplenishActive(true);
             }
         }
 
-        // C_Particle_Move, C_Backgroundクラスは変更なしのため省略
-        // (元のコードをそのままここにペーストしてください)
+        // C_Particle_Move, C_Background繧ｯ繝ｩ繧ｹ縺ｯ螟画峩縺ｪ縺励・縺溘ａ逵∫払
+        // (蜈・・繧ｳ繝ｼ繝峨ｒ縺昴・縺ｾ縺ｾ縺薙％縺ｫ繝壹・繧ｹ繝医＠縺ｦ縺上□縺輔＞)
         class C_Particle_Move {
 
             _Array_Particle;
@@ -998,26 +2055,27 @@
                 cameraPosition.z = 0;
                 this._Container.position.copy(cameraPosition);
 
-                if (!this._Position_Past.equals(Player.Position) && this._Array_Particle.length < this._Number) {
-                    const direction = this._Position_Past.clone().sub(Player.Position).normalize();
+                if (Player._Flag_Thrusting && this._Array_Particle.length < this._Number) {
+                    const backward = Player._FacingDirection.clone().normalize().multiplyScalar(-1);
 
-                    const angle = (Math.random() - 0.5) * Math.PI / 6;
-                    const direction_x = direction.clone().x * Math.cos(angle) - direction.clone().y * Math.sin(angle);
-                    const direction_y = direction.clone().x * Math.sin(angle) + direction.clone().y * Math.cos(angle);
+                    const angle = (Math.random() - 0.5) * Math.PI / 10;
+                    const direction_x = backward.x * Math.cos(angle) - backward.y * Math.sin(angle);
+                    const direction_y = backward.x * Math.sin(angle) + backward.y * Math.cos(angle);
                     let velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
-                    if (!Player.Flag_Boost) velocity = direction.clone().normalize().multiplyScalar(0.05);
+                    if (!Player.Flag_Boost) velocity = backward.clone().multiplyScalar(0.05);
 
-                    const particlePosition = Player.Position.clone().sub(this._Container.position);
+                    const exhaustPosition = Player.Position.clone().add(backward.clone().multiplyScalar(Player._Radius * 1.35));
+                    const particlePosition = exhaustPosition.sub(this._Container.position);
 
                     this._Array_Particle.push({
                         position: particlePosition,
                         velocity: velocity,
-                        size: (Math.random() - 0.5) * this._Size + this._Size * 0.5,
+                        size: (Math.random() - 0.5) * (this._Size * 0.45) + this._Size * 0.35,
                         life: this._Lifespan,
                         color: new THREE.Color(0x00ff88)
                     });
-                    this._Position_Past.copy(Player.Position);
                 }
+                this._Position_Past.copy(Player.Position);
 
                 const positions = this._ParticleSystem.geometry.attributes.position.array;
                 const colors = this._ParticleSystem.geometry.attributes.color.array;
@@ -1198,8 +2256,222 @@
         const Manager = new C_Manager();
         const Player = new C_Player();
 
+        SetupOverlayWindow(InventoryWindow, InventoryHeader, InventoryCollapse);
+        SetupOverlayWindow(MinimapWindow, MinimapHeader, MinimapCollapse);
+        SetupOverlayWindow(ShopWindow, ShopHeader, ShopCollapse);
+        UpdateOverlayVisibility("Before_Loaded");
+
+        function HandleInventorySelection(event) {
+            const button = event.target.closest("[data-item-id]");
+            if (!button) return;
+            event.preventDefault?.();
+            event.stopPropagation?.();
+            SelectedInventoryItem = button.dataset.itemId;
+            OpenInventoryPopup(SelectedInventoryItem);
+        }
+
+        InventoryContent.addEventListener("click", HandleInventorySelection);
+        InventoryContent.addEventListener("pointerup", HandleInventorySelection);
+
+        InventoryUseButton.addEventListener("click", () => {
+            if (!InventoryPopupItemId) return;
+            if (Player.UseInventoryItem(InventoryPopupItemId)) {
+                CloseInventoryPopup();
+            } else {
+                UpdateInventoryPopup(InventoryPopupItemId);
+            }
+        });
+
+        InventoryDiscardButton.addEventListener("click", () => {
+            if (!InventoryPopupItemId) return;
+            if (Player.DiscardInventoryItem(InventoryPopupItemId)) {
+                CloseInventoryPopup();
+            } else {
+                UpdateInventoryPopup(InventoryPopupItemId);
+            }
+        });
+
+        InventoryCloseButton.addEventListener("click", () => {
+            CloseInventoryPopup();
+        });
+
+        InventoryPopupBackdrop.addEventListener("pointerdown", () => {
+            CloseInventoryPopup();
+        });
+
+        ShopBuyEnergy.addEventListener("click", () => { if (Player.Flag_InShop) Player.BuyEnergyPack(); });
+        ShopBuyAmmo.addEventListener("click", () => { if (Player.Flag_InShop) Player.BuyAmmoPack(); });
+        ShopSellMetal.addEventListener("click", () => { if (Player.Flag_InShop) Player.SellRareMetal(); });
+        ShopUpgradeEngine.addEventListener("click", () => { if (Player.Flag_InShop) Player.UpgradeEngine(); });
+        ShopUpgradeBattery.addEventListener("click", () => { if (Player.Flag_InShop) Player.UpgradeBattery(); });
+
         Manager.Initialize();
         Manager.Update();
+
+        function SetupOverlayWindow(_window, _header, _collapseButton) {
+            let dragState = null;
+
+            _header.addEventListener("pointerdown", (event) => {
+                if (event.target === _collapseButton) return;
+                const rect = _window.getBoundingClientRect();
+                dragState = {
+                    offsetX: event.clientX - rect.left,
+                    offsetY: event.clientY - rect.top,
+                };
+                _header.setPointerCapture(event.pointerId);
+            });
+
+            _header.addEventListener("pointermove", (event) => {
+                if (!dragState) return;
+                const left = Math.min(window.innerWidth - _window.offsetWidth - 8, Math.max(8, event.clientX - dragState.offsetX));
+                const top = Math.min(window.innerHeight - _window.offsetHeight - 8, Math.max(8, event.clientY - dragState.offsetY));
+                _window.style.left = `${left}px`;
+                _window.style.top = `${top}px`;
+                _window.style.right = "auto";
+            });
+
+            _header.addEventListener("pointerup", (event) => {
+                dragState = null;
+                if (_header.hasPointerCapture(event.pointerId)) _header.releasePointerCapture(event.pointerId);
+            });
+
+            _header.addEventListener("pointercancel", () => {
+                dragState = null;
+            });
+
+            _collapseButton.addEventListener("click", () => {
+                _window.classList.toggle("is-collapsed");
+                _collapseButton.textContent = _window.classList.contains("is-collapsed") ? "+" : "-";
+            });
+        }
+
+        function UpdateOverlayVisibility(_state) {
+            const shouldShow = _state !== "Before_Loaded" && _state !== "Loaded";
+            InventoryWindow.classList.toggle("is-hidden", !shouldShow);
+            MinimapWindow.classList.toggle("is-hidden", !shouldShow);
+            ShopWindow.classList.toggle("is-hidden", !shouldShow);
+            ShopWindow.classList.toggle("is-active", shouldShow && Player.Flag_InShop);
+            if (!shouldShow) {
+                CloseInventoryPopup();
+                EnergyWarning.classList.add("is-hidden");
+            }
+        }
+
+        function OpenInventoryPopup(_itemId) {
+            InventoryPopupItemId = _itemId;
+            UpdateInventoryPopup(_itemId);
+            InventoryPopupBackdrop.classList.remove("is-hidden");
+            InventoryPopup.classList.remove("is-hidden");
+        }
+
+        function CloseInventoryPopup() {
+            InventoryPopupItemId = null;
+            InventoryPopupBackdrop.classList.add("is-hidden");
+            InventoryPopup.classList.add("is-hidden");
+        }
+
+        function UpdateInventoryPopup(_itemId) {
+            const entry = Player.GetInventoryEntries().find(item => item.id === _itemId);
+            if (!entry) {
+                CloseInventoryPopup();
+                return;
+            }
+
+            const canUse = (_itemId === "energy_pack" && entry.count > 0 && Player.Energy_Carbon < Player._Energy_Carbon_Max)
+                || (_itemId === "ammo_pack" && entry.count > 0 && Player.Ammo < Player._Ammo_Max);
+            const canDiscard = _itemId !== "credits" && entry.count > 0;
+
+            InventoryPopupTitle.textContent = entry.label;
+            InventoryPopupText.textContent =
+                `Count ${Math.round(entry.count)}\n${entry.detail}`;
+            InventoryUseButton.disabled = !canUse;
+            InventoryDiscardButton.disabled = !canDiscard;
+        }
+
+        function UpdateMinimap() {
+            const width = MinimapCanvas.width;
+            const height = MinimapCanvas.height;
+            MinimapContext.clearRect(0, 0, width, height);
+            MinimapContext.fillStyle = "rgba(6, 12, 20, 0.96)";
+            MinimapContext.fillRect(0, 0, width, height);
+
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const range = 120;
+            const scale = width / (range * 2);
+
+            MinimapContext.strokeStyle = "rgba(168, 200, 255, 0.18)";
+            MinimapContext.lineWidth = 1;
+            for (let i = 1; i < 4; i++) {
+                const radius = (width * i) / 8;
+                MinimapContext.beginPath();
+                MinimapContext.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                MinimapContext.stroke();
+            }
+
+            Manager._Enemies.filter(enemy => enemy.IsActive).forEach(enemy => {
+                const color = enemy instanceof C_Enemy_Asteroid ? "#ff9b42" : "#ff5555";
+                DrawMinimapDot(enemy.Position, color, 4, false);
+            });
+            DrawMinimapDot(Manager._Shop.Position, "#9fd0ff", 5, true);
+            Manager._Drops.filter(drop => drop.IsActive).forEach(drop => {
+                const color = drop.Type === "metal" ? "#a8c8ff" : drop.Type === "energy" ? "#00ff88" : drop.Type === "money" ? "#7cff7c" : "#ffd700";
+                DrawMinimapDot(drop.Position, color, 3, false);
+            });
+            DrawMotherShipIndicator();
+            DrawMinimapDot(Player.Position, "#00cc66", 5, true);
+
+            function DrawMinimapDot(_position, _color, _radius, _outline) {
+                const relativeX = (_position.x - Player.Position.x) * scale;
+                const relativeY = (_position.y - Player.Position.y) * scale;
+                const x = centerX - relativeX;
+                const y = centerY - relativeY;
+                if (x < -8 || x > width + 8 || y < -8 || y > height + 8) return;
+
+                MinimapContext.beginPath();
+                MinimapContext.fillStyle = _color;
+                MinimapContext.arc(x, y, _radius, 0, Math.PI * 2);
+                MinimapContext.fill();
+                if (_outline) {
+                    MinimapContext.strokeStyle = "rgba(255,255,255,0.65)";
+                    MinimapContext.lineWidth = 1.5;
+                    MinimapContext.stroke();
+                }
+            }
+
+            function DrawMotherShipIndicator() {
+                const relative = Manager._MotherShip.Position.clone().sub(Player.Position);
+                const distance = relative.length();
+                const relativeX = -relative.x * scale;
+                const relativeY = relative.y * scale;
+                const rawX = centerX + relativeX;
+                const rawY = centerY - relativeY;
+                const margin = 12;
+
+                if (rawX >= margin && rawX <= width - margin && rawY >= margin && rawY <= height - margin) {
+                    DrawMinimapDot(Manager._MotherShip.Position, "#66ffcc", 6, true);
+                    return;
+                }
+
+                const angle = Math.atan2(-relative.y, -relative.x);
+                const radius = width / 2 - margin;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+
+                MinimapContext.beginPath();
+                MinimapContext.fillStyle = "#66ffcc";
+                MinimapContext.arc(x, y, 6, 0, Math.PI * 2);
+                MinimapContext.fill();
+                MinimapContext.strokeStyle = "rgba(255,255,255,0.75)";
+                MinimapContext.lineWidth = 1.5;
+                MinimapContext.stroke();
+
+                MinimapContext.fillStyle = "#66ffcc";
+                MinimapContext.font = '11px "Space Mono"';
+                MinimapContext.textAlign = "center";
+                MinimapContext.fillText(`${Math.round(distance)}m`, x, y - 10);
+            }
+        }
 
         function KeyDown(event) {
             if (['Space', 'ShiftLeft', 'ShiftRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
@@ -1211,6 +2483,7 @@
         }
 
         function TouchStart(event) {
+            if (event.target.closest?.("#Inventory_Window, #Minimap_Window, #Shop_Window, #Inventory_Popup")) return;
             if (Manager.Timer_Input.Flag_Finished) {
 
                 let screen_x, screen_y;
@@ -1236,7 +2509,6 @@
                 if (ui_home.length > 0) { window.location.href = "./index.html"; return; }
                 const ui_music = raycaster.intersectObject(Manager.UI_Music.Mesh_Front);
                 if (ui_music.length > 0) { Manager.BGM.Flag_Playing ? Manager.BGM.Stop() : Manager.BGM.Play(); return; }
-
                 const ui_boost = raycaster.intersectObject(Manager.UI_Boost.Mesh_Front);
                 if (ui_boost.length > 0) { Manager.ToggleBoostButton(); return; }
 
