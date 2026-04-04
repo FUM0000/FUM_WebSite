@@ -920,6 +920,11 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Random Question</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-comment-question-outline</v-icon></v-list-item-icon>
                 </v-list-item>
+                <v-list-item href="./Game_SpaceShip.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Space Ship</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-space-station</v-icon></v-list-item-icon>
+                </v-list-item>
             </v-list-group>
             <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->
 
