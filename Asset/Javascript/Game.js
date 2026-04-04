@@ -20,10 +20,13 @@ class FC_Input_Joystick {
         this.moveX = 0;
         this.moveY = 0;
         this.touchId = null;
+        this.maxDistance = 90;
 
         this.onStart = this.onStart.bind(this);
         this.onMove = this.onMove.bind(this);
         this.onEnd = this.onEnd.bind(this);
+
+        this.createVisuals();
 
         this.domElement.addEventListener('mousedown', this.onStart);
         this.domElement.addEventListener('touchstart', this.onStart);
@@ -33,6 +36,42 @@ class FC_Input_Joystick {
         this.domElement.addEventListener('touchend', this.onEnd);
         this.domElement.addEventListener('touchcancel', this.onEnd);
         // this.domElement.addEventListener('mouseleave', this.onEnd);
+    }
+
+    createVisuals() {
+        this.baseElement = document.createElement('div');
+        this.stickElement = document.createElement('div');
+
+        Object.assign(this.baseElement.style, {
+            position: 'absolute',
+            width: '120px',
+            height: '120px',
+            borderRadius: '50%',
+            border: '2px solid rgba(255, 255, 255, 0.45)',
+            background: 'rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 0 24px rgba(0, 180, 255, 0.18)',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            display: 'none',
+            zIndex: '12'
+        });
+
+        Object.assign(this.stickElement.style, {
+            position: 'absolute',
+            width: '52px',
+            height: '52px',
+            borderRadius: '50%',
+            border: '2px solid rgba(255, 255, 255, 0.8)',
+            background: 'rgba(0, 160, 255, 0.28)',
+            boxShadow: '0 0 18px rgba(0, 160, 255, 0.45)',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            display: 'none',
+            zIndex: '13'
+        });
+
+        this.domElement.appendChild(this.baseElement);
+        this.domElement.appendChild(this.stickElement);
     }
 
     onStart(event) {
@@ -47,6 +86,7 @@ class FC_Input_Joystick {
                     this.startX = touch.clientX;
                     this.startY = touch.clientY;
                     this.isActive = true;
+                    this.updateVisuals(this.startX, this.startY, 0, 0);
                     break;
                 }
             }
@@ -54,6 +94,7 @@ class FC_Input_Joystick {
             this.startX = event.clientX;
             this.startY = event.clientY;
             this.isActive = true;
+            this.updateVisuals(this.startX, this.startY, 0, 0);
         }
     }
 
@@ -65,14 +106,12 @@ class FC_Input_Joystick {
             for (let i = 0; i < event.changedTouches.length; i++) {
                 const touch = event.changedTouches[i];
                 if (touch.identifier === this.touchId) {
-                    this.moveX = touch.clientX - this.startX;
-                    this.moveY = touch.clientY - this.startY;
+                    this.setMoveDelta(touch.clientX - this.startX, touch.clientY - this.startY);
                     break;
                 }
             }
         } else {
-            this.moveX = event.clientX - this.startX;
-            this.moveY = event.clientY - this.startY;
+            this.setMoveDelta(event.clientX - this.startX, event.clientY - this.startY);
         }
     }
 
@@ -97,6 +136,28 @@ class FC_Input_Joystick {
         this.moveX = 0;
         this.moveY = 0;
         this.touchId = null;
+        this.baseElement.style.display = 'none';
+        this.stickElement.style.display = 'none';
+    }
+
+    setMoveDelta(deltaX, deltaY) {
+        const vector = new THREE.Vector2(deltaX, deltaY);
+        if (vector.length() > this.maxDistance) {
+            vector.setLength(this.maxDistance);
+        }
+
+        this.moveX = vector.x;
+        this.moveY = vector.y;
+        this.updateVisuals(this.startX, this.startY, this.moveX, this.moveY);
+    }
+
+    updateVisuals(baseX, baseY, deltaX, deltaY) {
+        this.baseElement.style.display = 'block';
+        this.stickElement.style.display = 'block';
+        this.baseElement.style.left = `${baseX}px`;
+        this.baseElement.style.top = `${baseY}px`;
+        this.stickElement.style.left = `${baseX + deltaX}px`;
+        this.stickElement.style.top = `${baseY + deltaY}px`;
     }
 
     isTouchInElement(touch) {
@@ -111,7 +172,12 @@ class FC_Input_Joystick {
 
     getInput() {
         const vector_input = new THREE.Vector2(this.moveX, -this.moveY);
-        // if (vector_input.length() > 0) vector_input.normalize();
+        if (vector_input.length() > this.maxDistance) {
+            vector_input.setLength(this.maxDistance);
+        }
+        if (vector_input.length() > 0) {
+            vector_input.divideScalar(this.maxDistance);
+        }
         return vector_input;
     }
 }
@@ -169,9 +235,15 @@ class FC_Input_Keyboard {
 
     #KeyDown(event) {
         this._Keys[event.key] = true;
+        this._Keys[event.key.toLowerCase()] = true;
+        this._Keys[event.code] = true;
+        this._Keys[event.code.toLowerCase()] = true;
     }
     #KeyUp(event) {
         this._Keys[event.key] = false;
+        this._Keys[event.key.toLowerCase()] = false;
+        this._Keys[event.code] = false;
+        this._Keys[event.code.toLowerCase()] = false;
     }
     IsPressed(key) {
         return this._Keys[key] === true;
