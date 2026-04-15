@@ -100,6 +100,8 @@
             left: 16px;
             top: 16px;
             width: 220px;
+            min-width: 220px;
+            min-height: 44px;
             background: rgba(8, 14, 24, 0.9);
             border: 1px solid rgba(168, 200, 255, 0.45);
             border-radius: 12px;
@@ -140,6 +142,7 @@
             padding: 10px 12px;
             background: rgba(168, 200, 255, 0.12);
             cursor: move;
+            touch-action: none;
             font-size: 12px;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -208,6 +211,12 @@
         .Overlay_Window.is-hidden,
         .Inventory_Window.is-hidden {
             display: none;
+        }
+
+        body.mobile-overlay-mode .Inventory_Window:not(.is-hidden),
+        body.mobile-overlay-mode .Overlay_Window:not(.is-hidden) {
+            display: flex;
+            flex-direction: column-reverse;
         }
 
         .Inventory_Body_Map {
@@ -432,18 +441,25 @@
         const EnergyWarning = document.getElementById("Energy_Warning");
         let SelectedInventoryItem = "energy_pack";
         let InventoryPopupItemId = null;
+        const OverlayConfigs = [
+            { window: InventoryWindow, header: InventoryHeader, button: InventoryCollapse },
+            { window: MinimapWindow, header: MinimapHeader, button: MinimapCollapse },
+            { window: ShopWindow, header: ShopHeader, button: ShopCollapse },
+        ];
+        const OverlayZBase = 30;
+        let OverlayStack = OverlayConfigs.map(overlay => overlay.window);
 
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0x222222));
-        if (Mobile_or_Desktop()) {
+        // Use pointer events for both desktop and mobile to avoid device-detection drift.
+        if (window.PointerEvent) {
+            document.addEventListener('pointerdown', function (event) { TouchStart(event); });
+        } else {
             document.addEventListener('touchstart', function (event) { TouchStart(event); });
-            document.addEventListener('keydown', function (event) { KeyDown(event); });
-        }
-        else {
             document.addEventListener('mousedown', function (event) { TouchStart(event); });
-            document.addEventListener('keydown', function (event) { KeyDown(event); });
         }
+        document.addEventListener('keydown', function (event) { KeyDown(event); });
 
 
         // =================================================================================
@@ -2259,6 +2275,8 @@
         SetupOverlayWindow(InventoryWindow, InventoryHeader, InventoryCollapse);
         SetupOverlayWindow(MinimapWindow, MinimapHeader, MinimapCollapse);
         SetupOverlayWindow(ShopWindow, ShopHeader, ShopCollapse);
+        ApplyOverlayDefaults();
+        ApplyOverlayZOrder();
         UpdateOverlayVisibility("Before_Loaded");
 
         function HandleInventorySelection(event) {
@@ -2310,38 +2328,130 @@
 
         function SetupOverlayWindow(_window, _header, _collapseButton) {
             let dragState = null;
+            let activePointerId = null;
+
+            const EndDrag = (_event) => {
+                if (dragState && _event && activePointerId !== null && _event.pointerId !== activePointerId) return;
+                dragState = null;
+                activePointerId = null;
+            };
 
             _header.addEventListener("pointerdown", (event) => {
                 if (event.target === _collapseButton) return;
+                BringOverlayToFront(_window);
                 const rect = _window.getBoundingClientRect();
+                _window.style.width = `${Math.round(rect.width)}px`;
                 dragState = {
                     offsetX: event.clientX - rect.left,
                     offsetY: event.clientY - rect.top,
                 };
-                _header.setPointerCapture(event.pointerId);
+                activePointerId = event.pointerId;
+                event.preventDefault();
+                try { _header.setPointerCapture(event.pointerId); } catch (_error) { }
             });
 
-            _header.addEventListener("pointermove", (event) => {
-                if (!dragState) return;
+            document.addEventListener("pointermove", (event) => {
+                if (!dragState || event.pointerId !== activePointerId) return;
+                event.preventDefault();
                 const left = Math.min(window.innerWidth - _window.offsetWidth - 8, Math.max(8, event.clientX - dragState.offsetX));
                 const top = Math.min(window.innerHeight - _window.offsetHeight - 8, Math.max(8, event.clientY - dragState.offsetY));
                 _window.style.left = `${left}px`;
                 _window.style.top = `${top}px`;
                 _window.style.right = "auto";
+                _window.style.bottom = "auto";
             });
 
-            _header.addEventListener("pointerup", (event) => {
-                dragState = null;
+            document.addEventListener("pointerup", (event) => {
+                EndDrag(event);
                 if (_header.hasPointerCapture(event.pointerId)) _header.releasePointerCapture(event.pointerId);
             });
 
-            _header.addEventListener("pointercancel", () => {
-                dragState = null;
+            document.addEventListener("pointercancel", (event) => {
+                EndDrag(event);
             });
+
+            _header.addEventListener("lostpointercapture", () => EndDrag());
 
             _collapseButton.addEventListener("click", () => {
                 _window.classList.toggle("is-collapsed");
                 _collapseButton.textContent = _window.classList.contains("is-collapsed") ? "+" : "-";
+            });
+
+            _window.addEventListener("pointerdown", () => {
+                BringOverlayToFront(_window);
+            }, true);
+        }
+
+        function SetOverlayCollapsed(_window, _collapseButton, _collapsed) {
+            _window.classList.toggle("is-collapsed", _collapsed);
+            _collapseButton.textContent = _collapsed ? "+" : "-";
+        }
+
+        function IsMobileViewport() {
+            return Mobile_or_Desktop() || window.matchMedia("(max-width: 900px)").matches;
+        }
+
+        function ApplyOverlayZOrder() {
+            OverlayStack.forEach((overlayWindow, index) => {
+                overlayWindow.style.zIndex = `${OverlayZBase + index}`;
+            });
+        }
+
+        function BringOverlayToFront(_window) {
+            OverlayStack = OverlayStack.filter(overlayWindow => overlayWindow !== _window);
+            OverlayStack.push(_window);
+            ApplyOverlayZOrder();
+        }
+
+        function ApplyOverlayDefaults() {
+            if (IsMobileViewport()) {
+                ApplyMobileOverlayDefaults();
+            } else {
+                ApplyDesktopOverlayDefaults();
+            }
+        }
+
+        function ApplyMobileOverlayDefaults() {
+            document.body.classList.add("mobile-overlay-mode");
+            const margin = 8;
+            const gap = 8;
+            let bottom = 12;
+
+            OverlayConfigs.forEach((overlay) => {
+                const minWidth = parseFloat(window.getComputedStyle(overlay.window).minWidth) || 220;
+                const width = Math.max(minWidth, window.innerWidth - margin * 2);
+                SetOverlayCollapsed(overlay.window, overlay.button, true);
+                overlay.window.style.left = `${margin}px`;
+                overlay.window.style.right = `${margin}px`;
+                overlay.window.style.width = `${Math.round(width)}px`;
+                overlay.window.style.maxWidth = "none";
+                overlay.window.style.top = "auto";
+                overlay.window.style.bottom = `${bottom}px`;
+                overlay.window.style.height = "";
+                const headerHeight = overlay.header.offsetHeight || 44;
+                bottom += headerHeight + gap;
+            });
+        }
+
+        function ApplyDesktopOverlayDefaults() {
+            document.body.classList.remove("mobile-overlay-mode");
+            const left = 12;
+            const gap = 10;
+            const headerHeights = OverlayConfigs.map((overlay) => overlay.header.offsetHeight || 44);
+            const totalHeight = headerHeights.reduce((sum, height) => sum + height, 0) + gap * (OverlayConfigs.length - 1);
+            let top = Math.max(8, Math.round((window.innerHeight - totalHeight) / 2));
+
+            OverlayConfigs.forEach((overlay, index) => {
+                const width = Math.round(overlay.window.getBoundingClientRect().width || 220);
+                SetOverlayCollapsed(overlay.window, overlay.button, true);
+                overlay.window.style.left = `${left}px`;
+                overlay.window.style.right = "auto";
+                overlay.window.style.width = `${width}px`;
+                overlay.window.style.maxWidth = "none";
+                overlay.window.style.top = `${top}px`;
+                overlay.window.style.bottom = "auto";
+                overlay.window.style.height = "";
+                top += headerHeights[index] + gap;
             });
         }
 
@@ -2492,6 +2602,7 @@
                         screen_x = event.touches[0].clientX;
                         screen_y = event.touches[0].clientY;
                         break;
+                    case "pointerdown":
                     case "mousedown":
                         screen_x = event.clientX;
                         screen_y = event.clientY;
