@@ -20,22 +20,31 @@ class FC_Input_Joystick {
         this.moveX = 0;
         this.moveY = 0;
         this.touchId = null;
+        this.pointerId = null;
         this.maxDistance = 90;
+        this.supportsPointerEvents = typeof window !== 'undefined' && 'PointerEvent' in window;
 
         this.onStart = this.onStart.bind(this);
         this.onMove = this.onMove.bind(this);
         this.onEnd = this.onEnd.bind(this);
 
         this.createVisuals();
+        this.domElement.style.touchAction = 'none';
 
-        this.domElement.addEventListener('mousedown', this.onStart);
-        this.domElement.addEventListener('touchstart', this.onStart);
-        document.addEventListener('mousemove', this.onMove);
-        document.addEventListener('touchmove', this.onMove);
-        document.addEventListener('mouseup', this.onEnd);
-        this.domElement.addEventListener('touchend', this.onEnd);
-        this.domElement.addEventListener('touchcancel', this.onEnd);
-        // this.domElement.addEventListener('mouseleave', this.onEnd);
+        if (this.supportsPointerEvents) {
+            this.domElement.addEventListener('pointerdown', this.onStart);
+            document.addEventListener('pointermove', this.onMove);
+            document.addEventListener('pointerup', this.onEnd);
+            document.addEventListener('pointercancel', this.onEnd);
+        } else {
+            this.domElement.addEventListener('mousedown', this.onStart);
+            this.domElement.addEventListener('touchstart', this.onStart, { passive: false });
+            document.addEventListener('mousemove', this.onMove);
+            document.addEventListener('touchmove', this.onMove, { passive: false });
+            document.addEventListener('mouseup', this.onEnd);
+            document.addEventListener('touchend', this.onEnd, { passive: false });
+            document.addEventListener('touchcancel', this.onEnd, { passive: false });
+        }
     }
 
     createVisuals() {
@@ -78,7 +87,13 @@ class FC_Input_Joystick {
         event.preventDefault();
         if (this.isActive) return;
 
-        if (event.type === 'touchstart') {
+        if (event.type === 'pointerdown') {
+            this.pointerId = event.pointerId;
+            this.startX = event.clientX;
+            this.startY = event.clientY;
+            this.isActive = true;
+            this.updateVisuals(this.startX, this.startY, 0, 0);
+        } else if (event.type === 'touchstart') {
             for (let i = 0; i < event.changedTouches.length; i++) {
                 const touch = event.changedTouches[i];
                 if (this.isTouchInElement(touch)) {
@@ -102,7 +117,10 @@ class FC_Input_Joystick {
         event.preventDefault();
         if (!this.isActive) return;
 
-        if (event.type === 'touchmove') {
+        if (event.type === 'pointermove') {
+            if (event.pointerId !== this.pointerId) return;
+            this.setMoveDelta(event.clientX - this.startX, event.clientY - this.startY);
+        } else if (event.type === 'touchmove') {
             for (let i = 0; i < event.changedTouches.length; i++) {
                 const touch = event.changedTouches[i];
                 if (touch.identifier === this.touchId) {
@@ -119,7 +137,10 @@ class FC_Input_Joystick {
         event.preventDefault();
         if (!this.isActive) return;
 
-        if (event.type === 'touchend' || event.type === 'touchcancel') {
+        if (event.type === 'pointerup' || event.type === 'pointercancel') {
+            if (event.pointerId !== this.pointerId) return;
+            this.reset();
+        } else if (event.type === 'touchend' || event.type === 'touchcancel') {
             for (let i = 0; i < event.changedTouches.length; i++) {
                 if (event.changedTouches[i].identifier === this.touchId) {
                     this.reset();
@@ -136,6 +157,7 @@ class FC_Input_Joystick {
         this.moveX = 0;
         this.moveY = 0;
         this.touchId = null;
+        this.pointerId = null;
         this.baseElement.style.display = 'none';
         this.stickElement.style.display = 'none';
     }
