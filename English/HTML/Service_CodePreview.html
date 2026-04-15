@@ -1,201 +1,763 @@
-<html><head>
-<link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="author" content="F U M">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+<link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet">
+
+<title>Code Preview</title>
+
 <style>
 * {
-    margin: 0;
-    padding: 0;
     box-sizing: border-box;
 }
 
+html,
 body {
-    background: #1d1d1d;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    color: #fff;
+    min-height: 100%;
+    background: #111827 !important;
 }
 
-.container {
+body {
+    color: #f8fafc;
+    font-family: "Segoe UI", sans-serif;
+}
+
+#App,
+#Main,
+.v-application,
+.v-application--wrap {
+    background: #111827 !important;
+}
+
+.code-preview-page,
+#App {
+    color: #f8fafc;
+}
+
+.code-preview-page {
+    width: 100%;
+}
+
+.workspace-shell {
     display: flex;
-    flex-direction: column;
+    align-content: stretch;
+    padding: 20px !important;
+}
+
+.code-preview-page .workspace {
+    width: 100%;
+    display: flex;
+}
+
+.code-preview-page .workspace-card {
+    width: 100%;
+    min-height: calc(100vh - 138px);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 24px;
+    background: rgba(15, 23, 42, 0.96) !important;
+    color: #f8fafc !important;
+    overflow: hidden;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.35);
+}
+
+.code-preview-page .workspace-card.v-sheet.v-card,
+.code-preview-page .pane-card.v-sheet.v-card,
+.code-preview-page .editor-wrap {
+    box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.08), 0 24px 60px rgba(2, 6, 23, 0.18) !important;
+}
+
+.code-preview-page .workspace-card.v-card--outlined,
+.code-preview-page .pane-card.v-card--outlined {
+    border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+.code-preview-page .toolbar {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(15, 23, 42, 0.88) !important;
+}
+
+.code-preview-page .workspace-body {
+    height: calc(100% - 64px);
+    padding: 16px;
+}
+
+.code-preview-page .pane-layout {
+    height: 100%;
+    display: flex;
+}
+
+.code-preview-page .pane {
+    flex: 1 1 50%;
+    min-width: 0;
     height: 100%;
 }
 
-.editor {
-    border-radius: 8px;
+.code-preview-page .pane + .pane {
+    margin-left: 16px;
+}
+
+.code-preview-page .pane-card {
+    height: 100%;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 20px;
+    background: rgba(15, 23, 42, 0.82) !important;
+    color: #f8fafc !important;
     display: flex;
     flex-direction: column;
-    margin-bottom: 16px;
-}
-
-.editor textarea {
-    flex-grow: 1;
-    border: none;
-    padding: 15px;
-    font-size: 14px;
-    resize: none;
-    outline: none;
-}
-
-#output {
-    border-radius: 8px;
-    padding: 20px;
     overflow: hidden;
 }
 
-.cosmos {
-  width: 100%;
-  height: 100vh;
-  background: linear-gradient(to bottom, #0B0B2B, #1B1B3A);
-  position: relative;
-  overflow: hidden;
-  cursor: none;
+.code-preview-page .pane-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.82));
 }
 
-.cursor {
-  width: 20px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  position: absolute;
-  pointer-events: none;
-  mix-blend-mode: difference;
-  transition: transform 0.2s;
-  animation: glow 1.5s ease-in-out infinite;
+.code-preview-page .pane-title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #f8fafc;
 }
 
-@keyframes glow {
-  0% { box-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #69b4ff; }
-  50% { box-shadow: 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #69b4ff; }
-  100% { box-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #69b4ff; }
+.code-preview-page .pane-subtitle {
+    margin-top: 4px;
+    color: rgba(226, 232, 240, 0.72);
+    font-size: 0.86rem;
+}
+
+.code-preview-page .preview-shell {
+    flex: 1;
+    min-height: 0;
+    padding: 16px;
+    background: rgba(2, 6, 23, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.code-preview-page .preview-stage {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+}
+
+.code-preview-page .preview-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    background: #ffffff;
+}
+
+.code-preview-page .code-shell {
+    flex: 1;
+    min-height: 0;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.code-preview-page .editor-wrap {
+    flex: 1;
+    min-height: 0;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.92);
+    display: flex;
+    flex-direction: column;
+}
+
+.code-preview-page .editor-tabs {
+    flex: 0 0 auto;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(15, 23, 42, 0.82);
+}
+
+.code-preview-page .editor-tabs > .v-tabs-bar {
+    min-height: 36px !important;
+    height: 36px !important;
+    background: transparent !important;
+}
+
+.code-preview-page .editor-tabs .v-slide-group__wrapper,
+.code-preview-page .editor-tabs .v-slide-group__content,
+.code-preview-page .editor-tabs .v-tabs-bar__content {
+    height: 36px !important;
+}
+
+.code-preview-page .editor-tabs .v-tab {
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 0 14px !important;
+    font-size: 13px;
+    color: rgba(226, 232, 240, 0.74) !important;
+    background: transparent !important;
+}
+
+.code-preview-page .editor-tabs .v-tab.v-tab--active {
+    color: #67e8f9 !important;
+}
+
+.code-preview-page .editor-tabs .v-tabs-slider-wrapper {
+    height: 2px !important;
+}
+
+.code-preview-page .editor-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    background: rgba(15, 23, 42, 0.92);
+}
+
+.code-preview-page .editor-textarea {
+    height: 100%;
+    flex: 1;
+    margin-top: 0 !important;
+}
+
+.code-preview-page .editor-textarea .v-input__control,
+.code-preview-page .editor-textarea .v-input__slot {
+    height: 100%;
+    min-height: 0 !important;
+}
+
+.code-preview-page .editor-textarea .v-input__slot {
+    margin-bottom: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.code-preview-page .editor-textarea .v-input__append-inner,
+.code-preview-page .editor-textarea .v-input__prepend-inner,
+.code-preview-page .editor-textarea .v-text-field__details,
+.code-preview-page .editor-textarea .v-messages,
+.code-preview-page .editor-textarea .v-counter {
+    display: none !important;
+}
+
+.code-preview-page .editor-textarea fieldset {
+    border: 0 !important;
+}
+
+.code-preview-page .editor-textarea textarea {
+    height: 100% !important;
+    min-height: 100% !important;
+    padding: 10px 18px 18px !important;
+    font-size: 14px;
+    line-height: 1.7;
+    font-family: Consolas, "Courier New", monospace;
+    color: #e2e8f0 !important;
+    caret-color: #67e8f9 !important;
+}
+
+.code-preview-page .ratio-toggle {
+    background: rgba(15, 23, 42, 0.48);
+}
+
+.code-preview-page .ratio-toggle .v-btn {
+    min-width: 64px;
+    color: rgba(226, 232, 240, 0.78) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.code-preview-page .ratio-toggle .v-btn.v-btn--active {
+    color: #67e8f9 !important;
+}
+
+.code-preview-page .toolbar .v-toolbar__content {
+    padding: 0 12px;
+}
+
+.code-preview-page .toolbar .v-toolbar__title,
+.code-preview-page .toolbar .v-btn,
+.code-preview-page .toolbar .v-icon {
+    color: #f8fafc !important;
+}
+
+.code-preview-page .toolbar .v-btn {
+    border-color: rgba(103, 232, 249, 0.56) !important;
+    min-width: 40px !important;
+    width: 40px;
+    padding: 0 !important;
+}
+
+@media (max-width: 960px) {
+    .workspace-shell {
+        padding: 10px !important;
+    }
+
+    .code-preview-page .workspace-card {
+        min-height: calc(100vh - 126px);
+        border-radius: 18px;
+    }
+
+    .code-preview-page .workspace-body,
+    .code-preview-page .pane-layout,
+    .code-preview-page .pane {
+        height: auto;
+    }
+
+    .code-preview-page .pane-layout {
+        flex-direction: column;
+    }
+
+    .code-preview-page .pane {
+        width: 100%;
+        flex: none;
+    }
+
+    .code-preview-page .pane + .pane {
+        margin-left: 0;
+        margin-top: 12px;
+    }
+
+    .code-preview-page .pane-card {
+        min-height: 420px;
+        border-radius: 16px;
+    }
+
+    .code-preview-page .pane-header {
+        padding: 12px 14px 10px;
+    }
+
+    .code-preview-page .pane-title {
+        font-size: 0.95rem;
+    }
+
+    .code-preview-page .pane-subtitle {
+        font-size: 0.76rem;
+    }
+
+    .code-preview-page .preview-shell,
+    .code-preview-page .code-shell {
+        padding: 12px;
+    }
+
+    .code-preview-page .editor-wrap,
+    .code-preview-page .preview-stage {
+        border-radius: 12px;
+    }
+
+    .code-preview-page .editor-tabs > .v-tabs-bar,
+    .code-preview-page .editor-tabs .v-slide-group__wrapper,
+    .code-preview-page .editor-tabs .v-slide-group__content,
+    .code-preview-page .editor-tabs .v-tabs-bar__content,
+    .code-preview-page .editor-tabs .v-tab {
+        height: 34px !important;
+        min-height: 34px !important;
+    }
+
+    .code-preview-page .editor-tabs .v-tab {
+        padding: 0 8px !important;
+        font-size: 12px;
+        letter-spacing: 0.02em;
+    }
+
+    .code-preview-page .editor-textarea textarea {
+        padding: 10px 14px 14px !important;
+        font-size: 13px !important;
+        line-height: 1.6;
+    }
+
+    .code-preview-page .ratio-toggle .v-btn {
+        min-width: 52px;
+        font-size: 11px;
+    }
 }
 </style>
 </head>
 <body>
-<div id="app">
-    <v-app dark>
-        <v-main>
-            <v-container fluid class="pa-0 container">
-                <v-row no-gutters>
-                    <v-col cols="12">
-                        <v-card class="editor">
-                            <v-card-title class="primary">
-                                HTML
-                            </v-card-title>
-                            <v-textarea
-                                id="htmlEditor"
-                                outlined
-                                hide-details
-                                class="pa-2"
-                                :value="htmlCode"
-                                @input="updateHtml"
-                                auto-grow
-                                rows="5"
-                            ></v-textarea>
-                        </v-card>
-                    </v-col>
+<audio id="BGM" src="" paused loop style="display:none;"></audio>
+<v-app id="App" v-cloak>
+    <template>
+        <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Code Preview</main-system-bar>
 
-                    <v-col cols="12">
-                        <v-card class="editor">
-                            <v-card-title class="primary">
-                                CSS
-                            </v-card-title>
-                            <v-textarea
-                                id="cssEditor"
-                                outlined
-                                hide-details
-                                class="pa-2"
-                                :value="cssCode"
-                                @input="updateCss"
-                                auto-grow
-                                rows="5"
-                            ></v-textarea>
-                        </v-card>
-                    </v-col>
+        <v-main id="Main">
+            <transition name="Fade_Page">
+                <v-container v-show="Ready_Page" fluid fill-height class="workspace-shell">
+                    <div class="code-preview-page">
+                    <div class="workspace">
+                        <v-card class="workspace-card" dark outlined>
+                            <v-toolbar flat dark class="toolbar">
+                                <v-toolbar-title class="font-weight-bold">Code Preview</v-toolbar-title>
+                                <v-spacer></v-spacer>
+                                <v-btn
+                                    class="mr-2"
+                                    outlined
+                                    rounded
+                                    color="cyan lighten-2"
+                                    icon
+                                    @click="togglePaneOrder"
+                                >
+                                    <v-icon small>mdi-swap-horizontal</v-icon>
+                                </v-btn>
+                            </v-toolbar>
 
-                    <v-col cols="12">
-                        <v-card class="editor">
-                            <v-card-title class="primary d-flex justify-space-between">
-                                JavaScript
-                            </v-card-title>
-                            <v-textarea
-                                id="jsEditor"
-                                outlined
-                                hide-details
-                                class="pa-2"
-                                :value="jsCode"
-                                @input="updateJs"
-                                auto-grow
-                                rows="5"
-                            ></v-textarea>
-                        </v-card>
-                    </v-col>
+                            <div class="workspace-body">
+                                <div class="pane-layout">
+                                    <div class="pane" :style="paneOrderStyle(true)">
+                                        <v-card class="pane-card" dark flat>
+                                            <div class="pane-header d-flex align-center justify-space-between">
+                                                <div>
+                                                    <div class="pane-title">Preview</div>
+                                                    <div class="pane-subtitle">Changes are reflected in real time.</div>
+                                                </div>
+                                                <v-btn-toggle
+                                                    v-model="previewSize"
+                                                    mandatory
+                                                    dense
+                                                    rounded
+                                                    color="cyan lighten-2"
+                                                    class="ratio-toggle"
+                                                >
+                                                    <v-btn small value="16:9">16:9</v-btn>
+                                                    <v-btn small value="1:1">1:1</v-btn>
+                                                    <v-btn small value="9:16">9:16</v-btn>
+                                                </v-btn-toggle>
+                                            </div>
+                                            <div class="preview-shell">
+                                                <div class="preview-stage" :style="previewStageStyle">
+                                                    <iframe
+                                                        id="preview"
+                                                        class="preview-frame"
+                                                    ></iframe>
+                                                </div>
+                                            </div>
+                                        </v-card>
+                                    </div>
 
-                    <v-col cols="12">
-                        <v-card class="editor">
-                            <v-card-title class="primary">
-                                Preview
-                            </v-card-title>
-                            <div class="pa-2" style="height: 400px; position: relative;">
-                                <iframe id="preview" style="width: 100%; height: 100%; border: none;"></iframe>
+                                    <div class="pane" :style="paneOrderStyle(false)">
+                                        <v-card class="pane-card" dark flat>
+                                            <div class="pane-header">
+                                                <div class="pane-title">Code Editor</div>
+                                                <div class="pane-subtitle">Switch tabs and keep editing in one continuous area.</div>
+                                            </div>
+
+                                            <div class="code-shell">
+                                                <div class="editor-wrap">
+                                                    <v-tabs
+                                                        v-model="activeTab"
+                                                        dark
+                                                        background-color="transparent"
+                                                        color="cyan lighten-2"
+                                                        slider-color="cyan lighten-2"
+                                                        grow
+                                                        class="editor-tabs"
+                                                    >
+                                                        <v-tab>HTML</v-tab>
+                                                        <v-tab>CSS</v-tab>
+                                                        <v-tab>JavaScript</v-tab>
+                                                    </v-tabs>
+
+                                                    <div class="editor-body">
+                                                        <v-textarea
+                                                            v-if="activeTab === 0"
+                                                            ref="htmlEditorField"
+                                                            id="htmlEditor"
+                                                            dark
+                                                            outlined
+                                                            hide-details
+                                                            class="editor-textarea"
+                                                            :value="htmlCode"
+                                                            @input="updateHtml"
+                                                            @keydown.native.capture="handleHtmlKeydown"
+                                                            autocomplete="on"
+                                                            autocorrect="on"
+                                                            spellcheck="true"
+                                                            inputmode="text"
+                                                            no-resize
+                                                            rows="18"
+                                                        ></v-textarea>
+
+                                                        <v-textarea
+                                                            v-else-if="activeTab === 1"
+                                                            id="cssEditor"
+                                                            dark
+                                                            outlined
+                                                            hide-details
+                                                            class="editor-textarea"
+                                                            :value="cssCode"
+                                                            @input="updateCss"
+                                                            autocomplete="on"
+                                                            autocorrect="on"
+                                                            spellcheck="true"
+                                                            inputmode="text"
+                                                            no-resize
+                                                            rows="18"
+                                                        ></v-textarea>
+
+                                                        <v-textarea
+                                                            v-else
+                                                            id="jsEditor"
+                                                            dark
+                                                            outlined
+                                                            hide-details
+                                                            class="editor-textarea"
+                                                            :value="jsCode"
+                                                            @input="updateJs"
+                                                            autocomplete="on"
+                                                            autocorrect="on"
+                                                            spellcheck="true"
+                                                            inputmode="text"
+                                                            no-resize
+                                                            rows="18"
+                                                        ></v-textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </v-card>
+                                    </div>
+                                </div>
                             </div>
                         </v-card>
-                    </v-col>
-                </v-row>
-            </v-container>
+                    </div>
+                    </div>
+                </v-container>
+            </transition>
         </v-main>
-    </v-app>
-</div>
+
+        <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+        <main-footer></main-footer>
+    </template>
+</v-app>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script src="../../Asset/Javascript/Common.js?v=1.03"></script>
 
 <script>
 new Vue({
-    el: '#app',
-    vuetify: new Vuetify({
-        theme: { dark: true }
-    }),
-    data: {
-        htmlCode: ``,
-        cssCode: ``,
-        jsCode: ``
-    },
-    methods: {
-        updateHtml(value) {
-            this.htmlCode = value;
-            this.runCode();
-        },
-        updateCss(value) {
-            this.cssCode = value;
-            this.runCode();
-        },
-        updateJs(value) {
-            this.jsCode = value;
-            this.runCode();
-        },
-        runCode() {
-            const iframe = document.getElementById('preview');
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            
-            iframeDoc.open();
-            iframeDoc.write(`
-                <html>
-                    <head>
-                        <style>${this.cssCode}</style>
-                    <\/head>
-                    <body>
-                        ${this.htmlCode}
-                        <script>${this.jsCode}<\/script>
-                    <\/body>
-                <\/html>
-            `);
-            iframeDoc.close();
-        }
-    },
-    mounted() {
-        this.runCode();
+  el: '#App',
+  vuetify: new Vuetify(),
+  mixins: [window.Mixins_Common],
+  data: {
+    activeTab: 0,
+    isPreviewFirst: true,
+    previewSize: '16:9',
+    htmlCode: '',
+    cssCode: '',
+    jsCode: ''
+  },
+  computed: {
+    previewStageStyle() {
+      if (this.previewSize === '1:1') {
+        return { aspectRatio: '1 / 1', height: '100%', width: 'auto' };
+      }
+      if (this.previewSize === '9:16') {
+        return { aspectRatio: '9 / 16', height: '100%', width: 'auto' };
+      }
+      return { aspectRatio: '16 / 9', width: '100%', height: 'auto' };
     }
+  },
+  methods: {
+    paneOrderStyle(isPreviewPane) {
+      if (!this.$vuetify.breakpoint.mdAndUp) return {};
+      return { order: isPreviewPane ? (this.isPreviewFirst ? 1 : 2) : (this.isPreviewFirst ? 2 : 1) };
+    },
+    getLineIndent(text) {
+      const lineStart = text.lastIndexOf('\n') + 1;
+      const line = text.slice(lineStart);
+      const indentMatch = line.match(/^\s*/);
+      return indentMatch ? indentMatch[0] : '';
+    },
+    getOpeningTagName(beforeCursor) {
+      const lastOpenIndex = beforeCursor.lastIndexOf('<');
+      if (lastOpenIndex < 0) return '';
+      const fragment = beforeCursor.slice(lastOpenIndex + 1);
+      if (!fragment || /[>\n]/.test(fragment)) return '';
+      if (/^(\/|!|\?)/.test(fragment.trim())) return '';
+      if (fragment.trim().endsWith('/')) return '';
+      const tagMatch = fragment.match(/^([A-Za-z][\w:-]*)\b/);
+      return tagMatch ? tagMatch[1] : '';
+    },
+    getHtmlIndentContext(text) {
+      const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+      const stack = [];
+      const tagPattern = /<\/?([A-Za-z][\w:-]*)\b[^>]*?>/g;
+      let match;
+      while ((match = tagPattern.exec(text)) !== null) {
+        const fullTag = match[0];
+        const tagName = match[1].toLowerCase();
+        const isClosing = fullTag.startsWith('</');
+        const isSelfClosing = /\/>$/.test(fullTag) || voidTags.has(tagName);
+        if (isClosing) {
+          const lastIndex = stack.lastIndexOf(tagName);
+          if (lastIndex !== -1) stack.splice(lastIndex, 1);
+          continue;
+        }
+        if (!isSelfClosing) stack.push(tagName);
+      }
+      return { depth: stack.length, currentTag: stack.length ? stack[stack.length - 1] : '' };
+    },
+    applyEditorText(textarea, nextValue, caretStart, caretEnd) {
+      const endPos = typeof caretEnd === 'number' ? caretEnd : caretStart;
+      textarea.value = nextValue;
+      this.htmlCode = nextValue;
+      this.runCode();
+      this.$nextTick(() => {
+        textarea.focus();
+        textarea.setSelectionRange(caretStart, endPos);
+      });
+    },
+    getEditorTextarea(event) {
+      if (event && event.target && event.target.tagName === 'TEXTAREA') return event.target;
+      const ref = this.$refs.htmlEditorField;
+      if (!ref || !ref.$el) return null;
+      return ref.$el.querySelector('textarea');
+    },
+    getLineRange(text, start, end) {
+      const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+      const lineEndIndex = text.indexOf('\n', end);
+      const lineEnd = lineEndIndex === -1 ? text.length : lineEndIndex;
+      return { lineStart, lineEnd };
+    },
+    indentSelectedLines(textarea, value, start, end, indentUnit) {
+      const range = this.getLineRange(value, start, end);
+      const block = value.slice(range.lineStart, range.lineEnd);
+      const indented = block.split('\n').map((line) => `${indentUnit}${line}`).join('\n');
+      const nextValue = `${value.slice(0, range.lineStart)}${indented}${value.slice(range.lineEnd)}`;
+      const nextStart = start + indentUnit.length;
+      const lineCount = block.split('\n').length;
+      const nextEnd = end + indentUnit.length * lineCount;
+      this.applyEditorText(textarea, nextValue, nextStart, nextEnd);
+    },
+    outdentSelectedLines(textarea, value, start, end, indentUnit) {
+      const range = this.getLineRange(value, start, end);
+      const block = value.slice(range.lineStart, range.lineEnd);
+      let removedBeforeStart = 0;
+      let removedTotal = 0;
+      const outdented = block
+        .split('\n')
+        .map((line, index) => {
+          let removed = 0;
+          if (line.startsWith(indentUnit)) {
+            removed = indentUnit.length;
+            line = line.slice(indentUnit.length);
+          } else {
+            const spaces = line.match(/^ */);
+            removed = Math.min(spaces ? spaces[0].length : 0, indentUnit.length);
+            line = line.slice(removed);
+          }
+          if (index === 0) removedBeforeStart = removed;
+          removedTotal += removed;
+          return line;
+        })
+        .join('\n');
+      const nextValue = `${value.slice(0, range.lineStart)}${outdented}${value.slice(range.lineEnd)}`;
+      const nextStart = Math.max(range.lineStart, start - removedBeforeStart);
+      const nextEnd = Math.max(nextStart, end - removedTotal);
+      this.applyEditorText(textarea, nextValue, nextStart, nextEnd);
+    },
+    handleHtmlKeydown(event) {
+      if (event.isComposing || event.keyCode === 229) return;
+      const textarea = this.getEditorTextarea(event);
+      if (!textarea) return;
+      const value = textarea.value;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const beforeCursor = value.slice(0, start);
+      const afterCursor = value.slice(end);
+      const indentUnit = '    ';
+
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        if (event.shiftKey) return this.outdentSelectedLines(textarea, value, start, end, indentUnit);
+        if (start !== end || beforeCursor.endsWith('\n')) return this.indentSelectedLines(textarea, value, start, end, indentUnit);
+        const nextValue = `${beforeCursor}${indentUnit}${afterCursor}`;
+        return this.applyEditorText(textarea, nextValue, start + indentUnit.length);
+      }
+
+      if (event.key === '>') {
+        const tagName = this.getOpeningTagName(beforeCursor);
+        if (!tagName) return;
+        event.preventDefault();
+        const nextValue = `${beforeCursor}>${afterCursor.startsWith(`</${tagName}>`) ? '' : `</${tagName}>`}${afterCursor}`;
+        return this.applyEditorText(textarea, nextValue, start + 1);
+      }
+
+      if (event.key !== 'Enter') return;
+
+      event.preventDefault();
+      const indentContext = this.getHtmlIndentContext(beforeCursor);
+      const contextIndent = indentUnit.repeat(indentContext.depth);
+      const openingTagName = indentContext.currentTag;
+      const trimmedAfterCursor = afterCursor.replace(/^\s*/, '');
+      const isBetweenTagPair = openingTagName && trimmedAfterCursor.startsWith(`</${openingTagName}>`);
+      const currentLineIndent = this.getLineIndent(beforeCursor);
+      const nextIndent = contextIndent || currentLineIndent;
+      let insertedText = `\n${nextIndent}`;
+      const caret = start + insertedText.length;
+
+      if (isBetweenTagPair) {
+        const closingIndent = indentUnit.repeat(Math.max(indentContext.depth - 1, 0));
+        const afterWithoutLeadingSpace = afterCursor.replace(/^\s*/, '');
+        insertedText += `\n${closingIndent}`;
+        const nextValue = `${beforeCursor}${insertedText}${afterWithoutLeadingSpace}`;
+        return this.applyEditorText(textarea, nextValue, caret);
+      }
+
+      const nextValue = `${beforeCursor}${insertedText}${afterCursor}`;
+      this.applyEditorText(textarea, nextValue, caret);
+    },
+    updateHtml(value) {
+      this.htmlCode = value;
+      this.runCode();
+    },
+    updateCss(value) {
+      this.cssCode = value;
+      this.runCode();
+    },
+    updateJs(value) {
+      this.jsCode = value;
+      this.runCode();
+    },
+    togglePaneOrder() {
+      this.isPreviewFirst = !this.isPreviewFirst;
+    },
+    runCode() {
+      const iframe = document.getElementById('preview');
+      if (!iframe) return;
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      iframeDoc.open();
+      iframeDoc.write(`
+        <html>
+          <head>
+            <style>${this.cssCode}</style>
+          <\/head>
+          <body>
+            ${this.htmlCode}
+            <script>${this.jsCode}<\/script>
+          <\/body>
+        <\/html>
+      `);
+      iframeDoc.close();
+    }
+  },
+  mounted() {
+    this.runCode();
+  }
 });
 </script>
-</body></html>
+</body>
+</html>
