@@ -256,6 +256,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Health</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_Kampo.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Kampo</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Service_TimeTravel.html">
                         <v-list-item-icon />
                         <v-list-item-title>Time Travel</v-list-item-title>
@@ -744,6 +748,11 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Ingredient ▲ --------------------------------------------------------------------------->
                 
+                <v-list-item href="./Cooking_Seasoning.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Seasoning</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-food-variant</v-icon></v-list-item-icon>
+                </v-list-item>
                 <v-list-item href="./Cooking_Science.html">
                     <v-list-item-icon />
                     <v-list-item-title>Science</v-list-item-title>
