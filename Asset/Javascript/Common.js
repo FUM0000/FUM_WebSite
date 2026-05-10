@@ -260,6 +260,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Kampo</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_MusicTheory.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Music Theory</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Service_TimeTravel.html">
                         <v-list-item-icon />
                         <v-list-item-title>Time Travel</v-list-item-title>
