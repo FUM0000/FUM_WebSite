@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+    <title>Type Infinity</title>
+
+    <style>
+        .type-card {
+            max-width: 960px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-controls__chips {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-controls__language {
+            margin-left: auto;
+            max-width: 220px;
+            flex-shrink: 0;
+        }
+
+        .header-controls__language.v-text-field--outlined.v-input--dense .v-input__control {
+            min-height: 44px;
+        }
+
+        .header-controls__language .v-select__selections {
+            min-height: 24px;
+            padding-top: 2px;
+            padding-bottom: 3px;
+        }
+
+        .header-controls__language .v-select__selection {
+            line-height: 1.5;
+        }
+
+        .game-shell {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            background:
+                radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.82)),
+                linear-gradient(135deg, #edf7f6 0%, #e8eef9 55%, #f7efe5 100%);
+            border: 1px solid rgba(33, 41, 52, 0.08);
+            box-shadow: 0 22px 60px rgba(46, 65, 90, 0.12);
+            padding: 28px;
+            min-height: 420px;
+        }
+
+        .game-shell::before {
+            content: "";
+            position: absolute;
+            inset: -20% auto auto -10%;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: rgba(137, 196, 244, 0.14);
+            filter: blur(6px);
+        }
+
+        .game-shell::after {
+            content: "";
+            position: absolute;
+            right: -50px;
+            bottom: -60px;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: rgba(255, 181, 167, 0.18);
+            filter: blur(8px);
+        }
+
+        .game-panel {
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .status-chip {
+            border-radius: 16px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(33, 41, 52, 0.08);
+            backdrop-filter: blur(8px);
+        }
+
+        .status-chip-label {
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6c7785;
+            margin-bottom: 6px;
+        }
+
+        .status-chip-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1d2a36;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .sentence-panel {
+            border-radius: 20px;
+            background: rgba(20, 31, 45, 0.92);
+            color: #f4f7fb;
+            padding: 24px;
+            min-height: 170px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+
+        .sentence-label {
+            font-size: 0.8rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(244, 247, 251, 0.55);
+            margin-bottom: 14px;
+        }
+
+        .sentence-text {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: clamp(1.2rem, 2.2vw, 1.7rem);
+            line-height: 1.9;
+            word-break: break-word;
+            min-height: 62px;
+        }
+
+        .typing-guide {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .typing-guide--solo {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .typing-guide-label {
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(244, 247, 251, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .typing-guide-text {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(1.05rem, 2vw, 1.45rem);
+            line-height: 2;
+            word-break: break-word;
+            min-height: 96px;
+        }
+
+        .char-correct {
+            color: #7be0ad;
+        }
+
+        .char-current {
+            color: #ffe082;
+            text-decoration: underline;
+            text-underline-offset: 6px;
+        }
+
+        .char-pending {
+            color: rgba(244, 247, 251, 0.5);
+        }
+
+        .char-error {
+            color: #ff8a80;
+            background: rgba(255, 138, 128, 0.16);
+            border-radius: 4px;
+            padding: 0 2px;
+        }
+
+        .meta-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .meta-card {
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(33, 41, 52, 0.08);
+            padding: 18px 20px;
+        }
+
+        .meta-title {
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6c7785;
+            margin-bottom: 10px;
+        }
+
+        .queue-item {
+            font-size: 0.92rem;
+            line-height: 1.75;
+            color: #334155;
+            margin-bottom: 10px;
+        }
+
+        .queue-item-main {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-weight: 700;
+        }
+
+        .queue-item-sub {
+            font-family: 'Space Mono', monospace;
+            color: #64748b;
+        }
+
+        .coaching-copy {
+            font-size: 0.96rem;
+            line-height: 1.8;
+            color: #425466;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            background: rgba(17, 24, 39, 0.62);
+            transition: opacity 0.35s ease;
+            text-align: center;
+            color: white;
+            pointer-events: none;
+        }
+
+        .overlay-card {
+            position: absolute;
+            left: 50%;
+            bottom: 20%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            max-width: 520px;
+            border-radius: 24px;
+            padding: 28px 30px;
+            background: rgba(10, 16, 28, 0.84);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+        }
+
+        .overlay-title {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            margin-bottom: 10px;
+        }
+
+        .overlay-title--compact {
+            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            margin-bottom: 8px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .overlay-copy {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .overlay-copy--coaching {
+            font-size: 0.82rem;
+            line-height: 1.65;
+            text-align: left;
+        }
+
+        .overlay-card--gameover {
+            padding: 18px 22px;
+        }
+
+        #trendChart {
+            width: 100%;
+            height: 360px;
+        }
+
+        #trendChart .modebar {
+            position: absolute !important;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+        }
+
+        @media (max-width: 960px) {
+            .status-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 600px) {
+            .game-shell {
+                padding: 18px;
+                min-height: 480px;
+            }
+
+            .status-row {
+                grid-template-columns: 1fr;
+            }
+
+            .sentence-panel {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <v-app id="App" v-cloak>
+        <template>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Game > Type Infinity</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+                        <v-row justify="center">
+                            <v-col cols="12" lg="9">
+                                <v-card class="mx-auto pa-6 type-card">
+                                    <div class="header-controls">
+                                        <div class="header-controls__chips">
+                                            <v-chip color="blue-grey lighten-5" class="pa-4" label>
+                                                <v-icon left small>mdi-keyboard-space</v-icon>
+                                                SPACE Start
+                                            </v-chip>
+
+                                            <v-chip color="blue-grey lighten-5" class="pa-4" label>
+                                                <v-icon left small>mdi-keyboard-esc</v-icon>
+                                                ESC Reset
+                                            </v-chip>
+                                        </div>
+
+                                        <v-select
+                                            class="header-controls__language"
+                                            v-model="selectedLanguage"
+                                            :items="languageOptions"
+                                            item-text="label"
+                                            item-value="value"
+                                            label="Language"
+                                            outlined
+                                            dense
+                                            hide-details
+                                            @change="changeLanguage"
+                                        ></v-select>
+                                    </div>
+
+                                    <div class="game-shell">
+                                        <div class="game-panel">
+                                            <div class="status-row">
+                                                <div class="status-chip">
+                                                    <div class="status-chip-label">Typed</div>
+                                                    <div class="status-chip-value">{{ totalTypedChars }}</div>
+                                                </div>
+                                                <div class="status-chip">
+                                                    <div class="status-chip-label">Speed</div>
+                                                    <div class="status-chip-value">{{ currentWpm }} WPM</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="sentence-panel">
+                                                <template v-if="selectedLanguage === 'ja'">
+                                                    <div class="sentence-label">{{ currentSentenceLabel }}</div>
+                                                    <div class="sentence-text">{{ currentPrompt.display }}</div>
+                                                    <div class="typing-guide">
+                                                        <div class="typing-guide-label">{{ typingGuideLabel }}</div>
+                                                        <div class="typing-guide-text" v-html="formattedSentence"></div>
+                                                    </div>
+                                                </template>
+                                                <div v-else class="typing-guide typing-guide--solo">
+                                                    <div class="typing-guide-label">Type This</div>
+                                                    <div class="typing-guide-text" v-html="formattedSentence"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="meta-row">
+                                                <div class="meta-card">
+                                                    <div class="meta-title">Next Queue</div>
+                                                    <div v-for="(item, index) in upcomingSentences" :key="index" class="queue-item">
+                                                        <div class="queue-item-main">{{ index + 1 }}. {{ item.display }}</div>
+                                                        <div class="queue-item-sub">{{ item.typing }}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div v-if="gameState === 'ready' || gameState === 'gameover'" class="overlay">
+                                            <div class="overlay-card" :class="{ 'overlay-card--gameover': gameState === 'gameover' }">
+                                                <template v-if="gameState === 'ready'">
+                                                    <div class="overlay-copy">{{ overlayMessage }}</div>
+                                                </template>
+                                                <template v-else>
+                                                    <div class="overlay-title overlay-title--compact">Game Over</div>
+                                                    <div class="overlay-copy overlay-copy--coaching">{{ gameOverCoaching }}</div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <v-card justify="center" class="mt-6 pa-4">
+                                        <v-card-title class="justify-center">Analysis</v-card-title>
+                                        <div id="trendChart"></div>
+                                        <v-list dense class="mt-4">
+                                            <v-list-item>
+                                                <v-list-item-content class="text-center">
+                                                    Best Typed: {{ bestTyped }}
+                                                </v-list-item-content>
+                                            </v-list-item>
+                                            <v-list-item>
+                                                <v-list-item-content class="text-center">
+                                                    Average Typed: {{ averageTyped }}
+                                                </v-list-item-content>
+                                            </v-list-item>
+                                            <v-list-item>
+                                                <v-list-item-content class="text-center">
+                                                    Best WPM: {{ bestWpm }}
+                                                </v-list-item-content>
+                                            </v-list-item>
+                                        </v-list>
+                                    </v-card>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <script>
+        const ENGLISH = {
+            articles: ['the', 'a', 'an', 'this', 'that', 'my', 'your', 'our', 'their', 'each', 'every', 'some', 'any', 'no', 'another', 'both'],
+            subjects: [
+                'the artist', 'the student', 'the runner', 'the captain', 'the designer', 'the teacher', 'the engineer',
+                'the musician', 'the traveler', 'the gamer', 'the writer', 'the baker', 'the scientist', 'the pilot',
+                'the swimmer', 'the chef', 'the doctor', 'the farmer', 'the builder', 'the dancer', 'the sailor',
+                'the guard', 'the ranger', 'the archivist', 'the inventor', 'the mechanic', 'the photographer',
+                'the librarian', 'the carpenter', 'the conductor', 'the explorer', 'the detective', 'the gardener'
+            ],
+            nouns: [
+                'river', 'signal', 'garden', 'window', 'planet', 'puzzle', 'camera', 'library', 'notebook', 'lantern',
+                'station', 'bridge', 'forest', 'backpack', 'thunder', 'sunrise', 'keyboard', 'rocket', 'village', 'ocean',
+                'painter', 'mountain', 'compass', 'market', 'festival', 'shelter', 'archive', 'engine', 'harbor', 'meadow',
+                'gallery', 'castle', 'mirror', 'coffee', 'sandbox', 'pattern', 'ticket', 'story', 'memory', 'rhythm',
+                'island', 'desert', 'canyon', 'valley', 'waterfall', 'lighthouse', 'workshop', 'observatory', 'greenhouse',
+                'balloon', 'satellite', 'circuit', 'crystal', 'diamond', 'emerald', 'treasure', 'mystery', 'journey',
+                'adventure', 'horizon', 'sunset', 'moonlight', 'starlight', 'rainbow', 'breeze', 'storm', 'volcano',
+                'glacier', 'meadow', 'orchard', 'vineyard', 'bakery', 'theater', 'stadium', 'museum', 'cathedral',
+                'fortress', 'tunnel', 'highway', 'railway', 'airport', 'harbor', 'dock', 'warehouse', 'factory',
+                'laboratory', 'classroom', 'bedroom', 'kitchen', 'balcony', 'corridor', 'elevator', 'sculpture',
+                'portrait', 'melody', 'symphony', 'whisper', 'laughter', 'silence', 'shadow', 'spark', 'flame', 'ember'
+            ],
+            pluralNouns: [
+                'waves', 'ideas', 'letters', 'clouds', 'signals', 'colors', 'shadows', 'sparks', 'paths', 'dreams',
+                'stories', 'patterns', 'footprints', 'answers', 'lanterns', 'secrets', 'riddles', 'buttons', 'flowers',
+                'memories', 'stones', 'leaves', 'branches', 'roots', 'seeds', 'feathers', 'wings', 'tracks', 'trails',
+                'maps', 'clues', 'keys', 'locks', 'gates', 'doors', 'windows', 'mirrors', 'books', 'pages', 'chapters',
+                'verses', 'notes', 'chords', 'beats', 'steps', 'breaths', 'moments', 'seasons', 'years', 'decades',
+                'centuries', 'legends', 'myths', 'tales', 'songs', 'dances', 'paintings', 'sketches', 'designs',
+                'models', 'engines', 'wheels', 'gears', 'tools', 'weapons', 'shields', 'helmets', 'banners', 'flags'
+            ],
+            verbs: [
+                'builds', 'finds', 'carries', 'draws', 'follows', 'changes', 'watches', 'guides', 'pushes', 'collects',
+                'protects', 'balances', 'paints', 'studies', 'measures', 'throws', 'catches', 'solves', 'opens', 'climbs',
+                'writes', 'drives', 'creates', 'repairs', 'explores', 'discovers', 'reveals', 'hides', 'searches',
+                'delivers', 'receives', 'prepares', 'organizes', 'designs', 'constructs', 'destroys', 'restores',
+                'transforms', 'illuminates', 'decorates', 'celebrates', 'announces', 'whispers', 'shouts', 'listens',
+                'observes', 'imagines', 'remembers', 'forgets', 'learns', 'teaches', 'practices', 'improves', 'achieves',
+                'escapes', 'returns', 'arrives', 'departs', 'crosses', 'enters', 'leaves', 'approaches', 'surrounds',
+                'embraces', 'releases', 'captures', 'escapes', 'defeats', 'rescues', 'supports', 'encourages', 'inspires'
+            ],
+            baseVerbs: [
+                'build', 'find', 'carry', 'draw', 'follow', 'change', 'watch', 'guide', 'push', 'collect', 'protect',
+                'balance', 'paint', 'study', 'measure', 'throw', 'catch', 'solve', 'open', 'climb', 'write', 'drive',
+                'create', 'repair', 'explore', 'discover', 'reveal', 'hide', 'search', 'deliver', 'receive', 'prepare',
+                'organize', 'design', 'construct', 'destroy', 'restore', 'transform', 'illuminate', 'decorate',
+                'celebrate', 'announce', 'whisper', 'shout', 'listen', 'observe', 'imagine', 'remember', 'learn', 'teach',
+                'practice', 'improve', 'achieve', 'escape', 'return', 'arrive', 'depart', 'cross', 'enter', 'leave',
+                'approach', 'surround', 'embrace', 'release', 'capture', 'defeat', 'rescue', 'support', 'encourage', 'inspire'
+            ],
+            adjectives: [
+                'quiet', 'bright', 'ancient', 'gentle', 'swift', 'careful', 'clever', 'hidden', 'curious', 'playful',
+                'steady', 'silent', 'frozen', 'golden', 'wild', 'brave', 'calm', 'vivid', 'tiny', 'massive', 'bold',
+                'lively', 'glossy', 'dusty', 'electric', 'mysterious', 'peaceful', 'dangerous', 'fragile', 'powerful',
+                'delicate', 'fierce', 'graceful', 'elegant', 'rustic', 'modern', 'classic', 'vintage', 'futuristic',
+                'magical', 'ordinary', 'strange', 'familiar', 'distant', 'nearby', 'endless', 'brief', 'eternal',
+                'temporary', 'permanent', 'invisible', 'transparent', 'opaque', 'shiny', 'dull', 'smooth', 'rough',
+                'soft', 'hard', 'warm', 'cool', 'fresh', 'stale', 'sweet', 'bitter', 'sour', 'salty', 'spicy',
+                'colorful', 'pale', 'dark', 'light', 'deep', 'shallow', 'wide', 'narrow', 'tall', 'short', 'long', 'round'
+            ],
+            adverbs: [
+                'softly', 'quickly', 'boldly', 'calmly', 'quietly', 'eagerly', 'slowly', 'warmly', 'neatly', 'brightly',
+                'sharply', 'bravely', 'smoothly', 'carefully', 'suddenly', 'honestly', 'loosely', 'firmly', 'wildly',
+                'gently', 'silently', 'loudly', 'clearly', 'vaguely', 'directly', 'indirectly', 'forward', 'backward',
+                'upward', 'downward', 'inward', 'outward', 'nearby', 'faraway', 'always', 'never', 'sometimes', 'often',
+                'rarely', 'usually', 'finally', 'eventually', 'immediately', 'gradually', 'rapidly', 'steadily',
+                'reluctantly', 'willingly', 'patiently', 'impatiently', 'gracefully', 'awkwardly', 'skillfully', 'poorly'
+            ],
+            prepositions: [
+                'above', 'behind', 'inside', 'near', 'around', 'beyond', 'under', 'across', 'through', 'beside',
+                'between', 'among', 'beneath', 'over', 'onto', 'into', 'from', 'toward', 'along', 'against',
+                'without', 'within', 'outside', 'throughout', 'upon', 'off', 'down', 'up', 'out', 'in'
+            ],
+            connectors: ['while', 'because', 'when', 'after', 'before', 'if', 'although', 'unless', 'until', 'since', 'as', 'once']
+        };
+
+        const JAPANESE = {
+            subjects: [
+                { display: 'その画家', typing: 'sonogaka' },
+                { display: 'あの学生', typing: 'anogakusei' },
+                { display: 'そのランナー', typing: 'sonorannna-' },
+                { display: 'あの先生', typing: 'anosennsei' },
+                { display: 'その技師', typing: 'sonogisi' },
+                { display: 'あの音楽家', typing: 'anoonngakuka' },
+                { display: 'その旅行者', typing: 'sonoryokousha' },
+                { display: 'あの作家', typing: 'anosakka' },
+                { display: 'その料理人', typing: 'sonoryourininn' },
+                { display: 'あの医者', typing: 'anoisha' },
+                { display: 'その農家', typing: 'sononouka' },
+                { display: 'あの建築家', typing: 'anokenntikuka' },
+                { display: 'あの水兵', typing: 'anosuihei' },
+                { display: 'その警備員', typing: 'sonokeibiinn' },
+                { display: 'あの発明家', typing: 'anohatumeika' },
+                { display: 'その機械工', typing: 'sonokikaikou' },
+                { display: 'あの写真家', typing: 'anosyasinnka' },
+                { display: 'その司書', typing: 'sonosisho' },
+                { display: 'あの大工', typing: 'anodaiku' },
+                { display: 'その探検家', typing: 'sonotannkenka' },
+                { display: 'あの探偵', typing: 'anotanntei' },
+                { display: 'その庭師', typing: 'sononiwasi' },
+                { display: 'あの飛行士', typing: 'anohikousi' }
+            ],
+            adjectives: [
+                { display: '静かな', typing: 'sizukana' },
+                { display: '明るい', typing: 'akarui' },
+                { display: '古い', typing: 'hurui' },
+                { display: 'やさしい', typing: 'yasasii' },
+                { display: 'すばやい', typing: 'subayai' },
+                { display: '好奇心の強い', typing: 'koukisinnotuyoi' },
+                { display: '小さな', typing: 'tiisana' },
+                { display: '力強い', typing: 'tikarazuyoi' },
+                { display: '美しい', typing: 'utukusii' },
+                { display: '珍しい', typing: 'mezurasii' },
+                { display: '暖かい', typing: 'atatakai' },
+                { display: '冷たい', typing: 'tumetai' },
+                { display: '深い', typing: 'hukai' },
+                { display: '浅い', typing: 'asai' },
+                { display: '広い', typing: 'hiroi' },
+                { display: '狭い', typing: 'semai' },
+                { display: '高い', typing: 'takai' },
+                { display: '低い', typing: 'hikui' },
+                { display: '長い', typing: 'nagai' },
+                { display: '短い', typing: 'mizikai' },
+                { display: '強い', typing: 'tuyoi' },
+                { display: '弱い', typing: 'yowai' },
+                { display: '新しい', typing: 'atarasii' },
+                { display: '危ない', typing: 'abunai' },
+                { display: '安全な', typing: 'annzennna' },
+                { display: '不思議な', typing: 'husiginna' },
+                { display: '勇敢な', typing: 'yuukannna' },
+                { display: '穏やかな', typing: 'odayakana' }
+            ],
+            nouns: [
+                { display: '川', typing: 'kawa' },
+                { display: '窓', typing: 'mado' },
+                { display: '庭', typing: 'niwa' },
+                { display: '本棚', typing: 'honndana' },
+                { display: '鍵盤', typing: 'kennbann' },
+                { display: '駅', typing: 'eki' },
+                { display: '橋', typing: 'hasi' },
+                { display: '森', typing: 'mori' },
+                { display: '市場', typing: 'itiba' },
+                { display: '物語', typing: 'monogatari' },
+                { display: '島', typing: 'sima' },
+                { display: '砂漠', typing: 'sabaku' },
+                { display: '峡谷', typing: 'kyoukoku' },
+                { display: '滝', typing: 'taki' },
+                { display: '灯台', typing: 'toudai' },
+                { display: '工房', typing: 'koubou' },
+                { display: '天文台', typing: 'tennmonndai' },
+                { display: '温室', typing: 'onnsitu' },
+                { display: '気球', typing: 'kikyuu' },
+                { display: '衛星', typing: 'eisei' },
+                { display: '宝石', typing: 'houseki' },
+                { display: '宝', typing: 'takara' },
+                { display: '旅', typing: 'tabi' },
+                { display: '冒険', typing: 'boukenn' },
+                { display: '地平線', typing: 'tiheisenn' },
+                { display: '夕日', typing: 'yuuhi' },
+                { display: '月光', typing: 'gekkou' },
+                { display: '虹', typing: 'niji' },
+                { display: '火山', typing: 'kazan' },
+                { display: '氷河', typing: 'hyouga' },
+                { display: '劇場', typing: 'gekizyou' },
+                { display: '博物館', typing: 'hakubutukann' },
+                { display: '城', typing: 'siro' },
+                { display: '要塞', typing: 'yousai' },
+                { display: 'トンネル', typing: 'tonnneru' },
+                { display: '空港', typing: 'kuukou' },
+                { display: '倉庫', typing: 'souko' },
+                { display: '工場', typing: 'koujou' },
+                { display: '研究室', typing: 'kennkyuusitu' },
+                { display: '教室', typing: 'kyousitu' },
+                { display: '台所', typing: 'daidokoro' },
+                { display: '彫刻', typing: 'tyoukoku' },
+                { display: '旋律', typing: 'senritu' },
+                { display: '交響曲', typing: 'koukyoukyoku' },
+                { display: '炎', typing: 'honoo' },
+                { display: '風', typing: 'kaze' },
+                { display: '雷', typing: 'kaminari' }
+            ],
+            objects: [
+                { display: '地図', typing: 'tizu' },
+                { display: 'かばん', typing: 'kabann' },
+                { display: 'ランタン', typing: 'ranntann' },
+                { display: 'パズル', typing: 'pazuru' },
+                { display: 'カメラ', typing: 'kamera' },
+                { display: '切符', typing: 'kippu' },
+                { display: 'ノート', typing: 'no-to' },
+                { display: '羅針盤', typing: 'rasinnbann' },
+                { display: '望遠鏡', typing: 'bouennkyou' },
+                { display: '双眼鏡', typing: 'souganngann' },
+                { display: 'コンパス', typing: 'konnpasu' },
+                { display: '鍵', typing: 'kagi' },
+                { display: '錠', typing: 'jou' },
+                { display: '盾', typing: 'tate' },
+                { display: '弓', typing: 'yumi' },
+                { display: '矢', typing: 'ya' },
+                { display: '剣', typing: 'kenn' },
+                { display: '杖', typing: 'tue' },
+                { display: '巻物', typing: 'makimono' },
+                { display: '封筒', typing: 'huutou' },
+                { display: '手紙', typing: 'tegami' },
+                { display: '絵筆', typing: 'ehude' },
+                { display: '絵の具', typing: 'enogu' },
+                { display: '楽譜', typing: 'gakuhu' },
+                { display: '笛', typing: 'hue' },
+                { display: '太鼓', typing: 'taiko' },
+                { display: '時計', typing: 'tokei' },
+                { display: '砂時計', typing: 'sunadokei' },
+                { display: '宝箱', typing: 'takarabako' },
+                { display: '革袋', typing: 'kawabukuro' },
+                { display: '水筒', typing: 'suitou' },
+                { display: '毛布', typing: 'mouhu' },
+                { display: 'テント', typing: 'tennto' },
+                { display: 'ロープ', typing: 'ro-pu' },
+                { display: 'ハンマー', typing: 'hannmaa' }
+            ],
+            particles: {
+                topic: { display: 'は', typing: 'ha' },
+                object: { display: 'を', typing: 'wo' },
+                place: { display: 'で', typing: 'de' },
+                with: { display: 'と', typing: 'to' },
+                and: { display: 'と', typing: 'to' }
+            },
+            adverbs: [
+                { display: '静かに', typing: 'sizukani' },
+                { display: 'すばやく', typing: 'subayaku' },
+                { display: 'ていねいに', typing: 'teineini' },
+                { display: 'ゆっくり', typing: 'yukkuri' },
+                { display: 'しっかり', typing: 'sikkari' },
+                { display: '楽しそうに', typing: 'tanosisouni' },
+                { display: '真剣に', typing: 'sinnkenni' },
+                { display: '大胆に', typing: 'daitannni' },
+                { display: '慎重に', typing: 'sintyouni' },
+                { display: '積極的に', typing: 'sekkyokutekini' },
+                { display: '突然', typing: 'totuzenn' },
+                { display: '徐々に', typing: 'zozoni' },
+                { display: '必ず', typing: 'kanarazu' },
+                { display: '偶然', typing: 'guuzenn' },
+                { display: '一生懸命', typing: 'issyoukennmenni' }
+            ],
+            verbs: [
+                { display: '見つける', typing: 'mitukeru' },
+                { display: '運ぶ', typing: 'hakobu' },
+                { display: '描く', typing: 'kaku' },
+                { display: '集める', typing: 'atumeru' },
+                { display: '守る', typing: 'mamoru' },
+                { display: '調べる', typing: 'siraberu' },
+                { display: '作る', typing: 'tukuru' },
+                { display: '直す', typing: 'naosu' },
+                { display: '発見する', typing: 'hakkennsuru' },
+                { display: '隠す', typing: 'kakusu' },
+                { display: '探す', typing: 'sagasu' },
+                { display: '届ける', typing: 'todokeru' },
+                { display: '受け取る', typing: 'uketoru' },
+                { display: '準備する', typing: 'junnbisuru' },
+                { display: '設計する', typing: 'sekkeisuru' },
+                { display: '建てる', typing: 'tateru' },
+                { display: '壊す', typing: 'kowasu' },
+                { display: '変える', typing: 'kaeru' },
+                { display: '照らす', typing: 'terasu' },
+                { display: '飾る', typing: 'kazaru' },
+                { display: '祝う', typing: 'iwau' },
+                { display: '伝える', typing: 'tutaeru' },
+                { display: '聞く', typing: 'kiku' },
+                { display: '見る', typing: 'miru' },
+                { display: '考える', typing: 'kangaeru' },
+                { display: '覚える', typing: 'oboeru' },
+                { display: '忘れる', typing: 'wasureru' },
+                { display: '学ぶ', typing: 'manabu' },
+                { display: '教える', typing: 'osieru' },
+                { display: '練習する', typing: 'rennshuusuru' },
+                { display: '到着する', typing: 'touchakusuru' },
+                { display: '出発する', typing: 'shuppatusuru' },
+                { display: '渡る', typing: 'wataru' },
+                { display: '入る', typing: 'hairu' },
+                { display: '出る', typing: 'deru' },
+                { display: '近づく', typing: 'tikataduku' },
+                { display: '囲む', typing: 'kakomu' },
+                { display: '抱く', typing: 'daku' },
+                { display: '放す', typing: 'hanasu' },
+                { display: '捕まえる', typing: 'tukamaeru' },
+                { display: '助ける', typing: 'tasukeru' },
+                { display: '励ます', typing: 'hagemasu' }
+            ],
+            endings: [
+                { display: '。', typing: '.' }
+            ]
+        };
+
+        function getVolumeTier(typed) {
+            if (typed >= 200) return 4;
+            if (typed >= 120) return 3;
+            if (typed >= 70) return 2;
+            if (typed >= 35) return 1;
+            return 0;
+        }
+
+        function getSpeedTier(wpm) {
+            if (wpm >= 90) return 4;
+            if (wpm >= 70) return 3;
+            if (wpm >= 50) return 2;
+            if (wpm >= 32) return 1;
+            return 0;
+        }
+
+        function getGameOverCoaching(wpm, typed) {
+            const volume = getVolumeTier(typed);
+            const speed = getSpeedTier(wpm);
+            const gap = speed - volume;
+
+            if (typed < 20) {
+                return '入力開始直後のミスです。ホームポジションと指の形を確認し、最初の1文は速度ゼロで正確に打ち切る練習をすると改善が早いです。';
+            }
+
+            if (typed < 40 && speed <= 1) {
+                return '打鍵数・速度ともに基礎段階です。画面の1文字先だけを見て、打つ前に指を一度止めてから押すリズムを作ると、ミス率が大きく下がります。';
+            }
+
+            if (gap >= 2 && typed < 80) {
+                return '短い区間では速く打てていますが、持続力でミスが出ています。スピードを2割落として、文の切れ目で指をホームに戻す癖をつけると連続正解が伸びます。';
+            }
+
+            if (gap <= -2 && volume >= 2) {
+                return '粘り強く多く入力できています。速度が追いついていないので、打鍵の深さを浅くし、手首を固定してリズムを一定に保つとWPMが上がります。';
+            }
+
+            if (volume >= 3 && speed <= 1) {
+                return '長く正確に続けられる持久力があります。次は語単位で先読みし、同じリズムで指の移動距離だけを短くすると速度が伸びます。';
+            }
+
+            if (volume >= 3 && speed >= 3) {
+                return '打鍵数・速度ともに高水準です。最速を狙うより、疲れた後半でも同じ精度を保つ再現性トレーニングが次の壁を突破します。';
+            }
+
+            if (speed >= 3 && volume <= 1) {
+                return '瞬発力は優秀ですが、入力量がまだ少ないです。速度を維持しつつ、ミスするまでではなく1文完了後に意識的にリズムを整えると安定します。';
+            }
+
+            if (speed >= 2 && volume >= 2) {
+                return '中級のバランスです。ミスしやすい指（人差し指・薬指の連打）を意識的に練習し、句読点の前で手を止めない癖を直すと上級に近づきます。';
+            }
+
+            if (speed <= 1 && volume >= 2) {
+                return '正確に長く打てる段階です。速度はまだ控えめなので、正解を確認しながら1分ごとに5WPMだけ上げる漸進練習が効果的です。';
+            }
+
+            if (speed >= 4 && volume >= 2) {
+                return '高速帯に入っています。打鍵数も十分です。細かなミスが効率を落とすので、最後の10秒は速度より正確性を優先すると記録が安定します。';
+            }
+
+            if (speed <= 1 && volume <= 1) {
+                return '基礎固めの段階です。ローマ字／英語ともに、単語全体を見てから打ち始める習慣をつけると、1文字ずつ追うよりミスが減ります。';
+            }
+
+            return '総合的に見て伸びしろがあります。速度と打鍵数のバランスを取り、ミスした位置の指だけを10回ゆっくり正解するリメディアル練習を挟むと効率的です。';
+        }
+
+        function pick(list) {
+            return list[Math.floor(Math.random() * list.length)];
+        }
+
+        function capitalize(text) {
+            return text.charAt(0).toUpperCase() + text.slice(1);
+        }
+
+        function createEnglishSentence() {
+            const templateIndex = Math.floor(Math.random() * 6);
+
+            switch (templateIndex) {
+                case 0: {
+                    const sentence = `${capitalize(pick(ENGLISH.subjects))} ${pick(ENGLISH.verbs)} ${pick(ENGLISH.articles)} ${pick(ENGLISH.adjectives)} ${pick(ENGLISH.nouns)}.`;
+                    return { display: sentence, typing: sentence };
+                }
+                case 1: {
+                    const sentence = `${capitalize(pick(ENGLISH.subjects))} ${pick(ENGLISH.adverbs)} ${pick(ENGLISH.verbs)} ${pick(ENGLISH.articles)} ${pick(ENGLISH.nouns)} ${pick(ENGLISH.prepositions)} ${pick(ENGLISH.articles)} ${pick(ENGLISH.adjectives)} ${pick(ENGLISH.nouns)}.`;
+                    return { display: sentence, typing: sentence };
+                }
+                case 2: {
+                    const sentence = `${capitalize(pick(ENGLISH.articles))} ${pick(ENGLISH.adjectives)} ${pick(ENGLISH.nouns)} ${pick(ENGLISH.verbs)} ${pick(ENGLISH.adverbs)} ${pick(ENGLISH.connectors)} ${pick(ENGLISH.articles)} ${pick(ENGLISH.adjectives)} ${pick(ENGLISH.nouns)} waits nearby.`;
+                    return { display: sentence, typing: sentence };
+                }
+                case 3: {
+                    const sentence = `${capitalize(pick(ENGLISH.subjects))} can ${pick(ENGLISH.baseVerbs)} ${pick(ENGLISH.pluralNouns)} ${pick(ENGLISH.prepositions)} ${pick(ENGLISH.articles)} ${pick(ENGLISH.nouns)}.`;
+                    return { display: sentence, typing: sentence };
+                }
+                case 4: {
+                    const sentence = `${capitalize(pick(ENGLISH.articles))} ${pick(ENGLISH.adjectives)} ${pick(ENGLISH.nouns)} and ${pick(ENGLISH.articles)} ${pick(ENGLISH.adjectives)} ${pick(ENGLISH.nouns)} ${pick(ENGLISH.verbs)} together.`;
+                    return { display: sentence, typing: sentence };
+                }
+                default: {
+                    const sentence = `${capitalize(pick(ENGLISH.subjects))} will ${pick(ENGLISH.baseVerbs)} ${pick(ENGLISH.articles)} ${pick(ENGLISH.adjectives)} ${pick(ENGLISH.nouns)} ${pick(ENGLISH.connectors)} the night feels ${pick(ENGLISH.adjectives)}.`;
+                    return { display: sentence, typing: sentence };
+                }
+            }
+        }
+
+        function joinJapanese(parts) {
+            return {
+                display: parts.map(part => part.display).join(''),
+                typing: parts.map(part => part.typing).join('')
+            };
+        }
+
+        function createJapaneseSentence() {
+            const templateIndex = Math.floor(Math.random() * 6);
+
+            switch (templateIndex) {
+                case 0:
+                    return joinJapanese([pick(JAPANESE.subjects), JAPANESE.particles.topic, pick(JAPANESE.adjectives), pick(JAPANESE.nouns), JAPANESE.particles.object, pick(JAPANESE.verbs), pick(JAPANESE.endings)]);
+                case 1:
+                    return joinJapanese([pick(JAPANESE.subjects), JAPANESE.particles.topic, pick(JAPANESE.objects), JAPANESE.particles.place, pick(JAPANESE.adverbs), pick(JAPANESE.verbs), pick(JAPANESE.endings)]);
+                case 2:
+                    return joinJapanese([pick(JAPANESE.subjects), JAPANESE.particles.topic, pick(JAPANESE.nouns), JAPANESE.particles.with, pick(JAPANESE.objects), JAPANESE.particles.object, pick(JAPANESE.verbs), pick(JAPANESE.endings)]);
+                case 3:
+                    return joinJapanese([pick(JAPANESE.adjectives), pick(JAPANESE.nouns), JAPANESE.particles.topic, pick(JAPANESE.subjects), JAPANESE.particles.object, pick(JAPANESE.verbs), pick(JAPANESE.endings)]);
+                case 4:
+                    return joinJapanese([pick(JAPANESE.subjects), JAPANESE.particles.topic, pick(JAPANESE.adverbs), pick(JAPANESE.objects), JAPANESE.particles.object, pick(JAPANESE.verbs), pick(JAPANESE.endings)]);
+                default:
+                    return joinJapanese([pick(JAPANESE.nouns), JAPANESE.particles.and, pick(JAPANESE.objects), JAPANESE.particles.topic, pick(JAPANESE.subjects), JAPANESE.particles.object, pick(JAPANESE.verbs), pick(JAPANESE.endings)]);
+            }
+        }
+
+        function createPrompt(language) {
+            return language === 'ja' ? createJapaneseSentence() : createEnglishSentence();
+        }
+
+        new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                selectedLanguage: 'en',
+                languageOptions: [
+                    { label: 'English', value: 'en' },
+                    { label: 'Japanese', value: 'ja' }
+                ],
+                gameState: 'ready',
+                currentPrompt: {
+                    display: '',
+                    typing: ''
+                },
+                inputIndex: 0,
+                totalTypedChars: 0,
+                totalCorrectChars: 0,
+                wrongChar: '',
+                expectedChar: '',
+                startTime: null,
+                timerId: null,
+                elapsedSeconds: 0,
+                upcomingSentences: [],
+                history: [],
+                resizeHandler: null
+            },
+            computed: {
+                currentWpm() {
+                    if (!this.startTime || this.elapsedSeconds <= 0) return 0;
+                    return Math.max(0, Math.round((this.totalCorrectChars / 5) / (this.elapsedSeconds / 60)));
+                },
+                bestTyped() {
+                    if (this.history.length === 0) return 0;
+                    return Math.max(...this.history.map(item => item.typed));
+                },
+                averageTyped() {
+                    if (this.history.length === 0) return 0;
+                    const total = this.history.reduce((sum, item) => sum + item.typed, 0);
+                    return (total / this.history.length).toFixed(1);
+                },
+                bestWpm() {
+                    if (this.history.length === 0) return 0;
+                    return Math.max(...this.history.map(item => item.wpm));
+                },
+                currentSentenceLabel() {
+                    return this.selectedLanguage === 'ja' ? 'Current Sentence / 日本語' : 'Current Sentence';
+                },
+                typingGuideLabel() {
+                    return 'Type This Romaji';
+                },
+                gameOverCoaching() {
+                    return getGameOverCoaching(this.currentWpm, this.totalTypedChars);
+                },
+                overlayMessage() {
+                    return this.selectedLanguage === 'ja'
+                        ? 'SPACEで開始'
+                        : 'SPACE to start';
+                },
+                formattedSentence() {
+                    const safe = this.escapeHtml(this.currentPrompt.typing);
+                    const before = safe.slice(0, this.inputIndex);
+                    const current = safe.charAt(this.inputIndex);
+                    const after = safe.slice(this.inputIndex + 1);
+
+                    if (this.gameState === 'gameover' && this.wrongChar) {
+                        const expected = this.escapeHtml(this.expectedChar || current);
+                        return `<span class="char-correct">${before}</span><span class="char-error">${this.escapeHtml(this.wrongChar)}</span><span class="char-current">${expected}</span><span class="char-pending">${after}</span>`;
+                    }
+
+                    return `<span class="char-correct">${before}</span><span class="char-current">${current || '&nbsp;'}</span><span class="char-pending">${after}</span>`;
+                }
+            },
+            methods: {
+                escapeHtml(text) {
+                    return text
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                },
+                fillQueue() {
+                    while (this.upcomingSentences.length < 3) {
+                        this.upcomingSentences.push(createPrompt(this.selectedLanguage));
+                    }
+                },
+                nextSentence() {
+                    if (this.upcomingSentences.length === 0) {
+                        this.fillQueue();
+                    }
+                    this.currentPrompt = this.upcomingSentences.shift();
+                    this.inputIndex = 0;
+                    this.wrongChar = '';
+                    this.expectedChar = '';
+                    this.fillQueue();
+                },
+                startRun() {
+                    this.gameState = 'playing';
+                    this.totalTypedChars = 0;
+                    this.totalCorrectChars = 0;
+                    this.elapsedSeconds = 0;
+                    this.startTime = performance.now();
+                    clearInterval(this.timerId);
+                    this.timerId = setInterval(() => {
+                        this.elapsedSeconds = (performance.now() - this.startTime) / 1000;
+                    }, 50);
+                    this.upcomingSentences = [];
+                    this.fillQueue();
+                    this.nextSentence();
+                },
+                finishRun() {
+                    this.gameState = 'gameover';
+                    clearInterval(this.timerId);
+                    this.timerId = null;
+                    if (this.startTime) {
+                        this.elapsedSeconds = (performance.now() - this.startTime) / 1000;
+                    }
+                    this.history.push({
+                        typed: this.totalTypedChars,
+                        wpm: this.currentWpm
+                    });
+                    this.updateChart();
+                },
+                changeLanguage() {
+                    this.resetGame();
+                },
+                resetGame() {
+                    clearInterval(this.timerId);
+                    this.timerId = null;
+                    this.gameState = 'ready';
+                    this.currentPrompt = createPrompt(this.selectedLanguage);
+                    this.inputIndex = 0;
+                    this.totalTypedChars = 0;
+                    this.totalCorrectChars = 0;
+                    this.wrongChar = '';
+                    this.expectedChar = '';
+                    this.startTime = null;
+                    this.elapsedSeconds = 0;
+                    this.upcomingSentences = [];
+                    this.fillQueue();
+                },
+                handleKeydown(event) {
+                    const key = event.key;
+
+                    if (key === 'Escape') {
+                        event.preventDefault();
+                        this.resetGame();
+                        return;
+                    }
+
+                    if (key === ' ' && this.gameState !== 'playing') {
+                        event.preventDefault();
+                        this.startRun();
+                        return;
+                    }
+
+                    if (this.gameState !== 'playing') {
+                        return;
+                    }
+
+                    if (key.length !== 1) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const expected = this.currentPrompt.typing.charAt(this.inputIndex);
+                    this.totalTypedChars++;
+
+                    if (key === expected) {
+                        this.inputIndex++;
+                        this.totalCorrectChars++;
+
+                        if (this.inputIndex >= this.currentPrompt.typing.length) {
+                            this.nextSentence();
+                        }
+                    } else {
+                        this.wrongChar = key;
+                        this.expectedChar = expected;
+                        this.finishRun();
+                    }
+                },
+                updateChart() {
+                    const el = document.getElementById('trendChart');
+                    if (!el) return;
+
+                    const trace1 = {
+                        x: Array.from({ length: this.history.length }, (_, i) => i + 1),
+                        y: this.history.map(item => item.typed),
+                        name: 'Typed',
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        line: { color: '#1976D2' }
+                    };
+
+                    const trace2 = {
+                        x: Array.from({ length: this.history.length }, (_, i) => i + 1),
+                        y: this.history.map(item => item.wpm),
+                        name: 'WPM',
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        yaxis: 'y2',
+                        line: { color: '#ff8a65' }
+                    };
+
+                    const layout = {
+                        width: el.clientWidth,
+                        height: 360,
+                        margin: { t: 40, b: 130, l: 60, r: 60 },
+                        xaxis: {
+                            title: { text: 'Run', standoff: 16 },
+                            tickmode: 'linear',
+                            dtick: 1
+                        },
+                        yaxis: { title: 'Typed' },
+                        yaxis2: {
+                            title: 'WPM',
+                            overlaying: 'y',
+                            side: 'right'
+                        },
+                        legend: {
+                            orientation: 'h',
+                            yanchor: 'top',
+                            y: -0.38,
+                            xanchor: 'center',
+                            x: 0.5
+                        }
+                    };
+
+                    const config = {
+                        displaylogo: false,
+                        displayModeBar: true,
+                        responsive: true,
+                        modeBarButtons: [
+                            ['pan2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d']
+                        ]
+                    };
+
+                    Plotly.newPlot('trendChart', [trace1, trace2], layout, config);
+                }
+            },
+            mounted() {
+                this.resetGame();
+                this.updateChart();
+                this.resizeHandler = () => this.updateChart();
+                window.addEventListener('keydown', this.handleKeydown);
+                window.addEventListener('resize', this.resizeHandler);
+            },
+            beforeDestroy() {
+                clearInterval(this.timerId);
+                window.removeEventListener('keydown', this.handleKeydown);
+                window.removeEventListener('resize', this.resizeHandler);
+            }
+        });
+    </script>
+</body>
+
+</html>
