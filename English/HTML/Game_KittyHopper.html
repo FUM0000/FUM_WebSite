@@ -116,21 +116,20 @@
 
                 if (this._State == "Before_Loaded") {
                     this.BGM = '../../Asset/Audio/lofi_2.wav';
-                    Scene.fog = new THREE.Fog(0xFCA3B7, 0, 0);
-                    this._UI_Tap.Fog = false;
-                    this._UI_Tap.Show();
-                    const direction = new THREE.Vector3();
-                    Camera.Object.getWorldDirection(direction);
-                    this._UI_Tap.Position = Camera.Position.clone().add(direction.multiplyScalar(2));
-                    this._UI_Tap.LookAt(Camera.Position);
                 }
+            }
+            #EnterWaitingStart() {
+                Scene.fog = new THREE.Fog(0xFCA3B7, 0, 10);
+                this.Set_Tap();
+                this._UI_Start.Show();
+                this._UI_Tap.Show();
+                this._State = "Waiting_Start";
             }
             Update() {
 
                 if (this._State == "Before_Loaded" && Cat._Flag_Loaded) {
-                    this._State = "Loaded"
                     super.Fade(true);
-
+                    this.#EnterWaitingStart();
                 }
                 if (this._State != "Before_Loaded") {
 
@@ -138,8 +137,7 @@
                         case "Waiting":
                             this._Timer_Waiting.Update();
                             if (this._Timer_Waiting.Flag_Finished) {
-                                this._State = "Waiting_Start";
-                                this._UI_Tap.Show();
+                                this.#EnterWaitingStart();
                             }
                             break;
                         case "Playing": Manager.Update_Playing(); break;
@@ -439,11 +437,6 @@
                 if (ui_music.length > 0) { Manager.BGM.Flag_Playing ? Manager.BGM.Stop() : Manager.BGM.Play(); return; }
 
                 switch (Manager.State) {
-                    case "Loaded":
-                        Scene.fog = new THREE.Fog(0xFCA3B7, 0, 10);
-                        Manager.Set_Tap();
-                        Manager.Change_State("Waiting");
-                        break;
                     case "Waiting_Start": Manager.Start(); break;
                     case "Playing": Cat.Jump(); break;
                     case "Waiting_Restart":
