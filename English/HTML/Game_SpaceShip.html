@@ -736,8 +736,6 @@
                 this._UI_Gameover.Initialize();
                 this._UI_Tap.Initialize();
                 this._UI_Tap.Fog = false;
-                this._UI_Tap.Show();
-                this._UI_Tap.LookAt(Camera.Position);
                 this._UI_Energy.Initialize();
                 this._UI_Boost.Initialize();
                 this._UI_Shoot.Initialize();
@@ -784,21 +782,30 @@
 
                 this._Particle_Move.Initialize();
 
-                switch (this._State) {
-                    case "Before_Loaded":
-                        this._UI_Tap.Position = new THREE.Vector3(0, 0, -8);
-                        this._UI_Tap.Rotation = new THREE.Vector3(0, 0, 0);
-                        break;
-                    case "Loaded":
-                        this._Particle_Background = new C_Background();
-                        break;
+                if (this._State === "Loaded" && !this._Particle_Background) {
+                    this._Particle_Background = new C_Background();
                 }
             }
+
+            #ShowWaitingUI() {
+                this._UI_Start.Show();
+                this._UI_Tap.Show();
+                this._UI_Tap.Fog = false;
+            }
+
+            #EnterWaitingStart() {
+                Scene.fog = null;
+                this.Initialize();
+                this._State = "Waiting_Start";
+                this.#ShowWaitingUI();
+            }
+
             Update() {
 
                 if (this._State == "Before_Loaded") {
-                    this._State = "Loaded"
+                    this._State = "Loaded";
                     super.Fade(true);
+                    this.#EnterWaitingStart();
                 }
                 else {
                     this._Keyboard.Update();
@@ -811,7 +818,7 @@
                             this._Timer_Waiting.Update();
                             if (this._Timer_Waiting.Flag_Finished) {
                                 this._State = "Waiting_Start";
-                                this._UI_Tap.Show();
+                                this.#ShowWaitingUI();
                             }
                             break;
                         case "Playing": Manager.#Update_Playing(); break;
@@ -961,7 +968,7 @@
                 quaternion_2.multiply(quaternion_tilt_y_2);
                 quaternion_2.multiply(quaternion_tilt_x_2);
 
-                this._UI_Energy.Place_on_Screen(new THREE.Vector2(-0.5, 0.8), 4);
+                this._UI_Energy.Place_on_Screen(new THREE.Vector2(-0.5, 0.72), 4);
                 this._UI_Energy.Rotation_Quaternion = quaternion_2;
                 const percentage = Math.round((Player.Energy_Carbon / Player._Energy_Carbon_Max) * 100);
                 this._UI_Energy.Text = `ENERGY: ${percentage.toString().padStart(3, ' ')}%`;
@@ -969,7 +976,7 @@
                 else if (percentage >= 20) this._UI_Energy.Color = "#CFCF00";
                 else this._UI_Energy.Color = "#CF0000";
 
-                this._UI_Ammo.Place_on_Screen(new THREE.Vector2(-0.5, 0.7), 4);
+                this._UI_Ammo.Place_on_Screen(new THREE.Vector2(-0.5, 0.62), 4);
                 this._UI_Ammo.Rotation_Quaternion = quaternion_2;
                 this._UI_Ammo.Text = `AMMO: ${Math.floor(Player.Ammo).toString().padStart(3, ' ')}`;
                 if (Player.Ammo > 0) this._UI_Ammo.Color = "#FFD700";
@@ -1627,6 +1634,7 @@
             _FacingDirection = new THREE.Vector3(0, 1, 0);
             _Flag_Replenishing = false;
             _Flag_Thrusting = false;
+            _Flag_Braking = false;
             _Replenish_Progress = 0;
             _Replenish_Energy_Start = 0;
             _Replenish_Ammo_Start = 0;
@@ -1684,6 +1692,7 @@
                 this._Flag_Replenishing = false;
                 this._Flag_InShop = false;
                 this._Flag_Thrusting = false;
+                this._Flag_Braking = false;
                 this._Replenish_Progress = 0;
                 this._Replenish_Energy_Start = this._Energy_Carbon_Initial;
                 this._Replenish_Ammo_Start = this._Ammo_Initial;
@@ -1707,46 +1716,85 @@
             }
 
 
-            Move(_direction) {
-                if (_direction.lengthSq() > 0) {
-                    this._Flag_Thrusting = true;
-                    let acceleration = this._Acceleration;
-                    let energyRate = 1.85;
-                    if (this._Flag_Boost) {
-                        acceleration *= 1.85;
-                        energyRate *= 1.8;
-                    }
+            Move(_stickDirection) {
+                const hasInput = _stickDirection.lengthSq() > 0.0001;
+                this._Flag_Thrusting = false;
+                this._Flag_Braking = false;
 
-                    const thrust = _direction.clone().multiplyScalar(acceleration * FC_Environment.TIME_DELTA);
-                    this._Velocity.add(thrust);
-                    if (this._Velocity.length() > this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1)) {
-                        this._Velocity.setLength(this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1));
-                    }
+                if (hasInput) {
+                    const inputDirection = _stickDirection.clone().normalize();
+                    const facing = this._FacingDirection.clone().normalize();
+                    const travelDirection = this._Velocity.lengthSq() > 0.0004
+                        ? this._Velocity.clone().normalize()
+                        : facing;
+                    const angleFromFacing = Math.acos(THREE.MathUtils.clamp(facing.dot(inputDirection), -1, 1));
+                    const angleFromTravel = Math.acos(THREE.MathUtils.clamp(travelDirection.dot(inputDirection), -1, 1));
 
-                    this._Energy_Carbon -= thrust.length() * energyRate;
-                } else {
-                    this._Flag_Thrusting = false;
-                    const speed = this._Velocity.length();
-                    if (speed < 0.14) {
-                        this._Velocity.multiplyScalar(0.72);
-                        if (this._Velocity.length() < 0.018) this._Velocity.set(0, 0, 0);
+                    this._FacingDirection.lerp(inputDirection, GetSmoothFactor(0.62));
+                    this._FacingDirection.normalize();
+                    this._Object.rotation.z = Math.atan2(-this._FacingDirection.x, this._FacingDirection.y);
+
+                    if (angleFromFacing <= Math.PI * 0.5) {
+                        this._Flag_Thrusting = true;
+                        let acceleration = this._Acceleration * Math.cos(angleFromFacing);
+                        let energyRate = 1.85;
+                        if (this._Flag_Boost) {
+                            acceleration *= 1.85;
+                            energyRate *= 1.8;
+                        }
+
+                        const thrust = this._FacingDirection.clone()
+                            .multiplyScalar(acceleration * FC_Environment.TIME_DELTA);
+                        this._Velocity.add(thrust);
+                        if (this._Velocity.length() > this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1)) {
+                            this._Velocity.setLength(this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1));
+                        }
+
+                        this._Energy_Carbon -= thrust.length() * energyRate;
+                    } else if (angleFromTravel > Math.PI * 0.5 && this._Velocity.lengthSq() > 0.0004) {
+                        this.#ApplyBraking();
                     } else {
-                        this._Velocity.multiplyScalar(0.9988);
+                        this.#ApplyVelocityDrag();
                     }
+                } else {
+                    this.#ApplyVelocityDrag();
+                }
+
+                if (this._Velocity.lengthSq() > 0.0001) {
+                    const speed = this._Velocity.length();
+                    const forwardSpeed = this._Velocity.dot(this._FacingDirection);
+                    this._Velocity.copy(this._FacingDirection).multiplyScalar(Math.max(0, forwardSpeed));
+                    if (this._Velocity.length() > speed) this._Velocity.setLength(speed);
                 }
 
                 this._Object.position.add(this._Velocity.clone().multiplyScalar(FC_Environment.TIME_DELTA));
 
-                const facingSource = this._Velocity.lengthSq() > 0.0001 ? this._Velocity : _direction;
-                if (facingSource.lengthSq() > 0.0001) {
-                    const desiredFacing = facingSource.clone().normalize();
-                    this._FacingDirection.lerp(desiredFacing, GetSmoothFactor(6.2));
-                    this._FacingDirection.normalize();
-                    this._Object.rotation.z = Math.atan2(-this._FacingDirection.x, this._FacingDirection.y);
-                }
-
                 this._Energy_Carbon = Math.max(0, this._Energy_Carbon);
                 if (this._Energy_Carbon <= 0) Manager.GameOver();
+            }
+
+            #ApplyBraking() {
+                this._Flag_Braking = true;
+                const speed = this._Velocity.length();
+                const travelDirection = this._Velocity.clone().normalize();
+                let brakeForce = this._Acceleration * 1.55;
+                if (this._Flag_Boost) brakeForce *= 1.25;
+
+                const brakeDelta = brakeForce * FC_Environment.TIME_DELTA;
+                const newSpeed = Math.max(0, speed - brakeDelta);
+                this._Velocity.copy(travelDirection).multiplyScalar(newSpeed);
+
+                this._Energy_Carbon -= brakeDelta * 1.1;
+            }
+
+            #ApplyVelocityDrag() {
+                const speed = this._Velocity.length();
+                if (speed < 0.14) {
+                    this._Velocity.multiplyScalar(0.72);
+                    if (this._Velocity.length() < 0.018) this._Velocity.set(0, 0, 0);
+                } else {
+                    this._Velocity.multiplyScalar(0.9988);
+                }
             }
 
             Shoot() {
@@ -2072,24 +2120,11 @@
                 this._Container.position.copy(cameraPosition);
 
                 if (Player._Flag_Thrusting && this._Array_Particle.length < this._Number) {
-                    const backward = Player._FacingDirection.clone().normalize().multiplyScalar(-1);
-
-                    const angle = (Math.random() - 0.5) * Math.PI / 10;
-                    const direction_x = backward.x * Math.cos(angle) - backward.y * Math.sin(angle);
-                    const direction_y = backward.x * Math.sin(angle) + backward.y * Math.cos(angle);
-                    let velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
-                    if (!Player.Flag_Boost) velocity = backward.clone().multiplyScalar(0.05);
-
-                    const exhaustPosition = Player.Position.clone().add(backward.clone().multiplyScalar(Player._Radius * 1.35));
-                    const particlePosition = exhaustPosition.sub(this._Container.position);
-
-                    this._Array_Particle.push({
-                        position: particlePosition,
-                        velocity: velocity,
-                        size: (Math.random() - 0.5) * (this._Size * 0.45) + this._Size * 0.35,
-                        life: this._Lifespan,
-                        color: new THREE.Color(0x00ff88)
-                    });
+                    this.#SpawnExhaustParticle(false);
+                }
+                if (Player._Flag_Braking && this._Array_Particle.length < this._Number) {
+                    this.#SpawnExhaustParticle(true);
+                    if (this._Array_Particle.length < this._Number) this.#SpawnExhaustParticle(true);
                 }
                 this._Position_Past.copy(Player.Position);
 
@@ -2133,6 +2168,30 @@
                 this._ParticleSystem.geometry.attributes.position.needsUpdate = true;
                 this._ParticleSystem.geometry.attributes.color.needsUpdate = true;
                 this._ParticleSystem.geometry.attributes.size.needsUpdate = true;
+            }
+
+            #SpawnExhaustParticle(_isBraking) {
+                const facing = Player._FacingDirection.clone().normalize();
+                const exhaustSide = _isBraking ? facing : facing.clone().multiplyScalar(-1);
+                const particleDirection = _isBraking ? facing : exhaustSide;
+
+                const angle = (Math.random() - 0.5) * Math.PI / 10;
+                const direction_x = particleDirection.x * Math.cos(angle) - particleDirection.y * Math.sin(angle);
+                const direction_y = particleDirection.x * Math.sin(angle) + particleDirection.y * Math.cos(angle);
+                let velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
+                if (!Player.Flag_Boost && !_isBraking) velocity = exhaustSide.clone().multiplyScalar(0.05);
+                if (_isBraking) velocity.multiplyScalar(1.35);
+
+                const exhaustPosition = Player.Position.clone().add(exhaustSide.clone().multiplyScalar(Player._Radius * 1.35));
+                const particlePosition = exhaustPosition.sub(this._Container.position);
+
+                this._Array_Particle.push({
+                    position: particlePosition,
+                    velocity: velocity,
+                    size: (Math.random() - 0.5) * (this._Size * 0.45) + this._Size * (_isBraking ? 0.42 : 0.35),
+                    life: this._Lifespan * (_isBraking ? 0.85 : 1),
+                    color: new THREE.Color(_isBraking ? 0x88ccff : 0x00ff88)
+                });
             }
         }
 
@@ -2627,11 +2686,6 @@
                 if (ui_shoot.length > 0) { Manager.Shoot(); return; }
 
                 switch (Manager.State) {
-                    case "Loaded":
-                        Scene.fog = null;
-                        Manager.Initialize();
-                        Manager.Change_State("Waiting");
-                        break;
                     case "Waiting_Start": Manager.Start(); break;
                     case "Playing": break;
                     case "Waiting_Restart":
