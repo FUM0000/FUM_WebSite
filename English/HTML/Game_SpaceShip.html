@@ -505,8 +505,12 @@
         // 繝峨Ο繝・・繧｢繧､繝・Β繧ｯ繝ｩ繧ｹ (C_Item_Drop)
         // =================================================================================
         class C_Item_Drop extends FC_GameObject {
-            _Lifespan = 10.0;
-            _Timer_Life = new FC_Timer(this._Lifespan);
+            static LIFESPAN = 30.0;
+            static BLINK_SLOW_START = 15.0;
+            static BLINK_FAST_START = 3.75;
+
+            _Lifespan = C_Item_Drop.LIFESPAN;
+            _Timer_Life = new FC_Timer(C_Item_Drop.LIFESPAN);
             _IsActive = true;
             get IsActive() { return this._IsActive; }
             _Radius = 0.3;
@@ -539,7 +543,12 @@
                 }
 
                 const geometry = new THREE.IcosahedronGeometry(this._Radius, 0);
-                const material = new THREE.MeshBasicMaterial({ color: color });
+                const material = new THREE.MeshStandardMaterial({
+                    color: color,
+                    emissive: color,
+                    emissiveIntensity: 0.1,
+                    flatShading: true
+                });
                 this._Object = new THREE.Mesh(geometry, material);
                 this.Position = _position;
                 if (_velocity) this._Velocity.copy(_velocity);
@@ -587,30 +596,41 @@
             Update() {
                 if (!this._IsActive) return;
 
-                const timeRemaining = Math.max(0, this._Lifespan - this._Timer_Life.Time_Current);
+                const timeRemaining = Math.max(0, this._Lifespan - this._Timer_Life._Timer);
                 this.Position.add(this._Velocity.clone().multiplyScalar(FC_Environment.TIME_DELTA));
                 this._Velocity.multiplyScalar(0.93);
                 this._Object.rotation.z += FC_Environment.TIME_DELTA * 1.4;
                 if (this._Label) this._Label.material.rotation = 0;
 
-                if (timeRemaining <= 5) {
-                    const blinkProgress = THREE.MathUtils.clamp((5 - timeRemaining) / 5, 0, 1);
-                    const blinkRate = THREE.MathUtils.lerp(1.5, 14, blinkProgress * blinkProgress);
-                    this._BlinkPhase += FC_Environment.TIME_DELTA * blinkRate;
-                    const shouldBeVisible = Math.floor(this._BlinkPhase) % 2 === 0;
-                    if (shouldBeVisible !== this._BlinkVisible) {
-                        this._BlinkVisible = shouldBeVisible;
-                        this._Object.visible = shouldBeVisible;
-                        if (this._Label) this._Label.visible = shouldBeVisible;
-                    }
+                if (timeRemaining <= C_Item_Drop.BLINK_FAST_START) {
+                    const urgency = 1 - timeRemaining / C_Item_Drop.BLINK_FAST_START;
+                    const blinkRate = THREE.MathUtils.lerp(11, 26, urgency * urgency);
+                    this.#ApplyBlink(blinkRate);
+                } else if (timeRemaining <= C_Item_Drop.BLINK_SLOW_START) {
+                    const slowSpan = C_Item_Drop.BLINK_SLOW_START - C_Item_Drop.BLINK_FAST_START;
+                    const slowProgress = 1 - (timeRemaining - C_Item_Drop.BLINK_FAST_START) / slowSpan;
+                    const blinkRate = THREE.MathUtils.lerp(1.1, 3.2, slowProgress);
+                    this.#ApplyBlink(blinkRate);
                 } else {
-                    this._BlinkVisible = true;
-                    this._Object.visible = true;
-                    if (this._Label) this._Label.visible = true;
+                    this.#SetVisible(true);
                 }
 
                 this._Timer_Life.Update();
                 if (this._Timer_Life.Flag_Finished) this.Destroy();
+            }
+
+            #ApplyBlink(_rate) {
+                this._BlinkPhase += FC_Environment.TIME_DELTA * _rate;
+                const shouldBeVisible = Math.floor(this._BlinkPhase) % 2 === 0;
+                if (shouldBeVisible !== this._BlinkVisible) {
+                    this.#SetVisible(shouldBeVisible);
+                }
+            }
+
+            #SetVisible(_visible) {
+                this._BlinkVisible = _visible;
+                this._Object.visible = _visible;
+                if (this._Label) this._Label.visible = _visible;
             }
 
             Destroy() {
@@ -636,9 +656,7 @@
 
             constructor() {
                 super();
-                const geometry = new THREE.IcosahedronGeometry(this._Radius, 0);
-                const material = new THREE.MeshStandardMaterial({ color: 0xFF8C00, flatShading: true });
-                this._Object = new THREE.Mesh(geometry, material);
+                this._Object = CreateAsteroidMesh(this._Radius);
                 Scene.add(this._Object);
                 this.Initialize();
             }
@@ -674,6 +692,8 @@
             Update() {
                 if (!this._IsActive) return;
                 this.Position.add(this._Velocity.clone().multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
+                this._Object.rotation.x += FC_Environment.TIME_DELTA * 0.35;
+                this._Object.rotation.y += FC_Environment.TIME_DELTA * 0.28;
                 if (this.Position.distanceTo(Player.Position) > 50) this.Destroy();
             }
 
@@ -723,6 +743,8 @@
             _Timer_AsteroidSpawn = new FC_Timer(1.0);
             _Timer_ShooterSpawn = new FC_Timer(12.0);
             _Boost_Button_Enabled = false;
+            _SmoothedInput = new THREE.Vector2();
+            _InputSmoothing = 16;
 
             constructor() {
                 super(Scene, Renderer);
@@ -809,8 +831,7 @@
                 }
                 else {
                     this._Keyboard.Update();
-                    this._Input_Move = this._Joystick.getInput().add(this._Keyboard.Input_Move);
-                    if (this._Input_Move.length() > 1) this._Input_Move.normalize();
+                    this.#ProcessMovementInput();
                     this.#UpdateBoostState();
 
                     switch (this._State) {
@@ -935,6 +956,7 @@
 
 
             #Update_System() {
+                UpdateSceneLighting();
                 this._Timer_Input.Update();
 
                 if (this._State == "Gameover") {
@@ -1047,7 +1069,7 @@
             }
             #Update_Playing() {
                 Player.Update(this._Input_Move);
-                Camera.Update();
+                Camera.Update(Player);
 
                 this._UI_Start.Update();
                 this._UI_Tap.Update();
@@ -1080,6 +1102,22 @@
                 this._Enemies = this._Enemies.filter(e => e.IsActive);
                 this._Drops = this._Drops.filter(d => d.IsActive);
                 this._Effects = this._Effects.filter(effect => effect.IsActive);
+            }
+
+            #ProcessMovementInput() {
+                const raw = this._Joystick.getInput().add(this._Keyboard.Input_Move);
+                const deadZone = 0.14;
+
+                if (raw.length() < deadZone) {
+                    this._SmoothedInput.lerp(new THREE.Vector2(0, 0), GetSmoothFactor(14));
+                    this._Input_Move = this._SmoothedInput;
+                    return;
+                }
+
+                const magnitude = Math.min(1, (raw.length() - deadZone) / (1 - deadZone));
+                const target = raw.clone().normalize().multiplyScalar(magnitude);
+                this._SmoothedInput.lerp(target, GetSmoothFactor(this._InputSmoothing));
+                this._Input_Move = this._SmoothedInput;
             }
 
             #UpdateBoostState() {
@@ -1290,47 +1328,134 @@
             }
         }
 
-        function CreateShipMesh(_bodyColor, _wingColor, _radius, _cockpitColor = 0xffffff) {
+        function CreateHullMaterial(_color, _emissive = 0x000000, _emissiveIntensity = 0.05) {
+            return new THREE.MeshStandardMaterial({
+                color: _color,
+                emissive: _emissive,
+                emissiveIntensity: _emissiveIntensity,
+                flatShading: true
+            });
+        }
+
+        function CreateAccentMaterial(_color) {
+            return new THREE.MeshStandardMaterial({
+                color: _color,
+                emissive: _color,
+                emissiveIntensity: 0.12,
+                flatShading: true
+            });
+        }
+
+        function CreateGlowRingMaterial(_color, _opacity = 0.42) {
+            return new THREE.MeshBasicMaterial({
+                color: _color,
+                transparent: true,
+                opacity: _opacity,
+                depthWrite: false,
+                side: THREE.DoubleSide,
+                polygonOffset: true,
+                polygonOffsetFactor: -2,
+                polygonOffsetUnits: -2
+            });
+        }
+
+        function CreateShieldMaterial(_color, _opacity = 0.14) {
+            return new THREE.MeshBasicMaterial({
+                color: _color,
+                wireframe: true,
+                transparent: true,
+                opacity: _opacity,
+                depthWrite: false
+            });
+        }
+
+        function CreateShipMesh(_bodyColor, _accentColor, _radius, _cockpitColor = 0xffffff) {
             const ship = new THREE.Group();
+            const hullMat = CreateHullMaterial(_bodyColor);
+            const accentMat = CreateAccentMaterial(_accentColor);
+            const glassMat = new THREE.MeshStandardMaterial({
+                color: _cockpitColor,
+                emissive: _cockpitColor,
+                emissiveIntensity: 0.2,
+                flatShading: true,
+                transparent: true,
+                opacity: 0.94
+            });
+            const depth = _radius * 0.34;
 
             const bodyShape = new THREE.Shape();
-            bodyShape.moveTo(0, _radius * 1.35);
-            bodyShape.lineTo(_radius * 0.78, _radius * 0.35);
-            bodyShape.lineTo(_radius * 0.46, _radius * 0.08);
-            bodyShape.lineTo(_radius * 0.62, -_radius * 0.9);
-            bodyShape.lineTo(0, -_radius * 0.62);
-            bodyShape.lineTo(-_radius * 0.62, -_radius * 0.9);
-            bodyShape.lineTo(-_radius * 0.46, _radius * 0.08);
-            bodyShape.lineTo(-_radius * 0.78, _radius * 0.35);
-            bodyShape.closePath();
+            bodyShape.moveTo(0, _radius * 1.42);
+            bodyShape.quadraticCurveTo(_radius * 0.42, _radius * 0.95, _radius * 0.72, _radius * 0.38);
+            bodyShape.lineTo(_radius * 0.5, -_radius * 0.15);
+            bodyShape.lineTo(_radius * 0.58, -_radius * 0.82);
+            bodyShape.quadraticCurveTo(0, -_radius * 1.02, -_radius * 0.58, -_radius * 0.82);
+            bodyShape.lineTo(-_radius * 0.5, -_radius * 0.15);
+            bodyShape.lineTo(-_radius * 0.72, _radius * 0.38);
+            bodyShape.quadraticCurveTo(-_radius * 0.42, _radius * 0.95, 0, _radius * 1.42);
 
-            const body = new THREE.Mesh(
-                new THREE.ShapeGeometry(bodyShape),
-                new THREE.MeshStandardMaterial({ color: _bodyColor, flatShading: true, side: THREE.DoubleSide })
+            const fuselage = new THREE.Mesh(
+                new THREE.ExtrudeGeometry(bodyShape, {
+                    depth: depth,
+                    bevelEnabled: true,
+                    bevelThickness: _radius * 0.04,
+                    bevelSize: _radius * 0.03,
+                    bevelSegments: 1,
+                    curveSegments: 4
+                }),
+                hullMat
             );
+            fuselage.position.z = -depth * 0.5;
 
-            const cockpit = new THREE.Mesh(
-                new THREE.SphereGeometry(_radius * 0.28, 8, 8),
-                new THREE.MeshStandardMaterial({ color: _cockpitColor, emissive: _cockpitColor, emissiveIntensity: 0.2, flatShading: true })
+            const canopy = new THREE.Mesh(
+                new THREE.SphereGeometry(_radius * 0.26, 6, 5, 0, Math.PI * 2, 0, Math.PI * 0.52),
+                glassMat
             );
-            cockpit.position.set(0, _radius * 0.25, 0.14);
+            canopy.position.set(0, _radius * 0.42, depth * 0.22);
+            canopy.scale.set(1, 1.15, 0.75);
 
-            const wingLeft = new THREE.Mesh(
-                new THREE.BoxGeometry(_radius * 0.22, _radius * 0.7, _radius * 0.18),
-                new THREE.MeshStandardMaterial({ color: _wingColor, flatShading: true })
-            );
-            wingLeft.position.set(-_radius * 0.58, -_radius * 0.15, 0);
-            wingLeft.rotation.z = THREE.MathUtils.degToRad(10);
+            const wingGeo = new THREE.BoxGeometry(_radius * 0.14, _radius * 0.82, _radius * 0.1);
+            const wingLeft = new THREE.Mesh(wingGeo, accentMat);
+            wingLeft.position.set(-_radius * 0.62, -_radius * 0.08, -depth * 0.12);
+            wingLeft.rotation.z = THREE.MathUtils.degToRad(14);
 
             const wingRight = wingLeft.clone();
-            wingRight.position.x = _radius * 0.58;
-            wingRight.rotation.z *= -1;
+            wingRight.position.x = _radius * 0.62;
+            wingRight.rotation.z = THREE.MathUtils.degToRad(-14);
 
-            ship.add(body);
-            ship.add(cockpit);
-            ship.add(wingLeft);
-            ship.add(wingRight);
+            const engineGeo = new THREE.CylinderGeometry(_radius * 0.1, _radius * 0.13, _radius * 0.2, 8);
+            const engineLeft = new THREE.Mesh(engineGeo, accentMat);
+            engineLeft.rotation.x = THREE.MathUtils.degToRad(90);
+            engineLeft.position.set(-_radius * 0.28, -_radius * 0.72, -depth * 0.18);
+
+            const engineRight = engineLeft.clone();
+            engineRight.position.x = _radius * 0.28;
+
+            const stripe = new THREE.Mesh(
+                new THREE.BoxGeometry(_radius * 0.08, _radius * 1.05, _radius * 0.04),
+                accentMat
+            );
+            stripe.position.set(0, _radius * 0.05, depth * 0.38);
+
+            ship.add(fuselage, canopy, wingLeft, wingRight, engineLeft, engineRight, stripe);
             return ship;
+        }
+
+        function CreateAsteroidMesh(_radius) {
+            const group = new THREE.Group();
+            const rockMat = CreateHullMaterial(0xff8c00, 0x3a1808, 0.04);
+            const coreMat = CreateHullMaterial(0xc4682a, 0x201008, 0.02);
+
+            const crust = new THREE.Mesh(new THREE.IcosahedronGeometry(_radius, 0), rockMat);
+            crust.scale.set(1.08, 0.94, 1.12);
+            const core = new THREE.Mesh(new THREE.IcosahedronGeometry(_radius * 0.72, 0), coreMat);
+            const crater = new THREE.Mesh(
+                new THREE.SphereGeometry(_radius * 0.22, 5, 4),
+                new THREE.MeshStandardMaterial({ color: 0x4a2810, flatShading: true })
+            );
+            crater.position.set(_radius * 0.35, _radius * 0.2, _radius * 0.25);
+
+            group.add(crust, core, crater);
+            return group;
         }
 
         class C_Enemy_Shooter extends FC_GameObject {
@@ -1350,7 +1475,7 @@
             constructor() {
                 super();
 
-                this._Object = CreateShipMesh(0xFF4444, 0x991111, this._Radius, 0xFFAAAA);
+                this._Object = CreateShipMesh(0xcc3344, 0x661828, this._Radius, 0xffb0b8);
                 this._Trail = new C_Exhaust_Trail(this, 0xff8855, 0.75);
                 Scene.add(this._Object);
                 this.Initialize();
@@ -1472,49 +1597,84 @@
             static SHIELD_RADIUS = 3.9;
 
             _Object_Shield;
+            _Object_Ring;
+            _Object_Spire;
 
             constructor() {
                 super();
 
                 const group = new THREE.Group();
-                const base = new THREE.Mesh(
-                    new THREE.CylinderGeometry(1.2, 1.2, 0.35, 6),
-                    new THREE.MeshStandardMaterial({ color: 0x4D5E88, flatShading: true })
+                const platformMat = CreateHullMaterial(0x3d4f72, 0x0a1020, 0.05);
+                const spireMat = CreateAccentMaterial(0x9ec8ff);
+                const pylonMat = CreateHullMaterial(0x556a94, 0x1a2848, 0.04);
+
+                const platform = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.35, 1.5, 0.22, 6),
+                    platformMat
                 );
-                const core = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.1, 1.1, 0.18),
-                    new THREE.MeshStandardMaterial({ color: 0xA8C8FF, emissive: 0x1A2440, flatShading: true })
+                platform.position.z = -0.08;
+
+                const deck = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.95, 1.05, 0.14, 6),
+                    CreateHullMaterial(0x5a7098, 0x142038, 0.06)
                 );
+                deck.position.z = 0.02;
+
+                const spire = new THREE.Mesh(
+                    new THREE.OctahedronGeometry(0.42, 0),
+                    spireMat
+                );
+                spire.position.set(0, 0, 0.38);
+                spire.scale.set(1, 1.35, 0.85);
+
+                const spireGlow = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.18, 5, 4),
+                    new THREE.MeshBasicMaterial({ color: 0xc8e4ff, transparent: true, opacity: 0.55, depthWrite: false })
+                );
+                spireGlow.position.set(0, 0, 0.58);
+
+                for (let i = 0; i < 3; i++) {
+                    const angle = (Math.PI * 2 * i) / 3;
+                    const pylon = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.22, 0.9, 0.16),
+                        pylonMat
+                    );
+                    pylon.position.set(Math.cos(angle) * 1.05, Math.sin(angle) * 1.05, 0.06);
+                    pylon.rotation.z = angle + Math.PI * 0.5;
+                    group.add(pylon);
+                }
+
                 const ring = new THREE.Mesh(
-                    new THREE.RingGeometry(C_Shop.DOCK_RADIUS - 0.1, C_Shop.DOCK_RADIUS, 32),
-                    new THREE.MeshBasicMaterial({ color: 0xA8C8FF, side: THREE.DoubleSide, transparent: true, opacity: 0.35 })
+                    new THREE.RingGeometry(C_Shop.DOCK_RADIUS - 0.12, C_Shop.DOCK_RADIUS, 40),
+                    CreateGlowRingMaterial(0x88b8ff, 0.38)
                 );
-                const shield = new THREE.Mesh(
-                    new THREE.SphereGeometry(C_Shop.SHIELD_RADIUS, 28, 18),
-                    new THREE.MeshBasicMaterial({
-                        color: 0x7DB7FF,
-                        wireframe: true,
-                        transparent: true,
-                        opacity: 0.16
-                    })
-                );
-                shield.scale.z = 0.18;
                 ring.rotation.x = THREE.MathUtils.degToRad(90);
-                base.rotation.z = THREE.MathUtils.degToRad(90);
-                group.add(base);
-                group.add(core);
-                group.add(ring);
-                group.add(shield);
+                ring.position.z = 0.28;
+                ring.renderOrder = 12;
+
+                const shield = new THREE.Mesh(
+                    new THREE.SphereGeometry(C_Shop.SHIELD_RADIUS, 16, 10),
+                    CreateShieldMaterial(0x7db7ff, 0.12)
+                );
+                shield.scale.set(1, 1, 0.22);
+                shield.position.z = 0.12;
+                shield.renderOrder = 20;
+
+                group.add(platform, deck, spire, spireGlow, ring, shield);
 
                 this._Object = group;
                 this._Object_Shield = shield;
+                this._Object_Ring = ring;
+                this._Object_Spire = spire;
                 this.Position = new THREE.Vector3(8, -6, 0);
                 Scene.add(this._Object);
             }
 
             Update() {
-                this._Object.rotation.z -= FC_Environment.TIME_DELTA * 0.25;
-                this._Object_Shield.material.opacity = 0.08 + Math.sin(performance.now() * 0.005) * 0.08;
+                this._Object.rotation.z -= FC_Environment.TIME_DELTA * 0.18;
+                this._Object_Spire.rotation.y += FC_Environment.TIME_DELTA * 0.55;
+                this._Object_Shield.material.opacity = 0.1 + Math.sin(performance.now() * 0.004) * 0.05;
+                this._Object_Ring.material.opacity = 0.32 + Math.sin(performance.now() * 0.005 + 1) * 0.1;
             }
 
             Check(_position) {
@@ -1532,67 +1692,97 @@
 
             _Object_Field;
             _Object_Shield;
+            _Object_Ring;
 
             constructor() {
                 super();
 
                 const container = new THREE.Group();
+                const hullMat = CreateHullMaterial(0x8a96a8, 0x141c28, 0.05);
+                const towerMat = CreateAccentMaterial(0x6ec8e8);
+                const armMat = CreateHullMaterial(0x5c6878, 0x101820, 0.04);
 
-                const body = new THREE.Mesh(
-                    new THREE.BoxGeometry(4.8, 1.2, 0.26),
-                    new THREE.MeshStandardMaterial({ color: 0xAAB8CC, flatShading: true, emissive: 0x18202A })
+                const core = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.35, 1.55, 0.75, 8),
+                    hullMat
                 );
+                core.position.z = -0.12;
 
-                const bridge = new THREE.Mesh(
-                    new THREE.BoxGeometry(2.5, 0.6, 0.26),
-                    new THREE.MeshStandardMaterial({ color: 0x88E0FF, emissive: 0x113344, flatShading: true })
+                const midRing = new THREE.Mesh(
+                    new THREE.TorusGeometry(1.85, 0.11, 6, 24),
+                    CreateAccentMaterial(0x7ab0c8)
                 );
-                bridge.position.y = 0.18;
+                midRing.rotation.x = THREE.MathUtils.degToRad(90);
+                midRing.position.z = 0.08;
 
-                const wingLeft = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.8, 3.8, 0.26),
-                    new THREE.MeshStandardMaterial({ color: 0x5F6D80, flatShading: true })
+                const tower = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.45, 0.65, 0.55, 6),
+                    towerMat
                 );
-                wingLeft.position.x = -1.5;
+                tower.position.set(0, 0, 0.42);
 
-                const wingRight = wingLeft.clone();
-                wingRight.position.x = 1.5;
+                const towerCap = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.38, 0.35, 6),
+                    towerMat
+                );
+                towerCap.position.set(0, 0, 0.82);
+
+                for (let i = 0; i < 4; i++) {
+                    const angle = (Math.PI * 0.5 * i) + Math.PI * 0.25;
+                    const arm = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.28, 2.6, 0.2),
+                        armMat
+                    );
+                    arm.position.set(Math.cos(angle) * 1.35, Math.sin(angle) * 1.35, -0.04);
+                    arm.rotation.z = angle - Math.PI * 0.5;
+                    container.add(arm);
+
+                    const node = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.16, 5, 4),
+                        CreateAccentMaterial(0x88e0ff)
+                    );
+                    node.position.set(Math.cos(angle) * 2.45, Math.sin(angle) * 2.45, 0.02);
+                    container.add(node);
+                }
+
+                const outerRing = new THREE.Mesh(
+                    new THREE.TorusGeometry(2.55, 0.07, 6, 28),
+                    CreateAccentMaterial(0x5a90a8)
+                );
+                outerRing.rotation.x = THREE.MathUtils.degToRad(90);
+                outerRing.position.z = 0.22;
 
                 const field = new THREE.Mesh(
-                    new THREE.RingGeometry(C_MotherShip.REPLENISH_RADIUS - 0.15, C_MotherShip.REPLENISH_RADIUS, 48),
-                    new THREE.MeshBasicMaterial({ color: 0x66FFCC, side: THREE.DoubleSide, transparent: true, opacity: 0.45 })
+                    new THREE.RingGeometry(C_MotherShip.REPLENISH_RADIUS - 0.12, C_MotherShip.REPLENISH_RADIUS, 56),
+                    CreateGlowRingMaterial(0x66ffcc, 0.4)
                 );
                 field.rotation.x = THREE.MathUtils.degToRad(90);
+                field.position.z = 0.38;
+                field.renderOrder = 14;
 
                 const shield = new THREE.Mesh(
-                    new THREE.SphereGeometry(C_MotherShip.SHIELD_RADIUS, 32, 20),
-                    new THREE.MeshBasicMaterial({
-                        color: 0x55CCFF,
-                        wireframe: true,
-                        transparent: true,
-                        opacity: 0.2
-                    })
+                    new THREE.SphereGeometry(C_MotherShip.SHIELD_RADIUS, 16, 10),
+                    CreateShieldMaterial(0x55ccff, 0.11)
                 );
-                shield.scale.z = 0.18;
+                shield.scale.set(1, 1, 0.2);
+                shield.position.z = 0.15;
+                shield.renderOrder = 22;
 
-                container.add(body);
-                container.add(bridge);
-                container.add(wingLeft);
-                container.add(wingRight);
-                container.add(shield);
-                container.add(field);
+                container.add(core, midRing, tower, towerCap, outerRing, field, shield);
 
                 this._Object = container;
                 this._Object_Field = field;
                 this._Object_Shield = shield;
+                this._Object_Ring = outerRing;
                 this.Position = new THREE.Vector3(0, 0, 0);
                 Scene.add(this._Object);
             }
 
             Update() {
-                this._Object.rotation.z += FC_Environment.TIME_DELTA * 0.12;
-                this._Object_Field.material.opacity = 0.28 + Math.sin(performance.now() * 0.004) * 0.12;
-                this._Object_Shield.material.opacity = 0.12 + Math.sin(performance.now() * 0.006) * 0.08;
+                this._Object.rotation.z += FC_Environment.TIME_DELTA * 0.08;
+                this._Object_Ring.rotation.z -= FC_Environment.TIME_DELTA * 0.14;
+                this._Object_Field.material.opacity = 0.34 + Math.sin(performance.now() * 0.004) * 0.08;
+                this._Object_Shield.material.opacity = 0.09 + Math.sin(performance.now() * 0.005) * 0.04;
             }
 
             Check(_position) {
@@ -1635,6 +1825,10 @@
             _Flag_Replenishing = false;
             _Flag_Thrusting = false;
             _Flag_Braking = false;
+            _ThrustIntensity = 0;
+            _BrakeIntensity = 0;
+            _LastFacingAngle = 0;
+            _BankRoll = 0;
             _Replenish_Progress = 0;
             _Replenish_Energy_Start = 0;
             _Replenish_Ammo_Start = 0;
@@ -1663,7 +1857,7 @@
             constructor() {
                 super();
 
-                this._Object = CreateShipMesh(0x00CC66, 0x008844, this._Radius, 0xAAFFEE);
+                this._Object = CreateShipMesh(0x1a9e6e, 0x0d5c48, this._Radius, 0xb8fff0);
                 Scene.add(this._Object);
 
                 this.Initialize();
@@ -1693,6 +1887,11 @@
                 this._Flag_InShop = false;
                 this._Flag_Thrusting = false;
                 this._Flag_Braking = false;
+                this._ThrustIntensity = 0;
+                this._BrakeIntensity = 0;
+                this._BankRoll = 0;
+                this._LastFacingAngle = 0;
+                this._Object.scale.set(1, 1, 1);
                 this._Replenish_Progress = 0;
                 this._Replenish_Energy_Start = this._Energy_Carbon_Initial;
                 this._Replenish_Ammo_Start = this._Ammo_Initial;
@@ -1707,19 +1906,29 @@
             }
             Update(_input) {
                 this._Shoot_Cooldown.Update();
+                const stickMagnitude = _input ? Math.min(1, _input.length()) : 0;
                 let direction = new THREE.Vector3();
-                if (_input && _input.length() != 0) {
+                if (stickMagnitude > 0.0001) {
                     direction = new THREE.Vector3(-_input.x, _input.y, 0).normalize();
                 }
-                this.Move(direction);
+                this.Move(direction, stickMagnitude);
                 this.#UpdateReplenishment();
             }
 
+            get SpeedRatio() {
+                return THREE.MathUtils.clamp(
+                    this._Velocity.length() / (this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1)),
+                    0,
+                    1
+                );
+            }
 
-            Move(_stickDirection) {
+            Move(_stickDirection, _stickMagnitude = 0) {
                 const hasInput = _stickDirection.lengthSq() > 0.0001;
                 this._Flag_Thrusting = false;
                 this._Flag_Braking = false;
+                this._ThrustIntensity = THREE.MathUtils.lerp(this._ThrustIntensity, 0, GetSmoothFactor(8));
+                this._BrakeIntensity = THREE.MathUtils.lerp(this._BrakeIntensity, 0, GetSmoothFactor(8));
 
                 if (hasInput) {
                     const inputDirection = _stickDirection.clone().normalize();
@@ -1729,43 +1938,66 @@
                         : facing;
                     const angleFromFacing = Math.acos(THREE.MathUtils.clamp(facing.dot(inputDirection), -1, 1));
                     const angleFromTravel = Math.acos(THREE.MathUtils.clamp(travelDirection.dot(inputDirection), -1, 1));
+                    const turnRate = 0.45 + 0.75 * _stickMagnitude;
 
-                    this._FacingDirection.lerp(inputDirection, GetSmoothFactor(0.62));
+                    this._FacingDirection.lerp(inputDirection, GetSmoothFactor(turnRate));
                     this._FacingDirection.normalize();
-                    this._Object.rotation.z = Math.atan2(-this._FacingDirection.x, this._FacingDirection.y);
+                    const facingAngle = Math.atan2(-this._FacingDirection.x, this._FacingDirection.y);
+                    let angleDelta = facingAngle - this._LastFacingAngle;
+                    if (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
+                    if (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+                    this._LastFacingAngle = facingAngle;
+                    this._BankRoll = THREE.MathUtils.lerp(this._BankRoll, THREE.MathUtils.clamp(-angleDelta * 3.2, -0.42, 0.42), GetSmoothFactor(11));
+                    this._Object.rotation.z = facingAngle;
+                    this._Object.rotation.x = this._BankRoll * 0.38;
 
                     if (angleFromFacing <= Math.PI * 0.5) {
                         this._Flag_Thrusting = true;
-                        let acceleration = this._Acceleration * Math.cos(angleFromFacing);
+                        const alignmentFactor = Math.cos(angleFromFacing);
+                        const maxSpeed = this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1);
+                        let acceleration = this._Acceleration * alignmentFactor * (0.55 + 0.45 * _stickMagnitude);
                         let energyRate = 1.85;
                         if (this._Flag_Boost) {
                             acceleration *= 1.85;
                             energyRate *= 1.8;
                         }
 
-                        const thrust = this._FacingDirection.clone()
-                            .multiplyScalar(acceleration * FC_Environment.TIME_DELTA);
-                        this._Velocity.add(thrust);
-                        if (this._Velocity.length() > this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1)) {
-                            this._Velocity.setLength(this._MaxSpeed * (this._Flag_Boost ? 1.45 : 1));
-                        }
+                        const currentForwardSpeed = Math.max(0, this._Velocity.dot(this._FacingDirection));
+                        const targetSpeed = Math.min(maxSpeed, currentForwardSpeed + acceleration * FC_Environment.TIME_DELTA * 2.4);
+                        const newForwardSpeed = THREE.MathUtils.lerp(
+                            currentForwardSpeed,
+                            targetSpeed,
+                            GetSmoothFactor(5.2 + alignmentFactor * 2.5)
+                        );
+                        this._Velocity.copy(this._FacingDirection).multiplyScalar(newForwardSpeed);
+                        this._ThrustIntensity = alignmentFactor * (0.35 + 0.65 * _stickMagnitude) * (0.45 + this.SpeedRatio * 0.55);
+                        if (this._Flag_Boost) this._ThrustIntensity = Math.min(1, this._ThrustIntensity * 1.25);
 
-                        this._Energy_Carbon -= thrust.length() * energyRate;
+                        this._Energy_Carbon -= acceleration * FC_Environment.TIME_DELTA * energyRate;
                     } else if (angleFromTravel > Math.PI * 0.5 && this._Velocity.lengthSq() > 0.0004) {
-                        this.#ApplyBraking();
+                        this.#ApplyBraking(_stickMagnitude);
                     } else {
                         this.#ApplyVelocityDrag();
                     }
                 } else {
                     this.#ApplyVelocityDrag();
+                    this._BankRoll = THREE.MathUtils.lerp(this._BankRoll, 0, GetSmoothFactor(7));
+                    this._Object.rotation.x = this._BankRoll * 0.38;
                 }
 
                 if (this._Velocity.lengthSq() > 0.0001) {
                     const speed = this._Velocity.length();
                     const forwardSpeed = this._Velocity.dot(this._FacingDirection);
-                    this._Velocity.copy(this._FacingDirection).multiplyScalar(Math.max(0, forwardSpeed));
-                    if (this._Velocity.length() > speed) this._Velocity.setLength(speed);
+                    const alignedSpeed = Math.max(0, forwardSpeed);
+                    this._Velocity.copy(this._FacingDirection).multiplyScalar(
+                        THREE.MathUtils.lerp(alignedSpeed, speed, GetSmoothFactor(2.2))
+                    );
                 }
+
+                const thrustScale = 1 + this._ThrustIntensity * 0.05 - this._BrakeIntensity * 0.02;
+                const scaleTarget = THREE.MathUtils.clamp(thrustScale, 0.96, 1.06);
+                this._Object.scale.x = THREE.MathUtils.lerp(this._Object.scale.x, scaleTarget, GetSmoothFactor(10));
+                this._Object.scale.y = THREE.MathUtils.lerp(this._Object.scale.y, scaleTarget, GetSmoothFactor(10));
 
                 this._Object.position.add(this._Velocity.clone().multiplyScalar(FC_Environment.TIME_DELTA));
 
@@ -1773,16 +2005,17 @@
                 if (this._Energy_Carbon <= 0) Manager.GameOver();
             }
 
-            #ApplyBraking() {
+            #ApplyBraking(_stickMagnitude = 1) {
                 this._Flag_Braking = true;
                 const speed = this._Velocity.length();
                 const travelDirection = this._Velocity.clone().normalize();
-                let brakeForce = this._Acceleration * 1.55;
+                let brakeForce = this._Acceleration * (1.35 + 0.35 * _stickMagnitude);
                 if (this._Flag_Boost) brakeForce *= 1.25;
 
                 const brakeDelta = brakeForce * FC_Environment.TIME_DELTA;
                 const newSpeed = Math.max(0, speed - brakeDelta);
                 this._Velocity.copy(travelDirection).multiplyScalar(newSpeed);
+                this._BrakeIntensity = THREE.MathUtils.clamp(speed / (this._MaxSpeed * 1.45), 0.25, 1) * (0.5 + 0.5 * _stickMagnitude);
 
                 this._Energy_Carbon -= brakeDelta * 1.1;
             }
@@ -1790,10 +2023,11 @@
             #ApplyVelocityDrag() {
                 const speed = this._Velocity.length();
                 if (speed < 0.14) {
-                    this._Velocity.multiplyScalar(0.72);
+                    this._Velocity.multiplyScalar(0.68);
                     if (this._Velocity.length() < 0.018) this._Velocity.set(0, 0, 0);
                 } else {
-                    this._Velocity.multiplyScalar(0.9988);
+                    const drag = 1 - (0.0018 + speed * 0.0011) * (FC_Environment.TIME_DELTA * 60);
+                    this._Velocity.multiplyScalar(THREE.MathUtils.clamp(drag, 0.92, 0.9995));
                 }
             }
 
@@ -2007,8 +2241,6 @@
             }
         }
 
-        // C_Particle_Move, C_Background繧ｯ繝ｩ繧ｹ縺ｯ螟画峩縺ｪ縺励・縺溘ａ逵∫払
-        // (蜈・・繧ｳ繝ｼ繝峨ｒ縺昴・縺ｾ縺ｾ縺薙％縺ｫ繝壹・繧ｹ繝医＠縺ｦ縺上□縺輔＞)
         class C_Particle_Move {
 
             _Array_Particle;
@@ -2016,20 +2248,23 @@
             _Size;
             _Position_Past;
             _Lifespan;
-            _Emission;
-            _Speed;
+            _SpawnAccumulator = 0;
             _ParticleSystem;
             _Container;
+            _Scratch_Velocity = new THREE.Vector3();
 
             constructor() {
                 const canvas = document.createElement('canvas');
-                canvas.width = 16;
-                canvas.height = 16;
+                canvas.width = 32;
+                canvas.height = 32;
                 const context = canvas.getContext('2d');
-                context.beginPath();
-                context.arc(8, 8, 7, 0, Math.PI * 2);
-                context.fillStyle = 'white';
-                context.fill();
+                const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.85)');
+                gradient.addColorStop(0.7, 'rgba(200, 255, 255, 0.25)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, 32, 32);
                 const texture = new THREE.CanvasTexture(canvas);
                 texture.needsUpdate = true;
 
@@ -2037,12 +2272,10 @@
                 Scene.add(this._Container);
 
                 this._Array_Particle = [];
-                this._Number = 200;
-                this._Size = 20;
+                this._Number = 260;
+                this._Size = 22;
                 this._Position_Past = new THREE.Vector3();
-                this._Lifespan = 2;
-                this._Emission = 0.75;
-                this._Speed = 0.1;
+                this._Lifespan = 0.55;
                 this._ParticleSystem = this.Create_ParticleSystem(texture);
                 this._Container.add(this._ParticleSystem);
             }
@@ -2119,40 +2352,50 @@
                 cameraPosition.z = 0;
                 this._Container.position.copy(cameraPosition);
 
-                if (Player._Flag_Thrusting && this._Array_Particle.length < this._Number) {
-                    this.#SpawnExhaustParticle(false);
+                let spawnRate = 0;
+                if (Player._Flag_Thrusting) {
+                    spawnRate = 18 + Player._ThrustIntensity * 70 + Player.SpeedRatio * 24;
+                    if (Player.Flag_Boost) spawnRate *= 1.45;
                 }
-                if (Player._Flag_Braking && this._Array_Particle.length < this._Number) {
-                    this.#SpawnExhaustParticle(true);
-                    if (this._Array_Particle.length < this._Number) this.#SpawnExhaustParticle(true);
+                if (Player._Flag_Braking) {
+                    spawnRate = Math.max(spawnRate, 24 + Player._BrakeIntensity * 55);
                 }
+
+                this._SpawnAccumulator += FC_Environment.TIME_DELTA * spawnRate;
+                while (this._SpawnAccumulator >= 1 && this._Array_Particle.length < this._Number) {
+                    this._SpawnAccumulator -= 1;
+                    this.#SpawnExhaustParticle(Player._Flag_Braking);
+                }
+
                 this._Position_Past.copy(Player.Position);
 
                 const positions = this._ParticleSystem.geometry.attributes.position.array;
                 const colors = this._ParticleSystem.geometry.attributes.color.array;
                 const sizes = this._ParticleSystem.geometry.attributes.size.array;
+                const delta = FC_Environment.TIME_DELTA;
 
                 let index_particle = 0;
                 for (let i = this._Array_Particle.length - 1; i >= 0; i--) {
                     const particle = this._Array_Particle[i];
-                    particle.life -= FC_Environment.TIME_DELTA;
+                    particle.life -= delta;
 
                     if (particle.life <= 0) {
                         this._Array_Particle.splice(i, 1);
                         continue;
                     }
 
-                    particle.position.add(particle.velocity);
-                    const ratio_lifespan = particle.life / this._Lifespan;
+                    particle.position.addScaledVector(particle.velocity, delta);
+                    const ratio_lifespan = particle.life / particle.maxLife;
+                    const fade = ratio_lifespan * ratio_lifespan;
 
                     const index = index_particle * 3;
                     positions[index] = particle.position.x;
                     positions[index + 1] = particle.position.y;
                     positions[index + 2] = particle.position.z;
-                    colors[index] = particle.color.r * ratio_lifespan;
-                    colors[index + 1] = particle.color.g * ratio_lifespan;
-                    colors[index + 2] = particle.color.b * ratio_lifespan;
-                    sizes[index_particle] = particle.size * ratio_lifespan;
+                    colors[index] = particle.color.r * fade;
+                    colors[index + 1] = particle.color.g * fade;
+                    colors[index + 2] = particle.color.b * fade;
+                    sizes[index_particle] = particle.size * (0.35 + fade * 0.65);
 
                     index_particle++;
                 }
@@ -2172,25 +2415,45 @@
 
             #SpawnExhaustParticle(_isBraking) {
                 const facing = Player._FacingDirection.clone().normalize();
-                const exhaustSide = _isBraking ? facing : facing.clone().multiplyScalar(-1);
-                const particleDirection = _isBraking ? facing : exhaustSide;
+                const backward = facing.clone().multiplyScalar(-1);
+                const exhaustSide = _isBraking ? facing : backward;
+                const lateral = new THREE.Vector3(-facing.y, facing.x, 0);
+                const spread = (Math.random() - 0.5) * Player._Radius * 0.55;
 
-                const angle = (Math.random() - 0.5) * Math.PI / 10;
-                const direction_x = particleDirection.x * Math.cos(angle) - particleDirection.y * Math.sin(angle);
-                const direction_y = particleDirection.x * Math.sin(angle) + particleDirection.y * Math.cos(angle);
-                let velocity = new THREE.Vector3(direction_x * this._Speed, direction_y * this._Speed, 0);
-                if (!Player.Flag_Boost && !_isBraking) velocity = exhaustSide.clone().multiplyScalar(0.05);
-                if (_isBraking) velocity.multiplyScalar(1.35);
+                const angle = (Math.random() - 0.5) * Math.PI / (_isBraking ? 7 : 9);
+                const exhaustDir = exhaustSide.clone();
+                const rotatedX = exhaustDir.x * Math.cos(angle) - exhaustDir.y * Math.sin(angle);
+                const rotatedY = exhaustDir.x * Math.sin(angle) + exhaustDir.y * Math.cos(angle);
+                exhaustDir.set(rotatedX, rotatedY, 0).normalize();
 
-                const exhaustPosition = Player.Position.clone().add(exhaustSide.clone().multiplyScalar(Player._Radius * 1.35));
+                const playerSpeed = Player._Velocity.length();
+                const intensity = _isBraking ? Player._BrakeIntensity : Player._ThrustIntensity;
+                const emitSpeed = (_isBraking ? 2.8 : 1.6) + playerSpeed * 0.55 + intensity * 1.8;
+                const shipInfluence = _isBraking ? 1.05 : 0.88 + Player.SpeedRatio * 0.2;
+
+                this._Scratch_Velocity.copy(exhaustDir).multiplyScalar(emitSpeed);
+                this._Scratch_Velocity.sub(Player._Velocity.clone().multiplyScalar(shipInfluence));
+
+                const exhaustPosition = Player.Position.clone()
+                    .add(exhaustSide.clone().multiplyScalar(Player._Radius * (_isBraking ? 1.15 : 1.3)))
+                    .add(lateral.multiplyScalar(spread));
                 const particlePosition = exhaustPosition.sub(this._Container.position);
+
+                const thrustColor = new THREE.Color(0x44ffaa);
+                const boostColor = new THREE.Color(0x66ddff);
+                const brakeColor = new THREE.Color(0x99ccff);
+                const baseColor = _isBraking ? brakeColor : (Player.Flag_Boost ? boostColor : thrustColor);
+                const tint = baseColor.clone().lerp(new THREE.Color(0xffffff), 0.15 + intensity * 0.35);
+
+                const life = this._Lifespan * (0.65 + intensity * 0.55) * (_isBraking ? 0.9 : 1);
 
                 this._Array_Particle.push({
                     position: particlePosition,
-                    velocity: velocity,
-                    size: (Math.random() - 0.5) * (this._Size * 0.45) + this._Size * (_isBraking ? 0.42 : 0.35),
-                    life: this._Lifespan * (_isBraking ? 0.85 : 1),
-                    color: new THREE.Color(_isBraking ? 0x88ccff : 0x00ff88)
+                    velocity: this._Scratch_Velocity.clone(),
+                    size: this._Size * (0.22 + intensity * 0.35 + playerSpeed * 0.08) * (0.75 + Math.random() * 0.5),
+                    life: life,
+                    maxLife: life,
+                    color: tint
                 });
             }
         }
@@ -2322,10 +2585,87 @@
             }
         }
 
+        class C_SpaceCamera extends FC_Camera {
+
+            _SmoothPosition = new THREE.Vector3();
+            _SmoothLookAt = new THREE.Vector3();
+            _ShakeAmount = 0;
+
+            Initialize() {
+                super.Initialize();
+                this._SmoothPosition.copy(this.Position);
+                this._SmoothLookAt.copy(this._Position_LookAt);
+            }
+
+            Update(_player = null) {
+                if (!this._Flag_Target || !_player) {
+                    super.Update();
+                    return;
+                }
+
+                const velocity = _player._Velocity;
+                const speedRatio = _player.SpeedRatio;
+                const lag = 0.14 + speedRatio * 0.2;
+
+                const desiredPosition = new THREE.Vector3(
+                    _player.Position.x + this._OFFSET_TARGET_DEFAULT.x - velocity.x * lag,
+                    _player.Position.y + this._OFFSET_TARGET_DEFAULT.y - velocity.y * lag,
+                    _player.Position.z + this._OFFSET_TARGET_DEFAULT.z
+                );
+                const desiredLookAt = new THREE.Vector3(
+                    _player.Position.x + this._OFFSET_LOOKAT_DEFAULT.x + velocity.x * 0.06,
+                    _player.Position.y + this._OFFSET_LOOKAT_DEFAULT.y + velocity.y * 0.06,
+                    _player.Position.z + this._OFFSET_LOOKAT_DEFAULT.z
+                );
+
+                this._SmoothPosition.lerp(desiredPosition, GetSmoothFactor(5.8));
+                this._SmoothLookAt.lerp(desiredLookAt, GetSmoothFactor(7.5));
+
+                if (_player._Flag_Boost) this._ShakeAmount = Math.min(0.07, this._ShakeAmount + FC_Environment.TIME_DELTA * 0.55);
+                else if (_player._Flag_Braking) this._ShakeAmount = Math.min(0.05, this._ShakeAmount + FC_Environment.TIME_DELTA * 0.42);
+                else this._ShakeAmount *= Math.exp(-FC_Environment.TIME_DELTA * 10);
+
+                const shakeX = (Math.random() - 0.5) * this._ShakeAmount;
+                const shakeY = (Math.random() - 0.5) * this._ShakeAmount;
+
+                this.Position = this._SmoothPosition.clone().add(new THREE.Vector3(shakeX, shakeY, 0));
+                this.LookAt = this._SmoothLookAt.clone().add(new THREE.Vector3(shakeX * 0.35, shakeY * 0.35, 0));
+            }
+        }
+
         const Environment = new FC_Environment();
-        const Camera = new FC_Camera(Renderer, undefined, new THREE.Vector3(0, 0, -10));
+        const Camera = new C_SpaceCamera(Renderer, undefined, new THREE.Vector3(0, 0, -10));
         const Light_Ambient = new FC_Light_Ambient(Scene);
+        Light_Ambient._Object.intensity = 0.52;
+        Light_Ambient._Object.color.set(0x6a7a8e);
+
         const Light_Directional = new FC_Light_Directional(Scene);
+        Light_Directional._Object.intensity = 0.78;
+        Light_Directional._Object.color.set(0xfff0dc);
+        Scene.add(Light_Directional._Object.target);
+
+        const Light_Hemisphere = new THREE.HemisphereLight(0x7a9ab8, 0x1c2434, 0.32);
+        Scene.add(Light_Hemisphere);
+
+        const Light_Rim = new THREE.DirectionalLight(0x5a78a8, 0.2);
+        Scene.add(Light_Rim);
+        Scene.add(Light_Rim.target);
+
+        const Light_KeyOffset = new THREE.Vector3(8, 10, -10);
+        const Light_RimOffset = new THREE.Vector3(-6, -7, 9);
+
+        function UpdateSceneLighting() {
+            const focus = Camera.Position_LookAt;
+
+            Light_Directional._Object.position.copy(focus).add(Light_KeyOffset);
+            Light_Directional._Object.target.position.copy(focus);
+            Light_Directional._Object.target.updateMatrixWorld();
+
+            Light_Rim.position.copy(focus).add(Light_RimOffset);
+            Light_Rim.target.position.copy(focus);
+            Light_Rim.target.updateMatrixWorld();
+        }
+
         window.addEventListener('resize', Camera.Resize_Screen, false);
 
         const Manager = new C_Manager();
