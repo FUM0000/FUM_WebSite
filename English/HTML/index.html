@@ -64,11 +64,10 @@
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="align-content: flex-start;">
                         <!-- テキストフロー -->
-                        <v-container id="TextFlow">
+                        <v-container id="TextFlow_1">
                             <span style="color: red"> &lt;NEWS&gt; </span>
                             <span style="color: rgb(200, 200, 200)">
-                                Cherry blossoms are expected to be at their best from late March to early April — the
-                                perfect time for sakura viewing.
+                                Fireworks season has arrived in Japan! Enjoy spectacular fireworks, lively festival streets, traditional games, and delicious food stalls. Experience the excitement and atmosphere of a Japanese summer festival!
                             </span>
                         </v-container>
                     </v-container>
@@ -122,11 +121,21 @@
         #App .v-icon {
             pointer-events: auto;
         }
+        
+        @keyframes Flow_1 {
+            0% {
+                transform: translateX(100vw);
+            }
 
-        #TextFlow {
-            width: calc(1920px * 0.75);
+            100% {
+                transform: translateX(calc(-1920px * 1.1));
+            }
+        }
+
+        #TextFlow_1 {
+            width: calc(1920px * 1);
             white-space: nowrap;
-            animation: Flow 30s linear infinite;
+            animation: Flow_1 30s linear infinite;
         }
 
         #menu-guide {
@@ -156,7 +165,6 @@
             top: var(--menu-guide-y);
             width: var(--menu-guide-width);
             height: var(--menu-guide-height);
-            border-radius: 10px;
             transform: translate(-50%, -50%);
             mix-blend-mode: screen;
         }
@@ -261,16 +269,6 @@
         @media (prefers-reduced-motion: reduce) {
             #menu-guide {
                 display: none;
-            }
-        }
-
-        @keyframes Flow {
-            0% {
-                transform: translateX(100vw);
-            }
-
-            100% {
-                transform: translateX(calc(-1920px * 0.75));
             }
         }
 
@@ -552,6 +550,7 @@
         .loading-progress-bar::after {
             content: none;
         }
+
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -1111,186 +1110,177 @@
             return new THREE.CanvasTexture(canvas);
         }
         const particleTexture = createCircleTexture();
-        const tempPetalObject = new THREE.Object3D();
-        let sakuraPetalMesh = null;
-        let sakuraPetalStates = [];
-        let sakuraPetalOpacityAttr = null;
-        let sakuraPetalCount = isMobile ? 18 : 32;
-        function resetSakuraPetalState(index, initial = false) {
-            const spread = isMobile ? 34 : 48;
-            const state = sakuraPetalStates[index] || {};
-            state.spawnX = (Math.random() - 0.5) * spread;
-            state.spawnY = 18 + Math.random() * 26;
-            state.spawnZ = (Math.random() - 0.5) * spread;
-            state.driftX = (Math.random() - 0.5) * 10;
-            state.driftZ = (Math.random() - 0.5) * 10;
-            state.swayPhase = Math.random() * Math.PI * 2;
-            state.swaySpeed = 0.8 + Math.random() * 1.2;
-            state.spinPhase = Math.random() * Math.PI * 2;
-            state.fallDuration = 6.5 + Math.random() * 3.2;
-            state.fadeDuration = 10;
-            state.delay = initial ? Math.random() * (state.fallDuration + state.fadeDuration) : 0;
-            state.elapsed = 0;
-            state.scale = 0.72 + Math.random() * 0.28;
-            state.startRotX = Math.random() * Math.PI * 2;
-            state.startRotY = Math.random() * Math.PI * 2;
-            state.startRotZ = Math.random() * Math.PI * 2;
-            state.targetRotX = (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.18;
-            state.targetRotY = Math.random() * Math.PI * 2;
-            state.targetRotZ = (Math.random() - 0.5) * Math.PI * 2;
-            state.landedX = state.spawnX + state.driftX;
-            state.landedZ = state.spawnZ + state.driftZ;
-            sakuraPetalStates[index] = state;
+        // ── Firework Particle System ──
+        const FW_MAX = 6000;
+        const fwPos = new Float32Array(FW_MAX * 3);
+        const fwVel = new Float32Array(FW_MAX * 3);
+        const fwLife = new Float32Array(FW_MAX);
+        const fwCol = new Float32Array(FW_MAX * 3);
+        let fwCount = 0;
+
+        const fwGeo = new THREE.BufferGeometry();
+        fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3));
+        fwGeo.setAttribute('color', new THREE.BufferAttribute(fwCol, 3));
+        const fwMat = new THREE.PointsMaterial({
+            size: isMobile ? 0.6 : 0.9,
+            transparent: true,
+            opacity: 1,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            vertexColors: true,
+            sizeAttenuation: true
+        });
+        const fwPoints = new THREE.Points(fwGeo, fwMat);
+        scene.add(fwPoints);
+
+        const FW_PALETTES = [
+            [[1,0.25,0.15],[1,0.6,0.1],[1,0.2,0.4]],
+            [[0.2,0.5,1],[0.3,0.8,1],[0.6,0.4,1]],
+            [[1,0.8,0.1],[1,1,0.6],[1,0.6,0]],
+            [[0.2,1,0.4],[0.3,1,0.7],[0.6,1,0.3]],
+            [[1,0.3,0.8],[1,0.5,1],[0.8,0.2,1]],
+            [[1,1,1],[1,0.9,0.7],[1,0.95,0.8]],
+        ];
+
+        const shells = [];
+        let shellTimer = 0;
+
+        function spawnParticle(px, py, pz, vx, vy, vz, life, r, g, b) {
+            if (fwCount >= FW_MAX) return;
+            const i = fwCount++;
+            const i3 = i * 3;
+            fwPos[i3] = px; fwPos[i3+1] = py; fwPos[i3+2] = pz;
+            fwVel[i3] = vx; fwVel[i3+1] = vy; fwVel[i3+2] = vz;
+            fwLife[i] = life;
+            fwCol[i3] = r; fwCol[i3+1] = g; fwCol[i3+2] = b;
         }
-        function createSakuraPetalSystem(sourceMesh) {
-            const baseGeometry = sourceMesh.geometry.clone();
-            baseGeometry.computeVertexNormals();
-            baseGeometry.computeBoundingBox();
-            const bounds = baseGeometry.boundingBox;
-            const size = new THREE.Vector3();
-            bounds.getSize(size);
-            const maxDim = Math.max(size.x, size.y, size.z, 0.0001);
-            const normalizeScale = 1.35 / maxDim;
-            baseGeometry.scale(normalizeScale, normalizeScale, normalizeScale);
-            baseGeometry.center();
 
-            const baseMaterial = new THREE.MeshPhongMaterial({
-                color: 0xf7c9da,
-                emissive: 0x2b0f18,
-                emissiveIntensity: 0.2,
-                transparent: true,
-                opacity: 0.95,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-                shininess: 18
-            });
-            baseMaterial.onBeforeCompile = (shader) => {
-                shader.vertexShader = shader.vertexShader.replace(
-                    '#include <common>',
-                    '#include <common>\nattribute float instanceOpacity;\nvarying float vInstanceOpacity;'
-                ).replace(
-                    '#include <begin_vertex>',
-                    '#include <begin_vertex>\nvInstanceOpacity = instanceOpacity;'
-                );
-                shader.fragmentShader = shader.fragmentShader.replace(
-                    '#include <common>',
-                    '#include <common>\nvarying float vInstanceOpacity;'
-                ).replace(
-                    'vec4 diffuseColor = vec4( diffuse, opacity );',
-                    'vec4 diffuseColor = vec4( diffuse, opacity * vInstanceOpacity );'
-                );
-            };
+        function burstFirework(shell) {
+            const { x, y, z, type, palette } = shell;
+            const count = type === 0 ? 180 : type === 1 ? 250 : type === 2 ? 120 : 200;
+            const baseSpeed = type === 2 ? 7 : 11;
+            const gravMult = type === 2 ? 2.5 : 1;
+            shell.gravMult = gravMult;
 
-            sakuraPetalMesh = new THREE.InstancedMesh(baseGeometry, baseMaterial, sakuraPetalCount);
-            sakuraPetalMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-            sakuraPetalMesh.frustumCulled = false;
-            sakuraPetalMesh.renderOrder = 2;
-            sakuraPetalOpacityAttr = new THREE.InstancedBufferAttribute(new Float32Array(sakuraPetalCount), 1);
-            baseGeometry.setAttribute('instanceOpacity', sakuraPetalOpacityAttr);
+            for (let i = 0; i < count && fwCount < FW_MAX; i++) {
+                const theta = Math.acos(2 * Math.random() - 1);
+                const phi = Math.random() * Math.PI * 2;
+                const spd = baseSpeed * (0.4 + Math.random() * 0.8);
+                const vx = Math.sin(theta) * Math.cos(phi) * spd;
+                const vy = Math.sin(theta) * Math.sin(phi) * spd;
+                const vz = Math.cos(theta) * spd;
+                const life = 2 + Math.random() * 1.5;
+                const ci = Math.floor(Math.random() * palette.length);
+                const c = palette[ci];
 
-            for (let i = 0; i < sakuraPetalCount; i++) {
-                resetSakuraPetalState(i, true);
-                sakuraPetalOpacityAttr.setX(i, 0);
-                tempPetalObject.position.set(0, -9999, 0);
-                tempPetalObject.rotation.set(0, 0, 0);
-                tempPetalObject.scale.setScalar(0.001);
-                tempPetalObject.updateMatrix();
-                sakuraPetalMesh.setMatrixAt(i, tempPetalObject.matrix);
-            }
-            sakuraPetalOpacityAttr.needsUpdate = true;
-            scene.add(sakuraPetalMesh);
-        }
-        function updateSakuraPetals(delta, elapsedTime) {
-            if (!sakuraPetalMesh || !sakuraPetalOpacityAttr) return;
+                spawnParticle(x, y, z, vx, vy, vz, life, c[0], c[1], c[2]);
 
-            for (let i = 0; i < sakuraPetalCount; i++) {
-                const state = sakuraPetalStates[i];
-                state.elapsed += delta;
-
-                if (state.delay > 0) {
-                    state.delay -= delta;
-                    sakuraPetalOpacityAttr.setX(i, 0);
-                    continue;
+                // Chrysanthemum: trailing child sparks
+                if (type === 1 && Math.random() < 0.35) {
+                    spawnParticle(x, y, z,
+                        vx * 0.3 + (Math.random() - 0.5) * 3,
+                        vy * 0.3 + (Math.random() - 0.5) * 3,
+                        vz * 0.3 + (Math.random() - 0.5) * 3,
+                        life * 0.5, c[0] * 0.7, c[1] * 0.7, c[2] * 0.7);
                 }
-
-                const totalCycle = state.fallDuration + state.fadeDuration;
-                if (state.elapsed >= totalCycle) {
-                    resetSakuraPetalState(i, false);
-                }
-
-                const fallProgress = Math.min(state.elapsed / state.fallDuration, 1);
-                const inFade = state.elapsed > state.fallDuration;
-                const driftEase = 1 - Math.pow(1 - fallProgress, 2);
-                const swayAmount = (1 - fallProgress * 0.55) * (1.1 + state.scale * 4.5);
-                const swayX = Math.sin(elapsedTime * state.swaySpeed + state.swayPhase) * swayAmount;
-                const swayZ = Math.cos(elapsedTime * (state.swaySpeed * 0.9) + state.swayPhase) * swayAmount * 0.8;
-
-                let posX = state.spawnX + state.driftX * driftEase + swayX;
-                let posY = state.spawnY * (1 - Math.pow(fallProgress, 1.18));
-                let posZ = state.spawnZ + state.driftZ * driftEase + swayZ;
-                let opacity = 1;
-
-                if (inFade) {
-                    const fadeProgress = Math.min((state.elapsed - state.fallDuration) / state.fadeDuration, 1);
-                    posX = state.landedX;
-                    posY = 0;
-                    posZ = state.landedZ;
-                    opacity = 1 - fadeProgress;
-                }
-
-                const settleBlend = THREE.MathUtils.smoothstep(fallProgress, 0.68, 1.0);
-                const rotX = THREE.MathUtils.lerp(state.startRotX, state.targetRotX, settleBlend) + Math.sin(elapsedTime * 4.2 + state.spinPhase) * (1 - settleBlend) * 0.85;
-                const rotY = THREE.MathUtils.lerp(state.startRotY, state.targetRotY, settleBlend) + Math.cos(elapsedTime * 2.6 + state.spinPhase) * (1 - settleBlend) * 0.45;
-                const rotZ = THREE.MathUtils.lerp(state.startRotZ, state.targetRotZ, settleBlend) + Math.sin(elapsedTime * 3.4 + state.spinPhase * 0.7) * (1 - settleBlend) * 0.65;
-
-                tempPetalObject.position.set(posX, posY, posZ);
-                tempPetalObject.rotation.set(rotX, rotY, rotZ);
-                tempPetalObject.scale.setScalar(state.scale);
-                tempPetalObject.updateMatrix();
-                sakuraPetalMesh.setMatrixAt(i, tempPetalObject.matrix);
-                sakuraPetalOpacityAttr.setX(i, Math.max(0, opacity));
             }
 
-            sakuraPetalMesh.instanceMatrix.needsUpdate = true;
-            sakuraPetalOpacityAttr.needsUpdate = true;
+            // Crackle: secondary ring
+            if (type === 3) {
+                for (let i = 0; i < 60 && fwCount < FW_MAX; i++) {
+                    const theta = Math.acos(2 * Math.random() - 1);
+                    const phi = Math.random() * Math.PI * 2;
+                    const spd = 3 + Math.random() * 3;
+                    spawnParticle(x, y, z,
+                        Math.sin(theta) * Math.cos(phi) * spd,
+                        Math.sin(theta) * Math.sin(phi) * spd + 2,
+                        Math.cos(theta) * spd,
+                        1 + Math.random(), 1, 0.9, 0.5);
+                }
+            }
+
+            // Willow: extra falling streaks
+            if (type === 2) {
+                for (let i = 0; i < 30 && fwCount < FW_MAX; i++) {
+                    spawnParticle(x, y, z,
+                        (Math.random() - 0.5) * 1.5,
+                        -1 - Math.random() * 3,
+                        (Math.random() - 0.5) * 1.5,
+                        3 + Math.random() * 0.5, 1, 0.85, 0.3);
+                }
+            }
         }
-        if (THREE.FBXLoader) {
-            const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wn8n0sAAAAASUVORK5CYII=';
-            const sakuraLoadingManager = new THREE.LoadingManager();
-            sakuraLoadingManager.setURLModifier((url) => {
-                if (typeof url === 'string' && /\.png($|\?)/i.test(url)) {
-                    return transparentPixel;
-                }
-                return url;
+
+        function launchShell() {
+            const type = Math.floor(Math.random() * 4);
+            const palette = FW_PALETTES[Math.floor(Math.random() * FW_PALETTES.length)];
+            const x = (Math.random() - 0.5) * 50;
+            const z = (Math.random() - 0.5) * 50;
+            const vy = 22 + Math.random() * 14;
+            const burstH = 18 + vy * 1.2;
+            shells.push({
+                x, y: -10, z, vy, type, palette, phase: 0, timer: 0, burstH
             });
-            const sakuraLoader = new THREE.FBXLoader(sakuraLoadingManager);
-            const originalConsoleWarn = console.warn;
-            console.warn = (...args) => {
-                const message = String(args[0] || '');
-                if (
-                    message.includes('THREE.FBXLoader: ShininessExponent map is not supported') ||
-                    message.includes('THREE.FBXLoader: ReflectionFactor map is not supported')
-                ) {
-                    return;
+        }
+
+        function updateFireworks(delta, time) {
+            // 1. Update existing particles (move, age, compact)
+            let write = 0;
+            for (let i = 0; i < fwCount; i++) {
+                fwLife[i] -= delta;
+                if (fwLife[i] <= 0) continue;
+                const i3 = i * 3;
+                const w3 = write * 3;
+                fwPos[i3] += fwVel[i3] * delta;
+                fwPos[i3+1] += fwVel[i3+1] * delta;
+                fwPos[i3+2] += fwVel[i3+2] * delta;
+                fwVel[i3+1] -= 1.5 * delta;
+                if (write !== i) {
+                    fwPos[w3] = fwPos[i3]; fwPos[w3+1] = fwPos[i3+1]; fwPos[w3+2] = fwPos[i3+2];
+                    fwVel[w3] = fwVel[i3]; fwVel[w3+1] = fwVel[i3+1]; fwVel[w3+2] = fwVel[i3+2];
+                    fwLife[write] = fwLife[i];
+                    fwCol[w3] = fwCol[i3]; fwCol[w3+1] = fwCol[i3+1]; fwCol[w3+2] = fwCol[i3+2];
                 }
-                originalConsoleWarn.apply(console, args);
-            };
-            sakuraLoader.load(
-                '../../Asset/Model/Sakura_1_1.fbx',
-                (fbx) => {
-                    console.warn = originalConsoleWarn;
-                    const sourceMesh = fbx.getObjectByProperty('type', 'Mesh');
-                    if (!sourceMesh || !sourceMesh.geometry) return;
-                    createSakuraPetalSystem(sourceMesh);
-                },
-                undefined,
-                (error) => {
-                    console.warn = originalConsoleWarn;
-                    console.error('Failed to load Sakura petal model:', error);
+                write++;
+            }
+            fwCount = write;
+
+            // 2. Launch timer
+            shellTimer -= delta;
+            if (shellTimer <= 0 && shells.length < 4) {
+                launchShell();
+                shellTimer = 1.5 + Math.random() * 2.5;
+            }
+
+            // 3. Process shells
+            const gravMult = 1.5;
+            for (let s = shells.length - 1; s >= 0; s--) {
+                const shell = shells[s];
+                if (shell.phase === 0) {
+                    shell.y += shell.vy * delta;
+                    shell.vy -= 9.8 * delta;
+                    shell.timer += delta;
+                    // Trail spark
+                    if (shell.timer % 0.04 < delta + 0.001) {
+                        spawnParticle(shell.x, shell.y, shell.z,
+                            (Math.random() - 0.5) * 0.5, -1 - Math.random() * 2, (Math.random() - 0.5) * 0.5,
+                            0.3 + Math.random() * 0.3, 1, 0.8, 0.4);
+                    }
+                    if (shell.vy <= 0 || shell.y >= shell.burstH) {
+                        shell.phase = 1;
+                        shell.timer = 0;
+                        burstFirework(shell);
+                    }
+                } else {
+                    shell.timer += delta;
+                    if (shell.timer > 4.5) shells.splice(s, 1);
                 }
-            );
-        } else {
-            console.warn('THREE.FBXLoader is not available for sakura petals.');
+            }
+
+            // 4. Update geometry
+            fwGeo.attributes.position.needsUpdate = true;
+            fwGeo.attributes.color.needsUpdate = true;
+            fwGeo.setDrawRange(0, fwCount);
         }
         function createStarNoiseTexture(size = 1024, density = 0.002) {
             const canvas = document.createElement('canvas');
@@ -2400,7 +2390,7 @@
             updateFace(delta);
             updateSpeechBubble();
             updateJetParticles();
-            updateSakuraPetals(delta, time);
+            updateFireworks(delta, time);
             if (blackholeWarpPass && blackhole && blackhole.geometry) {
                 if (!blackhole.geometry.boundingSphere) {
                     blackhole.geometry.computeBoundingSphere();
