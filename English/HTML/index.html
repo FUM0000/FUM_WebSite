@@ -1894,14 +1894,17 @@
             textGeometry1.computeBoundingBox();
             const textWidth1 = textGeometry1.boundingBox.max.x - textGeometry1.boundingBox.min.x;
             textMesh1.position.set(-textWidth1 / 2, 0, 0);
+            textMesh1.renderOrder = 1;
 
             textGeometryMouthClosed.computeBoundingBox();
             const textWidthClosed = textGeometryMouthClosed.boundingBox.max.x - textGeometryMouthClosed.boundingBox.min.x;
             textMeshMouthClosed.position.set(-textWidthClosed / 2, -1, 0);
+            textMeshMouthClosed.renderOrder = 1;
 
             textGeometryMouthOpen.computeBoundingBox();
             const textWidthOpen = textGeometryMouthOpen.boundingBox.max.x - textGeometryMouthOpen.boundingBox.min.x;
             textMeshMouthOpen.position.set(-textWidthOpen / 2, -1, 0);
+            textMeshMouthOpen.renderOrder = 1;
 
             textMeshMouthOpen.visible = false;
 
@@ -2126,7 +2129,9 @@
                     float r = length(deltaAspect);
                     float ring = smoothstep(radius * 1.8, radius * 0.9, r);
                     float falloff = clamp(1.0 - (r / (radius * 1.8)), 0.0, 1.0);
-                    float warp = strength * ring * falloff;
+                    float protectRadius = radius * 0.65;
+                    float protection = smoothstep(0.0, protectRadius, r);
+                    float warp = strength * ring * falloff * protection;
                     vec2 dir = normalize(deltaAspect + 1e-6);
                     vec2 offset = dir * warp;
                     offset.x /= aspect;
