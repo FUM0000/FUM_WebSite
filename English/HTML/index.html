@@ -349,7 +349,12 @@
             align-items: center;
             justify-content: center;
             opacity: 1;
-            transition: opacity 2s ease-out;
+            transition: opacity 2s ease-out, transform 2s ease-out;
+        }
+
+        #loading-overlay.fade-out .intro-circle {
+            transform: translate(-50%, -50%) scale(1.8);
+            opacity: 0;
         }
 
         .inner-circle {
@@ -409,7 +414,6 @@
             width: 225px;
             height: 225px;
             transform: translate(-50%, -50%);
-            animation: orbit 5s linear infinite;
         }
 
         .orbit-letter {
@@ -590,6 +594,9 @@
             const innerCircle = document.querySelector('.inner-circle');
             let menuGuideDismissed = false;
             let destroyLoadingGalaxy = null;
+            let orbitLetters = null;
+            let orbitAngle = 0;
+            let exploded = false;
 
             const setupLoadingGalaxy = (canvas) => {
                 if (!canvas || !window.THREE) return null;
@@ -837,6 +844,8 @@
                 const radius = 112.5;
                 const angleStep = 360 / letterCount;
 
+                orbitLetters = letters;
+
                 letters.forEach((letter, index) => {
                     const angleDeg = index * angleStep - 90;
                     const angleRad = angleDeg * (Math.PI / 180);
@@ -848,6 +857,8 @@
                     letter.style.top = `calc(50% + ${y}px)`;
 
                     letter.style.transform = `translate(-50%, -50%) rotate(${index * angleStep}deg)`;
+
+                    letter.dataset.angle = angleRad;
 
                     setTimeout(() => {
                         letter.classList.add('positioned');
@@ -867,13 +878,61 @@
                     }
                     progressBar.style.width = progress + '%';
 
-                    // Progress-driven loading animation
                     const normalized = progress / 100;
                     if (innerCircle) {
                         const glow = normalized * 15;
                         innerCircle.style.boxShadow = `0 0 ${glow}px rgba(0,100,150,${0.2 + normalized * 0.5})`;
                     }
                 }, interval);
+
+                // Smooth rotation via requestAnimationFrame
+                let lastRafTime = 0;
+                function tickRotation(time) {
+                    if (!lastRafTime) lastRafTime = time;
+                    const delta = Math.min((time - lastRafTime) / 16.67, 3);
+                    lastRafTime = time;
+
+                    if (orbitContainer && !exploded) {
+                        const normalized = Math.min(progress / 100, 1);
+                        const speedFactor = (0.2 + normalized * 5) * delta;
+                        orbitAngle += speedFactor;
+                        orbitContainer.style.transform = `translate(-50%, -50%) rotate(${orbitAngle}deg)`;
+
+                        if (progress >= 100 && orbitLetters) {
+                            exploded = true;
+                            const angleRad = orbitAngle * (Math.PI / 180);
+                            const circleRadius = 112.5;
+
+                            orbitContainer.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+                            Array.from(orbitLetters).forEach((letter) => {
+                                const baseAngle = parseFloat(letter.dataset.angle);
+                                const currentAngle = baseAngle + angleRad;
+                                const cx = circleRadius * Math.cos(currentAngle);
+                                const cy = circleRadius * Math.sin(currentAngle);
+                                letter.style.left = `calc(50% + ${cx}px)`;
+                                letter.style.top = `calc(50% + ${cy}px)`;
+                            });
+
+                            void orbitContainer.offsetHeight;
+
+                            Array.from(orbitLetters).forEach((letter) => {
+                                const baseAngle = parseFloat(letter.dataset.angle);
+                                const currentAngle = baseAngle + angleRad;
+                                const dist = 600;
+                                const ex = dist * Math.cos(currentAngle);
+                                const ey = dist * Math.sin(currentAngle);
+                                letter.style.transition = 'all 1.2s cubic-bezier(0.22, 0.61, 0.36, 1)';
+                                letter.style.left = `calc(50% + ${ex}px)`;
+                                letter.style.top = `calc(50% + ${ey}px)`;
+                                letter.style.opacity = '0';
+                            });
+                            return;
+                        }
+                    }
+
+                    requestAnimationFrame(tickRotation);
+                }
+                requestAnimationFrame(tickRotation);
 
                 setTimeout(() => {
                     overlay.classList.add('fade-out');
