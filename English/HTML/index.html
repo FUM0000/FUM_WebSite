@@ -637,7 +637,7 @@
                 }
                 const loadingParticleTex = createLoadingParticleTexture();
 
-                // ── 天の川銀河（渦巻銀河） ── ローディング後と同じ計算式
+                // ── ローディング中天の川銀河（渦巻銀河） ── ローディング後と同じ計算式
                 const milkyWayTotal = 5000;
                 const armConfig = [
                     { armCount: 2, weight: 0.65, twist: 0.045, scatterBase: 0.4, scatterGrowth: 0.008 },
@@ -676,12 +676,13 @@
 
                         let color;
                         const t = radius / 200;
-                        if (t < 0.12) {
-                            color = new THREE.Color().setHSL(0.08 + Math.random() * 0.04, 0.4 + Math.random() * 0.3, 0.7 + Math.random() * 0.2);
-                        } else if (t < 0.35) {
-                            color = new THREE.Color().setHSL(0.12 - (t - 0.12) / 0.23 * 0.50, 0.2 + Math.random() * 0.25, 0.8 + Math.random() * 0.2);
+                        const isOrangeSpot = Math.random() < 0.18;
+                        if (isOrangeSpot) {
+                            color = new THREE.Color().setHSL(0.07 + Math.random() * 0.06, 0.5 + Math.random() * 0.3, 0.6 + Math.random() * 0.3);
+                        } else if (t < 0.18) {
+                            color = new THREE.Color().setHSL(0.07 + Math.random() * 0.05, 0.5 + Math.random() * 0.3, 0.6 + Math.random() * 0.25);
                         } else {
-                            color = new THREE.Color().setHSL(0.55 + Math.random() * 0.08, 0.2 + Math.random() * 0.25, 0.8 + Math.random() * 0.2);
+                            color = new THREE.Color().setHSL(0.58 + Math.random() * 0.07, 0.15 + Math.random() * 0.2, 0.85 + Math.random() * 0.15);
                         }
 
                         positions[i * 3] = x;
@@ -708,47 +709,8 @@
                     galaxyGroup.add(new THREE.Points(geometry, material));
                 }
 
-                // 星間塵・星雲（渦巻腕に沿う）
-                const dustSize = 2.5;
-                const dustCount = 800;
-                const dustPositions = new Float32Array(dustCount * 3);
-                const dustColors = new Float32Array(dustCount * 3);
-                for (let i = 0; i < dustCount; i++) {
-                    const armIdx = Math.floor(Math.random() * 4);
-                    const baseAngle = (Math.PI * 2 * armIdx) / 4;
-                    const radius = 15 + Math.pow(Math.random(), 0.5) * 200;
-                    const angle = baseAngle + radius * (0.025 + Math.random() * 0.02) + (Math.random() - 0.5) * 0.8;
-                    const dustHeight = 100 * Math.exp(-radius / 100) + 0.2;
-                    const h = (Math.random() - 0.5) * dustHeight;
-                    dustPositions[i * 3] = Math.cos(angle) * radius;
-                    dustPositions[i * 3 + 1] = h;
-                    dustPositions[i * 3 + 2] = Math.sin(angle) * radius;
-
-                    const t = radius / 215;
-                    if (t < 0.15) {
-                        dustColors[i * 3] = 0.7 + Math.random() * 0.3; dustColors[i * 3 + 1] = 0.35 + Math.random() * 0.25; dustColors[i * 3 + 2] = 0.05 + Math.random() * 0.13;
-                    } else {
-                        dustColors[i * 3] = 0.3 + Math.random() * 0.4; dustColors[i * 3 + 1] = 0.25 + Math.random() * 0.3; dustColors[i * 3 + 2] = 0.45 + Math.random() * 0.35;
-                    }
-                }
-                const dustGeometry = new THREE.BufferGeometry();
-                dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
-                dustGeometry.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
-                const dustMaterial = new THREE.PointsMaterial({
-                    map: loadingParticleTex,
-                    vertexColors: true,
-                    size: dustSize,
-                    transparent: true,
-                    opacity: 0.15,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false,
-                    sizeAttenuation: true
-                });
-                const dustField = new THREE.Points(dustGeometry, dustMaterial);
-                galaxyGroup.add(dustField);
-
-                // 暗黒星雲（光を遮る黒いダスト）
-                const darkCount = 600;
+                // 暗黒星雲
+                const darkCount = 900;
                 const darkPositions = new Float32Array(darkCount * 3);
                 for (let i = 0; i < darkCount; i++) {
                     const isMain = Math.random() < armConfig[0].weight;
@@ -770,9 +732,9 @@
                 const darkMaterial = new THREE.PointsMaterial({
                     map: loadingParticleTex,
                     color: 0x000000,
-                    size: 2.0,
+                    size: 3.0,
                     transparent: true,
-                    opacity: 0.45,
+                    opacity: 0.7,
                     depthWrite: false,
                     sizeAttenuation: true,
                     blending: THREE.NormalBlending
@@ -827,7 +789,6 @@
                     const elapsed = clock.elapsedTime;
                     galaxyGroup.rotation.y += delta * 0.52;
                     galaxyGroup.rotation.x = 0;
-                    dustField.rotation.y -= delta * 0.035;
                     core.material.opacity = 0.085 + Math.sin(elapsed * 1.8) * 0.006;
                     renderer.render(scene, camera);
                 };
@@ -1453,7 +1414,7 @@
             scene.add(starField);
 
             // ── 天の川銀河（渦巻銀河） ──
-            const milkyWayTotal = isMobile ? 1500 : 5000;
+            const milkyWayTotal = isMobile ? 2500 : 5000;
             const armConfig = [
                 { armCount: 2, weight: 0.65, twist: 0.045, scatterBase: 0.4, scatterGrowth: 0.008 },
                 { armCount: 2, weight: 0.35, twist: 0.030, scatterBase: 0.6, scatterGrowth: 0.012 },
@@ -1486,17 +1447,18 @@
                     const angle = baseAngle + armAngle + (Math.random() - 0.5) * scatter;
 
                     const x = Math.cos(angle) * radius + (Math.random() - 0.5) * diskSpread;
-                    const y = (Math.random() - 0.5) * (diskSpread * 0.3);
+                    const y = (Math.random() - 0.5) * diskSpread * Math.max(0, 4 - (radius / 200) * 4);
                     const z = Math.sin(angle) * radius + (Math.random() - 0.5) * diskSpread;
 
                     let color;
                     const t = radius / 200;
-                    if (t < 0.12) {
-                        color = new THREE.Color().setHSL(0.08 + Math.random() * 0.04, 0.4 + Math.random() * 0.3, 0.7 + Math.random() * 0.2);
-                    } else if (t < 0.35) {
-                        color = new THREE.Color().setHSL(0.12 - (t - 0.12) / 0.23 * 0.50, 0.2 + Math.random() * 0.25, 0.8 + Math.random() * 0.2);
+                    const isOrangeSpot = Math.random() < 0.18;
+                    if (isOrangeSpot) {
+                        color = new THREE.Color().setHSL(0.07 + Math.random() * 0.06, 0.5 + Math.random() * 0.3, 0.6 + Math.random() * 0.3);
+                    } else if (t < 0.18) {
+                        color = new THREE.Color().setHSL(0.07 + Math.random() * 0.05, 0.5 + Math.random() * 0.3, 0.6 + Math.random() * 0.25);
                     } else {
-                        color = new THREE.Color().setHSL(0.55 + Math.random() * 0.08, 0.2 + Math.random() * 0.25, 0.8 + Math.random() * 0.2);
+                        color = new THREE.Color().setHSL(0.58 + Math.random() * 0.07, 0.15 + Math.random() * 0.2, 0.85 + Math.random() * 0.15);
                     }
 
                     positions[i * 3] = x;
@@ -1524,47 +1486,8 @@
                 scene.add(new THREE.Points(geometry, material));
             }
 
-            // 星間塵・星雲（渦巻腕に沿う）
-            const dustSize = isMobile ? 1.0 : 2.5;
-            const dustCount = isMobile ? 200 : 800;
-            const dustPos = new Float32Array(dustCount * 3);
-            const dustCol = new Float32Array(dustCount * 3);
-            for (let i = 0; i < dustCount; i++) {
-                const armIdx = Math.floor(Math.random() * 4);
-                const baseAngle = (Math.PI * 2 * armIdx) / 4;
-                const radius = 15 + Math.pow(Math.random(), 0.5) * 200;
-                const angle = baseAngle + radius * (0.025 + Math.random() * 0.02) + (Math.random() - 0.5) * 0.8;
-                const dustHeight = 100 * Math.exp(-radius / 100) + 0.2;
-                const h = (Math.random() - 0.5) * dustHeight;
-                dustPos[i * 3] = Math.cos(angle) * radius;
-                dustPos[i * 3 + 1] = h;
-                dustPos[i * 3 + 2] = Math.sin(angle) * radius;
-
-                const t = radius / 215;
-                if (t < 0.15) {
-                    dustCol[i * 3] = 0.7 + Math.random() * 0.3; dustCol[i * 3 + 1] = 0.35 + Math.random() * 0.25; dustCol[i * 3 + 2] = 0.05 + Math.random() * 0.13;
-                } else {
-                    dustCol[i * 3] = 0.3 + Math.random() * 0.4; dustCol[i * 3 + 1] = 0.25 + Math.random() * 0.3; dustCol[i * 3 + 2] = 0.45 + Math.random() * 0.35;
-                }
-            }
-            const dustGeo = new THREE.BufferGeometry();
-            dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-            dustGeo.setAttribute('color', new THREE.BufferAttribute(dustCol, 3));
-            const dustMat = new THREE.PointsMaterial({
-                map: particleTexture,
-                vertexColors: true,
-                size: dustSize,
-                transparent: true,
-                opacity: 0.15,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                fog: false,
-                sizeAttenuation: true
-            });
-            scene.add(new THREE.Points(dustGeo, dustMat));
-
-            // 暗黒星雲（光を遮る黒いダスト）
-            const darkCount = 600;
+            // 暗黒星雲
+            const darkCount = 800;
             const darkPositions = new Float32Array(darkCount * 3);
             for (let i = 0; i < darkCount; i++) {
                 const isMain = Math.random() < armConfig[0].weight;
@@ -1578,7 +1501,7 @@
                 const angle = baseAngle + armAngle + (Math.random() - 0.5) * scatter;
 
                 darkPositions[i * 3] = Math.cos(angle) * radius + (Math.random() - 0.5) * (diskSpread * 0.3);
-                darkPositions[i * 3 + 1] = (Math.random() - 0.5) * (diskSpread * 0.15);
+                darkPositions[i * 3 + 1] = (Math.random() - 0.5) * (diskSpread * 0.25);
                 darkPositions[i * 3 + 2] = Math.sin(angle) * radius + (Math.random() - 0.5) * (diskSpread * 0.3);
             }
             const darkGeometry = new THREE.BufferGeometry();
@@ -1586,9 +1509,9 @@
             const darkMaterial = new THREE.PointsMaterial({
                 map: particleTexture,
                 color: 0x000000,
-                size: isMobile ? 1.5 : 3.0,
+                size: isMobile ? 2.5 : 4.0,
                 transparent: true,
-                opacity: 0.4,
+                opacity: 0.5,
                 depthWrite: false,
                 fog: false,
                 sizeAttenuation: true,
