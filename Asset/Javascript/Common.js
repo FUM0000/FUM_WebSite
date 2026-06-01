@@ -177,18 +177,6 @@ Vue.component('main-navigation', {
                 <template v-slot:activator>
                     <v-list-item-title>Service</v-list-item-title>
                 </template>
-                
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Company</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-microsoft-office</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Service_CalculateSalary.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Calculate Salary</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
 
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
@@ -275,6 +263,18 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Service_VariousStatistics.html">
                         <v-list-item-icon />
                         <v-list-item-title>Various Statistics</v-list-item-title>
+                    </v-list-item>
+                </v-list-group sub-group>
+                
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Others</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-microsoft-office</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Service_CalculateSalary.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Calculate Salary</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
             </v-list-group>

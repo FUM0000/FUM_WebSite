@@ -61,7 +61,8 @@
                         <h3>Day of Week Bonus</h3>
                       </v-col>
                       <v-col cols="6">
-                        <v-select :items="days" label="Day" v-model="bonusDay.day"></v-select>
+                        <v-select :items="days" label="Day" v-model="bonusDay.day"
+                          :menu-props="{ maxHeight: 'none' }"></v-select>
                       </v-col>
                       <v-col cols="6">
                         <v-text-field label="Bonus" type="number" v-model.number="bonusDay.amount" min="0"
@@ -113,30 +114,50 @@
                         <v-btn block @click="addShift">Add Shift</v-btn>
                       </v-col>
                     </v-row>
-                    <v-row v-for="(shift, index) in shifts" :key="index">
-                      <v-col>
-                        <v-text-field label="Date" type="number" v-model.number="shift.date" min="1" max="31"
-                          step="1"></v-text-field>
-                      </v-col>
-                      <v-col>
-                        <v-select :items="days" label="Day" v-model="shift.day"></v-select>
-                      </v-col>
-                      <v-col>
-                        <v-text-field label="Start" v-model="shift.startTime" placeholder="00:00"></v-text-field>
-                      </v-col>
-                      <v-col>
-                        <v-text-field label="End" v-model="shift.endTime" placeholder="00:00"></v-text-field>
-                      </v-col>
-                      <v-col>
-                        <v-text-field label="Break Start" v-model="shift.breakStart" placeholder="00:00"></v-text-field>
-                      </v-col>
-                      <v-col>
-                        <v-text-field label="Break End" v-model="shift.breakEnd" placeholder="00:00"></v-text-field>
-                      </v-col>
-                      <v-col class="d-flex align-center">
-                        <v-btn small color="error" @click="removeShift(index)">Remove</v-btn>
-                      </v-col>
-                    </v-row>
+                    <template v-for="(shift, index) in shifts">
+                      <v-row :key="'r1-' + index">
+                        <v-col cols="6" sm="1">
+                          <v-text-field label="Date" type="number" v-model.number="shift.date" min="1" max="31"
+                            step="1"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="2">
+                          <v-select :items="days" label="Day" v-model="shift.day"
+                            :menu-props="{ maxHeight: 'none' }"></v-select>
+                        </v-col>
+                        <v-col cols="6" sm="2" class="d-none d-sm-flex">
+                          <v-text-field label="Start" v-model="shift.startTime" placeholder="00:00"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="2" class="d-none d-sm-flex">
+                          <v-text-field label="End" v-model="shift.endTime" placeholder="00:00"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="2" class="d-none d-sm-flex">
+                          <v-text-field label="Break Start" v-model="shift.breakStart" placeholder="00:00"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="2" class="d-none d-sm-flex">
+                          <v-text-field label="Break End" v-model="shift.breakEnd" placeholder="00:00"></v-text-field>
+                        </v-col>
+                        <v-col sm="auto" class="d-none d-sm-flex align-center">
+                          <v-btn small color="error" @click="removeShift(index)">Remove</v-btn>
+                        </v-col>
+                      </v-row>
+                      <v-row :key="'r2-' + index" class="d-sm-none">
+                        <v-col cols="6">
+                          <v-text-field label="Start" v-model="shift.startTime" placeholder="00:00"></v-text-field>
+                        </v-col>
+                        <v-col cols="6">
+                          <v-text-field label="End" v-model="shift.endTime" placeholder="00:00"></v-text-field>
+                        </v-col>
+                        <v-col cols="6">
+                          <v-text-field label="Break Start" v-model="shift.breakStart" placeholder="00:00"></v-text-field>
+                        </v-col>
+                        <v-col cols="6">
+                          <v-text-field label="Break End" v-model="shift.breakEnd" placeholder="00:00"></v-text-field>
+                        </v-col>
+                        <v-col cols="12">
+                          <v-btn small color="error" block @click="removeShift(index)">Remove</v-btn>
+                        </v-col>
+                      </v-row>
+                    </template>
                     <v-row>
                       <v-col cols="12">
                         <v-btn block @click="addShift">Add Shift</v-btn>
@@ -222,7 +243,7 @@
       },
       methods: {
         addShift() {
-          this.shifts.push({ date: 1, day: 'Monday', startTime: '', endTime: '', breakStart: '', breakEnd: '' });
+          this.shifts.push({ date: this.shifts.length + 1, day: 'Monday', startTime: '', endTime: '', breakStart: '', breakEnd: '' });
         },
         removeShift(index) {
           this.shifts.splice(index, 1);
