@@ -997,6 +997,7 @@
         const vue = window.vue;
         const isMobile = window.innerWidth <= 768;
         const scene = new THREE.Scene();
+        const faceScene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x020202, 0, 5000);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({
@@ -1168,8 +1169,9 @@
 
         function burstFirework(shell) {
             const { x, y, z, type, palette } = shell;
-            const count = type === 0 ? 180 : type === 1 ? 250 : type === 2 ? 120 : 200;
-            const baseSpeed = type === 2 ? 7 : 11;
+            const heightScale = Math.max(1, (y + 10) / 50);
+            const count = Math.floor((type === 0 ? 180 : type === 1 ? 250 : type === 2 ? 120 : 200) * heightScale);
+            const baseSpeed = (type === 2 ? 7 : 11) * heightScale;
             const gravMult = type === 2 ? 2.5 : 1;
             shell.gravMult = gravMult;
 
@@ -1227,7 +1229,7 @@
             const palette = FW_PALETTES[Math.floor(Math.random() * FW_PALETTES.length)];
             const x = (Math.random() - 0.5) * 50;
             const z = (Math.random() - 0.5) * 50;
-            const vy = 22 + Math.random() * 14;
+            const vy = (22 + Math.random() * 14) * 1.5;
             const burstH = 18 + vy * 1.2;
             shells.push({
                 x, y: -10, z, vy, type, palette, phase: 0, timer: 0, burstH
@@ -1455,7 +1457,7 @@
                     const isOrangeSpot = Math.random() < 0.18;
                     if (isOrangeSpot) {
                         color = new THREE.Color().setHSL(0.07 + Math.random() * 0.06, 0.5 + Math.random() * 0.3, 0.6 + Math.random() * 0.3);
-                    } else if (t < 0.18) {
+                    } else if (t < 0.3) {
                         color = new THREE.Color().setHSL(0.07 + Math.random() * 0.05, 0.5 + Math.random() * 0.3, 0.6 + Math.random() * 0.25);
                     } else {
                         color = new THREE.Color().setHSL(0.58 + Math.random() * 0.07, 0.15 + Math.random() * 0.2, 0.85 + Math.random() * 0.15);
@@ -2019,11 +2021,8 @@
             const textGeometryMouthClosed = new THREE.TextGeometry('-', { font: font, size: 2, height: 0.25, curveSegments: 2, bevelEnabled: true, bevelThickness: 0, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 0 });
             const textGeometryMouthOpen = new THREE.TextGeometry('Ο', { font: font, size: 1, height: 0.25, curveSegments: 2, bevelEnabled: true, bevelThickness: 0, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 0 });
 
-            const textMaterial = new THREE.MeshPhongMaterial({
-                color: 0x00ff00,
-                emissive: 0x00ffcc,
-                emissiveIntensity: 0.5,
-                shininess: 100,
+            const textMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ff88,
                 fog: false
             });
 
@@ -2048,13 +2047,9 @@
 
             textMeshMouthOpen.visible = false;
 
-            scene.add(textMesh1);
-            scene.add(textMeshMouthClosed);
-            scene.add(textMeshMouthOpen);
-
-            const light = new THREE.PointLight(0x00ffcc, 1);
-            light.position.set(0, 0, 5);
-            scene.add(light);
+            faceScene.add(textMesh1);
+            faceScene.add(textMeshMouthClosed);
+            faceScene.add(textMeshMouthOpen);
         });
         const jetLength = 200;
         const jetOffset = 6;
@@ -2475,6 +2470,9 @@
             blackholeShaderMaterial.uniforms.time.value = time;
             blackholeShaderMaterial.uniforms.viewPos.value.copy(camera.position);
             blackholeShaderMaterial.uniforms.cameraDistance.value = camera.position.length();
+            const bhDist = camera.position.length();
+            const bhScale = THREE.MathUtils.clamp(0.1 + bhDist * 0.003, 0.1, 10.0);
+            blackhole.scale.set(bhScale, bhScale, bhScale);
             updateFace(delta);
             updateSpeechBubble();
             updateJetParticles();
@@ -2490,11 +2488,15 @@
                 const distance = camera.position.distanceTo(blackhole.position);
                 const worldRadius = blackhole.geometry.boundingSphere.radius * blackhole.scale.x;
                 const ndcRadius = (worldRadius / Math.max(distance, 0.001)) / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
-                const uvRadius = Math.min(0.45, Math.max(0.01, ndcRadius * 0.5));
+                const uvRadius = Math.min(0.45, Math.max(0.01, ndcRadius * 1.5));
                 const distanceFalloff = THREE.MathUtils.clamp(1.0 - (distance - 30) / 120, 0.75, 1.0);
                 blackholeWarpPass.material.uniforms.center.value.copy(centerUv);
                 blackholeWarpPass.material.uniforms.radius.value = uvRadius * 1.1 * distanceFalloff;
-                blackholeWarpPass.material.uniforms.strength.value = isMobile ? 0.05 : 0.08;
+                const maxWarpDist = 100;
+                const minWarpDist = 0;
+                const distFactor = 1 - THREE.MathUtils.clamp((distance - minWarpDist) / (maxWarpDist - minWarpDist), 0, 1);
+                const warpStrength = distFactor * distFactor * distFactor * distFactor * distFactor * 1;
+                blackholeWarpPass.material.uniforms.strength.value = warpStrength;
             }
 
             // ポストエフェクト
@@ -2502,6 +2504,10 @@
 
             controls.update();
             composer.render();
+            const prevAutoClear = renderer.autoClear;
+            renderer.autoClear = false;
+            renderer.render(faceScene, camera);
+            renderer.autoClear = prevAutoClear;
         }
         animate();
     </script>
