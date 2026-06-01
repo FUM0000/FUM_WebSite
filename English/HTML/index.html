@@ -551,7 +551,35 @@
             content: none;
         }
 
+        #firework-name-display {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            color: #fff;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.6), 0 0 20px rgba(0, 255, 204, 0.3);
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            border-radius: 8px;
+            padding: 6px 16px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            white-space: nowrap;
+        }
+
+        #firework-name-display.show {
+            opacity: 1;
+        }
+
     </style>
+
+    <div id="firework-name-display"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
@@ -1146,16 +1174,37 @@
         scene.add(fwPoints);
 
         const FW_PALETTES = [
-            [[1,0.25,0.15],[1,0.6,0.1],[1,0.2,0.4]],
-            [[0.2,0.5,1],[0.3,0.8,1],[0.6,0.4,1]],
-            [[1,0.8,0.1],[1,1,0.6],[1,0.6,0]],
-            [[0.2,1,0.4],[0.3,1,0.7],[0.6,1,0.3]],
-            [[1,0.3,0.8],[1,0.5,1],[0.8,0.2,1]],
-            [[1,1,1],[1,0.9,0.7],[1,0.95,0.8]],
+            [[0.3, 0.85, 1.0], [0.15, 0.6, 0.95], [0.5, 0.9, 1.0]],
+            [[0.7, 0.25, 0.95], [0.85, 0.35, 1.0], [0.55, 0.4, 0.95]],
+            [[1.0, 0.55, 0.1], [1.0, 0.75, 0.25], [0.9, 0.45, 0.0]],
+            [[0.2, 0.95, 0.5], [0.3, 0.85, 0.7], [0.1, 0.8, 0.4]],
+            [[0.95, 0.3, 0.6], [1.0, 0.45, 0.75], [0.85, 0.2, 0.5]],
+            [[1.0, 1.0, 1.0], [0.9, 0.92, 1.0], [0.8, 0.85, 1.0]],
         ];
+        const FW_TYPE_NAMES = ['ダリア', '柳', '色彩蜂', '万雷'];
+        const FW_PALETTE_NAMES = ['青', '紫', '橙', '緑', '桃', '白'];
+
+        function updateFireworkDisplay(type, paletteIndex) {
+            const el = document.getElementById('firework-name-display');
+            if (!el) return;
+            const typeName = FW_TYPE_NAMES[type] || '?';
+            const paletteName = FW_PALETTE_NAMES[paletteIndex] || '?';
+            el.textContent = `${typeName} (${paletteName})`;
+            el.classList.add('show');
+            clearTimeout(el._hideTimer);
+            el._hideTimer = setTimeout(() => el.classList.remove('show'), 2000);
+        }
+
+        // ── Type switching: only one type active at a time ──
+        let currentFireworkType = 0;
+        let typeElapsed = 0;
+        let typeLaunchTimer = 0;
+        const TYPE_SEQUENCE = [2, 1, 3, 0];
+        let typeSeqIndex = 0;
+        const TYPE_DURATION = 12;
+        const LAUNCH_INTERVAL = 1.2;
 
         const shells = [];
-        let shellTimer = 0;
 
         function spawnParticle(px, py, pz, vx, vy, vz, life, r, g, b) {
             if (fwCount >= FW_MAX) return;
@@ -1167,72 +1216,136 @@
             fwCol[i3] = r; fwCol[i3+1] = g; fwCol[i3+2] = b;
         }
 
+        // ── Deterministic spherical burst ──
+        function fibonacciSphere(index, total) {
+            const goldenRatio = (1 + Math.sqrt(5)) / 2;
+            const theta = Math.acos(1 - 2 * (index + 0.5) / total);
+            const phi = 2 * Math.PI * index / goldenRatio;
+            return { theta, phi };
+        }
+
         function burstFirework(shell) {
             const { x, y, z, type, palette } = shell;
-            const heightScale = Math.max(1, (y + 10) / 50);
-            const count = Math.floor((type === 0 ? 180 : type === 1 ? 250 : type === 2 ? 120 : 200) * heightScale);
-            const baseSpeed = (type === 2 ? 7 : 11) * heightScale;
-            const gravMult = type === 2 ? 2.5 : 1;
-            shell.gravMult = gravMult;
+            const paletteIndex = FW_PALETTES.indexOf(palette);
+            updateFireworkDisplay(type, paletteIndex >= 0 ? paletteIndex : 0);
+            const scale = Math.max(1, (y + 10) / 50);
 
+            switch (type) {
+                case 0: fwMat.size = (isMobile ? 1.0 : 1.5); burstDahlia(x, y, z, palette, scale); break;
+                case 1: fwMat.size = (isMobile ? 0.7 : 1.0); burstWillow(x, y, z, palette, scale); break;
+                case 2: fwMat.size = (isMobile ? 0.5 : 0.7); burstColorBee(x, y, z, palette, scale); break;
+                case 3: fwMat.size = (isMobile ? 0.4 : 0.6); burstCrackle(x, y, z, palette, scale); break;
+            }
+        }
+
+        function burstDahlia(x, y, z, palette, scale) {
+            const count = Math.floor(160 * scale);
+            const speed = 10 * scale;
             for (let i = 0; i < count && fwCount < FW_MAX; i++) {
-                const theta = Math.acos(2 * Math.random() - 1);
-                const phi = Math.random() * Math.PI * 2;
-                const spd = baseSpeed * (0.4 + Math.random() * 0.8);
+                const { theta, phi } = fibonacciSphere(i, count);
+                const spd = speed * (0.85 + (i % 2) * 0.075);
                 const vx = Math.sin(theta) * Math.cos(phi) * spd;
-                const vy = Math.sin(theta) * Math.sin(phi) * spd;
-                const vz = Math.cos(theta) * spd;
-                const life = 2 + Math.random() * 1.5;
-                const ci = Math.floor(Math.random() * palette.length);
+                const vy = Math.cos(theta) * spd;
+                const vz = Math.sin(theta) * Math.sin(phi) * spd;
+                const life = 3.0 + (i % 4) * 0.25;
+                const ci = Math.floor(i * palette.length / count);
                 const c = palette[ci];
-
                 spawnParticle(x, y, z, vx, vy, vz, life, c[0], c[1], c[2]);
-
-                // Chrysanthemum: trailing child sparks
-                if (type === 1 && Math.random() < 0.35) {
-                    spawnParticle(x, y, z,
-                        vx * 0.3 + (Math.random() - 0.5) * 3,
-                        vy * 0.3 + (Math.random() - 0.5) * 3,
-                        vz * 0.3 + (Math.random() - 0.5) * 3,
-                        life * 0.5, c[0] * 0.7, c[1] * 0.7, c[2] * 0.7);
-                }
+                spawnParticle(x, y, z, vx * 0.5, vy * 0.5, vz * 0.5,
+                    life * 0.7, c[0] * 0.5, c[1] * 0.5, c[2] * 0.5);
             }
+        }
 
-            // Crackle: secondary ring
-            if (type === 3) {
-                for (let i = 0; i < 60 && fwCount < FW_MAX; i++) {
-                    const theta = Math.acos(2 * Math.random() - 1);
-                    const phi = Math.random() * Math.PI * 2;
-                    const spd = 3 + Math.random() * 3;
-                    spawnParticle(x, y, z,
-                        Math.sin(theta) * Math.cos(phi) * spd,
-                        Math.sin(theta) * Math.sin(phi) * spd + 2,
-                        Math.cos(theta) * spd,
-                        1 + Math.random(), 1, 0.9, 0.5);
-                }
+        function burstWillow(x, y, z, palette, scale) {
+            const count = Math.floor(200 * scale);
+            const speed = 10 * scale;
+            for (let i = 0; i < count && fwCount < FW_MAX; i++) {
+                const { theta, phi } = fibonacciSphere(i, count);
+                const spd = speed * (0.85 + (i % 4) * 0.05);
+                const vx = Math.sin(theta) * Math.cos(phi) * spd;
+                const vy = Math.cos(theta) * spd;
+                const vz = Math.sin(theta) * Math.sin(phi) * spd;
+                const life = 4.0 + (i % 5) * 0.2;
+                const ci = Math.floor(i * palette.length / count);
+                const c = palette[ci];
+                spawnParticle(x, y, z, vx, vy, vz, life, c[0], c[1], c[2]);
             }
+        }
 
-            // Willow: extra falling streaks
-            if (type === 2) {
-                for (let i = 0; i < 30 && fwCount < FW_MAX; i++) {
-                    spawnParticle(x, y, z,
-                        (Math.random() - 0.5) * 1.5,
-                        -1 - Math.random() * 3,
-                        (Math.random() - 0.5) * 1.5,
-                        3 + Math.random() * 0.5, 1, 0.85, 0.3);
+        function burstColorBee(x, y, z, palette, scale) {
+            const subBursts = 4;
+            for (let b = 0; b < subBursts; b++) {
+                const bx = x + (b - 1.5) * 2;
+                const by = y + (b % 2) * 1.5;
+                const bz = z + (b - 1.5) * 2;
+                const count = Math.floor(20 * scale);
+                const speed = 18 * scale;
+                const subPalette = FW_PALETTES[(b + 1) % FW_PALETTES.length];
+                for (let i = 0; i < count && fwCount < FW_MAX; i++) {
+                    const { theta, phi } = fibonacciSphere(i, count);
+                    const spd = speed * (0.7 + (i % 3) * 0.15);
+                    const vx = Math.sin(theta) * Math.cos(phi) * spd;
+                    const vy = Math.cos(theta) * spd;
+                    const vz = Math.sin(theta) * Math.sin(phi) * spd;
+                    const life = 1.2 + (i % 4) * 0.08;
+                    const ci = Math.floor(i * subPalette.length / count);
+                    const c = subPalette[ci];
+                    spawnParticle(bx, by, bz, vx, vy, vz, life, c[0], c[1], c[2]);
                 }
             }
         }
 
-        function launchShell() {
-            const type = Math.floor(Math.random() * 4);
+        function burstCrackle(x, y, z, palette, scale) {
+            const count = Math.floor(300 * scale);
+            const speed = 8 * scale;
+            for (let i = 0; i < count && fwCount < FW_MAX; i++) {
+                const { theta, phi } = fibonacciSphere(i, count);
+                const spd = speed * (0.7 + (i % 5) * 0.06);
+                const vx = Math.sin(theta) * Math.cos(phi) * spd;
+                const vy = Math.cos(theta) * spd;
+                const vz = Math.sin(theta) * Math.sin(phi) * spd;
+                const life = 1.2 + (i % 4) * 0.08;
+                const ci = Math.floor(i * palette.length / count);
+                const c = palette[ci];
+                spawnParticle(x, y, z, vx, vy, vz, life, c[0], c[1], c[2]);
+            }
+        }
+
+        function burstCrackleSubBurst(x, y, z, palette, scale) {
+            const count = Math.floor(25 * scale);
+            const speed = 6 * scale;
+            for (let i = 0; i < count && fwCount < FW_MAX; i++) {
+                const { theta, phi } = fibonacciSphere(i, count);
+                const spd = speed * (0.7 + (i % 3) * 0.1);
+                const vx = Math.sin(theta) * Math.cos(phi) * spd;
+                const vy = Math.cos(theta) * spd;
+                const vz = Math.sin(theta) * Math.sin(phi) * spd;
+                const life = 0.8 + (i % 4) * 0.05;
+                const ci = Math.floor(i * palette.length / count);
+                const c = palette[ci];
+                spawnParticle(x, y, z, vx, vy, vz, life, c[0], c[1], c[2]);
+            }
+        }
+
+        function launchShell(type) {
             const palette = FW_PALETTES[Math.floor(Math.random() * FW_PALETTES.length)];
-            const x = (Math.random() - 0.5) * 50;
-            const z = (Math.random() - 0.5) * 50;
-            const vy = (22 + Math.random() * 14) * 1.5;
-            const burstH = 18 + vy * 1.2;
+            const x = (Math.floor(Math.random() * 100) / 100) * 60 - 30;
+            const z = (Math.floor(Math.random() * 100) / 100) * 60 - 30;
+
+            let vy, burstH;
+            const configs = [
+                { vy: 50, h: 22 },
+                { vy: 40, h: 18 },
+                { vy: 37, h: 24 },
+                { vy: 42, h: 20 },
+            ];
+            const cfg = configs[type] || configs[0];
+            vy = cfg.vy;
+            burstH = cfg.h + vy * 1.2;
+
             shells.push({
-                x, y: -10, z, vy, type, palette, phase: 0, timer: 0, burstH
+                x, y: -10, z, vy, type, palette, phase: 0, timer: 0, burstH,
+                lastSubBurst: type === 3 ? -1 : undefined
             });
         }
 
@@ -1258,26 +1371,49 @@
             }
             fwCount = write;
 
-            // 2. Launch timer
-            shellTimer -= delta;
-            if (shellTimer <= 0 && shells.length < 4) {
-                launchShell();
-                shellTimer = 1.5 + Math.random() * 2.5;
+            // 2. Type switching (only one type at a time)
+            typeElapsed += delta;
+            if (typeElapsed >= TYPE_DURATION) {
+                typeSeqIndex = (typeSeqIndex + 1) % TYPE_SEQUENCE.length;
+                currentFireworkType = TYPE_SEQUENCE[typeSeqIndex];
+                typeElapsed = 0;
+                typeLaunchTimer = 0;
             }
 
-            // 3. Process shells
-            const gravMult = 1.5;
+            // 3. Launch timer (only shells of current type)
+            const maxShells = 6;
+            typeLaunchTimer -= delta;
+            if (typeLaunchTimer <= 0 && shells.length < maxShells) {
+                launchShell(currentFireworkType);
+                typeLaunchTimer = LAUNCH_INTERVAL;
+            }
+
+            // 4. Process shells
             for (let s = shells.length - 1; s >= 0; s--) {
                 const shell = shells[s];
                 if (shell.phase === 0) {
                     shell.y += shell.vy * delta;
                     shell.vy -= 9.8 * delta;
                     shell.timer += delta;
-                    // Trail spark
+                    // Trail spark (deterministic)
                     if (shell.timer % 0.04 < delta + 0.001) {
-                        spawnParticle(shell.x, shell.y, shell.z,
-                            (Math.random() - 0.5) * 0.5, -1 - Math.random() * 2, (Math.random() - 0.5) * 0.5,
-                            0.3 + Math.random() * 0.3, 1, 0.8, 0.4);
+                        const sparkCount = 2;
+                        for (let i = 0; i < sparkCount; i++) {
+                            const a = (i * Math.PI) + shell.timer * 2;
+                            spawnParticle(shell.x, shell.y, shell.z,
+                                Math.cos(a) * 0.3, -1.5 - (i % 2) * 0.5, Math.sin(a) * 0.3,
+                                0.4, 1, 0.8, 0.4);
+                        }
+                    }
+                    // Crackle sub-bursts while rising
+                    if (shell.type === 3 && shell.phase === 0) {
+                        const subInterval = 0.25;
+                        const subCount = Math.floor(shell.timer / subInterval);
+                        if (subCount > shell.lastSubBurst) {
+                            shell.lastSubBurst = subCount;
+                            const subScale = Math.max(1, (shell.y + 10) / 50);
+                            burstCrackleSubBurst(shell.x, shell.y, shell.z, shell.palette, subScale);
+                        }
                     }
                     if (shell.vy <= 0 || shell.y >= shell.burstH) {
                         shell.phase = 1;
@@ -1290,7 +1426,7 @@
                 }
             }
 
-            // 4. Update geometry
+            // 5. Update geometry
             fwGeo.attributes.position.needsUpdate = true;
             fwGeo.attributes.color.needsUpdate = true;
             fwGeo.setDrawRange(0, fwCount);
