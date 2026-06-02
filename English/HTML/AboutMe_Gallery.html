@@ -42,6 +42,7 @@
             display: block;
             background: transparent;
             z-index: 0;
+            touch-action: none;
         }
 
         .Joystick_Area {
@@ -102,8 +103,10 @@
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0x070B14));
         const Loader_FBX = new FBXLoader();
+        document.addEventListener('pointerdown', function (event) { PointerDown(event); });
         document.addEventListener('touchstart', function (event) { PointerDown(event); });
         document.addEventListener('mousedown', function (event) { PointerDown(event); });
+        document.addEventListener('pointerup', function (event) { PointerUp(event); });
         document.addEventListener('touchend', function (event) { PointerUp(event); });
         document.addEventListener('mouseup', function (event) { PointerUp(event); });
 
@@ -644,6 +647,9 @@
                 if (this._Input_Look.length() == 0) {
                     this._Input_Look = this._Input_Keyboard.Input_Look;
                 }
+                if (this._Input_Look.length() > 0 && this._Input_Keyboard.Input_Look.length() == 0) {
+                    this._Input_Look.multiplyScalar(100);
+                }
                 if (this._Input_Move.length() > 0) this._Input_Move.normalize();
                 Player.Update(this._Input_Move, Camera.Forward);
                 Camera.Update(this._Input_Look, this._SENSIVILITY);
@@ -993,6 +999,8 @@
                     return { x: event.touches[0].clientX, y: event.touches[0].clientY };
                 case "touchend":
                     return { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY };
+                case "pointerdown":
+                case "pointerup":
                 case "mousedown":
                 case "mouseup":
                     return { x: event.clientX, y: event.clientY };

@@ -174,12 +174,13 @@ class FC_Input_Joystick {
     }
 
     updateVisuals(baseX, baseY, deltaX, deltaY) {
+        const rect = this.domElement.getBoundingClientRect();
         this.baseElement.style.display = 'block';
         this.stickElement.style.display = 'block';
-        this.baseElement.style.left = `${baseX}px`;
-        this.baseElement.style.top = `${baseY}px`;
-        this.stickElement.style.left = `${baseX + deltaX}px`;
-        this.stickElement.style.top = `${baseY + deltaY}px`;
+        this.baseElement.style.left = `${baseX - rect.left}px`;
+        this.baseElement.style.top = `${baseY - rect.top}px`;
+        this.stickElement.style.left = `${baseX + deltaX - rect.left}px`;
+        this.stickElement.style.top = `${baseY + deltaY - rect.top}px`;
     }
 
     isTouchInElement(touch) {
