@@ -228,6 +228,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Roulette</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_ShogiTimer.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Shogi Timer</v-list-item-title>
+                    </v-list-item>
                 </v-list-group sub-group>
 
                 <v-list-group sub-group :value="false">
@@ -1066,7 +1070,7 @@ Vue.component('main-footer', {
             <v-icon color="blue">mdi-chevron-down</v-icon>
         </v-btn>
         <v-spacer />
-        <span style="font-size: 0.8rem;">© 2025 FUM. All rights reserved.</span>
+        <span style="font-size: 0.8rem;">© 2026 FUM. All rights reserved.</span>
         <v-spacer />
         <v-btn @click="scrollToTop" text x-small>
             <v-icon color="red">mdi-chevron-up</v-icon>
@@ -1092,7 +1096,7 @@ Vue.component('main-footer-simple', {
     template: `
     <v-footer color="#FFFFFF60" class="font-weight-black" app>
         <v-spacer />
-        <span style="font-size: 0.8rem;">© 2025 FUM. All rights reserved.</span>
+        <span style="font-size: 0.8rem;">© 2026 FUM. All rights reserved.</span>
         <v-spacer />
     </v-footer>
     `,
