@@ -254,6 +254,7 @@
                 radial-gradient(circle at 73% 67%, rgba(120, 143, 255, 0.08) 0 16%, transparent 40%),
                 radial-gradient(circle at 56% 50%, rgba(214, 191, 85, 0.1) 0 12%, transparent 34%);
             filter: blur(30px);
+            animation: driftGlow 24s ease-in-out infinite alternate;
         }
 
         #Main::after {
@@ -267,6 +268,7 @@
                 repeating-linear-gradient(0deg, rgba(214, 191, 85, 0.035) 0 1px, transparent 1px 44px);
             mix-blend-mode: screen;
             opacity: 0.2;
+            animation: pulseGrid 12s ease-in-out infinite alternate;
         }
 
         .profile-page {
@@ -286,8 +288,26 @@
             background-size: 46px 46px, 92px 92px;
             background-position: 0 0, 18px 26px;
             opacity: 0.3;
+            animation: twinkle 4s ease-in-out infinite alternate;
         }
 
+        @keyframes driftGlow {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-3%, 2%) scale(1.05); }
+            66% { transform: translate(2%, -3%) scale(0.95); }
+            100% { transform: translate(-1%, 1%) scale(1.02); }
+        }
+
+        @keyframes pulseGrid {
+            0% { opacity: 0.15; }
+            50% { opacity: 0.3; }
+            100% { opacity: 0.15; }
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0.2; }
+            100% { opacity: 0.45; }
+        }
 
         .profile-page .profile-card,
         .profile-page .hobby-card,
@@ -598,9 +618,10 @@
                             name: item.name,
                             category: item.category,
                             x: x, y: y,
-                            vx: 0, vy: 0, rot: 0, rotV: 0,
+                            vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
+                            rot: 0, rotV: 0,
                             w: item.w, h: item.h,
-                            isDragging: false, movable: false,
+                            isDragging: false, movable: true,
                             style: {
                                 width: item.w + 'px',
                                 height: chipH + 'px',
@@ -670,13 +691,13 @@
                         var c = chips[i];
                         if (c.isDragging) continue;
                         if (c.movable) {
-                            c.vx *= 0.995;
-                            c.vy *= 0.995;
+                            c.vx *= 0.9975;
+                            c.vy *= 0.9975;
                             c.vx = Math.min(40, Math.max(-40, c.vx));
                             c.vy = Math.min(40, Math.max(-40, c.vy));
                             c.x += c.vx;
                             c.y += c.vy;
-                            c.rotV *= 0.92;
+                            c.rotV *= 0.985;
                             c.rot += c.rotV;
                             var rA = c.rot * Math.PI / 180;
                             var cosA = Math.cos(rA), sinA = Math.sin(rA);
@@ -732,20 +753,34 @@
                             var rvy = c2.vy - c.vy;
                             var velAlongNormal = rvx * nX + rvy * nY;
                             if (velAlongNormal < 0) {
+                                function supportPoint(verts, nx, ny) {
+                                    var best = verts[0];
+                                    var bestDot = best.x * nx + best.y * ny;
+                                    for (var s = 1; s < 4; s++) {
+                                        var d = verts[s].x * nx + verts[s].y * ny;
+                                        if (d > bestDot) { bestDot = d; best = verts[s]; }
+                                    }
+                                    return best;
+                                }
+                                var sp1 = supportPoint(v1, nX, nY);
+                                var sp2 = supportPoint(v2, -nX, -nY);
+                                var cx = (sp1.x + sp2.x) * 0.5;
+                                var cy = (sp1.y + sp2.y) * 0.5;
+                                var offX = cx - c.x, offY = cy - c.y;
+                                var offX2 = cx - c2.x, offY2 = cy - c2.y;
+                                var invI1 = 300 / (c.w * c.w + c.h * c.h);
+                                var invI2 = c2.movable ? 300 / (c2.w * c2.w + c2.h * c2.h) : 0;
+                                var cross1 = offX * nY - offY * nX;
+                                var cross2 = offX2 * nY - offY2 * nX;
+                                var angTerm = (cross1 * cross1 * invI1 * invM1 + cross2 * cross2 * invI2 * invM2);
                                 var e = 0.3;
-                                var j = -(1 + e) * velAlongNormal / totalM;
+                                var j = -(1 + e) * velAlongNormal / (totalM + angTerm);
                                 c.vx -= j * nX * invM1;
                                 c.vy -= j * nY * invM1;
                                 c2.vx += j * nX * invM2;
                                 c2.vy += j * nY * invM2;
-                                var contactX = (c.x + c2.x) / 2;
-                                var contactY = (c.y + c2.y) / 2;
-                                var offX = contactX - c.x, offY = contactY - c.y;
-                                var invI1 = 60 / (c.w * c.w + c.h * c.h);
                                 c.rotV += j * (offY * nX - offX * nY) * invI1 * invM1;
                                 if (c2.movable) {
-                                    var offX2 = contactX - c2.x, offY2 = contactY - c2.y;
-                                    var invI2 = 60 / (c2.w * c2.w + c2.h * c2.h);
                                     c2.rotV += j * (offX2 * nY - offY2 * nX) * invI2 * invM2;
                                 }
                             }
