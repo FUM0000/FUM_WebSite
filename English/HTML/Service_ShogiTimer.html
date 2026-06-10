@@ -161,8 +161,8 @@
                             <v-col cols="12" md="10" lg="8">
                                 <v-card class="px-2 py-2" elevation="10" style="display: flex; flex-direction: column;">
 
-                                    <v-row justify="center" v-show="!running && !paused" class="preset-row">
-                                        <v-col cols="auto">
+                                    <v-row justify="center" class="preset-row" style="min-height: 48px;">
+                                        <v-col cols="auto" v-show="!running && !paused">
                                             <v-chip-group v-model="selectedPreset" mandatory column>
                                                 <v-chip v-for="preset in presets" :key="preset.value"
                                                     :color="selectedPreset === preset.value ? 'primary' : ''"
@@ -226,17 +226,19 @@
                                         </v-col>
                                     </v-row>
 
-                                    <v-row style="padding: 10px;">
-                                        <v-col cols="12" class="d-flex align-center justify-space-between pa-0">
-                                            <div class="move-count grey--text text--darken-1">
+                                    <v-row style="padding: 0 10px;">
+                                        <v-col cols="12" class="d-flex align-center pa-0 py-2">
+                                            <div class="move-count grey--text text--darken-1" style="flex: 1;">
                                                 <v-icon small>mdi-chess-knight</v-icon>
                                                 Move {{ moveCount }}
                                             </div>
-                                            <div>
+                                            <div v-if="!running && !paused">
+                                                <v-btn icon small color="info" @click="togglePlayers">
+                                                    <v-icon>mdi-swap-horizontal</v-icon>
+                                                </v-btn>
+                                            </div>
+                                            <div style="flex: 1; text-align: right;">
                                                 <template v-if="!running && !paused">
-                                                    <v-btn icon small color="info" @click="togglePlayers" class="mr-1">
-                                                        <v-icon>mdi-swap-horizontal</v-icon>
-                                                    </v-btn>
                                                     <v-btn icon small color="success" @click="startGame">
                                                         <v-icon>mdi-play</v-icon>
                                                     </v-btn>
@@ -320,6 +322,21 @@
     </style>
 
     <script>
+        function playButtonSound(player) {
+            try {
+                var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = player === 1 ? 523.25 : 783.99;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {}
+        }
         new Vue({
             el: '#App',
             vuetify: new Vuetify(),
@@ -351,10 +368,10 @@
             },
             computed: {
                 player1Label: function () {
-                    return this.swapped ? '\u5F8C\u624B' : '\u5148\u624B';
+                    return this.swapped ? 'First' : 'Second';
                 },
                 player2Label: function () {
-                    return this.swapped ? '\u5148\u624B' : '\u5F8C\u624B';
+                    return this.swapped ? 'Second' : 'First';
                 },
             },
             methods: {
@@ -384,7 +401,7 @@
                         this.player1Time = this.initialTime;
                         this.player2Time = this.initialTime;
                     }
-                    this.currentPlayer = 1;
+                    this.currentPlayer = this.swapped ? 1 : 2;
                     this.moveCount = 0;
                     this.running = true;
                     this.paused = false;
@@ -427,6 +444,7 @@
                 },
                 pressButton: function (player) {
                     if (!this.running || this.currentPlayer !== player) return;
+                    playButtonSound(player);
                     var now = Date.now();
                     var elapsed = now - this.lastTickTime;
                     this.lastTickTime = now;
