@@ -993,6 +993,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-atom-variant</v-icon></v-list-item-icon>
                     </template>
 
+                    <v-list-item href="./Note_Sience_Physics.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>物理</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Note_Sience_Math.html">
                         <v-list-item-icon />
                         <v-list-item-title>数学</v-list-item-title>

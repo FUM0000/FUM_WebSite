@@ -125,20 +125,24 @@
                                         </v-btn>
                                     </v-card-title>
                                     <v-expand-transition>
-                                        <v-card-text v-show="hobbyExpanded" class="pa-5">
-                                            <v-chip-group column>
-                                                <v-chip v-for="hobby in hobbies" :key="hobby.name" class="ma-2"
-                                                    :color="hobby.color">
-                                                    {{ hobby.name }}
-                                                </v-chip>
-                                            </v-chip-group>
+                                        <v-card-text v-show="hobbyExpanded" class="pa-5" style="min-height: 220px; position: relative; overflow: hidden;">
+                                            <div class="hobby-physics-area" ref="hobbyArea">
+                                                    <div v-for="(chip, i) in hobbyChips" :key="chip.name"
+                                                        class="hobby-chip"
+                                                        :class="{ 'is-dragging': chip.isDragging }"
+                                                        :style="chip.style"
+                                                        @mousedown.prevent="hobbyDragStart(i, $event)"
+                                                        @touchstart.prevent="hobbyDragStart(i, $event)">
+                                                        {{ chip.name }}
+                                                    </div>
+                                            </div>
                                         </v-card-text>
                                     </v-expand-transition>
                                 </v-card>
 
                                 <v-card class="mb-4 job-offerings-card">
                                     <v-card-title class="text-h5 font-weight-bold py-3 d-flex justify-space-between">
-                                        <span><v-icon left>mdi-briefcase-outline</v-icon>Looking for Job</span>
+                                        <span><v-icon left>mdi-briefcase-outline</v-icon>Open for Opportunities</span>
                                         <v-btn icon @click="toggleCard('jobOfferings')">
                                             <v-icon>{{ jobOfferingsExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'
                                                 }}</v-icon>
@@ -235,23 +239,21 @@
             position: relative;
             overflow: hidden;
             background:
-                radial-gradient(1200px 900px at 12% -10%, rgba(52, 231, 255, 0.22), transparent 58%),
-                radial-gradient(1100px 900px at 88% -20%, rgba(214, 191, 85, 0.2), transparent 60%),
+                radial-gradient(1200px 900px at 12% -10%, rgba(52, 231, 255, 0.15), transparent 58%),
+                radial-gradient(1100px 900px at 88% -20%, rgba(214, 191, 85, 0.13), transparent 60%),
                 linear-gradient(145deg, #030406 0%, #0a101a 44%, #05070a 100%);
-            animation: spectralDrift 8s ease-in-out infinite alternate;
         }
 
         #Main::before {
             content: "";
             position: absolute;
-            inset: -45%;
+            inset: -30%;
             pointer-events: none;
             background:
-                radial-gradient(circle at 24% 30%, rgba(52, 231, 255, 0.2) 0 14%, transparent 32%),
-                radial-gradient(circle at 73% 67%, rgba(120, 143, 255, 0.14) 0 16%, transparent 40%),
-                radial-gradient(circle at 56% 50%, rgba(214, 191, 85, 0.16) 0 12%, transparent 34%);
-            filter: blur(44px) saturate(130%);
-            animation: morphField 13s ease-in-out infinite;
+                radial-gradient(circle at 24% 30%, rgba(52, 231, 255, 0.12) 0 14%, transparent 32%),
+                radial-gradient(circle at 73% 67%, rgba(120, 143, 255, 0.08) 0 16%, transparent 40%),
+                radial-gradient(circle at 56% 50%, rgba(214, 191, 85, 0.1) 0 12%, transparent 34%);
+            filter: blur(30px);
         }
 
         #Main::after {
@@ -260,12 +262,11 @@
             inset: 0;
             pointer-events: none;
             background:
-                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 3px),
-                repeating-linear-gradient(90deg, rgba(52, 231, 255, 0.07) 0 1px, transparent 1px 44px),
-                repeating-linear-gradient(0deg, rgba(214, 191, 85, 0.05) 0 1px, transparent 1px 44px);
+                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+                repeating-linear-gradient(90deg, rgba(52, 231, 255, 0.05) 0 1px, transparent 1px 44px),
+                repeating-linear-gradient(0deg, rgba(214, 191, 85, 0.035) 0 1px, transparent 1px 44px);
             mix-blend-mode: screen;
-            opacity: 0.24;
-            animation: gridWarp 14s linear infinite, glitchJitter 0.21s steps(2, end) infinite;
+            opacity: 0.2;
         }
 
         .profile-page {
@@ -280,12 +281,11 @@
             inset: 0;
             pointer-events: none;
             background-image:
-                radial-gradient(circle, rgba(255, 255, 255, 0.4) 0.7px, transparent 0.9px),
-                radial-gradient(circle, rgba(245, 96, 132, 0.38) 0.8px, transparent 1px);
+                radial-gradient(circle, rgba(255, 255, 255, 0.5) 0.7px, transparent 0.9px),
+                radial-gradient(circle, rgba(245, 96, 132, 0.35) 0.8px, transparent 1px);
             background-size: 46px 46px, 92px 92px;
             background-position: 0 0, 18px 26px;
-            opacity: 0.2;
-            animation: starDrift 18s linear infinite;
+            opacity: 0.3;
         }
 
 
@@ -378,7 +378,7 @@
         .profile-page .v-chip {
             background: rgba(238, 245, 255, 0.08) !important;
             border: 1px solid rgba(230, 238, 255, 0.26);
-            color: rgba(238, 245, 255, 0.94) !important;
+            color: #223344 !important;
             text-shadow: none;
         }
 
@@ -409,85 +409,45 @@
             align-items: center;
         }
 
-        @keyframes spectralDrift {
-            0% {
-                filter: hue-rotate(0deg) contrast(100%);
-            }
-
-            100% {
-                filter: hue-rotate(18deg) contrast(116%);
-            }
+        .hobby-physics-area {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            pointer-events: auto;
         }
 
-        @keyframes morphField {
-            0% {
-                transform: translate3d(-4%, -2%, 0) scale(1) rotate(0deg);
-                border-radius: 42% 58% 51% 49% / 36% 47% 53% 64%;
-            }
-
-            35% {
-                transform: translate3d(8%, 3%, 0) scale(1.14) rotate(120deg);
-                border-radius: 58% 42% 36% 64% / 52% 36% 64% 48%;
-            }
-
-            70% {
-                transform: translate3d(3%, -7%, 0) scale(0.96) rotate(220deg);
-                border-radius: 44% 56% 61% 39% / 56% 59% 41% 44%;
-            }
-
-            100% {
-                transform: translate3d(-4%, -2%, 0) scale(1) rotate(360deg);
-                border-radius: 42% 58% 51% 49% / 36% 47% 53% 64%;
-            }
+        .hobby-chip {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            border: 1px solid rgba(230, 238, 255, 0.35);
+            color: #1a1f2e;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: grab;
+            user-select: none;
+            padding: 3px 10px;
+            box-sizing: border-box;
+            transition: box-shadow 0.18s, border-color 0.18s;
+            z-index: 2;
+            letter-spacing: 0.03em;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+            line-height: 1.3;
+            white-space: nowrap;
         }
 
-        @keyframes gridWarp {
-            0% {
-                transform: perspective(520px) rotateX(14deg) translateY(0);
-                opacity: 0.22;
-            }
-
-            50% {
-                transform: perspective(560px) rotateX(17deg) translateY(20px);
-                opacity: 0.3;
-            }
-
-            100% {
-                transform: perspective(520px) rotateX(14deg) translateY(0);
-                opacity: 0.22;
-            }
+        .hobby-chip:hover {
+            border-color: rgba(52, 231, 255, 0.6);
+            box-shadow: 0 0 14px rgba(52, 231, 255, 0.25);
         }
 
-        @keyframes glitchJitter {
-            0% {
-                transform: translate(0, 0);
-            }
-
-            25% {
-                transform: translate(-0.6%, 0.4%);
-            }
-
-            50% {
-                transform: translate(0.6%, -0.4%);
-            }
-
-            75% {
-                transform: translate(-0.4%, -0.5%);
-            }
-
-            100% {
-                transform: translate(0, 0);
-            }
-        }
-
-        @keyframes starDrift {
-            0% {
-                transform: translate3d(0, 0, 0);
-            }
-
-            100% {
-                transform: translate3d(-46px, -46px, 0);
-            }
+        .hobby-chip.is-dragging {
+            cursor: grabbing;
+            z-index: 10;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+            border-color: rgba(52, 231, 255, 0.8);
         }
 
         @media (max-width: 960px) {
@@ -516,21 +476,25 @@
                 jobOfferingsExpanded: false,
                 lifeJourneyExpanded: false,
                 hobbies: [
-                    { name: 'Plant', color: 'green lighten-4' }, // 自然
-                    { name: 'Piano', color: 'blue-grey lighten-4' }, // 芸術
-                    { name: 'Art', color: 'purple lighten-4' }, // 芸術
-                    { name: 'Travel', color: 'green lighten-4' }, // 自然
-                    { name: 'Programming', color: 'blue lighten-4' }, // 技術
-                    { name: 'Learning', color: 'yellow lighten-4' }, // 学習
-                    { name: 'Training', color: 'yellow lighten-4' }, // 健康
-                    { name: 'YouTube', color: 'pink lighten-4' }, // エンタメ
-                    { name: 'Walk Outside', color: 'light-green lighten-4' }, // 自然
-                    { name: 'Movie', color: 'pink lighten-4' }, // エンタメ
-                    { name: 'Game', color: 'pink lighten-4' }, // エンタメ
-                    { name: 'AI', color: 'blue lighten-4' }, // 技術
-                    { name: 'Cooking', color: 'orange lighten-4' }, // 健康
-                    { name: 'Languages', color: 'green lighten-4' }, // 学習
+                    { name: 'Plant', color: 'green lighten-4', category: 'Nature' },
+                    { name: 'Piano', color: 'blue-grey lighten-4', category: 'Art' },
+                    { name: 'Art', color: 'purple lighten-4', category: 'Art' },
+                    { name: 'Travel', color: 'green lighten-4', category: 'Nature' },
+                    { name: 'Programming', color: 'blue lighten-4', category: 'Tech' },
+                    { name: 'Learning', color: 'yellow lighten-4', category: 'Study' },
+                    { name: 'Training', color: 'yellow lighten-4', category: 'Health' },
+                    { name: 'YouTube', color: 'pink lighten-4', category: 'Entertainment' },
+                    { name: 'Walk Outside', color: 'light-green lighten-4', category: 'Nature' },
+                    { name: 'Movie', color: 'pink lighten-4', category: 'Entertainment' },
+                    { name: 'Game', color: 'pink lighten-4', category: 'Entertainment' },
+                    { name: 'AI', color: 'blue lighten-4', category: 'Tech' },
+                    { name: 'Cooking', color: 'orange lighten-4', category: 'Health' },
+                    { name: 'Languages', color: 'green lighten-4', category: 'Study' },
                 ],
+                hobbyChips: [],
+                hobbyDragInfo: { index: -1, lastX: 0, lastY: 0, startX: 0, startY: 0, lastTime: 0, vx: 0, vy: 0, moveEvent: null, upEvent: null, boundMove: null, boundEnd: null, didDrag: false },
+                hobbyRAF: null,
+                hobbyRunning: false,
                 jobOfferings: [
                     {
                         name: 'Lessons',
@@ -586,7 +550,302 @@
             methods: {
                 toggleCard(card) {
                     this[card + 'Expanded'] = !this[card + 'Expanded'];
-                }
+                    if (card === 'hobby') {
+                        if (this.hobbyExpanded) {
+                            this.$nextTick(this.initHobbyPhysics);
+                        } else {
+                            this.stopHobbyPhysics();
+                        }
+                    }
+                },
+                initHobbyPhysics() {
+                    const container = this.$refs.hobbyArea;
+                    if (!container) return;
+                    const pRect = container.parentElement.getBoundingClientRect();
+                    const cRect = container.getBoundingClientRect();
+                    const wallL = pRect.left - cRect.left;
+                    const wallT = pRect.top - cRect.top;
+                    const chips = [];
+                    const catColors = {
+                        Nature: '#a5d6a7',
+                        Art: '#ce93d8',
+                        Tech: '#90caf9',
+                        Study: '#fff59d',
+                        Health: '#ffcc80',
+                        Entertainment: '#f48fb1'
+                    };
+                    const gap = 8;
+                    const chipH = 34;
+                    const pad = 10;
+                    const items = this.hobbies.map(h => ({
+                        w: h.name.length * 10 + 42,
+                        h: chipH,
+                        name: h.name, category: h.category
+                    }));
+                    var maxW = Math.max.apply(null, items.map(i => i.w));
+                    var totalW = pRect.width - pad * 2;
+                    var cols = Math.max(1, Math.floor((totalW + gap) / (maxW + gap)));
+                    var rows = Math.ceil(items.length / cols);
+                    var colW = totalW / cols;
+                    var startY = wallT + (pRect.height - (rows * chipH + (rows - 1) * gap)) / 2;
+                    items.forEach((item, i) => {
+                        var col = i % cols;
+                        var row = Math.floor(i / cols);
+                        var x = wallL + pad + col * colW + colW / 2;
+                        var y = startY + row * (chipH + gap) + chipH / 2;
+                        var bg = catColors[item.category] || 'rgba(238,245,255,0.15)';
+                        chips.push({
+                            name: item.name,
+                            category: item.category,
+                            x: x, y: y,
+                            vx: 0, vy: 0, rot: 0, rotV: 0,
+                            w: item.w, h: item.h,
+                            isDragging: false, movable: false,
+                            style: {
+                                width: item.w + 'px',
+                                height: chipH + 'px',
+                                background: bg,
+                                transform: 'translate(-50%, -50%) translate(' + x + 'px,' + y + 'px)'
+                            }
+                        });
+                    });
+                    this.hobbyChips = chips;
+                    this.startHobbyPhysics();
+                },
+                startHobbyPhysics() {
+                    var self = this;
+                    self.hobbyRunning = true;
+                    function loop() {
+                        if (!self.hobbyRunning) return;
+                        self.updateHobbyPhysics();
+                        self.hobbyRAF = requestAnimationFrame(loop);
+                    }
+                    loop();
+                },
+                stopHobbyPhysics() {
+                    this.hobbyRunning = false;
+                    if (this.hobbyRAF) {
+                        cancelAnimationFrame(this.hobbyRAF);
+                        this.hobbyRAF = null;
+                    }
+                    this.hobbyChips = [];
+                },
+                updateHobbyPhysics() {
+                    function getVerts(b) {
+                        var r = b.rot * Math.PI / 180;
+                        var c = Math.cos(r), s = Math.sin(r);
+                        var hw = b.w / 2, hh = b.h / 2;
+                        var pts = [
+                            {x:-hw, y:-hh}, {x: hw, y:-hh},
+                            {x: hw, y: hh}, {x:-hw, y: hh}
+                        ];
+                        var out = [];
+                        for (var p = 0; p < 4; p++) {
+                            out.push({
+                                x: b.x + pts[p].x * c - pts[p].y * s,
+                                y: b.y + pts[p].x * s + pts[p].y * c
+                            });
+                        }
+                        return out;
+                    }
+                    function proj(verts, axis) {
+                        var min = Infinity, max = -Infinity;
+                        for (var p = 0; p < 4; p++) {
+                            var d = verts[p].x * axis.x + verts[p].y * axis.y;
+                            if (d < min) min = d;
+                            if (d > max) max = d;
+                        }
+                        return {min: min, max: max};
+                    }
+                    var container = this.$refs.hobbyArea;
+                    if (!container) return;
+                    var rect = container.getBoundingClientRect();
+                    var pRect = container.parentElement.getBoundingClientRect();
+                    var wallL = pRect.left - rect.left;
+                    var wallR = pRect.right - rect.left;
+                    var wallT = pRect.top - rect.top;
+                    var wallB = pRect.bottom - rect.top;
+                    var chips = this.hobbyChips;
+                    for (var i = 0; i < chips.length; i++) {
+                        var c = chips[i];
+                        if (c.isDragging) continue;
+                        if (c.movable) {
+                            c.vx *= 0.995;
+                            c.vy *= 0.995;
+                            c.vx = Math.min(40, Math.max(-40, c.vx));
+                            c.vy = Math.min(40, Math.max(-40, c.vy));
+                            c.x += c.vx;
+                            c.y += c.vy;
+                            c.rotV *= 0.92;
+                            c.rot += c.rotV;
+                            var rA = c.rot * Math.PI / 180;
+                            var cosA = Math.cos(rA), sinA = Math.sin(rA);
+                            var hw = c.w / 2, hh = c.h / 2;
+                            var hw_w = hw * Math.abs(cosA) + hh * Math.abs(sinA);
+                            var hh_w = hw * Math.abs(sinA) + hh * Math.abs(cosA);
+                            if (c.x - hw_w < wallL) { c.x = wallL + hw_w; c.vx *= -0.4; c.rotV *= 0.3; }
+                            if (c.x + hw_w > wallR) { c.x = wallR - hw_w; c.vx *= -0.4; c.rotV *= 0.3; }
+                            if (c.y - hh_w < wallT) { c.y = wallT + hh_w; c.vy *= -0.4; c.rotV *= 0.3; }
+                            if (c.y + hh_w > wallB) { c.y = wallB - hh_w; c.vy *= -0.4; c.rotV *= 0.3; }
+                        }
+                        for (var j = i + 1; j < chips.length; j++) {
+                            var c2 = chips[j];
+                            if (!c2 || c2.isDragging) continue;
+                            if (!c.movable && !c2.movable) continue;
+                            var r1 = c.rot * Math.PI / 180;
+                            var r2 = c2.rot * Math.PI / 180;
+                            var axes = [
+                                {x: Math.cos(r1), y: Math.sin(r1)},
+                                {x: -Math.sin(r1), y: Math.cos(r1)},
+                                {x: Math.cos(r2), y: Math.sin(r2)},
+                                {x: -Math.sin(r2), y: Math.cos(r2)}
+                            ];
+                            var v1 = getVerts(c);
+                            var v2 = getVerts(c2);
+                            var minOverlap = Infinity;
+                            var nX = 0, nY = 0;
+                            for (var a = 0; a < 4; a++) {
+                                var ax = axes[a].x, ay = axes[a].y;
+                                var p1 = proj(v1, {x: ax, y: ay});
+                                var p2 = proj(v2, {x: ax, y: ay});
+                                var overlap = Math.min(p1.max, p2.max) - Math.max(p1.min, p2.min);
+                                if (overlap < 0.001) { minOverlap = -1; break; }
+                                if (overlap < minOverlap) {
+                                    minOverlap = overlap;
+                                    var cd = (c2.x - c.x) * ax + (c2.y - c.y) * ay;
+                                    var s = cd >= 0 ? 1 : -1;
+                                    nX = ax * s; nY = ay * s;
+                                }
+                            }
+                            if (minOverlap <= 0) continue;
+                            if (!c.movable) c.movable = true;
+                            if (!c2.movable) c2.movable = true;
+                            var invM1 = c.movable ? 1 : 0;
+                            var invM2 = c2.movable ? 1 : 0;
+                            var totalM = invM1 + invM2;
+                            var push = Math.max(minOverlap, 0.5) / totalM;
+                            c.x -= nX * push * invM1;
+                            c.y -= nY * push * invM1;
+                            c2.x += nX * push * invM2;
+                            c2.y += nY * push * invM2;
+                            var rvx = c2.vx - c.vx;
+                            var rvy = c2.vy - c.vy;
+                            var velAlongNormal = rvx * nX + rvy * nY;
+                            if (velAlongNormal < 0) {
+                                var e = 0.3;
+                                var j = -(1 + e) * velAlongNormal / totalM;
+                                c.vx -= j * nX * invM1;
+                                c.vy -= j * nY * invM1;
+                                c2.vx += j * nX * invM2;
+                                c2.vy += j * nY * invM2;
+                                var contactX = (c.x + c2.x) / 2;
+                                var contactY = (c.y + c2.y) / 2;
+                                var offX = contactX - c.x, offY = contactY - c.y;
+                                var invI1 = 60 / (c.w * c.w + c.h * c.h);
+                                c.rotV += j * (offY * nX - offX * nY) * invI1 * invM1;
+                                if (c2.movable) {
+                                    var offX2 = contactX - c2.x, offY2 = contactY - c2.y;
+                                    var invI2 = 60 / (c2.w * c2.w + c2.h * c2.h);
+                                    c2.rotV += j * (offX2 * nY - offY2 * nX) * invI2 * invM2;
+                                }
+                            }
+                        }
+                    }
+                    for (var k = 0; k < chips.length; k++) {
+                        var ck = chips[k];
+                        if (!ck.isDragging && Math.abs(ck.rotV) < 0.01) ck.rotV = 0;
+                        ck.style.transform = 'translate(-50%, -50%) translate(' + ck.x + 'px,' + ck.y + 'px) rotate(' + ck.rot + 'deg)';
+                    }
+                },
+                hobbyDragStart(index, event) {
+                    if (!this.hobbyChips[index]) return;
+                    var chip = this.hobbyChips[index];
+                    var isTouch = event.type === 'touchstart';
+                    var point = isTouch ? event.touches[0] : event;
+                    var container = this.$refs.hobbyArea;
+                    if (!container) return;
+                    var rect = container.getBoundingClientRect();
+                    var info = this.hobbyDragInfo;
+                    info.index = index;
+                    info.lastX = point.clientX - rect.left;
+                    info.lastY = point.clientY - rect.top;
+                    info.startX = info.lastX;
+                    info.startY = info.lastY;
+                    info.lastTime = Date.now();
+                    info.vx = 0;
+                    info.vy = 0;
+                    chip.isDragging = true;
+                    chip.movable = true;
+                    chip.vx = 0;
+                    chip.vy = 0;
+                    chip.rotV = 0;
+                    info.didDrag = false;
+                    var self = this;
+                    var moveEvent = isTouch ? 'touchmove' : 'mousemove';
+                    var upEvent = isTouch ? 'touchend' : 'mouseup';
+                    info.moveEvent = moveEvent;
+                    info.upEvent = upEvent;
+                    info.boundMove = function (e) { self.hobbyDragMove(e); };
+                    info.boundEnd = function () { self.hobbyDragEnd(); };
+                    window.addEventListener(moveEvent, info.boundMove, { passive: false });
+                    window.addEventListener(upEvent, info.boundEnd, { once: true });
+                },
+                hobbyDragMove: function (event) {
+                    if (event.cancelable) event.preventDefault();
+                    var info = this.hobbyDragInfo;
+                    if (info.index < 0) return;
+                    var chip = this.hobbyChips[info.index];
+                    if (!chip) return;
+                    var container = this.$refs.hobbyArea;
+                    if (!container) return;
+                    var rect = container.getBoundingClientRect();
+                    var point = event.touches ? event.touches[0] : event;
+                    var newX = point.clientX - rect.left;
+                    var newY = point.clientY - rect.top;
+                    var dxFromStart = newX - info.startX;
+                    var dyFromStart = newY - info.startY;
+                    if (!this.hobbyDragInfo.didDrag && (dxFromStart * dxFromStart + dyFromStart * dyFromStart) < 64) return;
+                    this.hobbyDragInfo.didDrag = true;
+                    var now = Date.now();
+                    var dt = now - info.lastTime;
+                    if (dt > 1) {
+                        info.vx = info.vx * 0.7 + ((newX - chip.x) / dt) * 0.3;
+                        info.vy = info.vy * 0.7 + ((newY - chip.y) / dt) * 0.3;
+                        info.lastTime = now;
+                    }
+                    var pRect2 = container.parentElement.getBoundingClientRect();
+                    var wallL2 = pRect2.left - rect.left;
+                    var wallR2 = pRect2.right - rect.left;
+                    var wallT2 = pRect2.top - rect.top;
+                    var wallB2 = pRect2.bottom - rect.top;
+                    var halfW = chip.w / 2;
+                    var halfH = chip.h / 2;
+                    chip.x = Math.max(wallL2 + halfW, Math.min(wallR2 - halfW, newX));
+                    chip.y = Math.max(wallT2 + halfH, Math.min(wallB2 - halfH, newY));
+                },
+                hobbyDragEnd: function () {
+                    var info = this.hobbyDragInfo;
+                    var chip = info.index >= 0 ? this.hobbyChips[info.index] : null;
+                    if (chip) {
+                        if (info.boundMove) window.removeEventListener(info.moveEvent, info.boundMove);
+                        chip.isDragging = false;
+                        chip.vx = info.vx * 2;
+                        chip.vy = info.vy * 2;
+                    }
+                    info.index = -1;
+                    var self = this;
+                    setTimeout(function () { self.hobbyDragInfo.didDrag = false; }, 50);
+                },
+            },
+            mounted: function () {
+                this.$nextTick(function () {
+                    if (this.hobbyExpanded) {
+                        this.initHobbyPhysics();
+                    }
+                });
+            },
+            beforeDestroy: function () {
+                this.stopHobbyPhysics();
             }
         })
     </script>
