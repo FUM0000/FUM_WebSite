@@ -24,7 +24,7 @@
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
 
-    <title>Introduction</title>
+    <title>Guid</title>
 
     <style>
         html,
@@ -328,7 +328,7 @@
     <v-app id="App" style="background: transparent !important;">
         <template>
 
-            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">About Me > Introduction</main-system-bar>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Guid</main-system-bar>
 
             <v-main id="Main">
                 <transition name="Fade_Page">
@@ -478,8 +478,8 @@
                         const size = baseSize + Math.random() * randomFactor;
                         const angle = Math.random() * 2 * Math.PI;
                         const radius = Math.min(centerX, centerY) * (isMobile ? 0.35 : (0.4 + Math.random() * 0.4));
-                        const initialX = centerX + Math.cos(angle) * centerX;
-                        const initialY = centerY + Math.sin(angle) * centerY;
+                        const initialX = centerX + Math.cos(angle) * radius;
+                        const initialY = centerY + Math.sin(angle) * radius;
                         return { theme: theme, x: initialX, y: initialY, vx: (Math.random() - 0.5) * 1, vy: (Math.random() - 0.5) * 1, isDragging: false, size: size, style: { width: `${size}px`, height: `${size}px`, transform: `translate(-50%, -50%) translate(${initialX}px, ${initialY}px)` } };
                     });
                 },
@@ -543,7 +543,7 @@
                 dragMove(event) { if (event.cancelable) event.preventDefault(); if (!this.draggedBubble) return; const point = event.touches ? event.touches[0] : event; const rect = document.getElementById('interactive-space').getBoundingClientRect(); const newX = point.clientX - rect.left; const newY = point.clientY - rect.top; const dxFromStart = newX - this.dragInfo.startX; const dyFromStart = newY - this.dragInfo.startY; if (!this.didDrag && ((dxFromStart * dxFromStart) + (dyFromStart * dyFromStart)) < 64) return; this.didDrag = true; const now = Date.now(); const dt = now - this.dragInfo.lastTime; if (dt > 1) { this.dragInfo.vx = this.dragInfo.vx * 0.7 + ((newX - this.draggedBubble.x) / dt) * 0.3; this.dragInfo.vy = this.dragInfo.vy * 0.7 + ((newY - this.draggedBubble.y) / dt) * 0.3; this.dragInfo.lastTime = now; } const half = this.draggedBubble.size / 2; this.draggedBubble.x = Math.max(half, Math.min(rect.width - half, newX)); this.draggedBubble.y = Math.max(half, Math.min(rect.height - half, newY)); },
                 dragEnd() { if (!this.draggedBubble) return; window.removeEventListener(this.dragInfo.moveEvent, this.dragMove); if (!this.didDrag) { this.openModal(this.draggedBubble.theme); this.didDrag = true; } else { this.draggedBubble.vx = this.dragInfo.vx * 20; this.draggedBubble.vy = this.dragInfo.vy * 20; } this.draggedBubble.isDragging = false; this.draggedBubble = null; setTimeout(() => { this.didDrag = false; }, 50); },
                 handleBubbleClick(bubble) { if (!this.didDrag) { this.openModal(bubble.theme); } },
-                resolveCollision(b1, b2, dx, dy, dist, minDist) { const overlap = (minDist - dist) / 2; const offsetX = (dx / dist) * overlap; const offsetY = (dy / dist) * overlap; b1.x -= offsetX; b1.y -= offsetY; b2.x += offsetX; b2.y += offsetY; const angle = Math.atan2(dy, dx); const sin = Math.sin(angle); const cos = Math.cos(angle); const v1 = { x: b1.vx * cos + b1.vy * sin, y: b1.vy * cos - b1.vx * sin }; const v2 = { x: b2.vx * cos + b2.vy * sin, y: b2.vy * cos - b2.vx * sin };[v1.x, v2.x] = [v2.x, v1.x]; b1.vx = v1.x * cos - v1.y * sin; b1.vy = v1.y * cos + v1.x * sin; b2.vx = v2.x * cos - v2.y * sin; b2.vy = v2.y * cos + v2.x * sin; },
+                resolveCollision(b1, b2, dx, dy, dist, minDist) { if (dist < 0.001) { const angle = Math.random() * 2 * Math.PI; const push = minDist * 0.5; b1.x += Math.cos(angle) * push; b1.y += Math.sin(angle) * push; b2.x -= Math.cos(angle) * push; b2.y -= Math.sin(angle) * push; return; } const overlap = (minDist - dist) * 0.5; const nx = dx / dist; const ny = dy / dist; b1.x -= nx * overlap; b1.y -= ny * overlap; b2.x += nx * overlap; b2.y += ny * overlap; const v1n = b1.vx * nx + b1.vy * ny; const v1t = b1.vy * nx - b1.vx * ny; const v2n = b2.vx * nx + b2.vy * ny; const v2t = b2.vy * nx - b2.vx * ny; b1.vx = v2n * nx - v1t * ny; b1.vy = v2n * ny + v1t * nx; b2.vx = v1n * nx - v2t * ny; b2.vy = v1n * ny + v2t * nx; },
                 openModal(theme) { this.modal.visible = true; this.modal.theme = theme; this.modal.pageIndex = 0; this.updateModalContent(); },
                 closeModal() { this.modal.visible = false; clearTimeout(this.typewriterTimer); },
                 changeModalPage(direction) { const newIndex = this.modal.pageIndex + direction; const contents = this.ThemeContents[this.modal.theme]; if (newIndex >= 0 && newIndex < contents.length) { this.modal.pageIndex = newIndex; this.updateModalContent(); } },

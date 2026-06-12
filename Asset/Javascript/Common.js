@@ -141,6 +141,14 @@ Vue.component('main-navigation', {
             <!-- ▲ Home ▲ ------------------------------------------------------------------------------------->
 
 
+            <!-- ▼ Guid ▼ ------------------------------------------------------------------------------------->
+            <v-list-item href="./Guid.html">
+                <v-list-item-icon><v-icon>mdi-compass</v-icon></v-list-item-icon>
+                <v-list-item-title>Guid</v-list-item-title>
+            </v-list-item>
+            <!-- ▲ Guid ▲ ------------------------------------------------------------------------------------->
+
+
             <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
             <v-list-group :value="false" prepend-icon="mdi-stamper">
                 <template v-slot:activator>
@@ -152,11 +160,7 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Profile</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-stamper</v-icon></v-list-item-icon>
                 </v-list-item>
-                <v-list-item href="./AboutMe_Introduction.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Introduction</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-human-greeting-variant</v-icon></v-list-item-icon>
-                </v-list-item>
+
                 <v-list-item href="./AboutMe_Blog.html">
                     <v-list-item-icon />
                     <v-list-item-title>Blog</v-list-item-title>
