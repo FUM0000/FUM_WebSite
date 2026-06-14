@@ -57,8 +57,8 @@
     }
 
     .note-stepper-header .v-stepper__step {
-      flex: 0 0 calc((100% - 30px) / 4);
-      max-width: calc((100% - 30px) / 4);
+      flex: 0 0 calc((100% - 40px) / 5);
+      max-width: calc((100% - 40px) / 5);
       min-width: 0;
       border: 0 !important;
       border-radius: 0;
@@ -88,7 +88,7 @@
       transform: translateY(-50%);
     }
 
-    .note-stepper-header .v-stepper__step:nth-child(4n)::after,
+    .note-stepper-header .v-stepper__step:nth-child(5n)::after,
     .note-stepper-header .v-stepper__step:last-child::after {
       display: none;
     }
@@ -139,6 +139,7 @@
                         <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2" class="step-title">確率</v-stepper-step>
                         <v-stepper-step :complete="Count_Step_1 > 3" step="3" @click="Count_Step_1 = 3" class="step-title">統計</v-stepper-step>
                         <v-stepper-step :complete="Count_Step_1 > 4" step="4" @click="Count_Step_1 = 4" class="step-title">素数判定</v-stepper-step>
+                        <v-stepper-step :complete="Count_Step_1 > 5" step="5" @click="Count_Step_1 = 5" class="step-title">数学の基本概念</v-stepper-step>
                       </v-stepper-header>
 
                       <v-stepper-items>
@@ -206,6 +207,25 @@
                           </v-card>
                           <div class="button-container">
                             <v-btn text @click="Count_Step_1 = 3">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 5">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="5">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">数学の基本概念</v-card-title>
+                              <v-treeview :items="filteredMathConcepts" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesMathConcepts"
+                                @update:open="updateOpenNodesMathConcepts">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 4">戻る</v-btn>
                           </div>
                         </v-stepper-content>
                       </v-stepper-items>
@@ -241,10 +261,12 @@
         filteredProbabilityTheory: [],
         filteredStatisticsTheory: [],
         filteredPrimeNumberSearch: [],
+        filteredMathConcepts: [],
         openNodesMentalArithmetic: [],
         openNodesProbabilityTheory: [],
         openNodesStatisticsTheory: [],
         openNodesPrimeNumberSearch: [],
+        openNodesMathConcepts: [],
         MentalArithmetic: [
           {
             "name": "5 × n",
@@ -613,6 +635,37 @@ def is_prime_miller_rabin(n, k=5):
               }
             ]
           }
+        ],
+        MathConcepts: [
+          {
+            name: '用語', children: [
+              { name: '自然界の数の法則' },
+              { name: '離散数と連続数' },
+              { name: 'ピタゴラスの音階' },
+              { name: '方程式' },
+              { name: '複素数三角数' },
+              { name: 'ウェーバーの法則' },
+              { name: 'ユークリッド' },
+              { name: 'フィボナッチ数列(時差式増殖法則)' },
+              { name: 'フラクタル' },
+              { name: 'Eularの公式' },
+              { name: 'カヴァリエリの原理' },
+            ]
+          },
+          {
+            name: '比率', children: [
+              { name: '1:3.14' },
+              { name: '1:1.618' },
+            ]
+          },
+          {
+            name: '方法', children: [
+              { name: 'そろタッチ(数珠算式暗算)', children: [
+                { name: '存在しない数をイメージしなくてよい' },
+              ]},
+              { name: '1:1.618' },
+            ]
+          },
         ]
       },
       created() {
@@ -620,6 +673,7 @@ def is_prime_miller_rabin(n, k=5):
         this.filteredProbabilityTheory = JSON.parse(JSON.stringify(this.ProbabilityTheory));
         this.filteredStatisticsTheory = JSON.parse(JSON.stringify(this.StatisticsTheory));
         this.filteredPrimeNumberSearch = JSON.parse(JSON.stringify(this.PrimeNumberSearch));
+        this.filteredMathConcepts = JSON.parse(JSON.stringify(this.MathConcepts));
       },
       methods: {
         collectAllNodeIds(items) {
@@ -647,6 +701,9 @@ def is_prime_miller_rabin(n, k=5):
         updateOpenNodesPrimeNumberSearch(newOpen) {
           this.openNodesPrimeNumberSearch = newOpen;
         },
+        updateOpenNodesMathConcepts(newOpen) {
+          this.openNodesMathConcepts = newOpen;
+        },
         filterTreeview() {
           const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
           if (!query) {
@@ -658,6 +715,8 @@ def is_prime_miller_rabin(n, k=5):
             this.openNodesStatisticsTheory = [];
             this.filteredPrimeNumberSearch = JSON.parse(JSON.stringify(this.PrimeNumberSearch));
             this.openNodesPrimeNumberSearch = [];
+            this.filteredMathConcepts = JSON.parse(JSON.stringify(this.MathConcepts));
+            this.openNodesMathConcepts = [];
             return;
           }
 
@@ -688,6 +747,8 @@ def is_prime_miller_rabin(n, k=5):
           this.openNodesStatisticsTheory = this.collectAllNodeIds(this.filteredStatisticsTheory);
           this.filteredPrimeNumberSearch = filterTree(JSON.parse(JSON.stringify(this.PrimeNumberSearch)));
           this.openNodesPrimeNumberSearch = this.collectAllNodeIds(this.filteredPrimeNumberSearch);
+          this.filteredMathConcepts = filterTree(JSON.parse(JSON.stringify(this.MathConcepts)));
+          this.openNodesMathConcepts = this.collectAllNodeIds(this.filteredMathConcepts);
         }
       }
     });

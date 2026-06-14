@@ -989,6 +989,18 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>マーケティング</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Note_Computer_Graphic.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>グラフィック</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Computer_Shortcut.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>ショートカット</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Computer_Font.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>フォント</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
                 
                 <v-list-group sub-group :value="false">
@@ -1008,6 +1020,47 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Note_Sience_Chemistry.html">
                         <v-list-item-icon />
                         <v-list-item-title>化学</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Sience_Plant.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>植物</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>アート</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-palette</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Note_Art_Visual.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>映像</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Art_Music.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>音楽</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Art_Fashion.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>ファッション</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>生活</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-heart-pulse</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Note_Life_Health.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>健康</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item href="./Note_Life_Culture.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>文化</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
 

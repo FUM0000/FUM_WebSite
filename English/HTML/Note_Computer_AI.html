@@ -55,6 +55,10 @@
                         <v-stepper-step :complete="Count_Step_1 > 4" step="4" @click="Count_Step_1 = 4"></v-stepper-step>
                         <v-divider></v-divider>
                         <v-stepper-step :complete="Count_Step_1 > 5" step="5" @click="Count_Step_1 = 5"></v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 6" step="6" @click="Count_Step_1 = 6"></v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 7" step="7" @click="Count_Step_1 = 7"></v-stepper-step>
                       </v-stepper-header>
 
                       <v-stepper-items>
@@ -144,6 +148,42 @@
                           </v-card>
                           <div class="button-container">
                             <v-btn text @click="Count_Step_1 = 4">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 6">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="6">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">利用ガイダンス</v-card-title>
+                              <v-treeview :items="filteredAIGuidance" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesAIGuidance" @update:open="updateOpenNodesAIGuidance">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 5">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 7">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="7">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">プラグイン・サービス</v-card-title>
+                              <v-treeview :items="filteredAIPlugins" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesAIPlugins" @update:open="updateOpenNodesAIPlugins">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 6">戻る</v-btn>
                           </div>
                         </v-stepper-content>
                       </v-stepper-items>
@@ -180,11 +220,15 @@
         filteredAIApplications: [],
         filteredAIEthics: [],
         filteredToolsFrameworks: [],
+        filteredAIGuidance: [],
+        filteredAIPlugins: [],
         openNodesAIFundamentals: [],
         openNodesMLAlgorithms: [],
         openNodesAIApplications: [],
         openNodesAIEthics: [],
         openNodesToolsFrameworks: [],
+        openNodesAIGuidance: [],
+        openNodesAIPlugins: [],
         AIFundamentals: [
           {
             "name": "1. AIの概要",
@@ -442,6 +486,54 @@
               }
             ]
           }
+        ],
+        AIGuidance: [
+          {
+            name: '色々な指定(要毎回再指定)', children: [
+              { name: '手順' }, { name: '対象' }, { name: '言い方' }, { name: '長さ' },
+              { name: '理由' }, { name: '返答の仕方(Yes, Noなど)' }, { name: '使用する言葉' },
+              { name: '考慮する内容' }, { name: '不正確な可能性の情報の排除' },
+            ]
+          },
+          {
+            name: '作成と編集', children: [
+              { name: 'テーブル' }, { name: 'プログラム' }, { name: '文章' },
+              { name: 'AIへの命令プロンプト' }, { name: '仕様書' },
+            ]
+          },
+          {
+            name: '応用', children: [
+              { name: 'フォーマットの作成とそのフォーマットでの返答' },
+              { name: '改善を繰り返してもらい、その記録も付けてもらう' },
+            ]
+          },
+        ],
+        AIPlugins: [
+          { name: 'Japanese Stable Diffusion XL' },
+          { name: 'Canva' },
+          { name: 'Adobe Firefly' },
+          { name: 'Stable Diffusion' },
+          { name: 'Shutterstock' },
+          { name: 'Midjourney' },
+          { name: 'フォトグラファーAI' },
+          { name: 'Flair AI' },
+          { name: 'invideo AI' },
+          { name: 'Notta' },
+          { name: 'Enhance Speech' },
+          { name: 'Mantra Engine' },
+          { name: 'AIチャットくん' },
+          { name: 'miibo' },
+          { name: 'Perplexity AI' },
+          { name: 'Catchy' },
+          { name: 'BuzzTai' },
+          { name: 'Xaris' },
+          { name: 'ラクリン' },
+          { name: 'Glasp' },
+          { name: 'AI SEO ディレクター by GMO' },
+          { name: 'Reclaim' },
+          { name: 'イルシル' },
+          { name: 'CalpWorks' },
+          { name: 'Coconote' },
         ]
       },
       created() {
@@ -450,6 +542,8 @@
         this.filteredAIApplications = JSON.parse(JSON.stringify(this.AIApplications));
         this.filteredAIEthics = JSON.parse(JSON.stringify(this.AIEthics));
         this.filteredToolsFrameworks = JSON.parse(JSON.stringify(this.ToolsFrameworks));
+        this.filteredAIGuidance = JSON.parse(JSON.stringify(this.AIGuidance));
+        this.filteredAIPlugins = JSON.parse(JSON.stringify(this.AIPlugins));
       },
       methods: {
         collectAllNodeIds(items) {
@@ -480,6 +574,12 @@
         updateOpenNodesToolsFrameworks(newOpen) {
           this.openNodesToolsFrameworks = newOpen;
         },
+        updateOpenNodesAIGuidance(newOpen) {
+          this.openNodesAIGuidance = newOpen;
+        },
+        updateOpenNodesAIPlugins(newOpen) {
+          this.openNodesAIPlugins = newOpen;
+        },
         filterTreeview() {
           const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
           if (!query) {
@@ -488,11 +588,15 @@
             this.filteredAIApplications = JSON.parse(JSON.stringify(this.AIApplications));
             this.filteredAIEthics = JSON.parse(JSON.stringify(this.AIEthics));
             this.filteredToolsFrameworks = JSON.parse(JSON.stringify(this.ToolsFrameworks));
+            this.filteredAIGuidance = JSON.parse(JSON.stringify(this.AIGuidance));
+            this.filteredAIPlugins = JSON.parse(JSON.stringify(this.AIPlugins));
             this.openNodesAIFundamentals = [];
             this.openNodesMLAlgorithms = [];
             this.openNodesAIApplications = [];
             this.openNodesAIEthics = [];
             this.openNodesToolsFrameworks = [];
+            this.openNodesAIGuidance = [];
+            this.openNodesAIPlugins = [];
             return;
           }
 
@@ -520,12 +624,16 @@
           this.filteredAIApplications = filterTree(JSON.parse(JSON.stringify(this.AIApplications)));
           this.filteredAIEthics = filterTree(JSON.parse(JSON.stringify(this.AIEthics)));
           this.filteredToolsFrameworks = filterTree(JSON.parse(JSON.stringify(this.ToolsFrameworks)));
+          this.filteredAIGuidance = filterTree(JSON.parse(JSON.stringify(this.AIGuidance)));
+          this.filteredAIPlugins = filterTree(JSON.parse(JSON.stringify(this.AIPlugins)));
 
           this.openNodesAIFundamentals = this.collectAllNodeIds(this.filteredAIFundamentals);
           this.openNodesMLAlgorithms = this.collectAllNodeIds(this.filteredMLAlgorithms);
           this.openNodesAIApplications = this.collectAllNodeIds(this.filteredAIApplications);
           this.openNodesAIEthics = this.collectAllNodeIds(this.filteredAIEthics);
           this.openNodesToolsFrameworks = this.collectAllNodeIds(this.filteredToolsFrameworks);
+          this.openNodesAIGuidance = this.collectAllNodeIds(this.filteredAIGuidance);
+          this.openNodesAIPlugins = this.collectAllNodeIds(this.filteredAIPlugins);
         }
       }
     });

@@ -1,0 +1,372 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>健康</title>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > Life > Health</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">健康</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="学習内容を検索" prepend-inner-icon="mdi-magnify" clearable
+                      outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_1">
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1">方法</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2">栄養</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 3" step="3" @click="Count_Step_1 = 3">精神</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 4" step="4" @click="Count_Step_1 = 4">ダイエット</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">方法</v-card-title>
+                              <v-treeview :items="filteredHealthMethod" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesHealthMethod" @update:open="updateOpenNodesHealthMethod">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">栄養</v-card-title>
+                              <v-treeview :items="filteredHealthNutrition" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesHealthNutrition" @update:open="updateOpenNodesHealthNutrition">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 3">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">精神</v-card-title>
+                              <v-treeview :items="filteredHealthMental" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesHealthMental" @update:open="updateOpenNodesHealthMental">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">ダイエット</v-card-title>
+                              <v-treeview :items="filteredHealthDiet" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesHealthDiet" @update:open="updateOpenNodesHealthDiet">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 3">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredHealthMethod: [],
+        filteredHealthNutrition: [],
+        filteredHealthMental: [],
+        filteredHealthDiet: [],
+        openNodesHealthMethod: [],
+        openNodesHealthNutrition: [],
+        openNodesHealthMental: [],
+        openNodesHealthDiet: [],
+        HealthMethod: [
+          {
+            name: '方法', children: [
+              { name: '生物学や栄養学や化学の偉人で長生きした人の生活習慣を追う' },
+            ]
+          }
+        ],
+        HealthNutrition: [
+          {
+            name: '栄養', children: [
+              { name: '食べ方', children: [
+                { name: '多様な食品' }, { name: '組み合わせ' }, { name: '食べる順番' },
+                { name: 'スピード' }, { name: '回数' }, { name: '時刻' },
+                { name: '環境' }, { name: '低脂質、減塩' },
+              ]},
+              { name: '栄養素', children: [
+                { name: '種類', children: [
+                  { name: '09種必須アミノ酸' }, { name: '03種必須脂肪酸' },
+                  { name: '00種ブドウ糖' }, { name: '18種ビタミン' }, { name: '20種ミネラル' },
+                ]},
+                { name: '主要な食べ物の栄養素', children: [
+                  { name: '卵', children: [{ name: 'ビタミンCと食物繊維以外のすべての栄養素' }] },
+                  { name: '肉', children: [
+                    { name: 'たんぱく質' }, { name: 'ビタミンB1' }, { name: 'ビタミンA' }, { name: '鉄' },
+                  ]},
+                  { name: '魚', children: [
+                    { name: 'たんぱく質' }, { name: 'ビタミンB2' }, { name: 'カルシウム' },
+                    { name: 'DHA(神経組織の構成成分)&EPA(血行改善)' },
+                  ]},
+                  { name: '豆', children: [
+                    { name: 'たんぱく質' }, { name: 'ピタミンB群' },
+                    { name: 'イソフラボン', children: [
+                      { name: 'ホルモンバランス' }, { name: '骨の健康' },
+                      { name: '抗酸化作用' }, { name: '心血管疾患の予防' },
+                      { name: 'がん予防' }, { name: '肌の健康維持' },
+                    ]},
+                    { name: 'カルシウム' },
+                  ]},
+                  { name: '野菜', children: [
+                    { name: 'βカロテン(体内でビタミンAへ変換)' },
+                    { name: 'ビタミンE' }, { name: '食物繊維' }, { name: 'ビタミンC' },
+                  ]},
+                ]},
+              ]},
+              { name: '症状ごとの食事', children: [
+                { name: '風邪', children: [{ name: '料理', children: [{ name: '鍋' }] }, { name: '要素', children: [{ name: '栄養' }, { name: '温める' }] }] },
+                { name: '熱', children: [{ name: '料理', children: [{ name: 'アイス' }, { name: 'プリン' }] }, { name: '要素', children: [{ name: '解熱' }, { name: '栄養' }] }] },
+                { name: '咽喉痛', children: [{ name: '料理', children: [{ name: 'にんじんやカボチャのポタージュ' }] }, { name: '要素', children: [{ name: '刺激回避' }, { name: 'βカロテン' }] }] },
+                { name: '咳', children: [{ name: '料理', children: [{ name: 'ヨーグルトやゼリー' }] }, { name: '要素', children: [{ name: '乾燥回避' }, { name: '解熱' }] }] },
+                { name: '吐き気', children: [{ name: '料理', children: [{ name: 'キャベツと卵のスープ' }] }, { name: '要素', children: [{ name: '酸味回避' }, { name: '胃の炎症抑制' }] }] },
+                { name: '胃もたれ', children: [{ name: '料理', children: [{ name: 'じゃがいものポタージュ' }] }, { name: '要素', children: [{ name: '絶食' }, { name: '胃の炎症抑制' }] }] },
+                { name: '食欲不振', children: [{ name: '料理', children: [{ name: 'ちらし寿司' }] }, { name: '要素', children: [{ name: '酢' }, { name: '香辛料' }] }] },
+                { name: '胸焼け', children: [{ name: '料理', children: [{ name: '白湯' }] }, { name: '要素', children: [{ name: '低刺激' }] }] },
+                { name: '二日酔い', children: [{ name: '料理', children: [{ name: 'ぶどうなど果物' }] }, { name: '要素', children: [{ name: 'アルコール分解' }] }] },
+                { name: '便秘', children: [{ name: '料理', children: [{ name: '玄米と根菜みそ汁' }] }, { name: '要素', children: [{ name: '食物繊維' }] }] },
+                { name: '下痢', children: [{ name: '料理', children: [{ name: '豆腐のみそ雑炊' }] }, { name: '要素', children: [{ name: '消化に良いもの' }, { name: '食物繊維を避ける' }] }] },
+                { name: 'ニキビ', children: [{ name: '料理', children: [{ name: 'にんじんサラダ' }, { name: 'バナナヨーグルト' }] }, { name: '要素', children: [{ name: '低脂質' }, { name: 'ビタミン' }, { name: 'たんぱく質' }] }] },
+                { name: 'シワ', children: [{ name: '料理', children: [{ name: '魚と野菜' }, { name: 'ブロッコリーのミルクスープ' }] }, { name: '要素', children: [{ name: 'ビタミン' }, { name: 'コラーゲン' }] }] },
+                { name: '抜毛', children: [{ name: '料理', children: [{ name: 'ゆで卵' }] }, { name: '要素', children: [{ name: 'たんぱく質' }] }] },
+                { name: '慢性疲労', children: [{ name: '料理', children: [{ name: 'にんじんサラダ' }] }, { name: '要素', children: [{ name: 'ストレス回避' }, { name: '抗酸化' }] }] },
+                { name: '筋肉疲労', children: [{ name: '料理', children: [{ name: '豚肉のしょうが焼き' }] }, { name: '要素', children: [{ name: 'ビタミンB群' }, { name: '酢(クエン酸)' }] }] },
+                { name: '眼精疲労', children: [{ name: '料理', children: [{ name: 'レバニラ' }] }, { name: '要素', children: [{ name: 'ビタミン' }, { name: 'アントシアニン(紫の食品)' }] }] },
+                { name: '夏バテ', children: [{ name: '料理', children: [{ name: '納豆とろろそば' }] }, { name: '要素', children: [{ name: 'ムチン(ネバネバ成分)' }, { name: 'ビタミンB群' }] }] },
+                { name: 'むくみ', children: [{ name: '料理', children: [{ name: 'スイカ' }] }, { name: '要素', children: [{ name: 'カリウム' }] }] },
+                { name: '免疫力', children: [{ name: '料理', children: [{ name: 'にんじんと鶏ささみのごま和え' }, { name: 'かきフライ' }, { name: 'まいたけの天ぷら' }, { name: 'キウイ' }] }, { name: '要素', children: [{ name: 'たんぱく質' }, { name: 'ビタミン' }, { name: '亜鉛' }] }] },
+                { name: '代謝促進', children: [{ name: '料理', children: [{ name: '豚キムチ炒め' }, { name: '刺身の盛り合わせ' }, { name: 'いんげんのからし和え' }, { name: '担々麺' }] }, { name: '要素', children: [{ name: 'たんぱく質' }, { name: '香辛料' }, { name: 'ビタミン' }] }] },
+                { name: '血行改善', children: [{ name: '料理', children: [{ name: 'いわしのつみれ汁' }, { name: 'かぼちゃのレモン煮' }, { name: '昆布チップス' }, { name: 'まぐろのカルパッチョ' }, { name: 'ワイン' }, { name: '魚と野菜' }] }, { name: '要素', children: [{ name: '減塩' }, { name: '動物性脂肪を減らす' }, { name: 'DHA&EPA' }, { name: 'ビタミン' }, { name: 'ミネラル' }, { name: '食物繊維' }, { name: 'ポリフェノール' }] }] },
+                { name: 'ストレス解消', children: [{ name: '料理', children: [{ name: 'フルグラ' }, { name: 'パプリカとベーコンの卵炒め' }, { name: 'いちご' }, { name: '親子丼' }, { name: 'ほうれん草としらすのおひたし' }, { name: 'みかん' }, { name: '鶏肉のクリームシチュー' }, { name: 'アボカドの納豆和え' }, { name: '生フルーツのサワー' }] }, { name: '要素', children: [{ name: '辛いものやジャンクフードを避ける' }, { name: 'たんぱく質' }, { name: 'ビタミン' }, { name: 'カルシウム' }] }] },
+                { name: '腸内環境改善', children: [{ name: '料理', children: [{ name: '納豆のキムチ和え' }, { name: 'りんごのヨーグルトがけ' }, { name: '玄米おにぎり' }] }, { name: '要素', children: [{ name: '乳酸菌' }, { name: 'オリゴ糖' }, { name: '食物繊維' }] }] },
+                { name: '老化予防', children: [{ name: '料理', children: [{ name: 'パプリカのマリネ' }, { name: 'ほうれん草とベーコンのソテー' }, { name: '緑茶' }, { name: 'フルーツゼリー' }] }, { name: '要素', children: [{ name: '抗酸化作用(ビタミン)' }, { name: '糖質を避ける' }, { name: 'たんぱく質と糖質を組み合わせない' }, { name: 'カテキン' }, { name: 'コラーゲン' }] }] },
+              ]},
+              { name: '食べ合わせ', children: [
+                { name: '良い', children: [
+                  { name: 'レバー＋レモン' }, { name: 'にんじん＋オリーブ油' }, { name: 'さば＋チーズ' }, { name: '卵＋ブロッコリー' },
+                  { name: 'たらこ＋パセリ' }, { name: 'アーモンド＋いわし' }, { name: 'わかめ＋しらす干し' },
+                  { name: 'ほうれん草＋オリーブ油' }, { name: '豚肉＋にんにく＋玉ねぎ＋にら' },
+                  { name: 'ごはん＋納豆＋ネギ' }, { name: 'バナナ＋牛乳' }, { name: '鶏もも肉＋アボカド' },
+                  { name: 'えのきだけ＋みそ汁' }, { name: 'マグロ赤身＋焼きのり' }, { name: '鶏ささみ＋チーズ' },
+                  { name: '牡蠣＋ほうれん草' }, { name: 'チーズ＋焼きのり' }, { name: 'わかめ＋あさり' },
+                  { name: 'まいたけ＋ご飯' }, { name: '鶏レバー＋枝豆' }, { name: '鶏ささみ＋赤ピーマン' },
+                  { name: 'さけ＋にんにく' }, { name: '納豆＋小松菜' }, { name: 'オレンジ＋にんじん' },
+                  { name: 'ほうれん草＋乳製品' }, { name: '小魚＋ナッツ' }, { name: 'レバー＋にら' },
+                  { name: 'ひじき＋レモン' }, { name: '玄米＋チーズ' }, { name: 'そば＋わかめ' },
+                  { name: 'メロン＋生ハム' }, { name: 'きのこ＋スープ' }, { name: 'しらす干し＋アボカド' },
+                  { name: 'わかめ＋みそ汁' }, { name: '牡蠣＋レモン' }, { name: '生湯葉＋卵' },
+                ]},
+                { name: '悪い', children: [
+                  { name: 'ベーコン＋ほうれん草' }, { name: 'カップ麺＋牛乳' },
+                  { name: 'うなぎ＋玄米' }, { name: 'レバー＋お酒' },
+                ]},
+              ]},
+              { name: '食材', children: [
+                { name: '食物繊維', children: [{ name: 'ゴボウ' }, { name: 'ヒジキ' }, { name: '寒天' }, { name: '納豆' }] },
+                { name: 'ビタミン', children: [{ name: 'キウイ' }, { name: 'ブロッコリー' }, { name: '柿' }, { name: '小松菜' }] },
+                { name: 'ミネラル', children: [{ name: '高野豆腐' }, { name: 'わかめ' }, { name: 'アサリ' }, { name: 'ゴマ' }] },
+                { name: 'オメガ脂肪酸', children: [{ name: 'サバ' }, { name: 'イワシ' }] },
+                { name: 'ポリフェノール', children: [{ name: '緑茶' }, { name: 'ブルーベリー' }] },
+              ]},
+            ]
+          }
+        ],
+        HealthMental: [
+          {
+            name: '精神', children: [
+              { name: '恐怖心', children: [
+                { name: '執着の解放' },
+                { name: 'リスク回避と行動' },
+              ]},
+            ]
+          }
+        ],
+        HealthDiet: [
+          {
+            name: 'ダイエット', children: [
+              { name: '食事', children: [
+                { name: 'オートミール' },
+                { name: 'ブロッコリー' },
+                { name: 'さばの水煮' },
+              ]},
+              { name: '運動', children: [
+                { name: 'ウォーキング' },
+                { name: 'ジョギング' },
+              ]},
+            ]
+          }
+        ]
+      },
+      created() {
+        this.filteredHealthMethod = JSON.parse(JSON.stringify(this.HealthMethod));
+        this.filteredHealthNutrition = JSON.parse(JSON.stringify(this.HealthNutrition));
+        this.filteredHealthMental = JSON.parse(JSON.stringify(this.HealthMental));
+        this.filteredHealthDiet = JSON.parse(JSON.stringify(this.HealthDiet));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesHealthMethod(newOpen) {
+          this.openNodesHealthMethod = newOpen;
+        },
+        updateOpenNodesHealthNutrition(newOpen) {
+          this.openNodesHealthNutrition = newOpen;
+        },
+        updateOpenNodesHealthMental(newOpen) {
+          this.openNodesHealthMental = newOpen;
+        },
+        updateOpenNodesHealthDiet(newOpen) {
+          this.openNodesHealthDiet = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredHealthMethod = JSON.parse(JSON.stringify(this.HealthMethod));
+            this.filteredHealthNutrition = JSON.parse(JSON.stringify(this.HealthNutrition));
+            this.filteredHealthMental = JSON.parse(JSON.stringify(this.HealthMental));
+            this.filteredHealthDiet = JSON.parse(JSON.stringify(this.HealthDiet));
+            this.openNodesHealthMethod = [];
+            this.openNodesHealthNutrition = [];
+            this.openNodesHealthMental = [];
+            this.openNodesHealthDiet = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredHealthMethod = filterTree(JSON.parse(JSON.stringify(this.HealthMethod)));
+          this.filteredHealthNutrition = filterTree(JSON.parse(JSON.stringify(this.HealthNutrition)));
+          this.filteredHealthMental = filterTree(JSON.parse(JSON.stringify(this.HealthMental)));
+          this.filteredHealthDiet = filterTree(JSON.parse(JSON.stringify(this.HealthDiet)));
+
+          this.openNodesHealthMethod = this.collectAllNodeIds(this.filteredHealthMethod);
+          this.openNodesHealthNutrition = this.collectAllNodeIds(this.filteredHealthNutrition);
+          this.openNodesHealthMental = this.collectAllNodeIds(this.filteredHealthMental);
+          this.openNodesHealthDiet = this.collectAllNodeIds(this.filteredHealthDiet);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

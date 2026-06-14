@@ -1,0 +1,284 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>映像</title>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > Art > Visual</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">映像</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="学習内容を検索" prepend-inner-icon="mdi-magnify" clearable
+                      outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_1">
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1">撮影</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2">絵</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">撮影</v-card-title>
+                              <v-treeview :items="filteredVisualPhoto" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesVisualPhoto" @update:open="updateOpenNodesVisualPhoto">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">絵</v-card-title>
+                              <v-treeview :items="filteredVisualDraw" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesVisualDraw" @update:open="updateOpenNodesVisualDraw">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredVisualPhoto: [],
+        filteredVisualDraw: [],
+        openNodesVisualPhoto: [],
+        openNodesVisualDraw: [],
+        VisualPhoto: [
+          {
+            name: '撮影', children: [
+              { name: '全般', children: [
+                { name: '構成', children: [
+                  { name: '流れを作る' },
+                  { name: '同じ場面でも複数の角度から撮る' },
+                  { name: '合間に色合いやリフレッシュを意識したカットを挟む' },
+                ]},
+                { name: '技法', children: [
+                  { name: 'ピントを合わせる', children: [
+                    { name: '目' }, { name: 'オブジェクト' }, { name: '注目しているポイント' }, { name: '特徴的なポイント' },
+                  ]},
+                  { name: 'カメラアングルによる印象の変化', children: [
+                    { name: '低い　　　　：存在感が増す(圧迫感)' },
+                    { name: '高い、同じ　：閲覧者と同調' },
+                    { name: '虫の視点　　：ファンタジー感' },
+                  ]},
+                  { name: '写真加工による印象の変化', children: [
+                    { name: '白飛び　　　：優しさ、曖昧さ' },
+                    { name: 'コントラスト：強さ' },
+                  ]},
+                  { name: '背景による印象の変化', children: [
+                    { name: '明るい　　　：馴染んでいる、ハッキリとした清涼感' },
+                    { name: '暗い　　　　：浮き上がってくる' },
+                  ]},
+                  { name: '構図に流れを入れる(視線誘導)' },
+                  { name: '全体的に明るく' },
+                  { name: '必ずしも全体を写さなくてもよい' },
+                  { name: 'ターゲットを中心から外す' },
+                  { name: '写したいものをハッキリとさせ大きく映す', children: [
+                    { name: '写したいものには空間も含まれる' },
+                  ]},
+                ]},
+              ]},
+              { name: '動画', children: [
+                { name: '似たようなシーケンスで遷移(αミックス)' },
+                { name: 'ターゲットまでの道程を映す' },
+                { name: '音声は後から付ける' },
+                { name: '音声は抑揚が必要' },
+                { name: '効果音は自然に後付' },
+                { name: '場面や画角は使い回すが長く同じ映像を長く映さない' },
+                { name: '幸せと愛と生と悲しみと憎しみ' },
+              ]},
+            ]
+          }
+        ],
+        VisualDraw: [
+          {
+            name: '絵', children: [
+              { name: '基本', children: [
+                { name: '大枠の形' },
+                { name: 'プロポーション' },
+                { name: 'シンプルな形' },
+                { name: '面を抽象化' },
+                { name: 'アタリとパース', children: [{ name: '対角線で中央が導かれる' }] },
+                { name: 'アタリから段階的に具体化してイメージできなければ観察' },
+                { name: '観察と描くのは区別し絵と向き合う' },
+              ]},
+              { name: 'タッチ', children: [
+                { name: '流れや面を意識' },
+                { name: 'あえて逆', children: [
+                  { name: '四角を丸く' },
+                  { name: '丸いところを直線' },
+                ]},
+                { name: '凹凸で影を作る' },
+              ]},
+              { name: '構成', children: [
+                { name: '一見バラバラの抽象に繋がり' },
+                { name: '対象についての雰囲気や感じることや意見' },
+                { name: '見方を変えさせる' },
+                { name: '視覚情報', children: [
+                  { name: 'ざっくりとしたレイアウト' },
+                  { name: '色' },
+                ]},
+              ]},
+              { name: '漫画', children: [
+                { name: '工程', children: [
+                  { name: '①プロット(単位ごとの話の流れ)' },
+                  { name: '②シナリオ' },
+                  { name: '③絵コンテ(ネーム)' },
+                  { name: '④下書き' },
+                  { name: '⑤ペン入れ' },
+                  { name: '⑥下書きの削除' },
+                  { name: '⑦塗り' },
+                  { name: '⑧修正' },
+                  { name: '⑨トーン' },
+                ]},
+              ]},
+              { name: '画材', children: [
+                { name: 'ミクストメディア' },
+                { name: 'テンペラ' },
+                { name: 'アクリル' },
+                { name: 'パネル' },
+              ]},
+            ]
+          }
+        ]
+      },
+      created() {
+        this.filteredVisualPhoto = JSON.parse(JSON.stringify(this.VisualPhoto));
+        this.filteredVisualDraw = JSON.parse(JSON.stringify(this.VisualDraw));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesVisualPhoto(newOpen) {
+          this.openNodesVisualPhoto = newOpen;
+        },
+        updateOpenNodesVisualDraw(newOpen) {
+          this.openNodesVisualDraw = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredVisualPhoto = JSON.parse(JSON.stringify(this.VisualPhoto));
+            this.filteredVisualDraw = JSON.parse(JSON.stringify(this.VisualDraw));
+            this.openNodesVisualPhoto = [];
+            this.openNodesVisualDraw = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredVisualPhoto = filterTree(JSON.parse(JSON.stringify(this.VisualPhoto)));
+          this.filteredVisualDraw = filterTree(JSON.parse(JSON.stringify(this.VisualDraw)));
+
+          this.openNodesVisualPhoto = this.collectAllNodeIds(this.filteredVisualPhoto);
+          this.openNodesVisualDraw = this.collectAllNodeIds(this.filteredVisualDraw);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

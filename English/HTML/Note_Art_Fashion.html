@@ -1,0 +1,175 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>ファッション</title>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > Art > Fashion</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">ファッション</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="ファッションを検索" prepend-inner-icon="mdi-magnify" clearable
+                      outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_1">
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1"></v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">メンズ</v-card-title>
+                              <v-treeview :items="filteredFashionMens" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesFashionMens" @update:open="updateOpenNodesFashionMens">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredFashionMens: [],
+        openNodesFashionMens: [],
+        FashionMens: [
+          {
+            name: 'メンズ', children: [
+              { name: 'ブランド', children: [
+                { name: 'Luxury', children: [
+                  { name: 'Ermenegildo Zegna', children: [{ name: '滑らかで落ち着いた印象' }] },
+                  { name: 'Giorgio Armani', children: [{ name: '遊びとツヤ感が多い印象' }] },
+                  { name: 'Loro Piana', children: [{ name: '季節に合わせた色やパステル調が多い印象' }] },
+                  { name: 'Prada', children: [{ name: 'シックとモダンな印象' }] },
+                  { name: 'Jil Sander', children: [{ name: '洗練された印象' }] },
+                ]},
+                { name: 'Designer', children: [
+                  { name: 'Emporio Armani', children: [{ name: 'モダンとイタリアらしい印象' }] },
+                  { name: 'Maison Margiela', children: [{ name: '洗練されたカジュアルな印象' }] },
+                ]},
+              ]},
+            ]
+          },
+        ],
+      },
+      created() {
+        this.filteredFashionMens = JSON.parse(JSON.stringify(this.FashionMens));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesFashionMens(newOpen) {
+          this.openNodesFashionMens = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredFashionMens = JSON.parse(JSON.stringify(this.FashionMens));
+            this.openNodesFashionMens = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredFashionMens = filterTree(JSON.parse(JSON.stringify(this.FashionMens)));
+
+          this.openNodesFashionMens = this.collectAllNodeIds(this.filteredFashionMens);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

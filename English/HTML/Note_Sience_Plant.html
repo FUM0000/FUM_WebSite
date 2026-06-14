@@ -1,0 +1,387 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>植物</title>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > Sience > Plant</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">植物</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="学習内容を検索" prepend-inner-icon="mdi-magnify" clearable
+                      outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_1">
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1" @click="Count_Step_1 = 1">全般</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2" @click="Count_Step_1 = 2">野菜</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 3" step="3" @click="Count_Step_1 = 3">観葉植物</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 4" step="4" @click="Count_Step_1 = 4">山椒の挿し木</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 5" step="5" @click="Count_Step_1 = 5">雑草</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 6" step="6" @click="Count_Step_1 = 6">水耕栽培</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">全般</v-card-title>
+                              <v-treeview :items="filteredPlantGeneral" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesPlantGeneral" @update:open="updateOpenNodesPlantGeneral">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">野菜</v-card-title>
+                              <v-treeview :items="filteredPlantVegetables" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesPlantVegetables" @update:open="updateOpenNodesPlantVegetables">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 3">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="3">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">観葉植物</v-card-title>
+                              <v-treeview :items="filteredPlantIndoor" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesPlantIndoor" @update:open="updateOpenNodesPlantIndoor">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 2">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 4">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="4">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">山椒の挿し木</v-card-title>
+                              <v-treeview :items="filteredPlantPepper" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesPlantPepper" @update:open="updateOpenNodesPlantPepper">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 3">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 5">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="5">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">雑草</v-card-title>
+                              <v-treeview :items="filteredPlantWeed" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesPlantWeed" @update:open="updateOpenNodesPlantWeed">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 4">戻る</v-btn>
+                            <v-btn color="primary" @click="Count_Step_1 = 6">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="6">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">水耕栽培</v-card-title>
+                              <v-treeview :items="filteredPlantHydro" item-key="name" activatable open-on-click
+                                dense :open.sync="openNodesPlantHydro" @update:open="updateOpenNodesPlantHydro">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 5">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredPlantGeneral: [],
+        filteredPlantVegetables: [],
+        filteredPlantIndoor: [],
+        filteredPlantPepper: [],
+        filteredPlantWeed: [],
+        filteredPlantHydro: [],
+        openNodesPlantGeneral: [],
+        openNodesPlantVegetables: [],
+        openNodesPlantIndoor: [],
+        openNodesPlantPepper: [],
+        openNodesPlantWeed: [],
+        openNodesPlantHydro: [],
+        PlantGeneral: [
+          {
+            name: '全般', children: [
+              { name: '水はけ' },
+              { name: '栄養' },
+              { name: '日当たり' },
+              { name: '土に空気を送る' },
+              { name: '土壌改良', children: [
+                { name: '納豆菌' },
+                { name: '乳酸菌' },
+                { name: '砂糖' },
+              ]},
+              { name: '防虫抗菌', children: [
+                { name: 'ニンニク唐辛子アルコール水' },
+              ]},
+            ]
+          }
+        ],
+        PlantVegetables: [
+          {
+            name: '野菜', children: [
+              { name: '発芽', children: [
+                { name: 'ニンニク', children: [
+                  { name: '皮をむく' },
+                  { name: '一晩水につける', children: [{ name: '三分の一程度浸水' }] },
+                ]},
+                { name: '枝豆', children: [
+                  { name: '豆もやしを半分に切る' },
+                  { name: '豆の半分を埋める' },
+                ]},
+              ]},
+              { name: '注意事項', children: [
+                { name: 'ほうれん草', children: [
+                  { name: '暑さを避ける' },
+                  { name: '石灰多め' },
+                  { name: '肥料切れをさせない' },
+                ]},
+                { name: '玉ねぎ', children: [
+                  { name: '小さい状態で越冬' },
+                  { name: '病気の予防を徹底' },
+                ]},
+                { name: 'とうもろこし', children: [{ name: '15度以上' }] },
+                { name: 'ビーツ', children: [{ name: '猛暑の種まき不可' }] },
+              ]},
+            ]
+          }
+        ],
+        PlantIndoor: [
+          {
+            name: '観葉植物', children: [
+              { name: '多肉植物', children: [
+                { name: '適した季節' },
+                { name: '夏型の冬は葉水のみ' },
+                { name: '成長期に週１で液肥' },
+              ]},
+            ]
+          }
+        ],
+        PlantPepper: [
+          {
+            name: '山椒の挿し木', children: [
+              { name: '3月もしくは 6月 7月' },
+              { name: '一年生枝' },
+            ]
+          }
+        ],
+        PlantWeed: [
+          {
+            name: '雑草', children: [
+              { name: '熱湯で枯らせる' },
+            ]
+          }
+        ],
+        PlantHydro: [
+          {
+            name: '水耕栽培', children: [
+              { name: 'スポンジとカップやパック' },
+              { name: '発泡スチロールと糸' },
+            ]
+          }
+        ]
+      },
+      created() {
+        this.filteredPlantGeneral = JSON.parse(JSON.stringify(this.PlantGeneral));
+        this.filteredPlantVegetables = JSON.parse(JSON.stringify(this.PlantVegetables));
+        this.filteredPlantIndoor = JSON.parse(JSON.stringify(this.PlantIndoor));
+        this.filteredPlantPepper = JSON.parse(JSON.stringify(this.PlantPepper));
+        this.filteredPlantWeed = JSON.parse(JSON.stringify(this.PlantWeed));
+        this.filteredPlantHydro = JSON.parse(JSON.stringify(this.PlantHydro));
+      },
+      methods: {
+        collectAllNodeIds(items) {
+          const ids = [];
+          const collect = (nodes) => {
+            nodes.forEach((node) => {
+              ids.push(node.name);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesPlantGeneral(newOpen) {
+          this.openNodesPlantGeneral = newOpen;
+        },
+        updateOpenNodesPlantVegetables(newOpen) {
+          this.openNodesPlantVegetables = newOpen;
+        },
+        updateOpenNodesPlantIndoor(newOpen) {
+          this.openNodesPlantIndoor = newOpen;
+        },
+        updateOpenNodesPlantPepper(newOpen) {
+          this.openNodesPlantPepper = newOpen;
+        },
+        updateOpenNodesPlantWeed(newOpen) {
+          this.openNodesPlantWeed = newOpen;
+        },
+        updateOpenNodesPlantHydro(newOpen) {
+          this.openNodesPlantHydro = newOpen;
+        },
+        filterTreeview() {
+          const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredPlantGeneral = JSON.parse(JSON.stringify(this.PlantGeneral));
+            this.filteredPlantVegetables = JSON.parse(JSON.stringify(this.PlantVegetables));
+            this.filteredPlantIndoor = JSON.parse(JSON.stringify(this.PlantIndoor));
+            this.filteredPlantPepper = JSON.parse(JSON.stringify(this.PlantPepper));
+            this.filteredPlantWeed = JSON.parse(JSON.stringify(this.PlantWeed));
+            this.filteredPlantHydro = JSON.parse(JSON.stringify(this.PlantHydro));
+            this.openNodesPlantGeneral = [];
+            this.openNodesPlantVegetables = [];
+            this.openNodesPlantIndoor = [];
+            this.openNodesPlantPepper = [];
+            this.openNodesPlantWeed = [];
+            this.openNodesPlantHydro = [];
+            return;
+          }
+
+          const filterTree = (items) => {
+            return items.reduce((acc, item) => {
+              const itemCopy = { ...item };
+              const matches = item.name.toLowerCase().includes(query);
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredPlantGeneral = filterTree(JSON.parse(JSON.stringify(this.PlantGeneral)));
+          this.filteredPlantVegetables = filterTree(JSON.parse(JSON.stringify(this.PlantVegetables)));
+          this.filteredPlantIndoor = filterTree(JSON.parse(JSON.stringify(this.PlantIndoor)));
+          this.filteredPlantPepper = filterTree(JSON.parse(JSON.stringify(this.PlantPepper)));
+          this.filteredPlantWeed = filterTree(JSON.parse(JSON.stringify(this.PlantWeed)));
+          this.filteredPlantHydro = filterTree(JSON.parse(JSON.stringify(this.PlantHydro)));
+
+          this.openNodesPlantGeneral = this.collectAllNodeIds(this.filteredPlantGeneral);
+          this.openNodesPlantVegetables = this.collectAllNodeIds(this.filteredPlantVegetables);
+          this.openNodesPlantIndoor = this.collectAllNodeIds(this.filteredPlantIndoor);
+          this.openNodesPlantPepper = this.collectAllNodeIds(this.filteredPlantPepper);
+          this.openNodesPlantWeed = this.collectAllNodeIds(this.filteredPlantWeed);
+          this.openNodesPlantHydro = this.collectAllNodeIds(this.filteredPlantHydro);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
