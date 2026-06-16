@@ -29,10 +29,45 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
 
-  <style>
-    #qrcode img {
-      margin: 0 auto;
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
     }
+  }
+  </script>
+
+  <style>
+    #qrcode img { margin: 0 auto; }
+    #qr-three-container {
+      width: 100%; aspect-ratio: 1; max-width: 420px;
+      margin: 8px auto 0; border-radius: 16px; overflow: hidden; position: relative;
+    }
+    #qr-three-container canvas { display: block; width: 100% !important; height: 100% !important; }
+    .qr-controls { display: flex; gap: 8px; margin-top: 8px; justify-content: center; flex-wrap: wrap; }
+    .setting-row {
+      display: flex; align-items: center; gap: 10px; margin: 5px 0; flex-wrap: wrap;
+    }
+    .setting-label {
+      min-width: 105px; font-size: 13px; font-weight: 500; color: rgba(0,0,0,0.75);
+    }
+    .picker-wrap {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .picker-wrap input[type="color"] {
+      width: 36px; height: 36px; padding: 0; border: 2px solid rgba(0,0,0,0.2);
+      border-radius: 50%; cursor: pointer; background: none;
+    }
+    .picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    .picker-wrap input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+    .hex-label {
+      font-size: 12px; font-family: 'Space Mono', monospace; color: rgba(0,0,0,0.45);
+      min-width: 60px;
+    }
+    .setting-radio-group {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0;
+    }
+    .setting-radio-group .v-radio { margin: 0; flex-shrink: 0; }
   </style>
 </head>
 
@@ -54,18 +89,55 @@
                     <v-icon large left>mdi-qrcode-plus</v-icon>
                     Generate QR Code
                   </v-card-title>
-                  <v-card-text>
+                  <v-card-text class="pt-3">
                     <v-text-field v-model="qrText" label="Enter URL" outlined :error-messages="urlError"
-                      @keyup.enter="generateQR"></v-text-field>
-                    <v-btn color="primary" large block @click="generateQR" :disabled="!isValidInput">
-                      <v-icon left>mdi-qrcode</v-icon>
-                      Generate
-                    </v-btn>
-                    <div id="qrcode" class="d-flex justify-center mt-4"></div>
-                    <v-btn v-if="qrGenerated" color="success" block class="mt-4" @click="saveQRCode">
-                      <v-icon left>mdi-download</v-icon>
-                      Save QR Code
-                    </v-btn>
+                      class="mt-4"></v-text-field>
+
+                    <v-divider class="my-2"></v-divider>
+
+                    <div class="setting-row">
+                      <span class="setting-label">Dot Color</span>
+                      <div class="picker-wrap">
+                        <input type="color" v-model="dotColor" />
+                        <span class="hex-label">{{ dotColor }}</span>
+                      </div>
+                    </div>
+
+                    <div class="setting-row">
+                      <span class="setting-label">Background</span>
+                      <div class="picker-wrap">
+                        <input type="color" v-model="bgColor" />
+                        <span class="hex-label">{{ bgColor }}</span>
+                      </div>
+                      <v-checkbox v-model="bgTransparent" label="Transparent" hide-details class="ma-0 pa-0" style="display:inline-flex;width:auto;"></v-checkbox>
+                    </div>
+
+                    <v-divider class="my-2"></v-divider>
+
+                    <v-radio-group v-model="cellShape" row hide-details class="setting-radio-group">
+                      <span class="setting-label">Cell Shape</span>
+                      <v-radio label="Square" value="square"></v-radio>
+                      <v-radio label="Rounded" value="round"></v-radio>
+                    </v-radio-group>
+
+                    <v-radio-group v-model="finderShape" row hide-details class="setting-radio-group">
+                      <span class="setting-label">Finder Pattern</span>
+                      <v-radio label="Standard" value="standard"></v-radio>
+                      <v-radio label="Circle" value="round"></v-radio>
+                    </v-radio-group>
+
+                    <v-divider class="my-2"></v-divider>
+
+                    <div id="qr-three-container"></div>
+                    <div v-if="qrGenerated" class="qr-controls">
+                      <v-btn color="success" @click="saveQRCode">
+                        <v-icon left>mdi-download</v-icon>
+                        Save PNG
+                      </v-btn>
+                    </div>
+                    <v-alert v-if="errorMessage" color="error" outlined class="mt-4">
+                      {{ errorMessage }}
+                    </v-alert>
                   </v-card-text>
                 </v-card>
 
@@ -106,12 +178,268 @@
 
     </template>
   </v-app>
-  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    let scene, camera, renderer;
+    let qrPlane = null;
+    let isInitialized = false;
+
+    function getContainer() {
+      return document.getElementById('qr-three-container');
+    }
+
+    function initScene() {
+      if (isInitialized) return;
+      const container = getContainer();
+      if (!container) return;
+      const w = container.clientWidth || 400;
+      const h = container.clientHeight || 400;
+
+      new ResizeObserver(() => onResize()).observe(container);
+
+      scene = new THREE.Scene();
+
+      const d = Math.max(w, h);
+      camera = new THREE.OrthographicCamera(-d / 2, d / 2, d / 2, -d / 2, -10, 10);
+      camera.position.set(0, 0, 5);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      window.addEventListener('resize', onResize);
+      isInitialized = true;
+    }
+
+    function onResize() {
+      const container = getContainer();
+      if (!container || !camera || !renderer) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
+      const d = Math.max(w, h);
+      camera.left = -d / 2; camera.right = d / 2;
+      camera.top = d / 2; camera.bottom = -d / 2;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+
+    function generateQRCanvas(url, cellShape, finderShape) {
+      const tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0';
+      document.body.appendChild(tempDiv);
+      try {
+        const qr = new QRCode(tempDiv, {
+          text: url, width: 256, height: 256,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+        const model = qr._oQRCode;
+        if (!model || !model.modules) throw new Error('Failed');
+        const M = model.moduleCount;
+        const modules = [];
+        for (let r = 0; r < M; r++) {
+          modules[r] = [];
+          for (let c = 0; c < M; c++) modules[r][c] = model.modules[r][c];
+        }
+
+        const cs = 16;
+        const margin = 4 * cs;
+        const size = M * cs + 2 * margin;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+
+        function inFinder(r, c) {
+          return (r < 7 && c < 7) || (r < 7 && c >= M - 7) || (r >= M - 7 && c < 7);
+        }
+
+        ctx.fillStyle = '#000000';
+        for (let r = 0; r < M; r++) {
+          for (let c = 0; c < M; c++) {
+            if (!modules[r][c]) continue;
+            const x = margin + c * cs;
+            const y = margin + r * cs;
+            if (finderShape === 'round' && inFinder(r, c)) continue;
+            if (inFinder(r, c)) {
+              ctx.fillRect(x, y, cs, cs);
+            } else if (cellShape === 'round') {
+              ctx.beginPath();
+              ctx.arc(x + cs / 2, y + cs / 2, cs / 2, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              ctx.fillRect(x, y, cs, cs);
+            }
+          }
+        }
+
+        if (finderShape === 'round') {
+          const fc = [
+            { cx: margin + 3.5 * cs, cy: margin + 3.5 * cs },
+            { cx: margin + (M - 3.5) * cs, cy: margin + 3.5 * cs },
+            { cx: margin + 3.5 * cs, cy: margin + (M - 3.5) * cs }
+          ];
+          for (const { cx, cy } of fc) {
+            ctx.fillStyle = '#000000';
+            ctx.beginPath(); ctx.arc(cx, cy, 3.5 * cs, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(cx, cy, 2.3 * cs, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath(); ctx.arc(cx, cy, 1.2 * cs, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+
+        return { canvas, M };
+      } finally {
+        document.body.removeChild(tempDiv);
+      }
+    }
+
+    function srgbToLinear(hex) {
+      const c = new THREE.Color(hex);
+      c.convertSRGBToLinear();
+      return c;
+    }
+
+    function renderQR(url, dotHex, bgHex, bgTransparent, cellShape, finderShape) {
+      initScene();
+
+      const container = getContainer();
+      if (!container) return;
+      const cw = container.clientWidth || 400;
+      const ch = container.clientHeight || 400;
+
+      if (qrPlane) { scene.remove(qrPlane); qrPlane.geometry.dispose(); qrPlane.material.dispose(); qrPlane = null; }
+
+      if (bgTransparent) {
+        scene.background = null;
+        renderer.setClearColor(0x000000, 0);
+      } else {
+        scene.background = srgbToLinear(bgHex);
+        renderer.setClearColor(0x000000, 1);
+      }
+
+      const d = Math.max(cw, ch);
+
+      const result = generateQRCanvas(url, cellShape, finderShape);
+      if (!result) return;
+
+      const qrTex = new THREE.CanvasTexture(result.canvas);
+      qrTex.needsUpdate = true;
+      const smooth = cellShape === 'round' || finderShape === 'round';
+      qrTex.minFilter = smooth ? THREE.LinearFilter : THREE.NearestFilter;
+      qrTex.magFilter = smooth ? THREE.LinearFilter : THREE.NearestFilter;
+
+      const qrMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uQRTexture: { value: qrTex },
+          uDotColor: { value: srgbToLinear(dotHex) },
+          uBgColor: { value: srgbToLinear(bgHex) },
+          uBgTransparent: { value: bgTransparent }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          precision highp float;
+          uniform sampler2D uQRTexture;
+          uniform vec3 uDotColor;
+          uniform vec3 uBgColor;
+          uniform bool uBgTransparent;
+          varying vec2 vUv;
+
+          void main() {
+            vec4 qrSample = texture2D(uQRTexture, vUv);
+            float lum = dot(qrSample.rgb, vec3(0.299, 0.587, 0.114));
+            float isDark = step(lum, 0.5);
+            vec3 color = mix(uBgColor, uDotColor, isDark);
+            float alpha = uBgTransparent ? isDark : 1.0;
+            gl_FragColor = vec4(color, alpha);
+          }
+        `,
+        transparent: bgTransparent,
+        depthWrite: !bgTransparent
+      });
+
+      const s = d * 0.5;
+
+      const geo = new THREE.PlaneGeometry(2, 2);
+      qrPlane = new THREE.Mesh(geo, qrMat);
+      qrPlane.scale.set(s, s, 1);
+      scene.add(qrPlane);
+
+      renderer.render(scene, camera);
+    }
+
+    function updateColors(dotHex, bgHex, bgTransparent, cellShape, finderShape, url) {
+      if (!qrPlane) return;
+      const needsRedraw = qrPlane.userData.cellShape !== cellShape || qrPlane.userData.finderShape !== finderShape;
+      qrPlane.userData.cellShape = cellShape;
+      qrPlane.userData.finderShape = finderShape;
+      if (needsRedraw && url) {
+        renderQR(url, dotHex, bgHex, bgTransparent, cellShape, finderShape);
+        return;
+      }
+      qrPlane.material.uniforms.uDotColor.value = srgbToLinear(dotHex);
+      qrPlane.material.uniforms.uBgColor.value = srgbToLinear(bgHex);
+      qrPlane.material.uniforms.uBgTransparent.value = bgTransparent;
+      qrPlane.material.transparent = bgTransparent;
+      qrPlane.material.depthWrite = !bgTransparent;
+      qrPlane.material.needsUpdate = true;
+      if (bgTransparent) {
+        scene.background = null;
+        renderer.setClearColor(0x000000, 0);
+      } else {
+        scene.background = srgbToLinear(bgHex);
+        renderer.setClearColor(0x000000, 1);
+      }
+      renderer.render(scene, camera);
+    }
+
+    window.THREE_QR = {
+      generate(url, dotHex, bgHex, bgTransparent, cellShape, finderShape) {
+        try {
+          renderQR(url, dotHex, bgHex, bgTransparent, cellShape, finderShape);
+          if (qrPlane) {
+            qrPlane.userData.cellShape = cellShape;
+            qrPlane.userData.finderShape = finderShape;
+          }
+          return true;
+        } catch (e) {
+          console.error('QR generation error:', e);
+          return false;
+        }
+      },
+      updateColors(dotHex, bgHex, bgTransparent, cellShape, finderShape, url) {
+        try {
+          updateColors(dotHex, bgHex, bgTransparent, cellShape, finderShape, url);
+        } catch (e) {
+          console.error('Color update error:', e);
+        }
+      },
+      saveImage() {
+        if (!renderer || !scene || !camera) return null;
+        renderer.render(scene, camera);
+        return renderer.domElement.toDataURL('image/png');
+      }
+    };
+
+    initScene();
+  </script>
 
   <script>
     new Vue({
@@ -125,7 +453,13 @@
         qrcode: null,
         html5QrcodeScanner: null,
         urlError: '',
-        qrGenerated: false
+        qrGenerated: false,
+        errorMessage: '',
+        dotColor: '#000000',
+        bgColor: '#ffffff',
+        bgTransparent: false,
+        cellShape: 'square',
+        finderShape: 'standard'
       },
       computed: {
         isValidInput() {
@@ -133,104 +467,83 @@
         }
       },
       watch: {
-        qrText(newValue) {
-          this.validateUrl(newValue);
-        }
+        qrText(v) {
+          this.validateUrl(v);
+          if (v && !this.urlError) this.generateQR();
+          else if (!v) this.qrGenerated = false;
+        },
+        dotColor() { this.regen(); },
+        bgColor() { this.regen(); },
+        bgTransparent() { this.regen(); },
+        cellShape() { this.regen(); },
+        finderShape() { this.regen(); }
       },
       methods: {
         validateUrl(url) {
-          if (!url) {
-            this.urlError = '';
-            return;
-          }
-
-          // 最初にhttp/httpsで始まっているかチェック
+          if (!url) { this.urlError = ''; return; }
           if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            this.urlError = 'URL must start with http:// or https://';
-            return;
+            this.urlError = 'URL must start with http:// or https://'; return;
           }
-
-          // URL形式の検証
-          try {
-            new URL(url);
-            this.urlError = '';
-          } catch (e) {
-            this.urlError = 'Please enter a valid URL';
-          }
+          try { new URL(url); this.urlError = ''; }
+          catch (e) { this.urlError = 'Please enter a valid URL'; }
         },
         generateQR() {
           if (this.qrText && !this.urlError) {
-            if (this.qrcode) {
-              document.getElementById('qrcode').innerHTML = '';
+            let u = this.qrText;
+            if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
+            this.errorMessage = '';
+            if (window.THREE_QR && window.THREE_QR.generate(u, this.dotColor, this.bgColor, this.bgTransparent, this.cellShape, this.finderShape)) {
+              this.qrGenerated = true;
+            } else {
+              this.errorMessage = 'Failed to generate QR code.';
             }
-
-            let finalUrl = this.qrText;
-            if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-              finalUrl = 'https://' + finalUrl;
-            }
-
-            this.qrcode = new QRCode(document.getElementById('qrcode'), {
-              text: finalUrl,
-              width: 256,
-              height: 256,
-              colorDark: '#000000',
-              colorLight: '#ffffff',
-              correctLevel: QRCode.CorrectLevel.H
-            });
-
-            this.qrGenerated = true;
+          }
+        },
+        regen() {
+          if (this.qrText && !this.urlError) {
+            if (!this.qrGenerated) { this.generateQR(); return; }
+            let u = this.qrText;
+            if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
+            window.THREE_QR.updateColors(this.dotColor, this.bgColor, this.bgTransparent, this.cellShape, this.finderShape, u);
           }
         },
         saveQRCode() {
-          const qrImage = document.querySelector('#qrcode img');
-          if (qrImage) {
-            const link = document.createElement('a');
-            link.download = 'qrcode.png';
-            link.href = qrImage.src;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+          if (window.THREE_QR) {
+            const d = window.THREE_QR.saveImage();
+            if (d) {
+              const a = document.createElement('a');
+              a.download = 'qrcode.png'; a.href = d;
+              document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
           }
         },
         async onFileChange(event) {
           const file = event.target.files[0];
           if (!file) return;
-
           try {
-            if (this.html5QrcodeScanner) {
-              await this.html5QrcodeScanner.clear();
-            }
-
-            const html5QrcodeScanner = new Html5Qrcode("reader");
-            this.html5QrcodeScanner = html5QrcodeScanner;
-
-            const imageFile = await this.getImageFileData(file);
-
-            const result = await html5QrcodeScanner.scanFile(imageFile, true);
-            this.scanResult = result;
-            this.scanError = false;
-          } catch (error) {
-            console.error("Error scanning file:", error);
-            this.scanResult = "An error has occurred. Please try another image.";
+            if (this.html5QrcodeScanner) await this.html5QrcodeScanner.clear();
+            const s = new Html5Qrcode("reader");
+            this.html5QrcodeScanner = s;
+            const f = await this.getImageFileData(file);
+            const r = await s.scanFile(f, true);
+            this.scanResult = r; this.scanError = false;
+          } catch (e) {
+            console.error(e);
+            this.scanResult = 'An error has occurred. Please try another image.';
             this.scanError = true;
           }
         },
         getImageFileData(file) {
           return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const imageFile = new File([e.target.result], file.name, { type: file.type });
-              resolve(imageFile);
-            };
-            reader.onerror = (e) => reject(e);
-            reader.readAsArrayBuffer(file);
+            const r = new FileReader();
+            r.onload = e => resolve(new File([e.target.result], file.name, { type: file.type }));
+            r.onerror = reject;
+            r.readAsArrayBuffer(file);
           });
         }
       },
       beforeDestroy() {
-        if (this.html5QrcodeScanner) {
-          this.html5QrcodeScanner.clear();
-        }
+        if (this.html5QrcodeScanner) this.html5QrcodeScanner.clear();
       }
     });
   </script>

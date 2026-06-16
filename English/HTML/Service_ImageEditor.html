@@ -19,12 +19,135 @@
   <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-
   <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
   <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
 
   <title>Image Editor</title>
+
+  <style>
+    .edit-layout {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 120px);
+    }
+    .preview-section {
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 0;
+      background: inherit;
+      border-bottom: 1px solid rgba(128,128,128,0.25);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .edit-scroll {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 200px;
+      padding-top: 4px;
+    }
+    .edit-scroll::-webkit-scrollbar { width: 6px; }
+    .edit-scroll::-webkit-scrollbar-track { background: transparent; }
+    .edit-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+    .preview-wrap {
+      position: relative;
+      overflow: hidden;
+      border-radius: 4px;
+      background: #111;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grab;
+      max-height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-wrap.dragging { cursor: grabbing; }
+    .preview-img {
+      display: block;
+      width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      object-position: center;
+    }
+    .preview-inner {
+      transform-origin: center center;
+    }
+    .shader-canvas {
+      display: block;
+      width: 100%;
+      border-radius: 4px;
+    }
+    .zoom-badge {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.6);
+      color: #ccc;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      pointer-events: none;
+      font-family: 'Space Mono', monospace;
+      z-index: 2;
+    }
+    .curve-canvas {
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      cursor: crosshair;
+      touch-action: none;
+      max-width: 100%;
+    }
+    .curve-wrap { display: flex; justify-content: center; margin: 8px 0; }
+    .section-card { border-left: 2px solid transparent; transition: border-color 0.2s; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .stitch-thumbs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0;
+    }
+    .stitch-thumb {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: #111;
+    }
+    .stitch-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .stitch-thumb .remove-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 18px;
+      text-align: center;
+      padding: 0;
+    }
+    .v-slider { margin-top: 2px; }
+  </style>
 </head>
 
 <body>
@@ -36,84 +159,171 @@
 
       <v-main id="Main">
         <transition name="Fade_Page">
-          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+          <v-container v-show="Ready_Page" fluid class="pa-3">
 
             <v-row justify="center">
-              <v-col xs="12" md="6">
-                <v-card>
+              <v-col xs="12" md="8" lg="7">
 
-                  <v-card-text>
-                    <v-file-input v-model="file" accept="image/*" label="Select Image" prepend-icon="mdi-image"
-                      @change="onFileSelected"></v-file-input>
+                <div class="edit-layout">
 
-                    <v-text-field class="mt-0 pt-0" v-model="outputFileName" label="Output filename"></v-text-field>
+                  <!-- ===== PREVIEW SECTION (sticky top) ===== -->
+                  <div class="preview-section mb-2">
+                    <v-card>
+                      <v-card-text class="py-2 px-3">
 
-                    <v-row v-if="imagePreview">
-                      <v-col cols="12">
-                        <v-img :src="showOriginal ? originalImage : previewImage" contain max-height="300"
-                          :style="getFilterStyle"></v-img>
-                        <v-btn block text color="primary" class="mt-2 mb-2" @mousedown="showOriginalImage"
-                          @mouseup="hideOriginalImage" @mouseleave="hideOriginalImage"
+                        <v-btn-toggle v-model="inputMode" mandatory dense class="mb-2">
+                          <v-btn small value="single">Single Image</v-btn>
+                          <v-btn small value="stitch">Stitch</v-btn>
+                        </v-btn-toggle>
+
+                        <template v-if="inputMode === 'single'">
+                          <v-file-input v-model="file" accept="image/*" label="Select Image" prepend-icon="mdi-image"
+                            @change="onFileSelected" class="mb-1"></v-file-input>
+                        </template>
+
+                        <template v-if="inputMode === 'stitch'">
+                          <v-file-input v-model="stitchFiles" accept="image/*" label="Add images" prepend-icon="mdi-plus"
+                            multiple dense hide-details class="mb-2" @change="onStitchFilesAdded"></v-file-input>
+                          <div class="stitch-thumbs" v-if="stitchImages.length">
+                            <div class="stitch-thumb" v-for="(img, i) in stitchImages" :key="i">
+                              <img :src="img" alt="">
+                              <button class="remove-btn" @click="removeStitchImage(i)">&times;</button>
+                            </div>
+                          </div>
+                          <v-row dense class="mt-1">
+                            <v-col cols="6">
+                              <v-select v-model="stitchLayout" :items="stitchLayouts" label="Layout" dense hide-details></v-select>
+                            </v-col>
+                            <v-col cols="3" v-if="stitchLayout === 'grid'">
+                              <v-text-field v-model.number="stitchCols" label="Cols" type="number" min="1" dense hide-details></v-text-field>
+                            </v-col>
+                            <v-col cols="3" v-if="stitchLayout === 'grid'">
+                              <v-text-field v-model.number="stitchRows" label="Rows" type="number" min="1" dense hide-details></v-text-field>
+                            </v-col>
+                          </v-row>
+                        </template>
+
+                        <v-text-field v-model="outputFileName" label="Output filename" class="mb-1"></v-text-field>
+
+                        <div v-if="imagePreview"
+                          class="preview-wrap"
+                          :class="{ dragging: dragging }"
+                          @wheel.prevent="onZoom"
+                          @mousedown="onDragStart"
+                          @mousemove="onDragMove"
+                          @mouseup="onDragEnd"
+                          @mouseleave="onDragEnd"
+                          @touchstart.prevent="onTouchStart"
+                          @touchmove.prevent="onTouchMove"
+                          @touchend="onTouchEnd">
+                          <div ref="previewInner" class="preview-inner" :style="previewInnerStyle">
+                            <img v-show="!useThreePreview" :src="showOriginal ? originalImage : previewImage"
+                              :style="stdFilterStyle" class="preview-img">
+                            <canvas v-show="useThreePreview" ref="shaderCanvas" class="shader-canvas"></canvas>
+                          </div>
+                          <div class="zoom-badge" v-if="zoom !== 1">{{ Math.round(zoom * 100) }}%</div>
+                        </div>
+
+                        <v-btn v-if="imagePreview" block text color="primary" class="mt-1 mb-0"
+                          @mousedown="showOriginalImage" @mouseup="hideOriginalImage" @mouseleave="hideOriginalImage"
                           @touchstart.prevent="showOriginalImage" @touchend.prevent="hideOriginalImage">
                           Hold to show original
                         </v-btn>
-                      </v-col>
-                    </v-row>
 
-                    <v-expansion-panels>
-                      <v-expansion-panel>
-                        <v-expansion-panel-header>Resize</v-expansion-panel-header>
-                        <v-expansion-panel-content>
-                          <v-row>
-                            <v-col cols="12" md="6">
-                              <v-text-field v-model.number="width" label="Width (px)" type="number"
-                                min="1"></v-text-field>
+                      </v-card-text>
+                    </v-card>
+                  </div>
+
+                  <!-- ===== EDITING SECTIONS (scrollable) ===== -->
+                  <div class="edit-scroll" ref="editScroll">
+
+                    <!-- Adjust -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-1">
+                          <v-icon small class="mr-1">mdi-tune</v-icon>Adjust
+                        </div>
+
+                        <v-slider v-model="brightness" min="-100" max="100" label="Brightness" thumb-label></v-slider>
+
+                        <v-slider v-model="contrast" min="-100" max="100" label="Contrast" thumb-label></v-slider>
+
+                        <v-slider v-model="saturation" min="-100" max="100" label="Saturation" thumb-label></v-slider>
+
+                        <v-switch inset v-model="grayscale" label="Grayscale"></v-switch>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Resize -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-1">
+                          <v-icon small class="mr-1">mdi-arrow-expand-all</v-icon>Resize
+                        </div>
+
+                        <v-row dense>
+                          <v-col cols="6">
+                            <v-text-field v-model.number="width" label="Width (px)" type="number" min="1" dense></v-text-field>
+                          </v-col>
+                          <v-col cols="6">
+                            <v-text-field v-model.number="height" label="Height (px)" type="number" min="1" dense></v-text-field>
+                          </v-col>
+                        </v-row>
+                        <v-checkbox v-model="maintainAspectRatio" label="Maintain aspect ratio" dense></v-checkbox>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Effects (Advanced) -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-1">
+                          <v-icon small class="mr-1">mdi-shimmer</v-icon>Effects
+                        </div>
+
+                        <v-switch inset v-model="enableShader" label="Shader Effects" class="mb-2"></v-switch>
+
+                        <div class="mb-2">
+                          <v-slider v-model="glitchIntensity" min="0" max="1" step="0.01" label="Glitch Intensity" thumb-label></v-slider>
+                          <v-slider v-model="glitchFrequency" min="0" max="1" step="0.01" label="Glitch Frequency" thumb-label></v-slider>
+                        </div>
+
+                        <div class="mb-1">
+                          <div class="curve-wrap">
+                            <canvas id="curveCanvas" class="curve-canvas" width="256" height="256"></canvas>
+                          </div>
+                          <v-row dense align="center">
+                            <v-col cols="8">
+                              <v-select v-model="curveChannel" :items="curveChannels" label="Channel" dense hide-details></v-select>
                             </v-col>
-                            <v-col cols="12" md="6">
-                              <v-text-field v-model.number="height" label="Height (px)" type="number"
-                                min="1"></v-text-field>
+                            <v-col cols="4" class="text-right">
+                              <v-btn small text @click="resetCurve">
+                                <v-icon small left>mdi-restore</v-icon>Reset
+                              </v-btn>
                             </v-col>
                           </v-row>
+                        </div>
+                      </v-card-text>
+                    </v-card>
 
-                          <v-checkbox v-model="maintainAspectRatio" label="Maintain aspect ratio"></v-checkbox>
-                        </v-expansion-panel-content>
-                      </v-expansion-panel>
+                    <!-- Export -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-1">
+                          <v-icon small class="mr-1">mdi-export</v-icon>Export
+                        </div>
 
-                      <v-expansion-panel>
-                        <v-expansion-panel-header>Filter</v-expansion-panel-header>
-                        <v-expansion-panel-content>
-                          <v-slider v-model="brightness" min="-100" max="100" label="Brightness" thumb-label
-                            @input="updatePreview"></v-slider>
+                        <v-select v-model="format" :items="formats" label="Output format" dense hide-details class="mb-2"></v-select>
+                        <v-slider v-if="format === 'image/jpeg'" v-model="quality" min="0" max="100" label="Quality" thumb-label></v-slider>
 
-                          <v-slider v-model="contrast" min="-100" max="100" label="Contrast" thumb-label
-                            @input="updatePreview"></v-slider>
+                        <v-btn color="primary" block :disabled="!file || !outputFileName" @click="processImage" class="mt-2">
+                          <v-icon small left>mdi-download</v-icon>Save Image
+                        </v-btn>
+                      </v-card-text>
+                    </v-card>
 
-                          <v-slider v-model="saturation" min="-100" max="100" label="Saturation" thumb-label
-                            @input="updatePreview"></v-slider>
+                  </div>
+                </div>
 
-                          <v-switch inset v-model="grayscale" label="Grayscale" @change="updatePreview"></v-switch>
-                        </v-expansion-panel-content>
-                      </v-expansion-panel>
-
-                      <v-expansion-panel>
-                        <v-expansion-panel-header>Format</v-expansion-panel-header>
-                        <v-expansion-panel-content>
-                          <v-select v-model="format" :items="formats" label="Output format"></v-select>
-
-                          <v-slider v-if="format === 'image/jpeg'" v-model="quality" min="0" max="100" label="Quality"
-                            thumb-label></v-slider>
-                        </v-expansion-panel-content>
-                      </v-expansion-panel>
-                    </v-expansion-panels>
-                  </v-card-text>
-
-                  <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn color="primary" block :disabled="!file || !outputFileName" @click="processImage">
-                      Save Image
-                    </v-btn>
-                  </v-card-actions>
-                </v-card>
               </v-col>
             </v-row>
 
@@ -130,6 +340,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
 
   <script>
@@ -137,162 +348,821 @@
       el: '#App',
       vuetify: new Vuetify(),
       mixins: [window.Mixins_Common],
-      data: {
-        file: null,
-        imagePreview: null,
-        originalImage: null,
-        previewImage: null,
-        showOriginal: false,
-        width: 1024,
-        height: 1024,
-        maintainAspectRatio: true,
-        format: 'image/png', // JPEGからPNGに変更
-        formats: [
-          { text: 'PNG', value: 'image/png' },
-          { text: 'JPEG', value: 'image/jpeg' }
-        ],
-        quality: 90,
-        originalAspectRatio: null,
-        outputFileName: '',
-        brightness: 0,
-        contrast: 0,
-        saturation: 0,
-        grayscale: false
+      data: function () {
+        return {
+          // ---- image ----
+          file: null,
+          originalImage: null,
+          previewImage: null,
+          showOriginal: false,
+          width: 1024,
+          height: 1024,
+          maintainAspectRatio: true,
+          originalAspectRatio: null,
+          outputFileName: '',
+          inputMode: 'single',
+
+          // ---- stitch ----
+          stitchFiles: null,
+          stitchImages: [],
+          stitchLayout: 'vertical',
+          stitchLayouts: [
+            { text: 'Horizontal', value: 'horizontal' },
+            { text: 'Vertical', value: 'vertical' },
+            { text: 'Grid', value: 'grid' },
+          ],
+          stitchCols: 2,
+          stitchRows: 2,
+          // ---- edit controls ----
+          brightness: 0,
+          contrast: 0,
+          saturation: 0,
+          grayscale: false,
+          glitchIntensity: 0,
+          glitchFrequency: 0.5,
+          curveChannel: 'RGB',
+          curveChannels: [
+            { text: 'RGB', value: 'RGB' },
+            { text: 'Red', value: 'R' },
+            { text: 'Green', value: 'G' },
+            { text: 'Blue', value: 'B' },
+          ],
+          curvePoints: [
+            { x: 0, y: 0 },
+            { x: 0.33, y: 0.33 },
+            { x: 0.67, y: 0.67 },
+            { x: 1, y: 1 }
+          ],
+          format: 'image/png',
+          formats: [
+            { text: 'PNG', value: 'image/png' },
+            { text: 'JPEG', value: 'image/jpeg' }
+          ],
+          quality: 90,
+
+          // ---- shader toggle ----
+          enableShader: false,
+
+          // ---- zoom / drag ----
+          zoom: 1,
+          panX: 0,
+          panY: 0,
+          dragging: false,
+          dragStartX: 0,
+          dragStartY: 0,
+          panStartX: 0,
+          panStartY: 0,
+
+          // ---- three.js ----
+          threeReady: false,
+          threeInitialized: false,
+          _scene: null,
+          _camera: null,
+          _renderer: null,
+          _material: null,
+          _mesh: null,
+          _texture: null,
+          _curveTexture: null,
+          _animId: null,
+          _renderPending: false,
+
+          // ---- ui ----
+          draggingPointIndex: -1,
+        };
       },
+
       computed: {
-        getFilterStyle() {
+        useThreePreview: function () {
+          return this.enableShader && this.threeReady;
+        },
+        stdFilterStyle: function () {
+          if (this.showOriginal || this.useThreePreview) return {};
+          return {
+            filter: 'brightness(' + (100 + this.brightness) + '%) ' +
+              'contrast(' + (100 + this.contrast) + '%) ' +
+              'saturate(' + (100 + this.saturation) + '%) ' +
+              (this.grayscale ? 'grayscale(100%)' : '')
+          };
+        },
+        previewInnerStyle: function () {
           if (this.showOriginal) return {};
           return {
-            filter: `brightness(${100 + this.brightness}%) ` +
-              `contrast(${100 + this.contrast}%) ` +
-              `saturate(${100 + this.saturation}%) ` +
-              `${this.grayscale ? 'grayscale(100%)' : ''}`
+            transform: 'translate(' + this.panX + 'px,' + this.panY + 'px) scale(' + this.zoom + ')'
           };
-        }
-      },
-      watch: {
-        width(newWidth) {
-          if (this.maintainAspectRatio && this.originalAspectRatio) {
-            this.height = Math.round(newWidth / this.originalAspectRatio);
-          }
-          this.updatePreview();
         },
-        height(newHeight) {
-          if (this.maintainAspectRatio && this.originalAspectRatio) {
-            this.width = Math.round(newHeight * this.originalAspectRatio);
-          }
-          this.updatePreview();
-        }
       },
-      methods: {
-        onFileSelected(file) {
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              this.originalImage = e.target.result;
-              this.imagePreview = e.target.result;
-              this.previewImage = e.target.result;
 
-              const img = new Image();
-              img.onload = () => {
-                this.originalAspectRatio = img.width / img.height;
-                this.width = img.width;
-                this.height = img.height;
-                if (!this.outputFileName) {
-                  const originalName = file.name.substring(0, file.name.lastIndexOf('.'));
-                  this.outputFileName = `${originalName}_edited`;
+      watch: {
+        width: function (v) {
+          if (this.maintainAspectRatio && this.originalAspectRatio) {
+            this.height = Math.round(v / this.originalAspectRatio);
+          }
+          this._refreshPreview();
+        },
+        height: function (v) {
+          if (this.maintainAspectRatio && this.originalAspectRatio) {
+            this.width = Math.round(v * this.originalAspectRatio);
+          }
+          this._refreshPreview();
+        },
+        brightness: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        contrast: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        saturation: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        grayscale: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        glitchIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        glitchFrequency: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        curvePoints: {
+          deep: true,
+          handler: function () {
+            this.drawCurveEditor();
+            this._updateCurveTexture();
+            this.requestShaderRender();
+          }
+        },
+        enableShader: function (v) {
+          if (v && !this.threeInitialized) {
+            var self = this;
+            this.$nextTick(function () {
+              self.initThreeJS();
+            });
+          }
+          this._refreshPreview();
+        },
+        inputMode: function () {
+          this.originalImage = null;
+          this.previewImage = null;
+          this.imagePreview = null;
+          this.originalAspectRatio = null;
+          this.zoom = 1;
+          this.panX = 0;
+          this.panY = 0;
+          this.stitchImages = [];
+          this.outputFileName = '';
+        },
+        stitchLayout: function () { this._autoStitch(); },
+        stitchCols: function () { this._autoStitch(); },
+        stitchRows: function () { this._autoStitch(); },
+      },
+
+      mounted: function () {
+        var self = this;
+        this.$nextTick(function () {
+          self.drawCurveEditor();
+          self._initCurveEditorEvents();
+        });
+      },
+
+      beforeDestroy: function () {
+        if (this._animId) cancelAnimationFrame(this._animId);
+        if (this._renderer) this._renderer.dispose();
+      },
+
+      methods: {
+
+        // ========================
+        //  FILE HANDLING
+        // ========================
+
+        onFileSelected: function (file) {
+          var self = this;
+          if (file) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              self.originalImage = e.target.result;
+              self.previewImage = e.target.result;
+              self.imagePreview = e.target.result;
+              var img = new Image();
+              img.onload = function () {
+                self.originalAspectRatio = img.width / img.height;
+                self.width = img.width;
+                self.height = img.height;
+                if (!self.outputFileName) {
+                  var base = file.name.substring(0, file.name.lastIndexOf('.'));
+                  self.outputFileName = base + '_edited';
                 }
-                this.updatePreview();
+                self._refreshPreview();
+                if (!self.threeInitialized) {
+                  self.$nextTick(self.initThreeJS);
+                } else {
+                  self._loadTexture(self.originalImage);
+                  self.$nextTick(self._refreshPreview);
+                }
               };
               img.src = e.target.result;
             };
             reader.readAsDataURL(file);
           } else {
-            this.imagePreview = null;
-            this.originalImage = null;
-            this.previewImage = null;
-            this.originalAspectRatio = null;
-            this.outputFileName = '';
+            self.originalImage = null;
+            self.previewImage = null;
+            self.originalAspectRatio = null;
+            self.outputFileName = '';
           }
         },
-        showOriginalImage() {
+
+        showOriginalImage: function () {
           this.showOriginal = true;
+          this.zoom = 1; this.panX = 0; this.panY = 0;
+          this._syncShaderUniforms();
         },
-        hideOriginalImage() {
+        hideOriginalImage: function () {
           this.showOriginal = false;
+          this._syncShaderUniforms();
         },
-        updatePreview() {
-          if (!this.imagePreview) return;
 
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
+        // ========================
+        //  ZOOM / DRAG
+        // ========================
 
-          img.onload = () => {
-            canvas.width = this.width;
-            canvas.height = this.height;
+        onZoom: function (e) {
+          if (!this.imagePreview || this.showOriginal) return;
+          var d = e.deltaY > 0 ? -0.1 : 0.1;
+          this.zoom = Math.max(1, Math.min(10, this.zoom + d));
+        },
+        onDragStart: function (e) {
+          if (this.zoom <= 1) return;
+          this.dragging = true;
+          this.dragStartX = e.clientX;
+          this.dragStartY = e.clientY;
+          this.panStartX = this.panX;
+          this.panStartY = this.panY;
+        },
+        onDragMove: function (e) {
+          if (!this.dragging) return;
+          this.panX = this.panStartX + (e.clientX - this.dragStartX);
+          this.panY = this.panStartY + (e.clientY - this.dragStartY);
+        },
+        onDragEnd: function () { this.dragging = false; },
+        onTouchStart: function (e) {
+          if (this.zoom <= 1 || e.touches.length !== 1) return;
+          this.dragging = true;
+          this.dragStartX = e.touches[0].clientX;
+          this.dragStartY = e.touches[0].clientY;
+          this.panStartX = this.panX;
+          this.panStartY = this.panY;
+        },
+        onTouchMove: function (e) {
+          if (!this.dragging || e.touches.length !== 1) return;
+          this.panX = this.panStartX + (e.touches[0].clientX - this.dragStartX);
+          this.panY = this.panStartY + (e.touches[0].clientY - this.dragStartY);
+        },
+        onTouchEnd: function () { this.dragging = false; },
 
-            // リサイズ
-            ctx.drawImage(img, 0, 0, this.width, this.height);
+        // ========================
+        //  STITCH
+        // ========================
 
-            // プレビュー更新
-            this.previewImage = canvas.toDataURL(this.format, this.quality / 100);
+        onStitchFilesAdded: function (files) {
+          var self = this;
+          if (!files || !files.length) return;
+          var total = files.length;
+          var loadedCount = 0;
+          var loadNext = function (idx) {
+            if (idx >= total) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              self.stitchImages.push(e.target.result);
+              loadedCount++;
+              if (loadedCount >= total) self._autoStitch();
+              else loadNext(idx + 1);
+            };
+            reader.readAsDataURL(files[idx]);
+          };
+          loadNext(0);
+          this.stitchFiles = null;
+        },
+
+        removeStitchImage: function (idx) {
+          this.stitchImages.splice(idx, 1);
+          this.stitchImages = this.stitchImages.slice();
+          this._autoStitch();
+        },
+
+        _autoStitch: function () {
+          if (this.stitchImages.length >= 2) this.doStitch();
+        },
+
+        doStitch: function () {
+          var self = this;
+          var images = this.stitchImages;
+          if (images.length < 2) return;
+
+          // Load all images first
+          var loaded = [];
+          var loadCount = 0;
+
+          var combine = function () {
+            var layout = self.stitchLayout;
+            var cols = self.stitchCols || 2;
+            var rows = self.stitchRows || 2;
+
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+
+            if (layout === 'horizontal') {
+              var totalW = 0, maxH = 0;
+              for (var i = 0; i < loaded.length; i++) {
+                totalW += loaded[i].width;
+                if (loaded[i].height > maxH) maxH = loaded[i].height;
+              }
+              canvas.width = totalW;
+              canvas.height = maxH;
+              var x = 0;
+              for (var i = 0; i < loaded.length; i++) {
+                ctx.drawImage(loaded[i], x, 0);
+                x += loaded[i].width;
+              }
+            } else if (layout === 'vertical') {
+              var maxW = 0, totalH = 0;
+              for (var i = 0; i < loaded.length; i++) {
+                if (loaded[i].width > maxW) maxW = loaded[i].width;
+                totalH += loaded[i].height;
+              }
+              canvas.width = maxW;
+              canvas.height = totalH;
+              var y = 0;
+              for (var i = 0; i < loaded.length; i++) {
+                ctx.drawImage(loaded[i], 0, y);
+                y += loaded[i].height;
+              }
+            } else if (layout === 'grid') {
+              var cells = Math.min(loaded.length, cols * rows);
+              var cellW = 0, cellH = 0;
+              for (var i = 0; i < cells; i++) {
+                if (loaded[i].width > cellW) cellW = loaded[i].width;
+                if (loaded[i].height > cellH) cellH = loaded[i].height;
+              }
+              if (cols > cells) cols = cells;
+              if (rows > Math.ceil(cells / cols)) rows = Math.ceil(cells / cols);
+              canvas.width = cellW * cols;
+              canvas.height = cellH * rows;
+              for (var i = 0; i < cells; i++) {
+                var cx = (i % cols) * cellW;
+                var cy = Math.floor(i / cols) * cellH;
+                ctx.drawImage(loaded[i], cx, cy, cellW, cellH);
+              }
+            }
+
+            var dataUrl = canvas.toDataURL('image/png');
+            self.originalImage = dataUrl;
+            self.previewImage = dataUrl;
+            self.imagePreview = dataUrl;
+            self.width = canvas.width;
+            self.height = canvas.height;
+            self.originalAspectRatio = canvas.width / canvas.height;
+            if (!self.outputFileName) self.outputFileName = 'stitch_combined';
+            self._refreshPreview();
+            if (self.threeReady) self._loadTexture(dataUrl);
           };
 
-          img.src = this.originalImage;
-        },
-        applyFilters(ctx, canvas) {
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = canvas.width;
-          tempCanvas.height = canvas.height;
-          const tempCtx = tempCanvas.getContext('2d');
-
-          tempCtx.drawImage(canvas, 0, 0);
-
-          if (this.grayscale) {
-            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-              const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-              data[i] = avg;
-              data[i + 1] = avg;
-              data[i + 2] = avg;
-            }
-            tempCtx.putImageData(imageData, 0, 0);
+          for (var i = 0; i < images.length; i++) {
+            (function (src) {
+              var img = new Image();
+              img.onload = function () {
+                loaded.push(img);
+                loadCount++;
+                if (loadCount === images.length) combine();
+              };
+              img.src = src;
+            })(images[i]);
           }
+        },
 
-          ctx.filter = `brightness(${100 + this.brightness}%) ` +
-            `contrast(${100 + this.contrast}%) ` +
-            `saturate(${100 + this.saturation}%)`;
+        // ========================
+        //  THREE.JS
+        // ========================
 
-          ctx.drawImage(tempCanvas, 0, 0);
+        initThreeJS: function () {
+          if (this.threeInitialized) return;
+          var self = this;
+          var canvas = self.$refs.shaderCanvas;
+          if (!canvas) return;
+
+          try {
+            self._renderer = new THREE.WebGLRenderer({
+              canvas: canvas,
+              preserveDrawingBuffer: true,
+              antialias: true
+            });
+            self._renderer.setClearColor(0x111111, 1);
+            self._scene = new THREE.Scene();
+            self._camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
+            self._camera.position.z = 1;
+
+            var u = {
+              tDiffuse: { value: null },
+              tCurve: { value: null },
+              uBrightness: { value: 0 },
+              uContrast: { value: 1 },
+              uSaturation: { value: 1 },
+              uGrayscale: { value: 0 },
+              uGlitchIntensity: { value: 0 },
+              uGlitchFrequency: { value: 0.5 },
+              uTime: { value: 0 },
+              uShowOriginal: { value: 0 },
+              uResolution: { value: new THREE.Vector2(512, 512) }
+            };
+
+            var vert = [
+              'varying vec2 vUv;',
+              'void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}'
+            ].join('\n');
+
+            var frag = [
+              'precision highp float;',
+              'uniform sampler2D tDiffuse;uniform sampler2D tCurve;',
+              'uniform float uBrightness,uContrast,uSaturation,uGrayscale;',
+              'uniform float uGlitchIntensity,uGlitchFrequency,uTime,uShowOriginal;',
+              'uniform vec2 uResolution;',
+              'varying vec2 vUv;',
+              'float r2(vec2 n){return fract(sin(dot(n,vec2(12.9898,78.233)))*43758.5453);}',
+              'float lum(vec3 c){return dot(c,vec3(0.299,0.587,0.114));}',
+              'void main(){',
+              'vec2 uv=vUv;vec4 col=texture2D(tDiffuse,uv);',
+              'if(uShowOriginal>0.5){gl_FragColor=col;return;}',
+              'vec3 c=col.rgb;c+=uBrightness;',
+              'c=(c-0.5)*uContrast+0.5;',
+              'float l=lum(c);c=mix(vec3(l),c,uSaturation);',
+              'if(uGrayscale>0.5)c=vec3(lum(c));',
+              'c.r=texture2D(tCurve,vec2(c.r,0.5)).r;',
+              'c.g=texture2D(tCurve,vec2(c.g,0.5)).g;',
+              'c.b=texture2D(tCurve,vec2(c.b,0.5)).b;',
+              'float gi=uGlitchIntensity;',
+              'if(gi>0.001){',
+              'float fq=uGlitchFrequency*10.0+1.0;',
+              'float bh=0.02+gi*0.08;float bn=floor(uv.y/bh);',
+              'float br=r2(vec2(bn,floor(uTime*fq)));',
+              'if(br<gi*2.0){',
+              'vec2 duv=uv;duv.x+=(br-0.5)*0.1*gi;',
+              'float sp=0.02*gi*br;',
+              'c.r=texture2D(tDiffuse,duv+vec2(sp,0.0)).r;',
+              'c.g=texture2D(tDiffuse,duv).g;',
+              'c.b=texture2D(tDiffuse,duv-vec2(sp,0.0)).b;',
+              '}',
+              'float sl=sin(uv.y*uResolution.y*0.5)*0.04*gi;c-=sl;',
+              '}',
+              'gl_FragColor=vec4(c,1.0);',
+              '}'
+            ].join('\n');
+
+            self._material = new THREE.ShaderMaterial({
+              uniforms: u,
+              vertexShader: vert,
+              fragmentShader: frag
+            });
+            self._mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), self._material);
+            self._scene.add(self._mesh);
+
+            self._initCurveTexture();
+            self.threeReady = true;
+            self.threeInitialized = true;
+            if (self.originalImage) self._loadTexture(self.originalImage);
+            self._startAnimLoop();
+            self.$nextTick(self._refreshPreview);
+          } catch (e) {
+            console.error('Three.js init failed:', e);
+          }
+        },
+
+        _loadTexture: function (src) {
+          var self = this;
+          var img = new Image();
+          img.onload = function () {
+            if (self._texture) self._texture.dispose();
+            var tex = new THREE.Texture(img);
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            tex.needsUpdate = true;
+            self._texture = tex;
+            if (self._material) {
+              self._material.uniforms.tDiffuse.value = tex;
+              self._refreshPreview();
+            }
+          };
+          img.src = src;
+        },
+
+        _startAnimLoop: function () {
+          var self = this;
+          var tick = function () {
+            if (self._renderer && self.threeReady && self._material) {
+              var go = self._renderPending;
+              if (self.glitchIntensity > 0.005 && !self.showOriginal) {
+                self._material.uniforms.uTime.value += 0.03;
+                go = true;
+              }
+              if (go) {
+                self._renderer.render(self._scene, self._camera);
+                self._renderPending = false;
+              }
+            }
+            self._animId = requestAnimationFrame(tick);
+          };
+          tick();
+        },
+
+        // ========================
+        //  SHADER RENDER
+        // ========================
+
+        requestShaderRender: function () {
+          this._renderPending = true;
+        },
+
+        _refreshPreview: function () {
+          if (this.useThreePreview) {
+            this._renderShaderPreview();
+          } else {
+            this._renderStandardPreview();
+          }
+        },
+
+        _renderStandardPreview: function () {
+          if (!this.originalImage) return;
+          var self = this;
+          var c = document.createElement('canvas');
+          var ctx = c.getContext('2d');
+          var img = new Image();
+          img.onload = function () {
+            c.width = self.width;
+            c.height = self.height;
+            ctx.drawImage(img, 0, 0, self.width, self.height);
+            self._applyCssFilters(ctx);
+            self.previewImage = c.toDataURL(self.format, self.quality / 100);
+          };
+          img.src = self.originalImage;
+        },
+
+        _applyCssFilters: function (ctx) {
+          var temp = document.createElement('canvas');
+          temp.width = ctx.canvas.width;
+          temp.height = ctx.canvas.height;
+          var tc = temp.getContext('2d');
+          tc.drawImage(ctx.canvas, 0, 0);
+          if (this.grayscale) {
+            var d = tc.getImageData(0, 0, temp.width, temp.height);
+            var pix = d.data;
+            for (var i = 0; i < pix.length; i += 4) {
+              var avg = (pix[i] + pix[i + 1] + pix[i + 2]) / 3;
+              pix[i] = avg; pix[i + 1] = avg; pix[i + 2] = avg;
+            }
+            tc.putImageData(d, 0, 0);
+          }
+          ctx.filter = 'brightness(' + (100 + this.brightness) + '%) ' +
+            'contrast(' + (100 + this.contrast) + '%) ' +
+            'saturate(' + (100 + this.saturation) + '%)';
+          ctx.drawImage(temp, 0, 0);
           ctx.filter = 'none';
         },
-        processImage() {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
 
-          img.onload = () => {
-            canvas.width = this.width;
-            canvas.height = this.height;
+        _renderShaderPreview: function () {
+          if (!this.threeReady || !this._renderer || !this._material) return;
+          var canvas = this.$refs.shaderCanvas;
+          if (!canvas) return;
 
-            ctx.drawImage(img, 0, 0, this.width, this.height);
-            this.applyFilters(ctx, canvas);
+          var wrap = canvas.parentElement;
+          var w = wrap ? wrap.clientWidth : 512;
+          if (w < 1) w = 512;
+          var aspect = this.width / this.height;
+          var h = Math.min(w / aspect, 320);
 
-            const processedImage = canvas.toDataURL(this.format, this.quality / 100);
+          canvas.style.height = h + 'px';
+          var dpr = Math.min(window.devicePixelRatio || 1, 2);
+          this._renderer.setSize(Math.round(w * dpr), Math.round(h * dpr), false);
+          this._renderer.setViewport(0, 0, Math.round(w * dpr), Math.round(h * dpr));
 
-            const link = document.createElement('a');
-            const extension = this.format.split('/')[1];
-            link.download = `${this.outputFileName}.${extension}`;
-            link.href = processedImage;
-            link.click();
+          this._syncShaderUniforms();
+          this._material.uniforms.uResolution.value.set(w * dpr, h * dpr);
+          this._renderer.render(this._scene, this._camera);
+          this._renderPending = false;
+        },
+
+        _syncShaderUniforms: function () {
+          if (!this._material) return;
+          var u = this._material.uniforms;
+          u.uBrightness.value = this.showOriginal ? 0 : this.brightness / 100;
+          u.uContrast.value = this.showOriginal ? 1 : 1 + this.contrast / 100;
+          u.uSaturation.value = this.showOriginal ? 1 : 1 + this.saturation / 100;
+          u.uGrayscale.value = this.showOriginal ? 0 : (this.grayscale ? 1 : 0);
+          u.uGlitchIntensity.value = this.showOriginal ? 0 : this.glitchIntensity;
+          u.uGlitchFrequency.value = this.showOriginal ? 0.5 : this.glitchFrequency;
+          u.uShowOriginal.value = this.showOriginal ? 1 : 0;
+        },
+
+        // ========================
+        //  CURVE TEXTURE
+        // ========================
+
+        _initCurveTexture: function () {
+          var data = new Uint8Array(256 * 4);
+          for (var i = 0; i < 256; i++) {
+            var v = Math.round(this._evalCurve(i / 255) * 255);
+            data[i * 4] = v; data[i * 4 + 1] = v; data[i * 4 + 2] = v; data[i * 4 + 3] = 255;
+          }
+          var tex = new THREE.DataTexture(data, 256, 1, THREE.RGBAFormat);
+          tex.minFilter = THREE.LinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          tex.wrapS = THREE.ClampToEdgeWrapping;
+          tex.wrapT = THREE.ClampToEdgeWrapping;
+          tex.needsUpdate = true;
+          this._curveTexture = tex;
+          if (this._material) this._material.uniforms.tCurve.value = tex;
+        },
+
+        _updateCurveTexture: function () {
+          if (!this._curveTexture) return;
+          var data = this._curveTexture.image.data;
+          for (var i = 0; i < 256; i++) {
+            var v = Math.round(this._evalCurve(i / 255) * 255);
+            data[i * 4] = v; data[i * 4 + 1] = v; data[i * 4 + 2] = v; data[i * 4 + 3] = 255;
+          }
+          this._curveTexture.needsUpdate = true;
+        },
+
+        _bezier: function (p0, p1, p2, p3, t) {
+          var m = 1 - t;
+          return m * m * m * p0 + 3 * m * m * t * p1 + 3 * m * t * t * p2 + t * t * t * p3;
+        },
+
+        _evalCurve: function (x) {
+          var pts = this.curvePoints;
+          if (x <= pts[0].x) return pts[0].y;
+          if (x >= pts[3].x) return pts[3].y;
+          var lo = 0, hi = 1;
+          for (var i = 0; i < 20; i++) {
+            var mid = (lo + hi) / 2;
+            var bx = this._bezier(pts[0].x, pts[1].x, pts[2].x, pts[3].x, mid);
+            if (Math.abs(bx - x) < 0.0001) { lo = hi = mid; break; }
+            if (bx < x) lo = mid; else hi = mid;
+          }
+          return this._bezier(pts[0].y, pts[1].y, pts[2].y, pts[3].y, (lo + hi) / 2);
+        },
+
+        // ========================
+        //  CURVE EDITOR UI
+        // ========================
+
+        drawCurveEditor: function () {
+          var c = document.getElementById('curveCanvas');
+          if (!c) return;
+          var ctx = c.getContext('2d');
+          var w = c.width, h = c.height;
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = '#1a1a2e';
+          ctx.fillRect(0, 0, w, h);
+
+          ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+          ctx.lineWidth = 1;
+          for (var i = 0; i <= 4; i++) {
+            var p = (i / 4) * w;
+            ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(w, p); ctx.stroke();
+          }
+          ctx.strokeStyle = 'rgba(255,255,255,0.11)';
+          ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(w, 0); ctx.stroke();
+
+          ctx.strokeStyle = '#4fc3f7';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (var px = 0; px <= w; px++) {
+            var gy = this._evalCurve(px / w);
+            var cy = h - gy * h;
+            px === 0 ? ctx.moveTo(px, cy) : ctx.lineTo(px, cy);
+          }
+          ctx.stroke();
+
+          var pts = this.curvePoints;
+          for (var pi = 0; pi < pts.length; pi++) {
+            var cx = pts[pi].x * w;
+            var cy = h - pts[pi].y * h;
+            var r = (pi === 0 || pi === 3) ? 4 : 6;
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = (pi === 0 || pi === 3) ? '#ffffff' : '#ffab40';
+            ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+          }
+          ctx.fillStyle = 'rgba(255,255,255,0.3)';
+          ctx.font = '10px Space Mono, monospace';
+          ctx.fillText('0', 4, h - 4);
+          ctx.fillText('1', w - 14, 12);
+        },
+
+        _initCurveEditorEvents: function () {
+          var self = this;
+          var canvas = document.getElementById('curveCanvas');
+          if (!canvas) return;
+
+          var pos = function (cx, cy) {
+            var r = canvas.getBoundingClientRect();
+            return {
+              x: Math.max(0, Math.min(1, (cx - r.left) / r.width)),
+              y: Math.max(0, Math.min(1, 1 - (cy - r.top) / r.height))
+            };
           };
 
-          img.src = this.imagePreview;
+          var down = function (cx, cy) {
+            var p = pos(cx, cy);
+            var pts = self.curvePoints;
+            var best = 0.06, idx = -1;
+            for (var i = 1; i < 3; i++) {
+              var d = Math.sqrt((p.x - pts[i].x) * (p.x - pts[i].x) + (p.y - pts[i].y) * (p.y - pts[i].y));
+              if (d < best) { best = d; idx = i; }
+            }
+            self.draggingPointIndex = idx;
+          };
+
+          var move = function (cx, cy) {
+            if (self.draggingPointIndex < 0) return;
+            var p = pos(cx, cy);
+            var pts = self.curvePoints;
+            var idx = self.draggingPointIndex;
+            var nx = p.x;
+            if (idx === 1) nx = Math.max(0.01, Math.min(pts[2].x - 0.01, nx));
+            else if (idx === 2) nx = Math.max(pts[1].x + 0.01, Math.min(0.99, nx));
+            pts[idx].x = nx;
+            pts[idx].y = Math.max(0, Math.min(1, p.y));
+            self.curvePoints = pts.map(function (pt) { return { x: pt.x, y: pt.y }; });
+            self.drawCurveEditor();
+            self._updateCurveTexture();
+            self.requestShaderRender();
+          };
+
+          var up = function () { self.draggingPointIndex = -1; };
+
+          canvas.addEventListener('mousedown', function (e) { down(e.clientX, e.clientY); });
+          window.addEventListener('mousemove', function (e) { move(e.clientX, e.clientY); });
+          window.addEventListener('mouseup', up);
+          canvas.addEventListener('touchstart', function (e) {
+            if (e.touches.length === 1) { e.preventDefault(); down(e.touches[0].clientX, e.touches[0].clientY); }
+          });
+          window.addEventListener('touchmove', function (e) {
+            if (self.draggingPointIndex >= 0) e.preventDefault();
+            if (e.touches.length === 1) move(e.touches[0].clientX, e.touches[0].clientY);
+          });
+          window.addEventListener('touchend', up);
+        },
+
+        resetCurve: function () {
+          this.curvePoints = [
+            { x: 0, y: 0 },
+            { x: 0.33, y: 0.33 },
+            { x: 0.67, y: 0.67 },
+            { x: 1, y: 1 }
+          ];
+          this.drawCurveEditor();
+          this._updateCurveTexture();
+          this.requestShaderRender();
+        },
+
+        // ========================
+        //  SAVE / EXPORT
+        // ========================
+
+        processImage: function () {
+          if (this.useThreePreview) this._saveShader();
+          else this._saveStandard();
+        },
+
+        _saveStandard: function () {
+          var self = this;
+          var c = document.createElement('canvas');
+          var ctx = c.getContext('2d');
+          var img = new Image();
+          img.onload = function () {
+            c.width = self.width;
+            c.height = self.height;
+            ctx.drawImage(img, 0, 0, self.width, self.height);
+            self._applyCssFilters(ctx);
+            self._download(c.toDataURL(self.format, self.quality / 100));
+          };
+          img.src = this.previewImage || this.originalImage;
+        },
+
+        _saveShader: function () {
+          var self = this;
+          if (!self.threeReady) { self._saveStandard(); return; }
+          var curW = self._renderer.domElement.width;
+          var curH = self._renderer.domElement.height;
+          self._syncShaderUniforms();
+          self._updateCurveTexture();
+          self._material.uniforms.uResolution.value.set(self.width, self.height);
+          self._material.uniforms.uTime.value = Math.random() * 100;
+          self._renderer.setSize(self.width, self.height, false);
+          self._renderer.render(self._scene, self._camera);
+          var data = self._renderer.domElement.toDataURL(self.format, self.quality / 100);
+          self._renderer.setSize(curW, curH, false);
+          self._refreshPreview();
+          self._download(data);
+        },
+
+        _download: function (dataUrl) {
+          var link = document.createElement('a');
+          link.download = this.outputFileName + '.' + this.format.split('/')[1];
+          link.href = dataUrl;
+          link.click();
         }
+
       }
-    })
+    });
   </script>
 
 </body>
