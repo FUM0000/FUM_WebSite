@@ -212,6 +212,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>QR Code</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_Creator_Audio.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Creator Audio</v-list-item-title>
+                    </v-list-item>
                 </v-list-group sub-group>
 
                 <v-list-group sub-group :value="false">

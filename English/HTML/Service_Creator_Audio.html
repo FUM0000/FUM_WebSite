@@ -1,0 +1,1068 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+  <title>Creator Audio</title>
+
+  <style>
+    .edit-layout {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 120px);
+    }
+    .preview-section {
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: inherit;
+    }
+    .edit-scroll {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 200px;
+      padding-top: 4px;
+    }
+    .edit-scroll::-webkit-scrollbar { width: 6px; }
+    .edit-scroll::-webkit-scrollbar-track { background: transparent; }
+    .edit-scroll::-webkit-scrollbar-thumb { background: rgba(100,100,100,0.2); border-radius: 3px; }
+
+    .waveform-canvas {
+      width: 100%;
+      border-radius: 8px;
+      background: #f5f5f5;
+    }
+    .v-slider:not(.v-input--is-disabled) .v-slider__thumb-label {
+      min-width: 48px;
+    }
+
+    @media (max-width: 600px) {
+      .edit-scroll { padding-bottom: 80px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Creator Audio</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid class="pa-3">
+
+            <v-row justify="center">
+              <v-col xs="12" md="8" lg="7">
+
+                <div class="edit-layout">
+
+                  <!-- ===== PREVIEW SECTION (sticky top) ===== -->
+                  <div class="preview-section mb-2">
+                    <v-card>
+                      <v-card-text class="pa-3">
+
+                        <!-- File Load -->
+                        <v-card-title class="font-weight-bold text-h6 pa-0 mb-2">Audio File</v-card-title>
+                        <v-file-input v-model="audioFile" label="Select mp3 / wav" accept=".mp3,.wav,.m4a,.ogg,.flac"
+                          outlined rounded color="primary" prepend-icon="mdi-file-music" @change="onFileChange"
+                          :disabled="isPlaying" hide-details class="mb-2"></v-file-input>
+
+                        <v-row align="center" class="mt-1">
+                          <v-col cols="auto">
+                            <v-btn color="primary" class="mr-2" @click="playAudio" :disabled="!isLoaded || isPlaying">
+                              <v-icon left>mdi-play</v-icon>Play
+                            </v-btn>
+                            <v-btn color="error" @click="stopAudio" :disabled="!isPlaying">
+                              <v-icon left>mdi-stop</v-icon>Stop
+                            </v-btn>
+                          </v-col>
+                          <v-col v-if="isLoaded">
+                            <span class="text-caption ml-2">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
+                          </v-col>
+                        </v-row>
+
+                        <v-progress-linear v-if="isPlaying" v-model="playProgress" color="primary" height="4" class="mt-2" rounded></v-progress-linear>
+
+                        <!-- Waveform -->
+                        <div v-if="isLoaded" class="mt-3">
+                          <canvas ref="waveform" class="waveform-canvas" width="0" height="100"></canvas>
+                        </div>
+
+                      </v-card-text>
+                    </v-card>
+                  </div>
+
+                  <!-- ===== EDITING SECTIONS (scrollable) ===== -->
+                  <div class="edit-scroll" ref="editScroll">
+
+                    <!-- Noise Addition -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon small class="mr-1">mdi-wave</v-icon>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Noise Addition</span>
+                          <v-switch v-model="noiseEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                        </div>
+                        <v-select v-model="noiseType" :items="noiseTypes" label="Noise Type" outlined rounded color="primary"
+                          :disabled="!noiseEnabled" class="mt-1" dense hide-details></v-select>
+                        <v-slider v-model="noiseAmount" min="0" max="1" step="0.01" label="Noise Amount"
+                          color="primary" :disabled="!noiseEnabled" thumb-label class="mt-2"></v-slider>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Noise Reduction -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon small class="mr-1">mdi-close-circle-outline</v-icon>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Noise Reduction</span>
+                          <v-switch v-model="nrEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                        </div>
+                        <v-slider v-model="nrThreshold" min="0" max="1" step="0.01" label="Reduction Strength"
+                          color="primary" :disabled="!nrEnabled" thumb-label></v-slider>
+                        <div class="text-caption grey--text">Higher values reduce more noise but may affect audio quality.</div>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Frequency Filters -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon small class="mr-1">mdi-sine-wave</v-icon>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Frequency Filter</span>
+                        </div>
+                        <v-select v-model="filterType" :items="filterTypes" label="Filter Type" outlined rounded color="primary"
+                          dense hide-details></v-select>
+                        <v-slider v-model="filterCutoff" min="20" max="20000" step="1" label="Cutoff Frequency (Hz)"
+                          color="primary" :disabled="filterType === 'off'" thumb-label class="mt-2">
+                          <template v-slot:append>
+                            <span class="text-caption">{{ formatHz(filterCutoff) }}</span>
+                          </template>
+                        </v-slider>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- EQ -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon small class="mr-1">mdi-tune</v-icon>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">EQ</span>
+                          <v-switch v-model="eqEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                        </div>
+                        <v-slider v-model="eqLowGain" min="-24" max="24" step="1" label="Low (60Hz)"
+                          color="primary" :disabled="!eqEnabled" thumb-label>
+                          <template v-slot:append>{{ eqLowGain > 0 ? '+' : '' }}{{ eqLowGain }}dB</template>
+                        </v-slider>
+                        <v-slider v-model="eqMidGain" min="-24" max="24" step="1" label="Mid (1kHz)"
+                          color="primary" :disabled="!eqEnabled" thumb-label>
+                          <template v-slot:append>{{ eqMidGain > 0 ? '+' : '' }}{{ eqMidGain }}dB</template>
+                        </v-slider>
+                        <v-slider v-model="eqHighGain" min="-24" max="24" step="1" label="High (8kHz)"
+                          color="primary" :disabled="!eqEnabled" thumb-label>
+                          <template v-slot:append>{{ eqHighGain > 0 ? '+' : '' }}{{ eqHighGain }}dB</template>
+                        </v-slider>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Tempo & Pitch -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon small class="mr-1">mdi-speedometer</v-icon>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Tempo &amp; Pitch</span>
+                        </div>
+                        <v-slider v-model="tempo" min="0.5" max="2.0" step="0.01" label="Tempo"
+                          color="primary" thumb-label>
+                          <template v-slot:append>{{ tempo.toFixed(2) }}x</template>
+                        </v-slider>
+                        <v-checkbox v-model="preservePitch" label="Preserve Pitch (download only)" color="primary" hide-details class="mt-0"></v-checkbox>
+                        <div class="text-caption grey--text mb-2">Requires SoundTouch library (ES Module).</div>
+                        <v-slider v-model="pitchShift" min="-24" max="24" step="1" label="Pitch Shift"
+                          color="primary" thumb-label>
+                          <template v-slot:append>{{ pitchShift > 0 ? '+' : '' }}{{ pitchShift }} semitones</template>
+                        </v-slider>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Volume & Compressor -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon small class="mr-1">mdi-volume-high</v-icon>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Volume &amp; Compressor</span>
+                        </div>
+                        <v-slider v-model="volume" min="0" max="300" step="1" label="Volume (%)"
+                          color="primary" thumb-label>
+                          <template v-slot:append>{{ volume }}%</template>
+                        </v-slider>
+                        <div class="d-flex align-center">
+                          <v-icon small class="mr-1">mdi-compress</v-icon>
+                          <span class="font-weight-medium" style="font-size:12px">Compressor</span>
+                          <v-switch v-model="compressorEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                        </div>
+                        <v-slider v-model="compressorThreshold" min="-60" max="0" step="1" label="Threshold (dB)"
+                          color="primary" :disabled="!compressorEnabled" thumb-label></v-slider>
+                        <v-slider v-model="compressorRatio" min="1" max="20" step="0.5" label="Ratio"
+                          color="primary" :disabled="!compressorEnabled" thumb-label></v-slider>
+                        <v-slider v-model="compressorKnee" min="0" max="40" step="1" label="Knee (dB)"
+                          color="primary" :disabled="!compressorEnabled" thumb-label></v-slider>
+                        <v-row dense>
+                          <v-col cols="6">
+                            <v-slider v-model="compressorAttack" min="0" max="1" step="0.001" label="Attack (s)"
+                              color="primary" :disabled="!compressorEnabled" thumb-label></v-slider>
+                          </v-col>
+                          <v-col cols="6">
+                            <v-slider v-model="compressorRelease" min="0" max="1" step="0.001" label="Release (s)"
+                              color="primary" :disabled="!compressorEnabled" thumb-label></v-slider>
+                          </v-col>
+                        </v-row>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Download -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon small class="mr-1">mdi-download</v-icon>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Download</span>
+                        </div>
+                        <v-text-field v-model="downloadFileName" label="File Name" outlined rounded color="primary"
+                          prepend-inner-icon="mdi-file-edit" dense hide-details></v-text-field>
+                        <v-btn color="success" block large @click="downloadAudio" :disabled="!isLoaded || isProcessing" class="mt-3">
+                          <v-icon left>mdi-download</v-icon>Download WAV
+                        </v-btn>
+                        <v-progress-linear v-if="isProcessing" indeterminate color="success" class="mt-2" rounded></v-progress-linear>
+                      </v-card-text>
+                    </v-card>
+
+                  </div>
+                </div>
+
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <!-- SoundTouchJS ES Module -->
+  <script type="module">
+    import { SoundTouch, SimpleFilter, WebAudioBufferSource } from 'https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.6/dist/soundtouch.js';
+    window.__ST = { SoundTouch, SimpleFilter, WebAudioBufferSource };
+  </script>
+
+  <!-- Regular scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        audioFile: null,
+        audioBuffer: null,
+        audioContext: null,
+        isLoaded: false,
+        isPlaying: false,
+        isProcessing: false,
+        duration: 0,
+        currentTime: 0,
+        playProgress: 0,
+        animFrameId: null,
+        sourceNode: null,
+        sourceStartTime: 0,
+        sourceOffset: 0,
+
+        noiseEnabled: false,
+        noiseType: 'white',
+        noiseAmount: 0.1,
+        noiseTypes: [
+          { text: 'White Noise', value: 'white' },
+          { text: 'Pink Noise', value: 'pink' },
+        ],
+        noiseGainNode: null,
+        noiseSourceNode: null,
+        noiseBuffer: null,
+        pinkNoiseBuffer: null,
+
+        nrEnabled: false,
+        nrThreshold: 0.5,
+
+        filterType: 'off',
+        filterCutoff: 1000,
+        filterTypes: [
+          { text: 'Off', value: 'off' },
+          { text: 'Low Pass', value: 'lowpass' },
+          { text: 'High Pass', value: 'highpass' },
+          { text: 'Band Pass', value: 'bandpass' },
+        ],
+        filterNode: null,
+
+        eqEnabled: false,
+        eqLowGain: 0,
+        eqMidGain: 0,
+        eqHighGain: 0,
+        eqLowNode: null,
+        eqMidNode: null,
+        eqHighNode: null,
+
+        tempo: 1.0,
+        preservePitch: false,
+        pitchShift: 0,
+
+        volume: 100,
+        gainNode: null,
+
+        compressorEnabled: false,
+        compressorThreshold: -24,
+        compressorRatio: 4,
+        compressorKnee: 30,
+        compressorAttack: 0.003,
+        compressorRelease: 0.25,
+        compressorNode: null,
+
+        downloadFileName: 'processed_audio',
+        sampleRate: 44100,
+        numChannels: 2,
+      },
+
+      watch: {
+        noiseEnabled() { this.rebuildGraph(); },
+        noiseType() { this.rebuildGraph(); },
+        noiseAmount(val) {
+          if (this.noiseGainNode) {
+            this.noiseGainNode.gain.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+        nrEnabled() { this.rebuildGraph(); },
+        nrThreshold() { this.rebuildGraph(); },
+        filterType() { this.rebuildGraph(); },
+        filterCutoff() {
+          if (this.filterNode && this.filterType !== 'off') {
+            this.filterNode.frequency.setValueAtTime(this.filterCutoff, this.audioContext.currentTime);
+          }
+        },
+        eqEnabled() { this.rebuildGraph(); },
+        eqLowGain(val) {
+          if (this.eqLowNode) {
+            this.eqLowNode.gain.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+        eqMidGain(val) {
+          if (this.eqMidNode) {
+            this.eqMidNode.gain.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+        eqHighGain(val) {
+          if (this.eqHighNode) {
+            this.eqHighNode.gain.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+        tempo() {
+          if (this.isPlaying) this.updateSourceParams();
+        },
+        pitchShift() {
+          if (this.isPlaying) this.updateSourceParams();
+        },
+        preservePitch() {
+          this.updateSourceParams();
+        },
+        volume(val) {
+          if (this.gainNode) {
+            this.gainNode.gain.setValueAtTime(val / 100, this.audioContext.currentTime);
+          }
+        },
+        compressorEnabled() { this.rebuildGraph(); },
+        compressorThreshold(val) {
+          if (this.compressorNode) {
+            this.compressorNode.threshold.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+        compressorRatio(val) {
+          if (this.compressorNode) {
+            this.compressorNode.ratio.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+        compressorKnee(val) {
+          if (this.compressorNode) {
+            this.compressorNode.knee.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+        compressorAttack(val) {
+          if (this.compressorNode) {
+            this.compressorNode.attack.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+        compressorRelease(val) {
+          if (this.compressorNode) {
+            this.compressorNode.release.setValueAtTime(val, this.audioContext.currentTime);
+          }
+        },
+      },
+
+      methods: {
+        createBuffer(numChannels, length, sampleRate) {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const buf = ctx.createBuffer(numChannels, length, sampleRate);
+          ctx.close();
+          return buf;
+        },
+
+        onFileChange(file) {
+          if (!file) return;
+          this.stopAudio();
+          this.isLoaded = false;
+          this.audioBuffer = null;
+          this.downloadFileName = file.name.replace(/\.[^/.]+$/, '') + '_processed';
+
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            ctx.decodeAudioData(e.target.result, (buffer) => {
+              this.audioBuffer = buffer;
+              this.sampleRate = buffer.sampleRate;
+              this.numChannels = buffer.numberOfChannels;
+              this.isLoaded = true;
+              this.duration = buffer.duration;
+              this.currentTime = 0;
+              this.playProgress = 0;
+              this.$nextTick(() => {
+                this.drawFullWaveform();
+              });
+              ctx.close();
+            }, (err) => {
+              alert('Failed to decode audio file: ' + err);
+            });
+          };
+          reader.readAsArrayBuffer(file);
+        },
+
+        playAudio() {
+          if (!this.isLoaded || !this.audioBuffer || this.isPlaying) return;
+
+          if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+          }
+
+          this.buildGraph();
+          this.sourceStartTime = this.audioContext.currentTime;
+          this.isPlaying = true;
+          this.startPlayheadUpdate();
+        },
+
+        stopAudio() {
+          this.isPlaying = false;
+          if (this.animFrameId) {
+            cancelAnimationFrame(this.animFrameId);
+            this.animFrameId = null;
+          }
+          if (this.sourceNode) {
+            try { this.sourceNode.stop(); } catch (e) { }
+            this.sourceNode.disconnect();
+            this.sourceNode = null;
+          }
+          if (this.noiseSourceNode) {
+            try { this.noiseSourceNode.stop(); } catch (e) { }
+            this.noiseSourceNode.disconnect();
+            this.noiseSourceNode = null;
+          }
+          this.sourceOffset = 0;
+          this.currentTime = 0;
+          this.playProgress = 0;
+        },
+
+        buildGraph() {
+          if (!this.audioContext) return;
+          const ctx = this.audioContext;
+
+          if (this.sourceNode) {
+            try { this.sourceNode.stop(); } catch (e) { }
+            this.sourceNode.disconnect();
+          }
+          if (this.noiseSourceNode) {
+            try { this.noiseSourceNode.stop(); } catch (e) { }
+            this.noiseSourceNode.disconnect();
+            this.noiseSourceNode = null;
+          }
+
+          this.sourceNode = ctx.createBufferSource();
+          this.sourceNode.buffer = this.audioBuffer;
+          this.updateSourceParams();
+
+          this.gainNode = ctx.createGain();
+          this.gainNode.gain.setValueAtTime(this.volume / 100, ctx.currentTime);
+
+          this.compressorNode = ctx.createDynamicsCompressor();
+          this.compressorNode.threshold.setValueAtTime(this.compressorThreshold, ctx.currentTime);
+          this.compressorNode.ratio.setValueAtTime(this.compressorRatio, ctx.currentTime);
+          this.compressorNode.knee.setValueAtTime(this.compressorKnee, ctx.currentTime);
+          this.compressorNode.attack.setValueAtTime(this.compressorAttack, ctx.currentTime);
+          this.compressorNode.release.setValueAtTime(this.compressorRelease, ctx.currentTime);
+
+          this.filterNode = ctx.createBiquadFilter();
+          this.filterNode.type = this.filterType === 'off' ? 'allpass' : this.filterType;
+          this.filterNode.frequency.setValueAtTime(this.filterCutoff, ctx.currentTime);
+          this.filterNode.Q.setValueAtTime(0.707, ctx.currentTime);
+
+          this.eqLowNode = ctx.createBiquadFilter();
+          this.eqLowNode.type = 'lowshelf';
+          this.eqLowNode.frequency.setValueAtTime(60, ctx.currentTime);
+          this.eqLowNode.gain.setValueAtTime(this.eqEnabled ? this.eqLowGain : 0, ctx.currentTime);
+
+          this.eqMidNode = ctx.createBiquadFilter();
+          this.eqMidNode.type = 'peaking';
+          this.eqMidNode.frequency.setValueAtTime(1000, ctx.currentTime);
+          this.eqMidNode.Q.setValueAtTime(0.707, ctx.currentTime);
+          this.eqMidNode.gain.setValueAtTime(this.eqEnabled ? this.eqMidGain : 0, ctx.currentTime);
+
+          this.eqHighNode = ctx.createBiquadFilter();
+          this.eqHighNode.type = 'highshelf';
+          this.eqHighNode.frequency.setValueAtTime(8000, ctx.currentTime);
+          this.eqHighNode.gain.setValueAtTime(this.eqEnabled ? this.eqHighGain : 0, ctx.currentTime);
+
+          let node = this.sourceNode;
+          node.connect(this.gainNode);
+          node = this.gainNode;
+
+          if (this.compressorEnabled) {
+            node.connect(this.compressorNode);
+            node = this.compressorNode;
+          }
+
+          if (this.filterType !== 'off') {
+            node.connect(this.filterNode);
+            node = this.filterNode;
+          }
+
+          if (this.eqEnabled) {
+            node.connect(this.eqLowNode);
+            node = this.eqLowNode;
+            node.connect(this.eqMidNode);
+            node = this.eqMidNode;
+            node.connect(this.eqHighNode);
+            node = this.eqHighNode;
+          }
+
+          node.connect(ctx.destination);
+          this.setupNoise(ctx);
+          this.sourceNode.start(0, this.sourceOffset);
+        },
+
+        updateSourceParams() {
+          if (!this.sourceNode || !this.audioContext) return;
+          const ctx = this.audioContext;
+          const ratio = this.tempo;
+          const pitchRatio = Math.pow(2, this.pitchShift / 12);
+          this.sourceNode.playbackRate.setValueAtTime(ratio * pitchRatio, ctx.currentTime);
+          this.sourceNode.detune.setValueAtTime(0, ctx.currentTime);
+        },
+
+        setupNoise(ctx) {
+          if (this.noiseSourceNode) {
+            try { this.noiseSourceNode.stop(); } catch (e) { }
+            this.noiseSourceNode.disconnect();
+            this.noiseSourceNode = null;
+          }
+          if (!this.noiseEnabled) return;
+
+          if (!this.noiseBuffer) {
+            this.noiseBuffer = this.generateWhiteNoise(ctx, ctx.sampleRate * 2);
+          }
+          if (!this.pinkNoiseBuffer) {
+            this.pinkNoiseBuffer = this.generatePinkNoise(ctx, ctx.sampleRate * 2);
+          }
+
+          const buf = this.noiseType === 'white' ? this.noiseBuffer : this.pinkNoiseBuffer;
+          this.noiseSourceNode = ctx.createBufferSource();
+          this.noiseSourceNode.buffer = buf;
+          this.noiseSourceNode.loop = true;
+
+          this.noiseGainNode = ctx.createGain();
+          this.noiseGainNode.gain.setValueAtTime(this.noiseAmount, ctx.currentTime);
+
+          this.noiseSourceNode.connect(this.noiseGainNode);
+          this.noiseGainNode.connect(ctx.destination);
+          this.noiseSourceNode.start();
+        },
+
+        generateWhiteNoise(ctx, length) {
+          const buf = ctx.createBuffer(1, length, ctx.sampleRate);
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+          return buf;
+        },
+
+        generatePinkNoise(ctx, length) {
+          const buf = ctx.createBuffer(1, length, ctx.sampleRate);
+          const data = buf.getChannelData(0);
+          let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+          for (let i = 0; i < length; i++) {
+            const w = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + w * 0.0555179;
+            b1 = 0.99332 * b1 + w * 0.0750759;
+            b2 = 0.96900 * b2 + w * 0.1538520;
+            b3 = 0.86650 * b3 + w * 0.3104856;
+            b4 = 0.55000 * b4 + w * 0.5329522;
+            b5 = -0.7616 * b5 - w * 0.0168980;
+            data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+            b6 = w * 0.115926;
+          }
+          return buf;
+        },
+
+        rebuildGraph() {
+          if (this.isPlaying) {
+            const wasPlaying = this.isPlaying;
+            this.stopAudio();
+            this.isPlaying = wasPlaying;
+            this.playAudio();
+          }
+        },
+
+        startPlayheadUpdate() {
+          const update = () => {
+            if (!this.isPlaying || !this.audioContext) {
+              this.animFrameId = null;
+              return;
+            }
+            const elapsed = this.audioContext.currentTime - this.sourceStartTime + this.sourceOffset;
+            const rate = this.sourceNode ? this.sourceNode.playbackRate.value : 1;
+            const actual = elapsed / rate;
+            this.currentTime = Math.min(actual, this.duration);
+            this.playProgress = (this.currentTime / this.duration) * 100;
+
+            if (this.currentTime >= this.duration || this.currentTime < 0) {
+              this.stopAudio();
+              this.drawPlayhead(0);
+              return;
+            }
+
+            this.drawPlayhead(this.currentTime / this.duration);
+            this.animFrameId = requestAnimationFrame(update);
+          };
+          this.animFrameId = requestAnimationFrame(update);
+        },
+
+        drawFullWaveform() {
+          const canvas = this.$refs.waveform;
+          if (!canvas || !this.audioBuffer) return;
+          const parent = canvas.parentElement;
+          canvas.width = (parent ? parent.clientWidth : 600) - 4;
+          canvas.height = 100;
+          const c = canvas.getContext('2d');
+          const data = this.audioBuffer.getChannelData(0);
+          const step = Math.ceil(data.length / canvas.width);
+          const amp = canvas.height / 2;
+
+          c.clearRect(0, 0, canvas.width, canvas.height);
+          c.strokeStyle = '#1976D2';
+          c.lineWidth = 1.5;
+          c.beginPath();
+          for (let i = 0; i < canvas.width; i++) {
+            let min = 1.0, max = -1.0;
+            for (let j = 0; j < step; j++) {
+              const idx = i * step + j;
+              if (idx < data.length) {
+                const d = data[idx];
+                if (d < min) min = d;
+                if (d > max) max = d;
+              }
+            }
+            const y1 = amp + min * amp * 0.9;
+            const y2 = amp + max * amp * 0.9;
+            c.moveTo(i, y1);
+            c.lineTo(i, y2);
+          }
+          c.stroke();
+        },
+
+        drawPlayhead(fraction) {
+          const canvas = this.$refs.waveform;
+          if (!canvas) return;
+          const c = canvas.getContext('2d');
+          this.drawFullWaveform();
+          const x = Math.max(0, Math.min(canvas.width - 1, fraction * canvas.width));
+          c.strokeStyle = '#FF5722';
+          c.lineWidth = 2;
+          c.beginPath();
+          c.moveTo(x, 0);
+          c.lineTo(x, canvas.height);
+          c.stroke();
+        },
+
+        formatTime(seconds) {
+          if (!seconds || seconds < 0) return '0:00';
+          const m = Math.floor(seconds / 60);
+          const s = Math.floor(seconds % 60);
+          return m + ':' + (s < 10 ? '0' : '') + s;
+        },
+
+        formatHz(hz) {
+          if (hz >= 1000) return (hz / 1000).toFixed(1) + 'kHz';
+          return Math.round(hz) + 'Hz';
+        },
+
+        async downloadAudio() {
+          if (!this.isLoaded || !this.audioBuffer || this.isProcessing) return;
+          this.isProcessing = true;
+
+          try {
+            let buffer = this.audioBuffer;
+            const ratio = this.tempo;
+            const pitchRatio = Math.pow(2, this.pitchShift / 12);
+            const needsTP = ratio !== 1.0 || this.pitchShift !== 0;
+
+            // Step 1: SoundTouch tempo/pitch processing (if enabled)
+            if (this.preservePitch && needsTP) {
+              buffer = await this.processSoundTouch(buffer, ratio, pitchRatio);
+            } else if (needsTP) {
+              buffer = this.processSimpleResample(buffer, ratio * pitchRatio);
+            }
+
+            // Step 2: Apply noise reduction on raw samples
+            if (this.nrEnabled && this.nrThreshold > 0) {
+              buffer = this.applyNoiseReduction(buffer);
+            }
+
+            // Step 3: Offline processing for volume, compressor, filter, EQ
+            buffer = await this.offlineProcessEffects(buffer);
+
+            // Step 4: Mix noise into output
+            if (this.noiseEnabled && this.noiseAmount > 0) {
+              buffer = this.mixNoise(buffer);
+            }
+
+            // Step 5: Export
+            this.exportWav(buffer);
+          } catch (err) {
+            console.error(err);
+            alert('Processing error: ' + err.message);
+          }
+
+          this.isProcessing = false;
+        },
+
+        processSoundTouch(buffer, tempoRatio, pitchRatio) {
+          return new Promise((resolve, reject) => {
+            const lib = window.__ST;
+            if (!lib || !lib.SoundTouch) {
+              // Fallback to simple resample
+              resolve(this.processSimpleResample(buffer, tempoRatio * pitchRatio));
+              return;
+            }
+            try {
+              const { SoundTouch, SimpleFilter, WebAudioBufferSource } = lib;
+              const numChannels = Math.min(buffer.numberOfChannels, 2);
+              const sampleRate = buffer.sampleRate;
+              const length = buffer.length;
+
+              const source = new WebAudioBufferSource(buffer);
+              const st = new SoundTouch();
+              st.tempo = tempoRatio;
+              st.pitch = pitchRatio;
+              st.rate = 1;
+              const filter = new SimpleFilter(source, st);
+
+              const allOutput = [];
+              const temp = new Float32Array(16384);
+              let framesRead;
+              do {
+                framesRead = filter.extract(temp, 8192);
+                if (framesRead > 0) {
+                  for (let i = 0; i < framesRead * 2; i++) {
+                    allOutput.push(temp[i]);
+                  }
+                }
+              } while (framesRead > 0);
+
+              const outFrames = allOutput.length / 2;
+              const newBuf = this.createBuffer(numChannels, outFrames, sampleRate);
+
+              if (numChannels === 1) {
+                const d0 = newBuf.getChannelData(0);
+                for (let i = 0; i < outFrames; i++) {
+                  d0[i] = (allOutput[i * 2] + allOutput[i * 2 + 1]) / 2;
+                }
+              } else {
+                const d0 = newBuf.getChannelData(0);
+                const d1 = newBuf.getChannelData(1);
+                for (let i = 0; i < outFrames; i++) {
+                  d0[i] = allOutput[i * 2];
+                  d1[i] = allOutput[i * 2 + 1];
+                }
+              }
+              resolve(newBuf);
+            } catch (err) {
+              reject(err);
+            }
+          });
+        },
+
+        processSimpleResample(buffer, ratio) {
+          const numChannels = buffer.numberOfChannels;
+          const sampleRate = buffer.sampleRate;
+          const oldLength = buffer.length;
+          const newLength = Math.floor(oldLength / ratio);
+          const newBuf = this.createBuffer(numChannels, newLength, sampleRate);
+
+          for (let ch = 0; ch < numChannels; ch++) {
+            const input = buffer.getChannelData(ch);
+            const output = newBuf.getChannelData(ch);
+            for (let i = 0; i < newLength; i++) {
+              const pos = i * ratio;
+              const idx = Math.floor(pos);
+              const frac = pos - idx;
+              if (idx + 1 < oldLength) {
+                output[i] = input[idx] * (1 - frac) + input[idx + 1] * frac;
+              } else if (idx < oldLength) {
+                output[i] = input[idx];
+              }
+            }
+          }
+          return newBuf;
+        },
+
+        applyNoiseReduction(buffer) {
+          const numChannels = buffer.numberOfChannels;
+          const sampleRate = buffer.sampleRate;
+          const length = buffer.length;
+          const threshold = this.nrThreshold * 0.3;
+
+          const newBuf = this.createBuffer(numChannels, length, sampleRate);
+
+          for (let ch = 0; ch < numChannels; ch++) {
+            const input = buffer.getChannelData(ch);
+            const output = newBuf.getChannelData(ch);
+            let rms = 0;
+            for (let i = 0; i < length; i++) {
+              rms += input[i] * input[i];
+            }
+            rms = Math.sqrt(rms / length);
+            const gate = Math.max(threshold, rms * 0.1);
+
+            for (let i = 0; i < length; i++) {
+              const abs = Math.abs(input[i]);
+              let gain = 1;
+              if (abs < gate) {
+                gain = Math.pow(abs / gate, 0.5 + (1 - threshold) * 3);
+              }
+              output[i] = input[i] * gain;
+            }
+          }
+          return newBuf;
+        },
+
+        offlineProcessEffects(buffer) {
+          return new Promise((resolve) => {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const length = buffer.length;
+
+            const offline = new OfflineAudioContext(numChannels, length, sampleRate);
+            const source = offline.createBufferSource();
+            source.buffer = buffer;
+
+            const gainNode = offline.createGain();
+            gainNode.gain.setValueAtTime(this.volume / 100, 0);
+
+            let node = source;
+            node.connect(gainNode);
+            node = gainNode;
+
+            if (this.compressorEnabled) {
+              const comp = offline.createDynamicsCompressor();
+              comp.threshold.setValueAtTime(this.compressorThreshold, 0);
+              comp.ratio.setValueAtTime(this.compressorRatio, 0);
+              comp.knee.setValueAtTime(this.compressorKnee, 0);
+              comp.attack.setValueAtTime(this.compressorAttack, 0);
+              comp.release.setValueAtTime(this.compressorRelease, 0);
+              node.connect(comp);
+              node = comp;
+            }
+
+            if (this.filterType !== 'off') {
+              const flt = offline.createBiquadFilter();
+              flt.type = this.filterType;
+              flt.frequency.setValueAtTime(this.filterCutoff, 0);
+              flt.Q.setValueAtTime(0.707, 0);
+              node.connect(flt);
+              node = flt;
+            }
+
+            if (this.eqEnabled) {
+              const low = offline.createBiquadFilter();
+              low.type = 'lowshelf';
+              low.frequency.setValueAtTime(60, 0);
+              low.gain.setValueAtTime(this.eqLowGain, 0);
+
+              const mid = offline.createBiquadFilter();
+              mid.type = 'peaking';
+              mid.frequency.setValueAtTime(1000, 0);
+              mid.Q.setValueAtTime(0.707, 0);
+              mid.gain.setValueAtTime(this.eqMidGain, 0);
+
+              const high = offline.createBiquadFilter();
+              high.type = 'highshelf';
+              high.frequency.setValueAtTime(8000, 0);
+              high.gain.setValueAtTime(this.eqHighGain, 0);
+
+              node.connect(low);
+              node = low;
+              node.connect(mid);
+              node = mid;
+              node.connect(high);
+              node = high;
+            }
+
+            node.connect(offline.destination);
+            source.start(0);
+
+            offline.startRendering().then((rendered) => {
+              resolve(rendered);
+            });
+          });
+        },
+
+        mixNoise(buffer) {
+          const numChannels = buffer.numberOfChannels;
+          const sampleRate = buffer.sampleRate;
+          const length = buffer.length;
+          const newBuf = this.createBuffer(numChannels, length, sampleRate);
+          const amp = this.noiseAmount * 0.5;
+
+          // Copy original
+          for (let ch = 0; ch < numChannels; ch++) {
+            const src = buffer.getChannelData(ch);
+            const dst = newBuf.getChannelData(ch);
+            for (let i = 0; i < length; i++) dst[i] = src[i];
+          }
+
+          // Generate noise and mix
+          const noiseData = new Float32Array(length);
+          if (this.noiseType === 'pink') {
+            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+            for (let i = 0; i < length; i++) {
+              const w = Math.random() * 2 - 1;
+              b0 = 0.99886 * b0 + w * 0.0555179;
+              b1 = 0.99332 * b1 + w * 0.0750759;
+              b2 = 0.96900 * b2 + w * 0.1538520;
+              b3 = 0.86650 * b3 + w * 0.3104856;
+              b4 = 0.55000 * b4 + w * 0.5329522;
+              b5 = -0.7616 * b5 - w * 0.0168980;
+              noiseData[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+              b6 = w * 0.115926;
+            }
+          } else {
+            for (let i = 0; i < length; i++) noiseData[i] = Math.random() * 2 - 1;
+          }
+
+          for (let ch = 0; ch < numChannels; ch++) {
+            const dst = newBuf.getChannelData(ch);
+            for (let i = 0; i < length; i++) {
+              dst[i] = Math.max(-1, Math.min(1, dst[i] + noiseData[i] * amp));
+            }
+          }
+          return newBuf;
+        },
+
+        exportWav(buffer) {
+          const numChannels = buffer.numberOfChannels;
+          const sampleRate = buffer.sampleRate;
+          const bitsPerSample = 16;
+          const data = [];
+          for (let ch = 0; ch < numChannels; ch++) {
+            data.push(buffer.getChannelData(ch));
+          }
+          const length = data[0].length;
+          const dataSize = length * numChannels * (bitsPerSample / 8);
+          const headerSize = 44;
+          const totalSize = headerSize + dataSize;
+
+          const arrayBuffer = new ArrayBuffer(totalSize);
+          const view = new DataView(arrayBuffer);
+
+          const writeStr = (v, o, s) => {
+            for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
+          };
+
+          writeStr(view, 0, 'RIFF');
+          view.setUint32(4, totalSize - 8, true);
+          writeStr(view, 8, 'WAVE');
+          writeStr(view, 12, 'fmt ');
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true);
+          view.setUint16(22, numChannels, true);
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
+          view.setUint16(32, numChannels * (bitsPerSample / 8), true);
+          view.setUint16(34, bitsPerSample, true);
+          writeStr(view, 36, 'data');
+          view.setUint32(40, dataSize, true);
+
+          let offset = 44;
+          for (let i = 0; i < length; i++) {
+            for (let ch = 0; ch < numChannels; ch++) {
+              let s = Math.max(-1, Math.min(1, data[ch][i]));
+              s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+              view.setInt16(offset, s, true);
+              offset += 2;
+            }
+          }
+
+          const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = this.downloadFileName + '.wav';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        },
+      },
+
+      mounted() {
+        this.Ready_Page = true;
+      },
+    });
+  </script>
+</body>
+
+</html>
