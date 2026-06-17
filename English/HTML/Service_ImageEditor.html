@@ -71,6 +71,9 @@
       max-height: 320px;
       object-fit: contain;
       object-position: center;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
     }
     .preview-inner {
       transform-origin: center center;
@@ -147,6 +150,19 @@
       padding: 0;
     }
     .v-slider { margin-top: 2px; }
+    .adjust-sliders .slider-label-text {
+      width: 100px;
+      min-width: 100px;
+      flex-shrink: 0;
+      font-size: 14px;
+      color: inherit;
+    }
+
+    @media (max-width: 600px) {
+      .preview-wrap { max-height: 180px; }
+      .preview-img { max-height: 180px; }
+      .edit-scroll { padding-bottom: 80px; }
+    }
   </style>
 </head>
 
@@ -167,9 +183,45 @@
                 <div class="edit-layout">
 
                   <!-- ===== PREVIEW SECTION (sticky top) ===== -->
-                  <div class="preview-section mb-2">
+                  <div class="preview-section mb-2" v-if="imagePreview">
                     <v-card>
                       <v-card-text class="py-2 px-3">
+
+                        <div v-if="imagePreview"
+                          class="preview-wrap"
+                          :class="{ dragging: dragging }"
+                          @wheel.prevent="onZoom"
+                          @mousedown="onDragStart"
+                          @mousemove="onDragMove"
+                          @mouseup="onDragEnd"
+                          @mouseleave="onDragEnd"
+                          @touchstart.prevent="onTouchStart"
+                          @touchmove.prevent="onTouchMove"
+                          @touchend="onTouchEnd">
+                          <div ref="previewInner" class="preview-inner" :style="previewInnerStyle">
+                            <img :src="showOriginal ? originalImage : previewImage"
+                              :style="stdFilterStyle" class="preview-img" draggable="false">
+                            <canvas ref="shaderCanvas" class="shader-canvas" style="display:none"></canvas>
+                          </div>
+                          <div class="zoom-badge" v-if="zoom !== 1">{{ Math.round(zoom * 100) }}%</div>
+                        </div>
+
+                        <v-btn v-if="imagePreview" block text color="primary" class="mt-1 mb-0"
+                          @mousedown="showOriginalImage" @mouseup="hideOriginalImage" @mouseleave="hideOriginalImage"
+                          @touchstart.prevent="showOriginalImage" @touchend.prevent="hideOriginalImage">
+                          Hold to show original
+                        </v-btn>
+
+                      </v-card-text>
+                    </v-card>
+                  </div>
+
+                  <!-- ===== EDITING SECTIONS (scrollable) ===== -->
+                  <div class="edit-scroll" ref="editScroll">
+
+                    <!-- Input -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
 
                         <v-btn-toggle v-model="inputMode" mandatory dense class="mb-2">
                           <v-btn small value="single">Single Image</v-btn>
@@ -203,61 +255,15 @@
                           </v-row>
                         </template>
 
-                        <v-text-field v-model="outputFileName" label="Output filename" class="mb-1"></v-text-field>
+                        <v-text-field v-model="outputFileName" label="Output filename" class="my-0 py-0"></v-text-field>
 
-                        <div v-if="imagePreview"
-                          class="preview-wrap"
-                          :class="{ dragging: dragging }"
-                          @wheel.prevent="onZoom"
-                          @mousedown="onDragStart"
-                          @mousemove="onDragMove"
-                          @mouseup="onDragEnd"
-                          @mouseleave="onDragEnd"
-                          @touchstart.prevent="onTouchStart"
-                          @touchmove.prevent="onTouchMove"
-                          @touchend="onTouchEnd">
-                          <div ref="previewInner" class="preview-inner" :style="previewInnerStyle">
-                            <img v-show="!useThreePreview" :src="showOriginal ? originalImage : previewImage"
-                              :style="stdFilterStyle" class="preview-img">
-                            <canvas v-show="useThreePreview" ref="shaderCanvas" class="shader-canvas"></canvas>
-                          </div>
-                          <div class="zoom-badge" v-if="zoom !== 1">{{ Math.round(zoom * 100) }}%</div>
-                        </div>
-
-                        <v-btn v-if="imagePreview" block text color="primary" class="mt-1 mb-0"
-                          @mousedown="showOriginalImage" @mouseup="hideOriginalImage" @mouseleave="hideOriginalImage"
-                          @touchstart.prevent="showOriginalImage" @touchend.prevent="hideOriginalImage">
-                          Hold to show original
-                        </v-btn>
-
-                      </v-card-text>
-                    </v-card>
-                  </div>
-
-                  <!-- ===== EDITING SECTIONS (scrollable) ===== -->
-                  <div class="edit-scroll" ref="editScroll">
-
-                    <!-- Adjust -->
-                    <v-card class="mb-3 section-card">
-                      <v-card-text class="pa-3">
-                        <div class="section-header mb-1">
-                          <v-icon small class="mr-1">mdi-tune</v-icon>Adjust
-                        </div>
-
-                        <v-slider v-model="brightness" min="-100" max="100" label="Brightness" thumb-label></v-slider>
-
-                        <v-slider v-model="contrast" min="-100" max="100" label="Contrast" thumb-label></v-slider>
-
-                        <v-slider v-model="saturation" min="-100" max="100" label="Saturation" thumb-label></v-slider>
-
-                        <v-switch inset v-model="grayscale" label="Grayscale"></v-switch>
                       </v-card-text>
                     </v-card>
 
                     <!-- Resize -->
                     <v-card class="mb-3 section-card">
                       <v-card-text class="pa-3">
-                        <div class="section-header mb-1">
+                        <div class="section-header mb-5">
                           <v-icon small class="mr-1">mdi-arrow-expand-all</v-icon>Resize
                         </div>
 
@@ -273,49 +279,68 @@
                       </v-card-text>
                     </v-card>
 
-                    <!-- Effects (Advanced) -->
+                    <!-- Effects -->
                     <v-card class="mb-3 section-card">
                       <v-card-text class="pa-3">
-                        <div class="section-header mb-1">
+                        <div class="section-header mb-5">
                           <v-icon small class="mr-1">mdi-shimmer</v-icon>Effects
                         </div>
 
-                        <v-switch inset v-model="enableShader" label="Shader Effects" class="mb-2"></v-switch>
+                        <v-select v-model="selectedEffect" :items="effects" label="Effect" dense hide-details class="mb-2"></v-select>
 
-                        <div class="mb-2">
+                        <template v-if="selectedEffect === 'color'">
+                          <div class="adjust-sliders">
+                            <div class="d-flex align-center">
+                              <span class="slider-label-text">Brightness</span>
+                              <v-slider v-model="brightness" min="-100" max="100" hide-details thumb-label class="flex-grow-1"></v-slider>
+                            </div>
+                            <div class="d-flex align-center">
+                              <span class="slider-label-text">Contrast</span>
+                              <v-slider v-model="contrast" min="-100" max="100" hide-details thumb-label class="flex-grow-1"></v-slider>
+                            </div>
+                            <div class="d-flex align-center">
+                              <span class="slider-label-text">Saturation</span>
+                              <v-slider v-model="saturation" min="-100" max="100" hide-details thumb-label class="flex-grow-1"></v-slider>
+                            </div>
+                          </div>
+                          <v-switch class="mt-0" inset v-model="grayscale" label="Grayscale"></v-switch>
+                        </template>
+
+                        <template v-if="selectedEffect === 'glitch'">
                           <v-slider v-model="glitchIntensity" min="0" max="1" step="0.01" label="Glitch Intensity" thumb-label></v-slider>
                           <v-slider v-model="glitchFrequency" min="0" max="1" step="0.01" label="Glitch Frequency" thumb-label></v-slider>
-                        </div>
+                        </template>
 
-                        <div class="mb-1">
-                          <div class="curve-wrap">
-                            <canvas id="curveCanvas" class="curve-canvas" width="256" height="256"></canvas>
-                          </div>
-                          <v-row dense align="center">
-                            <v-col cols="8">
-                              <v-select v-model="curveChannel" :items="curveChannels" label="Channel" dense hide-details></v-select>
-                            </v-col>
-                            <v-col cols="4" class="text-right">
-                              <v-btn small text @click="resetCurve">
-                                <v-icon small left>mdi-restore</v-icon>Reset
-                              </v-btn>
-                            </v-col>
-                          </v-row>
-                        </div>
+                        <template v-if="selectedEffect === 'noise'">
+                          <v-slider v-model="noiseIntensity" min="0" max="1" step="0.01" label="Noise Intensity" thumb-label></v-slider>
+                        </template>
+
+                        <template v-if="selectedEffect === 'edge'">
+                          <v-slider v-model="edgeIntensity" min="0" max="1" step="0.01" label="Edge Intensity" thumb-label></v-slider>
+                        </template>
+
+                        <template v-if="selectedEffect === 'blur'">
+                          <v-slider v-model="blurIntensity" min="0" max="1" step="0.01" label="Blur Intensity" thumb-label></v-slider>
+                        </template>
+
+                        <template v-if="selectedEffect === 'mosaic'">
+                          <v-slider v-model="mosaicIntensity" min="0" max="1" step="0.01" label="Mosaic Intensity" thumb-label></v-slider>
+                          <v-slider v-model="mosaicSize" min="2" max="64" step="1" label="Block Size" thumb-label></v-slider>
+                        </template>
                       </v-card-text>
                     </v-card>
 
                     <!-- Export -->
                     <v-card class="mb-3 section-card">
                       <v-card-text class="pa-3">
-                        <div class="section-header mb-1">
+                        <div class="section-header mb-5">
                           <v-icon small class="mr-1">mdi-export</v-icon>Export
                         </div>
 
                         <v-select v-model="format" :items="formats" label="Output format" dense hide-details class="mb-2"></v-select>
                         <v-slider v-if="format === 'image/jpeg'" v-model="quality" min="0" max="100" label="Quality" thumb-label></v-slider>
 
-                        <v-btn color="primary" block :disabled="!file || !outputFileName" @click="processImage" class="mt-2">
+                        <v-btn color="primary" block :disabled="(!file && !imagePreview) || !outputFileName" @click="processImage" class="mt-2">
                           <v-icon small left>mdi-download</v-icon>Save Image
                         </v-btn>
                       </v-card-text>
@@ -351,6 +376,7 @@
       data: function () {
         return {
           // ---- image ----
+          imagePreview: null,
           file: null,
           originalImage: null,
           previewImage: null,
@@ -380,19 +406,11 @@
           grayscale: false,
           glitchIntensity: 0,
           glitchFrequency: 0.5,
-          curveChannel: 'RGB',
-          curveChannels: [
-            { text: 'RGB', value: 'RGB' },
-            { text: 'Red', value: 'R' },
-            { text: 'Green', value: 'G' },
-            { text: 'Blue', value: 'B' },
-          ],
-          curvePoints: [
-            { x: 0, y: 0 },
-            { x: 0.33, y: 0.33 },
-            { x: 0.67, y: 0.67 },
-            { x: 1, y: 1 }
-          ],
+          noiseIntensity: 0,
+          edgeIntensity: 0,
+          blurIntensity: 0,
+          mosaicIntensity: 0,
+          mosaicSize: 16,
           format: 'image/png',
           formats: [
             { text: 'PNG', value: 'image/png' },
@@ -400,8 +418,17 @@
           ],
           quality: 90,
 
-          // ---- shader toggle ----
-          enableShader: false,
+          // ---- effects ----
+          selectedEffect: 'none',
+          effects: [
+            { text: 'None', value: 'none' },
+            { text: 'Color Adjust', value: 'color' },
+            { text: 'Glitch', value: 'glitch' },
+            { text: 'Noise', value: 'noise' },
+            { text: 'Edge', value: 'edge' },
+            { text: 'Blur', value: 'blur' },
+            { text: 'Mosaic', value: 'mosaic' },
+          ],
 
           // ---- zoom / drag ----
           zoom: 1,
@@ -412,6 +439,8 @@
           dragStartY: 0,
           panStartX: 0,
           panStartY: 0,
+          pinchDist: 0,
+          pinchZoomStart: 1,
 
           // ---- three.js ----
           threeReady: false,
@@ -422,16 +451,15 @@
           _material: null,
           _mesh: null,
           _texture: null,
-          _curveTexture: null,
           _animId: null,
           _renderPending: false,
-
-          // ---- ui ----
-          draggingPointIndex: -1,
         };
       },
 
       computed: {
+        enableShader: function () {
+          return this.selectedEffect !== 'none';
+        },
         useThreePreview: function () {
           return this.enableShader && this.threeReady;
         },
@@ -471,16 +499,18 @@
         grayscale: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
         glitchIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
         glitchFrequency: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
-        curvePoints: {
-          deep: true,
-          handler: function () {
-            this.drawCurveEditor();
-            this._updateCurveTexture();
-            this.requestShaderRender();
-          }
-        },
-        enableShader: function (v) {
-          if (v && !this.threeInitialized) {
+        noiseIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        edgeIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        blurIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        mosaicIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        mosaicSize: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        selectedEffect: function (v) {
+          this.glitchIntensity = 0;
+          this.noiseIntensity = 0;
+          this.edgeIntensity = 0;
+          this.blurIntensity = 0;
+          this.mosaicIntensity = 0;
+          if (v !== 'none' && !this.threeInitialized) {
             var self = this;
             this.$nextTick(function () {
               self.initThreeJS();
@@ -507,8 +537,7 @@
       mounted: function () {
         var self = this;
         this.$nextTick(function () {
-          self.drawCurveEditor();
-          self._initCurveEditorEvents();
+          // ready
         });
       },
 
@@ -593,6 +622,13 @@
         },
         onDragEnd: function () { this.dragging = false; },
         onTouchStart: function (e) {
+          if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            this.pinchDist = Math.sqrt(dx * dx + dy * dy);
+            this.pinchZoomStart = this.zoom;
+            return;
+          }
           if (this.zoom <= 1 || e.touches.length !== 1) return;
           this.dragging = true;
           this.dragStartX = e.touches[0].clientX;
@@ -601,11 +637,21 @@
           this.panStartY = this.panY;
         },
         onTouchMove: function (e) {
+          if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (this.pinchDist > 0) {
+              var s = dist / this.pinchDist;
+              this.zoom = Math.max(1, Math.min(10, this.pinchZoomStart * s));
+            }
+            return;
+          }
           if (!this.dragging || e.touches.length !== 1) return;
           this.panX = this.panStartX + (e.touches[0].clientX - this.dragStartX);
           this.panY = this.panStartY + (e.touches[0].clientY - this.dragStartY);
         },
-        onTouchEnd: function () { this.dragging = false; },
+        onTouchEnd: function () { this.dragging = false; this.pinchDist = 0; },
 
         // ========================
         //  STITCH
@@ -757,7 +803,11 @@
               uGrayscale: { value: 0 },
               uGlitchIntensity: { value: 0 },
               uGlitchFrequency: { value: 0.5 },
-              uTime: { value: 0 },
+              uNoiseIntensity: { value: 0 },
+              uEdgeIntensity: { value: 0 },
+              uBlurIntensity: { value: 0 },
+              uMosaicIntensity: { value: 0 },
+              uMosaicSize: { value: 16 },
               uShowOriginal: { value: 0 },
               uResolution: { value: new THREE.Vector2(512, 512) }
             };
@@ -769,9 +819,10 @@
 
             var frag = [
               'precision highp float;',
-              'uniform sampler2D tDiffuse;uniform sampler2D tCurve;',
-              'uniform float uBrightness,uContrast,uSaturation,uGrayscale;',
-              'uniform float uGlitchIntensity,uGlitchFrequency,uTime,uShowOriginal;',
+              'uniform sampler2D tDiffuse;',
+              'uniform float uBrightness,uContrast,uSaturation,uGrayscale,uShowOriginal;',
+              'uniform float uGlitchIntensity,uGlitchFrequency,uNoiseIntensity;',
+              'uniform float uEdgeIntensity,uBlurIntensity,uMosaicIntensity,uMosaicSize;',
               'uniform vec2 uResolution;',
               'varying vec2 vUv;',
               'float r2(vec2 n){return fract(sin(dot(n,vec2(12.9898,78.233)))*43758.5453);}',
@@ -783,14 +834,12 @@
               'c=(c-0.5)*uContrast+0.5;',
               'float l=lum(c);c=mix(vec3(l),c,uSaturation);',
               'if(uGrayscale>0.5)c=vec3(lum(c));',
-              'c.r=texture2D(tCurve,vec2(c.r,0.5)).r;',
-              'c.g=texture2D(tCurve,vec2(c.g,0.5)).g;',
-              'c.b=texture2D(tCurve,vec2(c.b,0.5)).b;',
+
+              // Glitch (static)
               'float gi=uGlitchIntensity;',
               'if(gi>0.001){',
-              'float fq=uGlitchFrequency*10.0+1.0;',
               'float bh=0.02+gi*0.08;float bn=floor(uv.y/bh);',
-              'float br=r2(vec2(bn,floor(uTime*fq)));',
+              'float br=r2(vec2(bn,floor(uv.x*100.0)));',
               'if(br<gi*2.0){',
               'vec2 duv=uv;duv.x+=(br-0.5)*0.1*gi;',
               'float sp=0.02*gi*br;',
@@ -800,6 +849,52 @@
               '}',
               'float sl=sin(uv.y*uResolution.y*0.5)*0.04*gi;c-=sl;',
               '}',
+
+              // Noise (static)
+              'float ni=uNoiseIntensity;',
+              'if(ni>0.001){',
+              'float n=r2(floor(uv*uResolution*0.5));',
+              'c=mix(c,vec3(lum(c)),ni*n*0.6);',
+              'c+=vec3(n-0.5)*ni*0.15;',
+              '}',
+
+              // Edge detection (Sobel)
+              'float ei=uEdgeIntensity;',
+              'if(ei>0.001){',
+              'vec2 st=1.0/uResolution;',
+              'float tl=texture2D(tDiffuse,uv+vec2(-1,-1)*st).r;',
+              'float tc_=texture2D(tDiffuse,uv+vec2(0,-1)*st).r;',
+              'float tr=texture2D(tDiffuse,uv+vec2(1,-1)*st).r;',
+              'float ml=texture2D(tDiffuse,uv+vec2(-1,0)*st).r;',
+              'float mr=texture2D(tDiffuse,uv+vec2(1,0)*st).r;',
+              'float bl=texture2D(tDiffuse,uv+vec2(-1,1)*st).r;',
+              'float bc_=texture2D(tDiffuse,uv+vec2(0,1)*st).r;',
+              'float br_=texture2D(tDiffuse,uv+vec2(1,1)*st).r;',
+              'float gx=-tl+tr-2.0*ml+2.0*mr-bl+br_;',
+              'float gy=-tl-2.0*tc_-tr+bl+2.0*bc_+br_;',
+              'float edge=sqrt(gx*gx+gy*gy);',
+              'c=mix(c,vec3(edge),ei);',
+              '}',
+
+              // Blur (box blur)
+              'float bi=uBlurIntensity;',
+              'if(bi>0.001){',
+              'vec2 st=1.0/uResolution;',
+              'vec3 blur=vec3(0.0);float n=0.0;',
+              'for(int x=-2;x<=2;x++){for(int y=-2;y<=2;y++){',
+              'blur+=texture2D(tDiffuse,uv+vec2(float(x),float(y))*st).rgb;n+=1.0;',
+              '}}',
+              'c=mix(c,blur/n,bi);',
+              '}',
+
+              // Mosaic (pixelate)
+              'float mi=uMosaicIntensity;',
+              'if(mi>0.001){',
+              'vec2 mos=floor(uv*uResolution/uMosaicSize)*uMosaicSize/uResolution;',
+              'vec4 mosCol=texture2D(tDiffuse,mos);',
+              'c=mix(c,mosCol.rgb,mi);',
+              '}',
+
               'gl_FragColor=vec4(c,1.0);',
               '}'
             ].join('\n');
@@ -812,7 +907,6 @@
             self._mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), self._material);
             self._scene.add(self._mesh);
 
-            self._initCurveTexture();
             self.threeReady = true;
             self.threeInitialized = true;
             if (self.originalImage) self._loadTexture(self.originalImage);
@@ -845,13 +939,9 @@
           var self = this;
           var tick = function () {
             if (self._renderer && self.threeReady && self._material) {
-              var go = self._renderPending;
-              if (self.glitchIntensity > 0.005 && !self.showOriginal) {
-                self._material.uniforms.uTime.value += 0.03;
-                go = true;
-              }
-              if (go) {
+              if (self._renderPending) {
                 self._renderer.render(self._scene, self._camera);
+                self.previewImage = self._renderer.domElement.toDataURL(self.format, self.quality / 100);
                 self._renderPending = false;
               }
             }
@@ -933,6 +1023,7 @@
           this._syncShaderUniforms();
           this._material.uniforms.uResolution.value.set(w * dpr, h * dpr);
           this._renderer.render(this._scene, this._camera);
+          this.previewImage = this._renderer.domElement.toDataURL(this.format, this.quality / 100);
           this._renderPending = false;
         },
 
@@ -945,172 +1036,12 @@
           u.uGrayscale.value = this.showOriginal ? 0 : (this.grayscale ? 1 : 0);
           u.uGlitchIntensity.value = this.showOriginal ? 0 : this.glitchIntensity;
           u.uGlitchFrequency.value = this.showOriginal ? 0.5 : this.glitchFrequency;
+          u.uNoiseIntensity.value = this.showOriginal ? 0 : this.noiseIntensity;
+          u.uEdgeIntensity.value = this.showOriginal ? 0 : this.edgeIntensity;
+          u.uBlurIntensity.value = this.showOriginal ? 0 : this.blurIntensity;
+          u.uMosaicIntensity.value = this.showOriginal ? 0 : this.mosaicIntensity;
+          u.uMosaicSize.value = this.showOriginal ? 16 : this.mosaicSize;
           u.uShowOriginal.value = this.showOriginal ? 1 : 0;
-        },
-
-        // ========================
-        //  CURVE TEXTURE
-        // ========================
-
-        _initCurveTexture: function () {
-          var data = new Uint8Array(256 * 4);
-          for (var i = 0; i < 256; i++) {
-            var v = Math.round(this._evalCurve(i / 255) * 255);
-            data[i * 4] = v; data[i * 4 + 1] = v; data[i * 4 + 2] = v; data[i * 4 + 3] = 255;
-          }
-          var tex = new THREE.DataTexture(data, 256, 1, THREE.RGBAFormat);
-          tex.minFilter = THREE.LinearFilter;
-          tex.magFilter = THREE.LinearFilter;
-          tex.wrapS = THREE.ClampToEdgeWrapping;
-          tex.wrapT = THREE.ClampToEdgeWrapping;
-          tex.needsUpdate = true;
-          this._curveTexture = tex;
-          if (this._material) this._material.uniforms.tCurve.value = tex;
-        },
-
-        _updateCurveTexture: function () {
-          if (!this._curveTexture) return;
-          var data = this._curveTexture.image.data;
-          for (var i = 0; i < 256; i++) {
-            var v = Math.round(this._evalCurve(i / 255) * 255);
-            data[i * 4] = v; data[i * 4 + 1] = v; data[i * 4 + 2] = v; data[i * 4 + 3] = 255;
-          }
-          this._curveTexture.needsUpdate = true;
-        },
-
-        _bezier: function (p0, p1, p2, p3, t) {
-          var m = 1 - t;
-          return m * m * m * p0 + 3 * m * m * t * p1 + 3 * m * t * t * p2 + t * t * t * p3;
-        },
-
-        _evalCurve: function (x) {
-          var pts = this.curvePoints;
-          if (x <= pts[0].x) return pts[0].y;
-          if (x >= pts[3].x) return pts[3].y;
-          var lo = 0, hi = 1;
-          for (var i = 0; i < 20; i++) {
-            var mid = (lo + hi) / 2;
-            var bx = this._bezier(pts[0].x, pts[1].x, pts[2].x, pts[3].x, mid);
-            if (Math.abs(bx - x) < 0.0001) { lo = hi = mid; break; }
-            if (bx < x) lo = mid; else hi = mid;
-          }
-          return this._bezier(pts[0].y, pts[1].y, pts[2].y, pts[3].y, (lo + hi) / 2);
-        },
-
-        // ========================
-        //  CURVE EDITOR UI
-        // ========================
-
-        drawCurveEditor: function () {
-          var c = document.getElementById('curveCanvas');
-          if (!c) return;
-          var ctx = c.getContext('2d');
-          var w = c.width, h = c.height;
-          ctx.clearRect(0, 0, w, h);
-          ctx.fillStyle = '#1a1a2e';
-          ctx.fillRect(0, 0, w, h);
-
-          ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-          ctx.lineWidth = 1;
-          for (var i = 0; i <= 4; i++) {
-            var p = (i / 4) * w;
-            ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, h); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(w, p); ctx.stroke();
-          }
-          ctx.strokeStyle = 'rgba(255,255,255,0.11)';
-          ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(w, 0); ctx.stroke();
-
-          ctx.strokeStyle = '#4fc3f7';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          for (var px = 0; px <= w; px++) {
-            var gy = this._evalCurve(px / w);
-            var cy = h - gy * h;
-            px === 0 ? ctx.moveTo(px, cy) : ctx.lineTo(px, cy);
-          }
-          ctx.stroke();
-
-          var pts = this.curvePoints;
-          for (var pi = 0; pi < pts.length; pi++) {
-            var cx = pts[pi].x * w;
-            var cy = h - pts[pi].y * h;
-            var r = (pi === 0 || pi === 3) ? 4 : 6;
-            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fillStyle = (pi === 0 || pi === 3) ? '#ffffff' : '#ffab40';
-            ctx.fill();
-            ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
-          }
-          ctx.fillStyle = 'rgba(255,255,255,0.3)';
-          ctx.font = '10px Space Mono, monospace';
-          ctx.fillText('0', 4, h - 4);
-          ctx.fillText('1', w - 14, 12);
-        },
-
-        _initCurveEditorEvents: function () {
-          var self = this;
-          var canvas = document.getElementById('curveCanvas');
-          if (!canvas) return;
-
-          var pos = function (cx, cy) {
-            var r = canvas.getBoundingClientRect();
-            return {
-              x: Math.max(0, Math.min(1, (cx - r.left) / r.width)),
-              y: Math.max(0, Math.min(1, 1 - (cy - r.top) / r.height))
-            };
-          };
-
-          var down = function (cx, cy) {
-            var p = pos(cx, cy);
-            var pts = self.curvePoints;
-            var best = 0.06, idx = -1;
-            for (var i = 1; i < 3; i++) {
-              var d = Math.sqrt((p.x - pts[i].x) * (p.x - pts[i].x) + (p.y - pts[i].y) * (p.y - pts[i].y));
-              if (d < best) { best = d; idx = i; }
-            }
-            self.draggingPointIndex = idx;
-          };
-
-          var move = function (cx, cy) {
-            if (self.draggingPointIndex < 0) return;
-            var p = pos(cx, cy);
-            var pts = self.curvePoints;
-            var idx = self.draggingPointIndex;
-            var nx = p.x;
-            if (idx === 1) nx = Math.max(0.01, Math.min(pts[2].x - 0.01, nx));
-            else if (idx === 2) nx = Math.max(pts[1].x + 0.01, Math.min(0.99, nx));
-            pts[idx].x = nx;
-            pts[idx].y = Math.max(0, Math.min(1, p.y));
-            self.curvePoints = pts.map(function (pt) { return { x: pt.x, y: pt.y }; });
-            self.drawCurveEditor();
-            self._updateCurveTexture();
-            self.requestShaderRender();
-          };
-
-          var up = function () { self.draggingPointIndex = -1; };
-
-          canvas.addEventListener('mousedown', function (e) { down(e.clientX, e.clientY); });
-          window.addEventListener('mousemove', function (e) { move(e.clientX, e.clientY); });
-          window.addEventListener('mouseup', up);
-          canvas.addEventListener('touchstart', function (e) {
-            if (e.touches.length === 1) { e.preventDefault(); down(e.touches[0].clientX, e.touches[0].clientY); }
-          });
-          window.addEventListener('touchmove', function (e) {
-            if (self.draggingPointIndex >= 0) e.preventDefault();
-            if (e.touches.length === 1) move(e.touches[0].clientX, e.touches[0].clientY);
-          });
-          window.addEventListener('touchend', up);
-        },
-
-        resetCurve: function () {
-          this.curvePoints = [
-            { x: 0, y: 0 },
-            { x: 0.33, y: 0.33 },
-            { x: 0.67, y: 0.67 },
-            { x: 1, y: 1 }
-          ];
-          this.drawCurveEditor();
-          this._updateCurveTexture();
-          this.requestShaderRender();
         },
 
         // ========================
@@ -1143,9 +1074,7 @@
           var curW = self._renderer.domElement.width;
           var curH = self._renderer.domElement.height;
           self._syncShaderUniforms();
-          self._updateCurveTexture();
           self._material.uniforms.uResolution.value.set(self.width, self.height);
-          self._material.uniforms.uTime.value = Math.random() * 100;
           self._renderer.setSize(self.width, self.height, false);
           self._renderer.render(self._scene, self._camera);
           var data = self._renderer.domElement.toDataURL(self.format, self.quality / 100);
