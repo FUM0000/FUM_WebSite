@@ -80,33 +80,34 @@
                                         </v-btn>
                                     </v-card-title>
                                     <v-expand-transition>
-                                        <v-card-text v-show="soundExpanded" class="pa-5">
+                                        <v-card-text v-show="soundExpanded" class="pa-5 pt-0">
 
                                             <!-- BGM選択 -->
-                                            <div class="mb-6">
-                                                <v-subheader class="px-0 font-weight-bold">
+                                            <div class="mb-2">
+                                                <v-subheader class="px-0 font-weight-bold py-0">
                                                     <v-icon left>mdi-playlist-music</v-icon>
                                                     BGM Selection
                                                 </v-subheader>
                                                 <v-select v-model="settings.bgm" :items="bgmOptions" outlined dense
+                                                    hide-details
                                                     @change="onSettingChange"></v-select>
                                             </div>
 
                                             <!-- BGMボリューム -->
-                                            <div class="mb-6">
-                                                <v-subheader class="px-0 font-weight-bold">
+                                            <div class="mb-0">
+                                                <v-subheader class="px-0 font-weight-bold py-0">
                                                     <v-icon left>mdi-volume-high</v-icon>
-                                                    BGM Volume: {{ settings.bgmVolume }}%
+                                                    BGM: {{ settings.bgmVolume }}%
                                                 </v-subheader>
                                                 <v-slider v-model="settings.bgmVolume" min="0" max="100" step="5"
                                                     thumb-label @input="onSettingChange"></v-slider>
                                             </div>
 
                                             <!-- SEボリューム -->
-                                            <div class="mb-4">
-                                                <v-subheader class="px-0 font-weight-bold">
+                                            <div class="mb-0">
+                                                <v-subheader class="px-0 font-weight-bold py-0">
                                                     <v-icon left>mdi-volume-medium</v-icon>
-                                                    SE Volume: {{ settings.seVolume }}%
+                                                    SE: {{ settings.seVolume }}%
                                                 </v-subheader>
                                                 <v-slider v-model="settings.seVolume" min="0" max="100" step="5"
                                                     thumb-label @input="onSettingChange"></v-slider>
@@ -124,21 +125,21 @@
                                         </v-btn>
                                     </v-card-title>
                                     <v-expand-transition>
-                                        <v-card-text v-show="colorExpanded" class="pa-5">
+                                        <v-card-text v-show="colorExpanded" class="pa-5 pt-0">
 
-                                            <!-- メインカラー(背景色) -->
-                                            <div class="mb-6">
-                                                <v-subheader class="px-0 font-weight-bold">
+                                            <!-- Background -->
+                                            <div class="mb-2">
+                                                <v-subheader class="pa-0 font-weight-bold mb-1">
                                                     <v-icon left>mdi-format-color-fill</v-icon>
-                                                    Main Color (Background)
+                                                    Background
                                                 </v-subheader>
                                                 <v-row align="center">
-                                                    <v-col cols="12" sm="8">
+                                                    <v-col cols="12" sm="8" class="py-0">
                                                         <v-text-field v-model="settings.mainColor" outlined dense
-                                                            placeholder="#FFFFFF"
+                                                            placeholder="#FFFFFF" hide-details
                                                             @input="onSettingChange"></v-text-field>
                                                     </v-col>
-                                                    <v-col cols="12" sm="4" class="py-0 mb-6">
+                                                    <v-col cols="12" sm="4" class="d-flex align-center py-0">
                                                         <input type="color" v-model="settings.mainColor"
                                                             @input="onSettingChange"
                                                             style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.38); cursor: pointer; padding: 0;">
@@ -146,7 +147,25 @@
                                                 </v-row>
                                             </div>
 
-
+                                            <!-- Menu -->
+                                            <div class="mb-2">
+                                                <v-subheader class="pa-0 font-weight-bold mb-1">
+                                                    <v-icon left>mdi-menu</v-icon>
+                                                    Menu
+                                                </v-subheader>
+                                                <v-row align="center">
+                                                    <v-col cols="12" sm="8" class="py-0">
+                                                        <v-text-field v-model="settings.menuColor" outlined dense
+                                                            placeholder="#FFFFFF" hide-details
+                                                            @input="onSettingChange"></v-text-field>
+                                                    </v-col>
+                                                    <v-col cols="12" sm="4" class="d-flex align-center py-0">
+                                                        <input type="color" v-model="settings.menuColor"
+                                                            @input="onSettingChange"
+                                                            style="width: 100%; height: 40px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.38); cursor: pointer; padding: 0;">
+                                                    </v-col>
+                                                </v-row>
+                                            </div>
 
                                         </v-card-text>
                                     </v-expand-transition>
@@ -283,6 +302,7 @@
                     bgmVolume: 50,
                     seVolume: 50,
                     mainColor: '#CFD8DC',
+                    menuColor: '#CFD8DC',
                 },
 
                 // 設定データ
@@ -291,6 +311,7 @@
                     bgmVolume: 50,
                     seVolume: 50,
                     mainColor: '#CFD8DC',
+                    menuColor: '#CFD8DC',
                 },
 
                 // 保存済みの設定(比較用)
@@ -302,6 +323,8 @@
                 this.loadSettings();
                 // メインカラーを適用
                 this.applyMainColor();
+                // メニューカラーを適用
+                this.applyMenuColor();
             },
 
             methods: {
@@ -353,8 +376,9 @@
                         this.savedSettings = JSON.parse(JSON.stringify(this.settings));
                         this.hasChanges = false;
 
-                        // メインカラーを即座に適用
+                        // メインカラーとメニューカラーを即座に適用
                         this.applyMainColor();
+                        this.applyMenuColor();
 
                         // 保存成功メッセージを表示
                         this.saveSuccess = true;
@@ -378,6 +402,16 @@
                         const vApp = document.querySelector('.v-application');
                         if (vApp) {
                             vApp.style.setProperty('background-color', this.settings.mainColor, 'important');
+                        }
+                    }
+                },
+
+                // メニューカラーを適用
+                applyMenuColor() {
+                    if (this.settings.menuColor) {
+                        const navDrawer = document.querySelector('.v-navigation-drawer');
+                        if (navDrawer) {
+                            navDrawer.style.setProperty('background-color', this.settings.menuColor, 'important');
                         }
                     }
                 },

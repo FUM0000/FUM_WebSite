@@ -114,13 +114,22 @@ function Change_Volume_BGM() {
     const audio = $("#BGM")[0];
     audio.volume = Get_Volume_BGM();
 }
+function Get_Menu_Color() {
+    const saved = localStorage.getItem('appSettings');
+    if (saved) {
+        const settings = JSON.parse(saved);
+        if (settings.menuColor) {
+            return settings.menuColor;
+        }
+    }
+    return '#CFD8DC';
+}
 
 
 //// NavigationBar
 Vue.component('main-navigation', {
     template: `
     <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right temporary>
-
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
         <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" style="height: 50px; background-color: #333333; color: white;">
@@ -1029,7 +1038,7 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-palette</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Note_Art_Visual.html">
+                    <v-list-item href="./Note_Art_Image.html">
                         <v-list-item-icon />
                         <v-list-item-title>映像</v-list-item-title>
                     </v-list-item>
@@ -1115,6 +1124,17 @@ Vue.component('main-navigation', {
         Drawer_Local: {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
+        }
+    },
+    mounted() {
+        this.applyMenuColor();
+    },
+    methods: {
+        applyMenuColor() {
+            const color = Get_Menu_Color();
+            if (color && this.$el) {
+                this.$el.style.setProperty('background-color', color, 'important');
+            }
         }
     },
 })
