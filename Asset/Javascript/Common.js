@@ -958,6 +958,11 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Random Question</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-comment-question-outline</v-icon></v-list-item-icon>
                 </v-list-item>
+                <v-list-item href="./Game_Shooting.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Warp Shot</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-target</v-icon></v-list-item-icon>
+                </v-list-item>
                 <v-list-item href="./Game_SpaceShip.html">
                     <v-list-item-icon />
                     <v-list-item-title>Space Ship</v-list-item-title>
@@ -994,13 +999,13 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>プログラミング</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Note_Computer_AI.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>AI</v-list-item-title>
-                    </v-list-item>
                     <v-list-item href="./Note_Computer_Quantum.html">
                         <v-list-item-icon />
                         <v-list-item-title>量子コンピュータ</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Computer_AI.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>AI</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
                 
@@ -1062,7 +1067,6 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>健康</v-list-item-title>
                     </v-list-item>
-
                     <v-list-item href="./Note_Life_Culture.html">
                         <v-list-item-icon />
                         <v-list-item-title>文化</v-list-item-title>
