@@ -1,0 +1,746 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+    <title>Hand Rock Paper Scissors</title>
+
+    <style>
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 4 / 3;
+        }
+
+        .camera-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .camera-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+
+        .gesture-display {
+            font-size: 6rem;
+            line-height: 1;
+            text-align: center;
+        }
+
+        .result-display {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .rps-icon {
+            font-size: 4rem;
+        }
+
+        .permission-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10;
+            color: white;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.2); }
+        }
+        .countdown-emoji {
+            animation: pulse 0.5s ease-in-out infinite alternate;
+            display: inline-block;
+        }
+        .fixed-side {
+            min-height: 520px;
+        }
+        @media (max-width: 600px) {
+            .gesture-display {
+                font-size: 4rem;
+            }
+            .rps-icon {
+                font-size: 3rem;
+            }
+            .result-display {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+    <meta name="robots" content="index, follow">
+</head>
+
+<body>
+
+    <v-app id="App" v-cloak>
+        <template>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Game > Hand Rock Paper Scissors</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+
+                        <v-row justify="center">
+                            <v-col cols="12" md="10" lg="8">
+                                <v-card class="pa-6" elevation="10">
+                                    <v-row>
+                                        <v-col cols="12" md="7">
+                                            <div class="camera-container">
+                                                <video ref="video" autoplay playsinline></video>
+                                                <canvas ref="canvas"></canvas>
+                                                <div v-if="!cameraActive" class="permission-overlay">
+                                                    <v-icon color="white" x-large>mdi-camera</v-icon>
+                                                    <span class="text-h6 white--text">Camera is off</span>
+                                                </div>
+                                            </div>
+                                            <div class="text-center mt-4 hidden-sm-and-down">
+                                                <v-divider class="mb-4"></v-divider>
+                                                <div class="text-subtitle-2 grey--text mb-1">Your Hand</div>
+                                                <div class="text-h4 font-weight-bold mt-4 mb-4" style="min-height: 3rem; display: flex; align-items: center; justify-content: center;">{{ statusText }}</div>
+                                                <div class="mt-2 px-4" style="height: 16px;">
+                                                    <v-progress-linear v-if="phase === 'countdown'" :value="countdownProgress" color="primary" height="6" rounded></v-progress-linear>
+                                                </div>
+                                            </div>
+                                        </v-col>
+
+                                        <v-col cols="12" md="5" class="fixed-side">
+                                            <v-row class="hidden-md-and-up">
+                                                <v-col cols="12" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text mb-1">Your Hand</div>
+                                                    <div class="text-h4 font-weight-bold mt-4 mb-4" style="min-height: 3rem; display: flex; align-items: center; justify-content: center;">{{ statusText }}</div>
+                                                    <div class="mt-2 px-4" style="height: 16px;">
+                                                        <v-progress-linear v-if="phase === 'countdown'" :value="countdownProgress" color="primary" height="6" rounded></v-progress-linear>
+                                                    </div>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row>
+                                                <v-col cols="4" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">You</div>
+                                                    <div class="rps-icon">{{ userGestureEmoji || '?' }}</div>
+                                                </v-col>
+                                                <v-col cols="4" class="text-center d-flex align-center justify-center">
+                                                    <div v-if="phase === 'countdown'" class="text-h5 font-weight-bold primary--text hidden-md-and-up">{{ countdownText }}</div>
+                                                    <div class="text-h4">VS</div>
+                                                </v-col>
+                                                <v-col cols="4" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">Computer</div>
+                                                    <div class="rps-icon">{{ phase === 'result' ? computerGestureEmoji : '❓' }}</div>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row>
+                                                <v-col cols="12" class="text-center">
+                                                    <div class="result-display" :class="resultColorClass">{{ resultText }}</div>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row>
+                                                <v-col cols="4" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">Win</div>
+                                                    <div class="text-h5 font-weight-bold green--text">{{ score.win }}</div>
+                                                </v-col>
+                                                <v-col cols="4" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">Lose</div>
+                                                    <div class="text-h5 font-weight-bold red--text">{{ score.lose }}</div>
+                                                </v-col>
+                                                <v-col cols="4" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">Draw</div>
+                                                    <div class="text-h5 font-weight-bold grey--text">{{ score.draw }}</div>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row justify="center">
+                                                <v-col cols="auto">
+                                                    <v-btn color="error" @click="resetScore" outlined>
+                                                        <v-icon left>mdi-restart</v-icon>Reset Score
+                                                    </v-btn>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row>
+                                                <v-col cols="12">
+                                                    <div class="text-subtitle-2 grey--text mb-2">CPU Opponent</div>
+                                                    <v-row dense>
+                                                        <v-col v-for="(cpu, i) in cpuOpponents" :key="i" cols="auto">
+                                                            <v-chip
+                                                                :color="selectedCpuIndex === i ? 'primary' : 'grey lighten-3'"
+                                                                :outlined="selectedCpuIndex !== i"
+                                                                @click="selectedCpuIndex = i; resetScore()"
+                                                                label
+                                                            >
+                                                                <span class="mr-1">{{ cpu.emoji }}</span>
+                                                                {{ cpu.name }}
+                                                            </v-chip>
+                                                        </v-col>
+                                                    </v-row>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row>
+                                                <v-col cols="12">
+                                                    <div class="text-subtitle-2 grey--text mb-2">History (Last 10)</div>
+                                                    <v-row v-if="roundHistory.length === 0" justify="center">
+                                                        <v-col cols="auto" class="text-caption grey--text">No rounds yet</v-col>
+                                                    </v-row>
+                                                    <v-row v-else dense>
+                                                        <v-col v-for="(round, i) in reversedHistory" :key="i" cols="auto">
+                                                            <v-chip
+                                                                small
+                                                                :color="round.result === 'win' ? 'green' : round.result === 'lose' ? 'red' : 'grey'"
+                                                                text-color="white"
+                                                            >
+                                                                {{ gestureNames[round.user].emoji }} vs {{ gestureNames[round.computer].emoji }}
+                                                            </v-chip>
+                                                        </v-col>
+                                                    </v-row>
+                                                </v-col>
+                                            </v-row>
+                                        </v-col>
+                                    </v-row>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+
+        <v-dialog v-model="showPermissionDialog" persistent max-width="480">
+            <v-card class="pa-6 text-center">
+                <v-icon x-large color="primary" class="mb-4">mdi-camera</v-icon>
+                <v-card-title class="justify-center text-h5">Camera Permission Required</v-card-title>
+                <v-card-text class="text-body-1">
+                    This app needs access to your camera to detect hand gestures for Rock Paper Scissors.<br><br>
+                    Your video is processed locally and is never sent to any server.
+                </v-card-text>
+                <v-card-actions class="justify-center pa-4">
+                    <v-btn x-large color="primary" @click="startCamera" :loading="cameraLoading">
+                        <v-icon left>mdi-camera</v-icon>Start Camera
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+    <script>
+        new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                showPermissionDialog: true,
+                cameraActive: false,
+                cameraLoading: false,
+                hands: null,
+                camera: null,
+                userGesture: null,
+                computerGesture: null,
+                result: null,
+                lastGesture: null,
+                gestureCount: 0,
+                noHandFrames: 0,
+                phase: 'idle',
+                countdownStep: null,
+                countdownTimerId: null,
+                score: { win: 0, lose: 0, draw: 0 },
+                selectedCpuIndex: 0,
+                roundHistory: [],
+                cpuOpponents: [
+                    { name: 'Mike', emoji: '😊' },
+                    { name: 'Sarah', emoji: '🔍' },
+                    { name: 'Chris', emoji: '🔄' },
+                    { name: 'Jessica', emoji: '🧠' },
+                    { name: 'Kevin', emoji: '👑' },
+                ],
+                gestureNames: {
+                    rock: { ja: 'グー', en: 'Rock', emoji: '✊' },
+                    paper: { ja: 'パー', en: 'Paper', emoji: '✋' },
+                    scissors: { ja: 'チョキ', en: 'Scissors', emoji: '✌️' },
+                    thumbsUp: { ja: 'グッド', en: 'Thumbs Up', emoji: '👍' }
+                }
+            },
+            computed: {
+                handDetected() {
+                    return this.lastGesture !== null;
+                },
+                userGestureEmoji() {
+                    if (this.userGesture) return this.gestureNames[this.userGesture].emoji;
+                    if (this.lastGesture) return this.gestureNames[this.lastGesture]?.emoji || '?';
+                    return '?';
+                },
+                statusText() {
+                    if (this.phase === 'countdown') return this.countdownText;
+                    if (this.phase === 'result') return this.resultText;
+                    if (this.phase === 'ready') return 'Ready!';
+                    return 'Show thumbs up to start';
+                },
+                countdownEmoji() {
+                    const map = { rock: '✊', paper: '✋', scissors: '✌️', one: '1️⃣', two: '2️⃣', three: '🎯' };
+                    return this.countdownStep ? map[this.countdownStep] : '';
+                },
+                countdownText() {
+                    const map = { rock: 'Rock', paper: 'Paper', scissors: 'Scissors', one: 'One!', two: 'Two!', three: 'Three!' };
+                    return this.countdownStep ? map[this.countdownStep] : '';
+                },
+                countdownProgress() {
+                    const map = { rock: 16, paper: 33, scissors: 50, one: 66, two: 83, three: 100 };
+                    return this.countdownStep ? map[this.countdownStep] : 0;
+                },
+                computerGestureEmoji() {
+                    if (!this.computerGesture) return '?';
+                    return this.gestureNames[this.computerGesture].emoji;
+                },
+                resultText() {
+                    if (this.result === 'win') return 'You Win!';
+                    if (this.result === 'lose') return 'You Lose...';
+                    if (this.result === 'draw') return 'Draw!';
+                    return 'Show your hand!';
+                },
+                resultColorClass() {
+                    if (this.result === 'win') return 'green--text';
+                    if (this.result === 'lose') return 'red--text';
+                    if (this.result === 'draw') return 'grey--text';
+                    return '';
+                },
+                reversedHistory() {
+                    return [...this.roundHistory].reverse();
+                }
+            },
+            methods: {
+                async startCamera() {
+                    this.cameraLoading = true;
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        this.$refs.video.srcObject = stream;
+                        await this.$refs.video.play();
+                        this.showPermissionDialog = false;
+                        this.cameraActive = true;
+                        this.initHands();
+                    } catch (err) {
+                        alert('Camera access denied. Please allow camera access and try again.');
+                        console.error(err);
+                    }
+                    this.cameraLoading = false;
+                },
+                async initHands() {
+                    this.hands = new Hands({
+                        locateFile: (file) => {
+                            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                        }
+                    });
+
+                    this.hands.setOptions({
+                        maxNumHands: 1,
+                        modelComplexity: 1,
+                        minDetectionConfidence: 0.7,
+                        minTrackingConfidence: 0.6
+                    });
+
+                    this.hands.onResults((results) => this.onHandResults(results));
+
+                    this.camera = new Camera(this.$refs.video, {
+                        onFrame: async () => {
+                            try {
+                                await this.hands.send({ image: this.$refs.video });
+                            } catch (e) {
+                                // ignore frame errors
+                            }
+                        },
+                        width: 640,
+                        height: 480
+                    });
+                    this.camera.start();
+                },
+                onHandResults(results) {
+                    const canvas = this.$refs.canvas;
+                    const ctx = canvas.getContext('2d');
+                    const video = this.$refs.video;
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                        const landmarks = results.multiHandLandmarks[0];
+                        this.noHandFrames = 0;
+
+                        drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
+                        drawLandmarks(ctx, landmarks, { color: '#FF0000', lineWidth: 1, radius: 4 });
+
+                        const gesture = this.classifyGesture(landmarks);
+
+                        if (gesture) {
+                            this.lastGesture = gesture;
+                            if (gesture === 'thumbsUp') {
+                                if (this.phase === 'idle') {
+                                    this.gestureCount++;
+                                    if (this.gestureCount >= 5) {
+                                        this.phase = 'ready';
+                                        setTimeout(() => {
+                                            if (this.phase === 'ready') {
+                                                this.startCountdown();
+                                            }
+                                        }, 600);
+                                    }
+                                }
+                            } else {
+                                this.gestureCount = 0;
+                            }
+                        } else {
+                            if (this.phase !== 'result' && this.phase !== 'countdown' && this.phase !== 'ready') {
+                                this.lastGesture = null;
+                                this.gestureCount = 0;
+                                this.phase = 'idle';
+                            }
+                        }
+                    } else {
+                        this.noHandFrames++;
+                        if (this.phase !== 'countdown' && this.phase !== 'result' && this.phase !== 'ready' && this.noHandFrames > 15) {
+                            this.cancelCountdown();
+                            this.lastGesture = null;
+                            this.gestureCount = 0;
+                            this.phase = 'idle';
+                        }
+                    }
+                },
+                classifyGesture(landmarks) {
+                    const thumbTip = landmarks[4];
+                    const thumbIP = landmarks[3];
+                    const indexMCP = landmarks[5];
+                    const indexPIP = landmarks[6];
+                    const indexTip = landmarks[8];
+                    const middlePIP = landmarks[10];
+                    const middleTip = landmarks[12];
+                    const ringPIP = landmarks[14];
+                    const ringTip = landmarks[16];
+                    const pinkyPIP = landmarks[18];
+                    const pinkyTip = landmarks[20];
+
+                    const distThumb = Math.hypot(thumbTip.x - indexMCP.x, thumbTip.y - indexMCP.y);
+                    const distThumbBase = Math.hypot(thumbIP.x - indexMCP.x, thumbIP.y - indexMCP.y);
+                    const thumbExtended = distThumb > distThumbBase * 1.2;
+
+                    const indexExtended = indexTip.y < indexPIP.y;
+                    const middleExtended = middleTip.y < middlePIP.y;
+                    const ringExtended = ringTip.y < ringPIP.y;
+                    const pinkyExtended = pinkyTip.y < pinkyPIP.y;
+
+                    const extendedCount = [indexExtended, middleExtended, ringExtended, pinkyExtended].filter(Boolean).length;
+
+                    if (thumbExtended && extendedCount === 0) return 'thumbsUp';
+                    if (!thumbExtended && extendedCount === 0) return 'rock';
+                    if (thumbExtended && extendedCount >= 3) return 'paper';
+                    if (!thumbExtended && extendedCount === 2 && indexExtended && middleExtended && !ringExtended && !pinkyExtended) return 'scissors';
+                    if (thumbExtended && extendedCount === 2 && indexExtended && middleExtended && !ringExtended && !pinkyExtended) return 'scissors';
+
+                    return null;
+                },
+                startCountdown() {
+                    if (this.phase === 'countdown') return;
+                    this.phase = 'countdown';
+                    const steps = ['rock', 'paper', 'scissors', 'one', 'two', 'three'];
+                    const intervals = [600, 600, 600, 400, 400];
+                    let index = 0;
+
+                    const tick = () => {
+                        if (this.phase !== 'countdown') return;
+                        this.countdownStep = steps[index];
+                        if (index >= steps.length - 1) {
+                            setTimeout(() => {
+                                if (this.phase !== 'countdown') return;
+                                this.evaluateRound();
+                            }, 300);
+                            return;
+                        }
+                        index++;
+                        this.countdownTimerId = setTimeout(tick, intervals[index - 1]);
+                    };
+
+                    if (this.countdownTimerId) {
+                        clearTimeout(this.countdownTimerId);
+                        this.countdownTimerId = null;
+                    }
+                    tick();
+                },
+                cancelCountdown() {
+                    if (this.countdownTimerId) {
+                        clearTimeout(this.countdownTimerId);
+                        this.countdownTimerId = null;
+                    }
+                    this.phase = 'idle';
+                    this.countdownStep = null;
+                },
+                evaluateRound() {
+                    const rps = ['rock', 'paper', 'scissors'];
+                    if (!rps.includes(this.lastGesture)) {
+                        this.phase = 'idle';
+                        this.countdownStep = null;
+                        this.gestureCount = 0;
+                        return;
+                    }
+                    this.userGesture = this.lastGesture;
+                    this.playRound();
+                    this.roundHistory.push({
+                        user: this.userGesture,
+                        computer: this.computerGesture,
+                        result: this.result
+                    });
+                    if (this.roundHistory.length > 10) {
+                        this.roundHistory.shift();
+                    }
+                    this.phase = 'result';
+                    this.countdownStep = null;
+                    this.gestureCount = 0;
+                    setTimeout(() => {
+                        this.phase = 'idle';
+                        this.gestureCount = 0;
+                    }, 2000);
+                },
+                playRound() {
+                    this.computerGesture = this.getCpuChoice();
+
+                    if (this.userGesture === this.computerGesture) {
+                        this.result = 'draw';
+                        this.score.draw++;
+                    } else if (
+                        (this.userGesture === 'rock' && this.computerGesture === 'scissors') ||
+                        (this.userGesture === 'paper' && this.computerGesture === 'rock') ||
+                        (this.userGesture === 'scissors' && this.computerGesture === 'paper')
+                    ) {
+                        this.result = 'win';
+                        this.score.win++;
+                    } else {
+                        this.result = 'lose';
+                        this.score.lose++;
+                    }
+                },
+                getCpuChoice() {
+                    switch (this.selectedCpuIndex) {
+                        case 0: return this.strategyNovice();
+                        case 1: return this.strategyPatternReader();
+                        case 2: return this.strategyAdaptive();
+                        case 3: return this.strategyMindGamer();
+                        case 4: return this.strategyLegend();
+                        default: return ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
+                    }
+                },
+                getCounter(hand) {
+                    const counters = { rock: 'paper', paper: 'scissors', scissors: 'rock' };
+                    return counters[hand];
+                },
+                strategyNovice() {
+                    const choices = ['rock', 'paper', 'scissors'];
+                    if (Math.random() < 0.3 && this.roundHistory.length > 0) {
+                        return this.roundHistory[this.roundHistory.length - 1].computer;
+                    }
+                    return choices[Math.floor(Math.random() * 3)];
+                },
+                strategyPatternReader() {
+                    const choices = ['rock', 'paper', 'scissors'];
+                    const h = this.roundHistory;
+                    if (h.length < 4) return choices[Math.floor(Math.random() * 3)];
+
+                    const lastTwo = h.slice(-2).map(r => r.user);
+                    const predictions = [];
+                    for (let i = 0; i < h.length - 2; i++) {
+                        if (h[i].user === lastTwo[0] && h[i + 1].user === lastTwo[1]) {
+                            predictions.push(h[i + 2].user);
+                        }
+                    }
+                    if (predictions.length > 0) {
+                        const counts = { rock: 0, paper: 0, scissors: 0 };
+                        predictions.forEach(p => counts[p]++);
+                        let predicted = 'rock', max = 0;
+                        for (const [hand, count] of Object.entries(counts)) {
+                            if (count > max) { max = count; predicted = hand; }
+                        }
+                        return this.getCounter(predicted);
+                    }
+                    return choices[Math.floor(Math.random() * 3)];
+                },
+                strategyAdaptive() {
+                    const choices = ['rock', 'paper', 'scissors'];
+                    const h = this.roundHistory;
+                    if (h.length < 3) return choices[Math.floor(Math.random() * 3)];
+
+                    const counts = { rock: 0, paper: 0, scissors: 0 };
+                    h.forEach(r => counts[r.user]++);
+                    let mostCommon = 'rock', max = 0;
+                    for (const [hand, count] of Object.entries(counts)) {
+                        if (count > max) { max = count; mostCommon = hand; }
+                    }
+                    return this.getCounter(mostCommon);
+                },
+                strategyMindGamer() {
+                    const choices = ['rock', 'paper', 'scissors'];
+                    const h = this.roundHistory;
+                    if (h.length < 2) return choices[Math.floor(Math.random() * 3)];
+
+                    const last = h[h.length - 1];
+                    if (last.result === 'win') {
+                        return this.getCounter(last.user);
+                    } else if (last.result === 'lose') {
+                        const avoid = last.user;
+                        const options = choices.filter(h => h !== avoid);
+                        return this.getCounter(options[Math.floor(Math.random() * 2)]);
+                    } else {
+                        if (Math.random() < 0.5) {
+                            return this.getCounter(last.user);
+                        }
+                        const options = choices.filter(h => h !== last.user);
+                        return this.getCounter(options[Math.floor(Math.random() * 2)]);
+                    }
+                },
+                strategyLegend() {
+                    const choices = ['rock', 'paper', 'scissors'];
+                    const h = this.roundHistory;
+                    if (h.length < 4) return choices[Math.floor(Math.random() * 3)];
+
+                    const votes = { rock: 0, paper: 0, scissors: 0 };
+
+                    const lastTwo = h.slice(-2).map(r => r.user);
+                    const predictions = [];
+                    for (let i = 0; i < h.length - 2; i++) {
+                        if (h[i].user === lastTwo[0] && h[i + 1].user === lastTwo[1]) {
+                            predictions.push(h[i + 2].user);
+                        }
+                    }
+                    if (predictions.length > 0) {
+                        const counts = { rock: 0, paper: 0, scissors: 0 };
+                        predictions.forEach(p => counts[p]++);
+                        let predicted = 'rock', max = 0;
+                        for (const [hand, count] of Object.entries(counts)) {
+                            if (count > max) { max = count; predicted = hand; }
+                        }
+                        votes[this.getCounter(predicted)] += 3;
+                    }
+
+                    const freq = { rock: 0, paper: 0, scissors: 0 };
+                    h.forEach(r => freq[r.user]++);
+                    let mostFreq = 'rock', freqMax = 0;
+                    for (const [hand, count] of Object.entries(freq)) {
+                        if (count > freqMax) { freqMax = count; mostFreq = hand; }
+                    }
+                    votes[this.getCounter(mostFreq)] += 2;
+
+                    const last = h[h.length - 1];
+                    if (last.result === 'win') {
+                        votes[this.getCounter(last.user)] += 2;
+                    } else if (last.result === 'lose') {
+                        const avoid = last.user;
+                        const options = choices.filter(h => h !== avoid);
+                        const likely = options[Math.floor(Math.random() * 2)];
+                        votes[this.getCounter(likely)] += 1;
+                    }
+
+                    if (h.length >= 2) {
+                        const lastUser = h[h.length - 1].user;
+                        const lastCpu = h[h.length - 1].computer;
+                        if (lastUser === lastCpu) {
+                            votes[this.getCounter(lastUser)] += 2;
+                        }
+                    }
+
+                    let best = 'rock', bestScore = -Infinity;
+                    for (const [hand, score] of Object.entries(votes)) {
+                        if (score > bestScore) { bestScore = score; best = hand; }
+                    }
+                    return best;
+                },
+                resetScore() {
+                    this.cancelCountdown();
+                    this.score = { win: 0, lose: 0, draw: 0 };
+                    this.result = null;
+                    this.userGesture = null;
+                    this.computerGesture = null;
+                    this.lastGesture = null;
+                    this.gestureCount = 0;
+                    this.noHandFrames = 0;
+                    this.roundHistory = [];
+                }
+            },
+            beforeDestroy() {
+                this.cancelCountdown();
+                if (this.camera) {
+                    this.camera.stop();
+                }
+                if (this.hands) {
+                    this.hands.close();
+                }
+                const video = this.$refs.video;
+                if (video && video.srcObject) {
+                    video.srcObject.getTracks().forEach(t => t.stop());
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
