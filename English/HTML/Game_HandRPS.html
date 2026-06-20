@@ -132,10 +132,11 @@
                                             <div class="camera-container">
                                                 <video ref="video" autoplay playsinline></video>
                                                 <canvas ref="canvas"></canvas>
-                                                <div v-if="!cameraActive" class="permission-overlay">
-                                                    <v-icon color="white" x-large>mdi-camera</v-icon>
-                                                    <span class="text-h6 white--text">Camera is off</span>
-                                                </div>
+                <div v-if="!cameraActive" class="permission-overlay">
+                    <v-icon color="white" x-large>mdi-camera</v-icon>
+                    <span class="text-h6 white--text">Camera is off</span>
+                    <v-btn color="primary" @click="showPermissionDialog = true" class="mt-2">Enable Camera</v-btn>
+                </div>
                                             </div>
                                             <div class="text-center mt-4 hidden-sm-and-down">
                                                 <v-divider class="mb-4"></v-divider>
@@ -265,7 +266,7 @@
             <main-footer></main-footer>
         </template>
 
-        <v-dialog v-model="showPermissionDialog" persistent max-width="480">
+        <v-dialog v-model="showPermissionDialog" max-width="480">
             <v-card class="pa-6 text-center">
                 <v-icon x-large color="primary" class="mb-4">mdi-camera</v-icon>
                 <v-card-title class="justify-center text-h5">Camera Permission Required</v-card-title>
@@ -277,6 +278,7 @@
                     <v-btn x-large color="primary" @click="startCamera" :loading="cameraLoading">
                         <v-icon left>mdi-camera</v-icon>Start Camera
                     </v-btn>
+                    <v-btn text @click="showPermissionDialog = false">Skip</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -386,7 +388,7 @@
                         this.cameraActive = true;
                         this.initHands();
                     } catch (err) {
-                        alert('Camera access denied. Please allow camera access and try again.');
+                        this.showPermissionDialog = false;
                         console.error(err);
                     }
                     this.cameraLoading = false;
@@ -436,7 +438,12 @@
                         drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
                         drawLandmarks(ctx, landmarks, { color: '#FF0000', lineWidth: 1, radius: 4 });
 
-                        const gesture = this.classifyGesture(landmarks);
+                        let classifyLm = landmarks;
+                        if (results.multiHandedness && results.multiHandedness[0].label === 'Left') {
+                            classifyLm = landmarks.map(lm => ({ x: 1 - lm.x, y: lm.y, z: lm.z }));
+                        }
+
+                        const gesture = this.classifyGesture(classifyLm);
 
                         if (gesture) {
                             this.lastGesture = gesture;
