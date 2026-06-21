@@ -298,6 +298,7 @@
                 isMobile: /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent),
 
                 chartResizeTimer: null,
+                chartObserver: null,
                 fruits: [],
                 effects: [],
                 shotTrails: [],
@@ -1073,6 +1074,7 @@
             beforeDestroy() {
                 if (this.chartResizeTimer) clearTimeout(this.chartResizeTimer);
                 window.removeEventListener('resize', this._onChartResize);
+                window.removeEventListener('orientationchange', this._onOrientationChange);
                 if (this.gameTimerId) clearInterval(this.gameTimerId);
                 if (this.fruitSpawnTimer) clearInterval(this.fruitSpawnTimer);
                 if (this.gameLoopId) clearInterval(this.gameLoopId);
@@ -1088,10 +1090,18 @@
                     if (this.chartResizeTimer) clearTimeout(this.chartResizeTimer);
                     this.chartResizeTimer = setTimeout(() => {
                         const el = document.getElementById('trendChart');
-                        if (el && el.hasChildNodes()) Plotly.Plots.resize(el);
-                    }, 300);
+                        if (el) this.updateChart();
+                    }, 200);
+                };
+                this._onOrientationChange = () => {
+                    if (this.chartResizeTimer) clearTimeout(this.chartResizeTimer);
+                    this.chartResizeTimer = setTimeout(() => {
+                        const el = document.getElementById('trendChart');
+                        if (el) this.updateChart();
+                    }, 600);
                 };
                 window.addEventListener('resize', this._onChartResize);
+                window.addEventListener('orientationchange', this._onOrientationChange);
                 this.loadSavedData();
             }
         });
