@@ -27,7 +27,7 @@
         .game-container {
             position: relative;
             width: 100%;
-            max-width: 640px;
+            max-width: min(640px, calc(90dvh * 4 / 3));
             margin: 0 auto;
             border-radius: 16px;
             overflow: hidden;
@@ -297,6 +297,7 @@
                 handsMap: {},
                 isMobile: /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent),
 
+                chartResizeTimer: null,
                 fruits: [],
                 effects: [],
                 shotTrails: [],
@@ -409,7 +410,7 @@
                     });
 
                     this.hands.setOptions({
-                        maxNumHands: 1,
+                        maxNumHands: this.isMobile ? 1 : 2,
                         modelComplexity: 0,
                         minDetectionConfidence: 0.7,
                         minTrackingConfidence: 0.6
@@ -527,10 +528,6 @@
 
                     // Hand / aim visuals in camera space (no transform) — CSS flip aligns them with mirrored video
                     for (const hand of Object.values(this.handsMap)) {
-                        if (this.gamePhase !== 'ended' && !this.isMobile) {
-                            drawConnectors(ctx, hand.landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
-                            drawLandmarks(ctx, hand.landmarks, { color: '#FF0000', lineWidth: 1, radius: 4 });
-                        }
                         this.drawLaserSight(ctx, hand.landmarks);
                         this.drawGunSight(ctx, hand.landmarks);
                         if (hand.aimX >= 0) {
@@ -1074,6 +1071,8 @@
                 }
             },
             beforeDestroy() {
+                if (this.chartResizeTimer) clearTimeout(this.chartResizeTimer);
+                window.removeEventListener('resize', this._onChartResize);
                 if (this.gameTimerId) clearInterval(this.gameTimerId);
                 if (this.fruitSpawnTimer) clearInterval(this.fruitSpawnTimer);
                 if (this.gameLoopId) clearInterval(this.gameLoopId);
@@ -1085,6 +1084,14 @@
                 }
             },
             mounted() {
+                this._onChartResize = () => {
+                    if (this.chartResizeTimer) clearTimeout(this.chartResizeTimer);
+                    this.chartResizeTimer = setTimeout(() => {
+                        const el = document.getElementById('trendChart');
+                        if (el && el.hasChildNodes()) Plotly.Plots.resize(el);
+                    }, 300);
+                };
+                window.addEventListener('resize', this._onChartResize);
                 this.loadSavedData();
             }
         });
