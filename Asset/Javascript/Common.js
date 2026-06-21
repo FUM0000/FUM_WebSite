@@ -927,6 +927,23 @@ Vue.component('main-navigation', {
                 <template v-slot:activator>
                     <v-list-item-title>Game</v-list-item-title>
                 </template>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Camera</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-camera</v-icon></v-list-item-icon>
+                    </template>
+                    <v-list-item href="./Game_HandRPS.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Hand RPS</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-hand-peace</v-icon></v-list-item-icon>
+                    </v-list-item>
+                    <v-list-item href="./Game_HandShooter.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Hand Shooting</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-gun</v-icon></v-list-item-icon>
+                    </v-list-item>
+                </v-list-group sub-group>
                 
                 <v-list-item href="./Game_KittyHopper.html">
                     <v-list-item-icon />
@@ -937,11 +954,6 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Checkman</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-checkbox-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_HandRPS.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Hand RPS</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-hand-peace</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Game_Market.html">
                     <v-list-item-icon />

@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+    <title>Hand Shooting</title>
+
+    <style>
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 4 / 3;
+        }
+
+        .game-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .game-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+
+        .permission-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10;
+            color: white;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9;
+            color: white;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .game-overlay.started {
+            background: rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+
+        .fixed-side {
+            min-height: 520px;
+        }
+
+        .score-num {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'Space Mono', monospace;
+        }
+        .timer-num {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .fruit-icon-sample {
+            font-size: 2rem;
+            line-height: 1;
+            display: inline-block;
+        }
+
+        [v-cloak] {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .score-num {
+                font-size: 1.8rem;
+            }
+            .timer-num {
+                font-size: 1.4rem;
+            }
+            .fixed-side {
+                min-height: auto;
+            }
+        }
+    </style>
+    <meta name="robots" content="index, follow">
+</head>
+
+<body>
+
+    <v-app id="App" v-cloak>
+        <template>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Game > Hand Shooting</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+                        <v-row justify="center">
+                            <v-col cols="12" md="10" lg="8">
+                                <v-card class="pa-6" elevation="10">
+                                    <v-row>
+                                        <v-col cols="12" md="7">
+                                            <div class="game-container">
+                                                <video ref="video" autoplay playsinline></video>
+                                                <canvas ref="gameCanvas"></canvas>
+                                                <div v-if="!cameraActive" class="permission-overlay">
+                                                    <v-icon color="white" x-large>mdi-camera</v-icon>
+                                                    <span class="text-h6 white--text">Camera is off</span>
+                                                    <v-btn color="primary" @click="showPermissionDialog = true" class="mt-2">Enable Camera</v-btn>
+                                                </div>
+
+                                            </div>
+                                        </v-col>
+
+                                        <v-col cols="12" md="5" class="fixed-side">
+                                            <v-row>
+                                                <v-col cols="4" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">Score</div>
+                                                    <div class="score-num primary--text">{{ score }}</div>
+                                                </v-col>
+                                                <v-col cols="4" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">Combo</div>
+                                                    <div class="score-num" :class="combo > 0 ? 'orange--text' : 'grey--text'">×{{ combo }}</div>
+                                                </v-col>
+                                                <v-col cols="4" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">Time</div>
+                                                    <div class="timer-num" :class="timeLeft <= 10 ? 'red--text' : ''">{{ timeLeft }}s</div>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row>
+                                                <v-col cols="6" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">High Score</div>
+                                                    <div class="text-h5 font-weight-bold amber--text">{{ highScore }}</div>
+                                                </v-col>
+                                                <v-col cols="6" class="text-center">
+                                                    <div class="text-subtitle-2 grey--text">Fruits</div>
+                                                    <div>
+                                                        <span class="fruit-icon-sample">🍎</span>
+                                                        <span class="fruit-icon-sample">🍊</span>
+                                                        <span class="fruit-icon-sample">🍋</span>
+                                                        <span class="fruit-icon-sample">🍇</span>
+                                                        <span class="fruit-icon-sample">🍉</span>
+                                                    </div>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row>
+                                                <v-col cols="12">
+                                                    <div class="text-subtitle-2 grey--text mb-2">How to Play</div>
+                                                    <v-list dense>
+                                                        <v-list-item>
+                                                            <v-list-item-icon><v-icon small>mdi-hand-pointing-up</v-icon></v-list-item-icon>
+                                                            <v-list-item-content class="text-body-2">Aim with your index finger</v-list-item-content>
+                                                        </v-list-item>
+                                                        <v-list-item>
+                                                            <v-list-item-icon><v-icon small>mdi-gesture-tap</v-icon></v-list-item-icon>
+                                                            <v-list-item-content class="text-body-2">Extend → curl thumb to fire</v-list-item-content>
+                                                        </v-list-item>
+                                                        <v-list-item>
+                                                            <v-list-item-icon><v-icon small>mdi-target</v-icon></v-list-item-icon>
+                                                            <v-list-item-content class="text-body-2">Shoot buttons to start / retry</v-list-item-content>
+                                                        </v-list-item>
+                                                        <v-list-item>
+                                                            <v-list-item-icon><v-icon small>mdi-fruit-cherries</v-icon></v-list-item-icon>
+                                                            <v-list-item-content class="text-body-2">Combo: ×1=10pt ×2=20pt…</v-list-item-content>
+                                                        </v-list-item>
+                                                    </v-list>
+                                                </v-col>
+                                            </v-row>
+
+                                            <v-divider class="my-3"></v-divider>
+
+                                            <v-row>
+                                                <v-col cols="12">
+                                                    <div class="text-subtitle-2 grey--text mb-2">Score Trend</div>
+                                                    <div id="trendChart" style="width:100%; height:260px;"></div>
+                                                </v-col>
+                                            </v-row>
+                                        </v-col>
+                                    </v-row>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+
+        <v-dialog v-model="showPermissionDialog" max-width="480">
+            <v-card class="pa-6 text-center">
+                <v-icon x-large color="primary" class="mb-4">mdi-camera</v-icon>
+                <v-card-title class="justify-center text-h5">Camera Permission Required</v-card-title>
+                <v-card-text class="text-body-1">
+                    This game uses your camera to detect hand gestures for aiming and shooting.<br><br>
+                    Your video is processed locally and is never sent to any server.
+                </v-card-text>
+                <v-card-actions class="justify-center pa-4">
+                    <v-btn x-large color="primary" @click="startCamera" :loading="cameraLoading">
+                        <v-icon left>mdi-camera</v-icon>Start Camera
+                    </v-btn>
+                    <v-btn text @click="showPermissionDialog = false">Skip</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <script>
+        new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                showPermissionDialog: true,
+                cameraActive: false,
+                cameraLoading: false,
+                hands: null,
+                camera: null,
+                gamePhase: 'idle',
+                score: 0,
+                highScore: 0,
+                timeLeft: 60,
+                historicalScores: [],
+                handDetected: false,
+                handsMap: {},
+
+                fruits: [],
+                effects: [],
+                shotTrails: [],
+                bullets: [],
+                floatingTexts: [],
+                floatButtons: [],
+                combo: 0,
+                gameTimerId: null,
+                fruitSpawnTimer: null,
+                gameLoopId: null,
+
+                canvasWidth: 640,
+                canvasHeight: 480,
+
+                FRUIT_EMOJIS: ['🍎', '🍊', '🍋', '🍇', '🍉', '🍓', '🍑', '🍒', '🥝', '🍌', '🍍', '🥭']
+            },
+            watch: {
+                score(val) {
+                    if (val > this.highScore) {
+                        this.highScore = val;
+                    }
+                }
+            },
+            methods: {
+                async startCamera() {
+                    this.cameraLoading = true;
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        this.$refs.video.srcObject = stream;
+                        await this.$refs.video.play();
+                        this.showPermissionDialog = false;
+                        this.cameraActive = true;
+                        this.loadSavedData();
+                        this.initHands();
+                        this.$nextTick(() => this.initFloatButtons('start'));
+                    } catch (err) {
+                        this.showPermissionDialog = false;
+                        console.error(err);
+                    }
+                    this.cameraLoading = false;
+                },
+                loadSavedData() {
+                    try {
+                        const hs = localStorage.getItem('HandShooter_highScore');
+                        if (hs) this.highScore = parseInt(hs) || 0;
+                        const hist = localStorage.getItem('HandShooter_history');
+                        if (hist) this.historicalScores = JSON.parse(hist) || [];
+                    } catch (e) {}
+                    this.$nextTick(() => this.updateChart());
+                },
+                initFloatButtons(id) {
+                    const cw = this.canvasWidth;
+                    const ch = this.canvasHeight;
+                    if (id === 'start') {
+                        this.floatButtons = [{
+                            id: 'start', text: 'START GAME',
+                            x: cw * 0.5, y: ch * 0.4,
+                            vx: (Math.random() - 0.5) * 0.4,
+                            vy: (Math.random() - 0.5) * 0.3,
+                            w: 220, h: 62
+                        }];
+                        if (!this.handDetected) {
+                            this.floatButtons.push({
+                                id: 'hint', text: 'Show your hand to the camera',
+                                x: cw * 0.5, y: ch * 0.62,
+                                vx: (Math.random() - 0.5) * 0.2,
+                                vy: (Math.random() - 0.5) * 0.15,
+                                w: 340, h: 36
+                            });
+                        }
+                    } else if (id === 'again') {
+                        this.floatButtons = [
+                            {
+                                id: 'title', text: 'TIME UP!',
+                                x: cw * 0.5, y: ch * 0.27,
+                                vx: (Math.random() - 0.5) * 0.3,
+                                vy: (Math.random() - 0.5) * 0.2,
+                                w: 200, h: 50
+                            },
+                            {
+                                id: 'score', text: 'Score: ' + this.score,
+                                x: cw * 0.5, y: ch * 0.40,
+                                vx: (Math.random() - 0.5) * 0.25,
+                                vy: (Math.random() - 0.5) * 0.2,
+                                w: 200, h: 40
+                            },
+                            {
+                                id: 'again', text: 'PLAY AGAIN',
+                                x: cw * 0.5, y: ch * 0.58,
+                                vx: (Math.random() - 0.5) * 0.4,
+                                vy: (Math.random() - 0.5) * 0.3,
+                                w: 220, h: 62
+                            }
+                        ];
+                    }
+                },
+                saveData() {
+                    try {
+                        localStorage.setItem('HandShooter_highScore', String(this.highScore));
+                        localStorage.setItem('HandShooter_history', JSON.stringify(this.historicalScores));
+                    } catch (e) {}
+                },
+                async initHands() {
+                    this.hands = new Hands({
+                        locateFile: (file) => {
+                            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                        }
+                    });
+
+                    this.hands.setOptions({
+                        maxNumHands: 1,
+                        modelComplexity: 1,
+                        minDetectionConfidence: 0.7,
+                        minTrackingConfidence: 0.6
+                    });
+
+                    this.hands.onResults((results) => this.onHandResults(results));
+
+                    this.camera = new Camera(this.$refs.video, {
+                        onFrame: async () => {
+                            try {
+                                await this.hands.send({ image: this.$refs.video });
+                            } catch (e) {}
+                        },
+                        width: 640,
+                        height: 480
+                    });
+                    this.camera.start();
+
+                    if (this.gameLoopId) clearInterval(this.gameLoopId);
+                    this.gameLoopId = setInterval(() => {
+                        if (this.gamePhase === 'playing') {
+                            this.updateFruits();
+                        }
+                        this.updateBullets();
+                        this.renderScene();
+                    }, 33);
+                },
+                onHandResults(results) {
+                    const newMap = {};
+                    const handedness = results.multiHandedness || [];
+                    if (results.multiHandLandmarks) {
+                        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                            const lm = results.multiHandLandmarks[i];
+                            const label = handedness[i] ? handedness[i].label : (i === 0 ? 'Right' : 'Left');
+
+                            const wrist = lm[0];
+                            const indexTip = lm[8];
+                            const aimX = (wrist.x + (indexTip.x - wrist.x) * 3) * this.canvasWidth;
+                            const aimY = (wrist.y + (indexTip.y - wrist.y) * 3) * this.canvasHeight;
+
+                            // Improved thumb detection: 3D distance to middle MCP (palm center)
+                            const thumbTip = lm[4];
+                            const thumbIP = lm[3];
+                            const palm = lm[9]; // middle MCP – stable across palm/back views
+
+                            const dTip = Math.hypot(
+                                thumbTip.x - palm.x,
+                                thumbTip.y - palm.y,
+                                (thumbTip.z || 0) - (palm.z || 0)
+                            );
+                            const dIP = Math.hypot(
+                                thumbIP.x - palm.x,
+                                thumbIP.y - palm.y,
+                                (thumbIP.z || 0) - (palm.z || 0)
+                            );
+
+                            const thumbExtended = (dTip / Math.max(dIP, 0.001) > 1.10) || (dTip > 0.18);
+
+                            const existing = this.handsMap[label];
+                            const wasExtended = existing ? existing.thumbExtended : false;
+                            const lastFire = existing ? existing.lastFireTime : 0;
+
+                            let newLastFire = lastFire;
+                            if (!thumbExtended && wasExtended) {
+                                const now = Date.now();
+                                if (now - lastFire > 120) {
+                                    this.fire(lm, aimX, aimY);
+                                    newLastFire = now;
+                                }
+                            }
+
+                            newMap[label] = {
+                                landmarks: lm,
+                                aimX, aimY,
+                                thumbExtended,
+                                wasThumbExtended: thumbExtended,
+                                lastFireTime: newLastFire
+                            };
+                        }
+                    }
+                    this.handsMap = newMap;
+                    this.handDetected = Object.keys(newMap).length > 0;
+                },
+                renderScene() {
+                    const canvas = this.$refs.gameCanvas;
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    const video = this.$refs.video;
+                    const w = video && video.videoWidth ? video.videoWidth : 640;
+                    const h = video && video.videoHeight ? video.videoHeight : 480;
+                    canvas.width = w;
+                    canvas.height = h;
+                    this.canvasWidth = w;
+                    this.canvasHeight = h;
+
+                    ctx.clearRect(0, 0, w, h);
+
+                    // Game objects drawn with inverse transform so CSS scaleX(-1) un-does the mirror and text is readable
+                    ctx.save();
+                    ctx.scale(-1, 1);
+                    ctx.translate(-w, 0);
+
+                    if (this.gamePhase !== 'playing') {
+                        this.drawFloatButtons(ctx);
+                    }
+                    this.drawShotTrails(ctx);
+                    this.drawBullets(ctx);
+                    if (this.gamePhase === 'playing') {
+                        this.drawFruits(ctx);
+                    }
+                    this.drawEffects(ctx);
+                    this.drawFloatingTexts(ctx);
+
+                    ctx.restore();
+
+                    // Hand / aim visuals in camera space (no transform) — CSS flip aligns them with mirrored video
+                    for (const hand of Object.values(this.handsMap)) {
+                        if (this.gamePhase !== 'ended') {
+                            drawConnectors(ctx, hand.landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
+                            drawLandmarks(ctx, hand.landmarks, { color: '#FF0000', lineWidth: 1, radius: 4 });
+                        }
+                        this.drawLaserSight(ctx, hand.landmarks);
+                        this.drawGunSight(ctx, hand.landmarks);
+                        if (hand.aimX >= 0) {
+                            this.drawCrosshair(ctx, hand.aimX, hand.aimY);
+                        }
+                    }
+                },
+                drawLaserSight(ctx, landmarks) {
+                    if (!landmarks) return;
+                    const lm = landmarks;
+                    const wrist = lm[0];
+                    const indexTip = lm[8];
+                    const w = this.canvasWidth;
+                    const h = this.canvasHeight;
+                    const dirX = (indexTip.x - wrist.x) * 3;
+                    const dirY = (indexTip.y - wrist.y) * 3;
+                    const startX = (wrist.x + (indexTip.x - wrist.x) * 0.5) * w;
+                    const startY = (wrist.y + (indexTip.y - wrist.y) * 0.5) * h;
+                    const endX = (wrist.x + dirX) * w;
+                    const endY = (wrist.y + dirY) * h;
+
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(255, 50, 50, 0.35)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 8]);
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+                    ctx.restore();
+                },
+                drawGunSight(ctx, landmarks) {
+                    if (!landmarks) return;
+                    const lm = landmarks;
+                    const wrist = lm[0];
+                    const indexTip = lm[8];
+                    const w = this.canvasWidth;
+                    const h = this.canvasHeight;
+
+                    const tipX = indexTip.x * w;
+                    const tipY = indexTip.y * h;
+                    const dirX = (indexTip.x - wrist.x) * 3;
+                    const dirY = (indexTip.y - wrist.y) * 3;
+                    const endX = (wrist.x + dirX) * w;
+                    const endY = (wrist.y + dirY) * h;
+
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(255, 200, 0, 0.4)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(wrist.x * w, wrist.y * h);
+                    ctx.lineTo(tipX, tipY);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = 'rgba(255, 200, 0, 0.15)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([2, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(tipX, tipY);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(255, 200, 0, 0.6)';
+                    ctx.beginPath();
+                    ctx.arc(tipX, tipY, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                },
+                drawCrosshair(ctx, x, y) {
+                    if (x < 0 || y < 0) return;
+                    const r = 18;
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.9)';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.arc(x, y, r, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(x - r - 6, y);
+                    ctx.lineTo(x - r + 4, y);
+                    ctx.moveTo(x + r + 6, y);
+                    ctx.lineTo(x + r - 4, y);
+                    ctx.moveTo(x, y - r - 6);
+                    ctx.lineTo(x, y - r + 4);
+                    ctx.moveTo(x, y + r + 6);
+                    ctx.lineTo(x, y + r - 4);
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                },
+                drawShotTrails(ctx) {
+                    for (let i = this.shotTrails.length - 1; i >= 0; i--) {
+                        const t = this.shotTrails[i];
+                        t.life--;
+                        if (t.life <= 0) {
+                            this.shotTrails.splice(i, 1);
+                            continue;
+                        }
+                        const alpha = t.life / t.maxLife;
+                        const w = 1 + (1 - alpha) * 3;
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.strokeStyle = '#FFD700';
+                        ctx.lineWidth = w;
+                        ctx.shadowColor = '#FFA500';
+                        ctx.shadowBlur = 12;
+                        ctx.beginPath();
+                        ctx.moveTo(t.x1, t.y1);
+                        ctx.lineTo(t.x2, t.y2);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                },
+                drawBullets(ctx) {
+                    for (const b of this.bullets) {
+                        ctx.save();
+                        ctx.shadowColor = '#FFD700';
+                        ctx.shadowBlur = 14;
+                        ctx.fillStyle = '#FFD700';
+                        ctx.beginPath();
+                        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#FFF8E1';
+                        ctx.beginPath();
+                        ctx.arc(b.x - b.vx * 0.08, b.y - b.vy * 0.08, b.radius * 0.5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                },
+                drawFloatingTexts(ctx) {
+                    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+                        const ft = this.floatingTexts[i];
+                        ft.life--;
+                        ft.y -= 1.2;
+                        if (ft.life <= 0) {
+                            this.floatingTexts.splice(i, 1);
+                            continue;
+                        }
+                        const alpha = ft.life / ft.maxLife;
+                        const size = 16 + (1 - alpha) * 8;
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.font = `bold ${size}px 'Space Mono', monospace`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                        ctx.shadowBlur = 4;
+                        ctx.fillStyle = '#FFD700';
+                        ctx.fillText(ft.text, ft.x, ft.y);
+                        ctx.fillStyle = '#FFF8E1';
+                        ctx.fillText(ft.text, ft.x - 1, ft.y - 1);
+                        ctx.restore();
+                    }
+                },
+                drawFloatButtons(ctx) {
+                    for (const btn of this.floatButtons) {
+                        btn.x += btn.vx;
+                        btn.y += btn.vy;
+                        const hw = btn.w / 2;
+                        const hh = btn.h / 2;
+                        if (btn.x < hw) { btn.x = hw; btn.vx *= -1; }
+                        if (btn.x > this.canvasWidth - hw) { btn.x = this.canvasWidth - hw; btn.vx *= -1; }
+                        if (btn.y < hh) { btn.y = hh; btn.vy *= -1; }
+                        if (btn.y > this.canvasHeight - hh) { btn.y = this.canvasHeight - hh; btn.vy *= -1; }
+
+                        if (btn.id === 'hint') {
+                            if (this.handDetected) continue;
+                            ctx.save();
+                            ctx.globalAlpha = 0.7 + Math.sin(Date.now() * 0.003) * 0.2;
+                            ctx.font = '15px "Space Mono", sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillText(btn.text, btn.x, btn.y);
+                            ctx.restore();
+                            continue;
+                        }
+                        if (btn.id === 'title') {
+                            ctx.save();
+                            ctx.font = 'bold 34px "Space Mono", monospace';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                            ctx.shadowBlur = 8;
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillText(btn.text, btn.x, btn.y);
+                            ctx.restore();
+                            continue;
+                        }
+                        if (btn.id === 'score') {
+                            ctx.save();
+                            ctx.font = '20px "Space Mono", monospace';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                            ctx.shadowBlur = 6;
+                            ctx.fillStyle = '#FFD740';
+                            ctx.fillText(btn.text, btn.x, btn.y);
+                            ctx.restore();
+                            continue;
+                        }
+
+                        const isPlayable = btn.id === 'start' || btn.id === 'again';
+                        const canStart = btn.id === 'start' ? this.handDetected : true;
+
+                        ctx.save();
+                        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+                        ctx.shadowBlur = 14;
+                        ctx.shadowOffsetY = 3;
+                        const grad = ctx.createLinearGradient(btn.x - hw, btn.y, btn.x + hw, btn.y);
+                        if (canStart) {
+                            grad.addColorStop(0, '#388E3C');
+                            grad.addColorStop(1, '#2E7D32');
+                        } else {
+                            grad.addColorStop(0, '#616161');
+                            grad.addColorStop(1, '#424242');
+                        }
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        this.roundRect(ctx, btn.x - hw, btn.y - hh, btn.w, btn.h, 14);
+                        ctx.fill();
+
+                        ctx.shadowBlur = 0;
+                        ctx.shadowOffsetY = 0;
+                        ctx.font = 'bold 18px "Space Mono", monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = canStart ? '#FFFFFF' : '#BDBDBD';
+                        ctx.fillText(btn.text, btn.x, btn.y);
+
+                        if (isPlayable && canStart) {
+                            const pulse = 0.3 + Math.sin(Date.now() * 0.005) * 0.15;
+                            ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            this.roundRect(ctx, btn.x - hw, btn.y - hh, btn.w, btn.h, 14);
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                    }
+                },
+                roundRect(ctx, x, y, w, h, r) {
+                    ctx.moveTo(x + r, y);
+                    ctx.lineTo(x + w - r, y);
+                    ctx.arcTo(x + w, y, x + w, y + r, r);
+                    ctx.lineTo(x + w, y + h - r);
+                    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+                    ctx.lineTo(x + r, y + h);
+                    ctx.arcTo(x, y + h, x, y + h - r, r);
+                    ctx.lineTo(x, y + r);
+                    ctx.arcTo(x, y, x + r, y, r);
+                    ctx.closePath();
+                },
+                drawFruits(ctx) {
+                    for (const fruit of this.fruits) {
+                        ctx.save();
+                        ctx.font = `${fruit.size}px serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(fruit.emoji, fruit.x, fruit.y);
+                        ctx.restore();
+                    }
+                },
+                drawEffects(ctx) {
+                    for (let i = this.effects.length - 1; i >= 0; i--) {
+                        const e = this.effects[i];
+                        e.life -= 1;
+                        if (e.life <= 0) {
+                            this.effects.splice(i, 1);
+                            continue;
+                        }
+                        const alpha = e.life / e.maxLife;
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.font = `${e.size * (1 + (1 - alpha) * 0.5)}px serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('💥', e.x, e.y);
+
+                        for (const p of e.particles) {
+                            p.x += p.vx;
+                            p.y += p.vy;
+                            p.vy += 0.3;
+                            ctx.globalAlpha = alpha * 0.8;
+                            ctx.fillStyle = p.color;
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    }
+                },
+                startGame() {
+                    this.score = 0;
+                    this.timeLeft = 60;
+                    this.gamePhase = 'playing';
+                    this.fruits = [];
+                    this.effects = [];
+                    this.shotTrails = [];
+                    this.bullets = [];
+                    this.floatingTexts = [];
+                    this.floatButtons = [];
+                    this.combo = 0;
+                    // Reset per-hand fire states
+                    for (const hand of Object.values(this.handsMap)) {
+                        hand.lastFireTime = 0;
+                        hand.wasThumbExtended = false;
+                    }
+
+                    this.spawnFruit();
+
+                    if (this.gameTimerId) clearInterval(this.gameTimerId);
+                    if (this.fruitSpawnTimer) clearInterval(this.fruitSpawnTimer);
+
+                    this.gameTimerId = setInterval(() => {
+                        if (this.gamePhase === 'playing') {
+                            this.timeLeft--;
+                            if (this.timeLeft <= 0) {
+                                this.endGame();
+                            }
+                        }
+                    }, 1000);
+
+                    this.fruitSpawnTimer = setInterval(() => {
+                        if (this.gamePhase === 'playing') {
+                            this.spawnFruit();
+                        }
+                    }, 800);
+                },
+                endGame() {
+                    this.gamePhase = 'ended';
+                    if (this.gameTimerId) {
+                        clearInterval(this.gameTimerId);
+                        this.gameTimerId = null;
+                    }
+                    if (this.fruitSpawnTimer) {
+                        clearInterval(this.fruitSpawnTimer);
+                        this.fruitSpawnTimer = null;
+                    }
+
+                    this.historicalScores.push(this.score);
+                    if (this.historicalScores.length > 50) {
+                        this.historicalScores = this.historicalScores.slice(-50);
+                    }
+                    this.saveData();
+                    this.$nextTick(() => this.updateChart());
+                    this.renderScene();
+                    // 3-second delay to prevent accidental button shot right after game ends
+                    setTimeout(() => {
+                        this.$nextTick(() => this.initFloatButtons('again'));
+                    }, 3000);
+                },
+                spawnFruit() {
+                    const emoji = this.FRUIT_EMOJIS[Math.floor(Math.random() * this.FRUIT_EMOJIS.length)];
+                    const size = 28 + Math.random() * 16;
+                    const x = size + Math.random() * (this.canvasWidth - size * 2);
+                    const y = -size;
+                    const speed = 1 + Math.random() * 2;
+                    this.fruits.push({ emoji, x, y, size, speed });
+                },
+                updateFruits() {
+                    const h = this.canvasHeight;
+                    for (let i = this.fruits.length - 1; i >= 0; i--) {
+                        this.fruits[i].y += this.fruits[i].speed;
+                        if (this.fruits[i].y > h + 40) {
+                            this.fruits.splice(i, 1);
+                        }
+                    }
+                },
+                updateBullets() {
+                    const w = this.canvasWidth;
+                    const h = this.canvasHeight;
+                    for (let i = this.bullets.length - 1; i >= 0; i--) {
+                        const b = this.bullets[i];
+                        b.x += b.vx;
+                        b.y += b.vy;
+                        b.life--;
+
+                        if (b.life <= 0 || b.x < -60 || b.x > w + 60 || b.y < -60 || b.y > h + 60) {
+                            this.combo = 0;
+                            this.bullets.splice(i, 1);
+                            continue;
+                        }
+
+                        let btnHit = false;
+                        for (const btn of this.floatButtons) {
+                            if (b.x > btn.x - btn.w / 2 && b.x < btn.x + btn.w / 2 &&
+                                b.y > btn.y - btn.h / 2 && b.y < btn.y + btn.h / 2) {
+                                if (btn.id === 'start' && this.handDetected) {
+                                    this.bullets.splice(i, 1);
+                                    this.startGame();
+                                    btnHit = true;
+                                    break;
+                                }
+                                if (btn.id === 'again') {
+                                    this.bullets.splice(i, 1);
+                                    this.startGame();
+                                    btnHit = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (btnHit) continue;
+
+                        for (let j = this.fruits.length - 1; j >= 0; j--) {
+                            const f = this.fruits[j];
+                            const dist = Math.hypot(f.x - b.x, f.y - b.y);
+                            if (dist < f.size / 2 + b.radius) {
+                                this.combo++;
+                                const points = 10 * this.combo;
+                                this.score += points;
+
+                                this.floatingTexts.push({
+                                    x: f.x,
+                                    y: f.y,
+                                    text: '+' + points,
+                                    life: 35,
+                                    maxLife: 35
+                                });
+
+                                const particles = [];
+                                const colors = ['#ff0', '#f80', '#f00', '#fff', '#0ff'];
+                                for (let p = 0; p < 10; p++) {
+                                    const angle = Math.random() * Math.PI * 2;
+                                    const spd = 2 + Math.random() * 4;
+                                    particles.push({
+                                        x: f.x, y: f.y,
+                                        vx: Math.cos(angle) * spd,
+                                        vy: Math.sin(angle) * spd - 2,
+                                        size: 3 + Math.random() * 4,
+                                        color: colors[Math.floor(Math.random() * colors.length)]
+                                    });
+                                }
+                                this.effects.push({
+                                    x: f.x, y: f.y,
+                                    size: f.size,
+                                    life: 15,
+                                    maxLife: 15,
+                                    particles
+                                });
+
+                                this.fruits.splice(j, 1);
+                            }
+                        }
+                    
+                    }
+                },
+                fire(landmarks, aimX, aimY) {
+                    if (!landmarks) return;
+                    const wrist = landmarks[0];
+                    const indexTip = landmarks[8];
+                    const w = this.canvasWidth;
+                    const h = this.canvasHeight;
+
+                    const wristPX = wrist.x * w;
+                    const wristPY = wrist.y * h;
+                    const tipPX = indexTip.x * w;
+                    const tipPY = indexTip.y * h;
+
+                    const dx = tipPX - wristPX;
+                    const dy = tipPY - wristPY;
+                    const len = Math.hypot(dx, dy);
+                    if (len < 2) return;
+
+                    const nx = dx / len;
+                    const ny = dy / len;
+
+                    const muzzleX = tipPX + nx * 12;
+                    const muzzleY = tipPY + ny * 12;
+
+                    // Convert camera-space coordinates to display space (undo CSS mirror)
+                    const displayX = w - muzzleX;
+                    const displayY = muzzleY;
+
+                    this.bullets.push({
+                        x: displayX,
+                        y: displayY,
+                        vx: -nx * 18,
+                        vy: ny * 18,
+                        radius: 5,
+                        life: 120,
+                        trail: []
+                    });
+
+                    this.shotTrails.push({
+                        x1: w - tipPX,
+                        y1: tipPY,
+                        x2: w - aimX,
+                        y2: aimY,
+                        life: 6,
+                        maxLife: 6
+                    });
+
+                    this.combo = 0;
+                },
+                updateChart() {
+                    const el = document.getElementById('trendChart');
+                    if (!el) return;
+                    if (this.historicalScores.length === 0) {
+                        el.innerHTML = '<div class="text-caption grey--text text-center pt-8">No games played yet</div>';
+                        return;
+                    }
+                    const trace1 = {
+                        x: Array.from({ length: this.historicalScores.length }, (_, i) => i + 1),
+                        y: this.historicalScores,
+                        name: 'Score',
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        line: { color: '#FF6F00', width: 2 },
+                        marker: { color: '#FF6F00', size: 6 }
+                    };
+                    const layout = {
+                        width: el.clientWidth,
+                        height: 260,
+                        margin: { t: 20, b: 40, l: 50, r: 20 },
+                        xaxis: { title: 'Game', tickmode: 'linear', dtick: Math.max(1, Math.floor(this.historicalScores.length / 10)) },
+                        yaxis: { title: 'Score', dtick: Math.max(1, Math.floor(Math.max(...this.historicalScores) / 5)) },
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        font: { size: 10 }
+                    };
+                    const config = {
+                        displaylogo: false, displayModeBar: false, responsive: true
+                    };
+                    Plotly.newPlot('trendChart', [trace1], layout, config);
+                }
+            },
+            beforeDestroy() {
+                if (this.gameTimerId) clearInterval(this.gameTimerId);
+                if (this.fruitSpawnTimer) clearInterval(this.fruitSpawnTimer);
+                if (this.gameLoopId) clearInterval(this.gameLoopId);
+                if (this.camera) this.camera.stop();
+                if (this.hands) this.hands.close();
+                const video = this.$refs.video;
+                if (video && video.srcObject) {
+                    video.srcObject.getTracks().forEach(t => t.stop());
+                }
+            },
+            mounted() {
+                this.loadSavedData();
+            }
+        });
+    </script>
+</body>
+
+</html>
