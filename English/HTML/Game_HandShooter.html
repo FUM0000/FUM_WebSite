@@ -437,32 +437,26 @@
                             const aimX = (wrist.x + (indexTip.x - wrist.x) * 3) * this.canvasWidth;
                             const aimY = (wrist.y + (indexTip.y - wrist.y) * 3) * this.canvasHeight;
 
-                            // Improved thumb detection: 3D distance to middle MCP (palm center)
+                            // Motion-based detection: fire when thumb curls inward (distance to palm shrinks)
+                            // Uses relative change (constrict ratio) — robust across orientations & sizes
                             const thumbTip = lm[4];
-                            const thumbIP = lm[3];
-                            const palm = lm[9]; // middle MCP – stable across palm/back views
-
-                            const dTip = Math.hypot(
+                            const palm = lm[9];
+                            const dist = Math.hypot(
                                 thumbTip.x - palm.x,
                                 thumbTip.y - palm.y,
                                 (thumbTip.z || 0) - (palm.z || 0)
                             );
-                            const dIP = Math.hypot(
-                                thumbIP.x - palm.x,
-                                thumbIP.y - palm.y,
-                                (thumbIP.z || 0) - (palm.z || 0)
-                            );
-
-                            const thumbExtended = (dTip / Math.max(dIP, 0.001) > 1.10) || (dTip > 0.18);
 
                             const existing = this.handsMap[label];
-                            const wasExtended = existing ? existing.thumbExtended : false;
+                            const prevDist = existing ? existing.thumbDist : dist;
                             const lastFire = existing ? existing.lastFireTime : 0;
 
+                            const constrictRatio = dist / Math.max(prevDist, 0.0001);
+
                             let newLastFire = lastFire;
-                            if (!thumbExtended && wasExtended) {
+                            if (constrictRatio < 0.85 && dist > 0.03) {
                                 const now = Date.now();
-                                if (now - lastFire > 120) {
+                                if (now - lastFire > 200) {
                                     this.fire(lm, aimX, aimY);
                                     newLastFire = now;
                                 }
@@ -471,8 +465,7 @@
                             newMap[label] = {
                                 landmarks: lm,
                                 aimX, aimY,
-                                thumbExtended,
-                                wasThumbExtended: thumbExtended,
+                                thumbDist: dist,
                                 lastFireTime: newLastFire
                             };
                         }
@@ -830,7 +823,7 @@
                     // Reset per-hand fire states
                     for (const hand of Object.values(this.handsMap)) {
                         hand.lastFireTime = 0;
-                        hand.wasThumbExtended = false;
+                        hand.thumbDist = 0;
                     }
 
                     this.spawnFruit();
