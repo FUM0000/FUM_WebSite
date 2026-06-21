@@ -268,6 +268,16 @@
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
     <script>
+        // Suppress MediaPipe WASM internal glog noise
+        (function() {
+            const _origLog = console.log;
+            const _origWarn = console.warn;
+            const _origInfo = console.info;
+            const isWasmMsg = m => typeof m === 'string' && /^(I|W|E|F)0000\s|INFO:|Created TensorFlow|gl_context|GL version|OpenGL error|XNNPACK|WebGL context/.test(m);
+            console.log = function() { if (arguments.length && isWasmMsg(arguments[0])) return; return _origLog.apply(console, arguments); };
+            console.warn = function() { if (arguments.length && isWasmMsg(arguments[0])) return; return _origWarn.apply(console, arguments); };
+            console.info = function() { if (arguments.length && isWasmMsg(arguments[0])) return; return _origInfo.apply(console, arguments); };
+        })();
         new Vue({
             el: '#App',
             vuetify: new Vuetify(),
@@ -285,6 +295,7 @@
                 historicalScores: [],
                 handDetected: false,
                 handsMap: {},
+                isMobile: /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent),
 
                 fruits: [],
                 effects: [],
@@ -392,12 +403,14 @@
                     this.hands = new Hands({
                         locateFile: (file) => {
                             return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-                        }
+                        },
+                        print: () => {},
+                        printErr: () => {}
                     });
 
                     this.hands.setOptions({
-                        maxNumHands: 2,
-                        modelComplexity: 1,
+                        maxNumHands: 1,
+                        modelComplexity: 0,
                         minDetectionConfidence: 0.7,
                         minTrackingConfidence: 0.6
                     });
@@ -406,12 +419,15 @@
 
                     this.camera = new Camera(this.$refs.video, {
                         onFrame: async () => {
+                            if (this._processing) return;
+                            this._processing = true;
                             try {
                                 await this.hands.send({ image: this.$refs.video });
                             } catch (e) {}
+                            this._processing = false;
                         },
-                        width: 640,
-                        height: 480
+                        width: 480,
+                        height: 360
                     });
                     this.camera.start();
 
@@ -481,8 +497,11 @@
                     const video = this.$refs.video;
                     const w = video && video.videoWidth ? video.videoWidth : 640;
                     const h = video && video.videoHeight ? video.videoHeight : 480;
-                    canvas.width = w;
-                    canvas.height = h;
+                    // Avoid resetting canvas every frame (clears context state & triggers reallocation)
+                    if (canvas.width !== w || canvas.height !== h) {
+                        canvas.width = w;
+                        canvas.height = h;
+                    }
                     this.canvasWidth = w;
                     this.canvasHeight = h;
 
@@ -508,7 +527,7 @@
 
                     // Hand / aim visuals in camera space (no transform) — CSS flip aligns them with mirrored video
                     for (const hand of Object.values(this.handsMap)) {
-                        if (this.gamePhase !== 'ended') {
+                        if (this.gamePhase !== 'ended' && !this.isMobile) {
                             drawConnectors(ctx, hand.landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
                             drawLandmarks(ctx, hand.landmarks, { color: '#FF0000', lineWidth: 1, radius: 4 });
                         }
@@ -622,8 +641,10 @@
                         ctx.globalAlpha = alpha;
                         ctx.strokeStyle = '#FFD700';
                         ctx.lineWidth = w;
-                        ctx.shadowColor = '#FFA500';
-                        ctx.shadowBlur = 12;
+                        if (!this.isMobile) {
+                            ctx.shadowColor = '#FFA500';
+                            ctx.shadowBlur = 12;
+                        }
                         ctx.beginPath();
                         ctx.moveTo(t.x1, t.y1);
                         ctx.lineTo(t.x2, t.y2);
@@ -635,7 +656,7 @@
                     for (const b of this.bullets) {
                         ctx.save();
                         ctx.shadowColor = '#FFD700';
-                        ctx.shadowBlur = 14;
+                        if (!this.isMobile) ctx.shadowBlur = 14;
                         ctx.fillStyle = '#FFD700';
                         ctx.beginPath();
                         ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
@@ -664,7 +685,7 @@
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
                         ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                        ctx.shadowBlur = 4;
+                        if (!this.isMobile) ctx.shadowBlur = 4;
                         ctx.fillStyle = '#FFD700';
                         ctx.fillText(ft.text, ft.x, ft.y);
                         ctx.fillStyle = '#FFF8E1';
@@ -700,8 +721,10 @@
                             ctx.font = 'bold 34px "Space Mono", monospace';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-                            ctx.shadowBlur = 8;
+                            if (!this.isMobile) {
+                                ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                                ctx.shadowBlur = 8;
+                            }
                             ctx.fillStyle = '#FFFFFF';
                             ctx.fillText(btn.text, btn.x, btn.y);
                             ctx.restore();
@@ -712,8 +735,10 @@
                             ctx.font = '20px "Space Mono", monospace';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                            ctx.shadowBlur = 6;
+                            if (!this.isMobile) {
+                                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                                ctx.shadowBlur = 6;
+                            }
                             ctx.fillStyle = '#FFD740';
                             ctx.fillText(btn.text, btn.x, btn.y);
                             ctx.restore();
@@ -725,7 +750,7 @@
 
                         ctx.save();
                         ctx.shadowColor = 'rgba(0,0,0,0.4)';
-                        ctx.shadowBlur = 14;
+                        if (!this.isMobile) ctx.shadowBlur = 14;
                         ctx.shadowOffsetY = 3;
                         const grad = ctx.createLinearGradient(btn.x - hw, btn.y, btn.x + hw, btn.y);
                         if (canStart) {
@@ -914,16 +939,12 @@
                             if (b.x > btn.x - btn.w / 2 && b.x < btn.x + btn.w / 2 &&
                                 b.y > btn.y - btn.h / 2 && b.y < btn.y + btn.h / 2) {
                                 if (btn.id === 'start' && this.handDetected) {
-                                    this.bullets.splice(i, 1);
                                     this.startGame();
-                                    btnHit = true;
-                                    break;
+                                    return;
                                 }
                                 if (btn.id === 'again') {
-                                    this.bullets.splice(i, 1);
                                     this.startGame();
-                                    btnHit = true;
-                                    break;
+                                    return;
                                 }
                             }
                         }
