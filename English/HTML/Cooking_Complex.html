@@ -109,15 +109,8 @@
             mixins: [window.Mixins_Youtube],
             data: {
                 selectedCategory: 'All',
-                categories: ['All', 'Meat', 'Seafood'],
-                Videos: [
-                    { id: '-iqeXovDSi4', title: 'Braised chicken in red wine', category: 'Meat', description: 'An authentic sauce made with red wine and chocolate.' },
-                    { id: 'Qx48zkAmsh4', title: 'Stewed Chicken in White Wine', category: 'Meat', description: 'A dish in which the umami flavor is allowed to soak into the chicken over time.' },
-                    { id: 'UmGlH4-w2Gc', title: 'Tacos al pastor', category: 'Meat', description: 'Enjoy these delicious, hearty tacos! They might even make you dance!' },
-                    { id: '7bEZw8VatOg', title: 'Ceviche', category: 'Seafood', description: "Gather the ingredients to make Peru's famous ceviche." },
-                    // { id: '', title: '', category: '', description: '' },
-                    // { id: '', title: '', category: '', description: '' },
-                ],
+                categories: ['All'],
+                Videos: [],
                 filteredVideos: [],
                 dialog: [],
                 categoryIcons: {
@@ -126,8 +119,15 @@
                 }
             },
             mounted() {
-                this.filteredVideos = this.Videos;
-                this.dialog = this.Videos.map(() => false);
+                const self = this;
+                const pageName = 'Complex';
+                $.getJSON('../../Asset/Data/Cooking-videos.json', function(data) {
+                    const all = Object.values(data);
+                    self.Videos = all.filter(v => v.pages && v.pages.includes(pageName));
+                    self.categories = ['All', ...new Set(self.Videos.flatMap(v => v.categories).filter(Boolean))].sort();
+                    self.filteredVideos = self.Videos;
+                    self.dialog = self.Videos.map(() => false);
+                });
             },
             methods: {
                 ChangeDrawer(value) {
@@ -137,7 +137,7 @@
                     if (this.selectedCategory === 'All') {
                         this.filteredVideos = this.Videos;
                     } else {
-                        this.filteredVideos = this.Videos.filter(video => video.category === this.selectedCategory);
+                        this.filteredVideos = this.Videos.filter(video => video.categories.includes(this.selectedCategory));
                     }
                 },
                 getIcon(category) {

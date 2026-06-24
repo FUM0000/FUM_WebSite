@@ -109,43 +109,32 @@
             mixins: [window.Mixins_Youtube],
             data: {
                 selectedCategory: 'All',
-                categories: ['All', 'Chinese', 'Curry', 'Meat', 'Noodle', 'Pan', 'Pasta', 'Source', 'Vegetable'],
-                Videos: [
-                    { id: 'BBUiIZ-YOUA', title: 'Chinese Spicy Chicken', category: 'Chinese', description: 'The spicy aroma that is unique to Chinese cuisine is very delicious.' },
-                    { id: 'XtejDRvciOQ', title: 'Homemade Curry', category: 'Curry', description: 'A simple curry made from spices.' },
-                    { id: 'kgnLwGih2NY', title: 'Butter Chicken Curry', category: 'Curry', description: 'Make a delicious butter chicken curry at home using yogurt.' },
-                    { id: 'vah2ClaAnyA', title: 'Stewed Chicken in White Wine', category: 'Meat', description: 'The rich sourness and sweetness go perfectly with the chicken thighs.' },
-                    { id: 'tas_31DiJ0o', title: 'Taco meat and potatoes', category: 'Meat', description: 'Mouthwatering Mexican cuisine.' },
-                    { id: 'gz09wOOy7eM', title: 'Braised Beef and Radish', category: 'Meat', description: 'Make izakaya food at home and enjoy some alcohol.' },
-                    { id: 'I2DaQEDZ3R4', title: 'Handmade Noodles', category: 'Noodle', description: 'Noodles that make the most of the egg flavor.' },
-                    { id: 'l7EEvtQH9ro', title: 'Handmade Udon', category: 'Noodle', description: "Let's make koshi(chewy) udon noodles!" },
-                    { id: 'L03tt1PTZCc', title: 'Tomato Cream Pasta', category: 'Pasta', description: 'The creamy sauce makes the pasta delicious.' },
-                    { id: 'Wix9gOjKXYk', title: 'Tomato Pasta', category: 'Pasta', description: 'A combination of tomato acidity, oil and cheese richness, and garlic.' },
-                    { id: 'jGoBainTDAk', title: 'Beef ragu Pasta', category: 'Pasta', description: 'A rich sauce made with certain Japanese ingredients.' },
-                    { id: '3RXP73e0svs', title: 'Crispy French Fries', category: 'Vegetable', description: 'Delicious French fries made by a chef who had an affair with a celebrity despite having small children.' },
-                    { id: 'r9kSBTXWeNQ', title: 'Mochi Potato', category: 'Vegetable', description: 'It has a chewy texture like mochi and a strong potato flavor.' },
-                    { id: 'X8iCa9hSQ9A', title: 'Hash potato sticks', category: 'Vegetable', description: 'Crispy potatoes with a twist' },
-                    { id: 'RdhdXS9tJxc', title: 'Bagel', category: 'Pan', description: 'It can be made in a toaster oven. Covering it with aluminum foil will prevent it from burning.' },
-                    // { id: '', title: '', category: '', description: '' },
-                    // { id: '', title: '', category: '', description: '' },
-                    // { id: '', title: '', category: '', description: '' },
-                    // { id: '', title: '', category: '', description: '' },
-                ],
+                categories: ['All'],
+                Videos: [],
                 filteredVideos: [],
                 dialog: [],
                 categoryIcons: {
                     'Chinese': 'mdi-temple-buddhist',
-                    'Curry': 'mdi-shaker',
+                    'Curry': 'mdi-food',
                     'Meat': 'mdi-food-steak',
-                    'Noodle': 'mdi-noodles',
-                    'Pan': 'mdi-baguette',
+                    'Noodle': 'mdi-silverware-fork-knife',
+                    'Pan': 'mdi-toaster-oven',
                     'Pasta': 'mdi-pasta',
+                    'Source': 'mdi-food-variant',
+                    'Stew': 'mdi-pot-steam',
                     'Vegetable': 'mdi-leek',
                 }
             },
             mounted() {
-                this.filteredVideos = this.Videos;
-                this.dialog = this.Videos.map(() => false);
+                const self = this;
+                const pageName = 'Normal';
+                $.getJSON('../../Asset/Data/Cooking-videos.json', function(data) {
+                    const all = Object.values(data);
+                    self.Videos = all.filter(v => v.pages && v.pages.includes(pageName));
+                    self.categories = ['All', ...new Set(self.Videos.flatMap(v => v.categories).filter(Boolean))].sort();
+                    self.filteredVideos = self.Videos;
+                    self.dialog = self.Videos.map(() => false);
+                });
             },
             methods: {
                 ChangeDrawer(value) {
@@ -155,7 +144,7 @@
                     if (this.selectedCategory === 'All') {
                         this.filteredVideos = this.Videos;
                     } else {
-                        this.filteredVideos = this.Videos.filter(video => video.category === this.selectedCategory);
+                        this.filteredVideos = this.Videos.filter(video => video.categories.includes(this.selectedCategory));
                     }
                 },
                 getIcon(category) {

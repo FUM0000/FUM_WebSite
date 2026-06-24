@@ -110,17 +110,27 @@
             data: {
                 selectedCategory: 'All',
                 categories: ['All'],
-                Videos: [
-                    // { id: '', title: '', category: '', description: '' },
-                ],
+                Videos: [],
                 filteredVideos: [],
                 dialog: [],
                 categoryIcons: {
+                    'Chinese': 'mdi-temple-buddhist',
+                    'Meat': 'mdi-food-steak',
+                    'Pasta': 'mdi-pasta',
+                    'Salad': 'mdi-shaker',
+                    'Stew': 'mdi-pot-steam',
                 }
             },
             mounted() {
-                this.filteredVideos = this.Videos;
-                this.dialog = this.Videos.map(() => false);
+                const self = this;
+                const pageName = 'Tomato';
+                $.getJSON('../../Asset/Data/Cooking-videos.json', function(data) {
+                    const all = Object.values(data);
+                    self.Videos = all.filter(v => v.pages && v.pages.includes(pageName));
+                    self.categories = ['All', ...new Set(self.Videos.flatMap(v => v.categories).filter(Boolean))].sort();
+                    self.filteredVideos = self.Videos;
+                    self.dialog = self.Videos.map(() => false);
+                });
             },
             methods: {
                 ChangeDrawer(value) {
@@ -130,7 +140,7 @@
                     if (this.selectedCategory === 'All') {
                         this.filteredVideos = this.Videos;
                     } else {
-                        this.filteredVideos = this.Videos.filter(video => video.category === this.selectedCategory);
+                        this.filteredVideos = this.Videos.filter(video => video.categories.includes(this.selectedCategory));
                     }
                 },
                 getIcon(category) {
