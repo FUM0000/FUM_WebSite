@@ -774,6 +774,22 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Bean</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Cooking_Tomato.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Tomato</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Cooking_SoyMilk.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Soy Milk</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Cooking_Tofu.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Tofu</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Cooking_Vinegar.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Vinegar</v-list-item-title>
+                    </v-list-item>
                 </v-list-group sub-group>
                 <!-- ▲ Ingredient ▲ --------------------------------------------------------------------------->
                 

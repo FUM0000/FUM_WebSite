@@ -22,6 +22,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
     <link href="../../Asset/CSS/Cooking.css?v=1.0" rel="stylesheet" />
+    <link href="../../Asset/CSS/Learning.css?v=1.0" rel="stylesheet" />
 
     <title>Seasoning</title>
     <meta name="robots" content="index, follow">
@@ -87,6 +88,28 @@
                                 </div>
                             </v-col>
                         </v-row>
+
+                        <v-row justify="center">
+                            <v-col cols="12" md="10">
+                                <v-card class="mt-6">
+                                    <v-card-title class="content-text">Condiments, Spices, Dressings &amp; Sauces</v-card-title>
+                                    <v-card-text>
+                                        <v-text-field v-model="searchQuery" label="Search" prepend-inner-icon="mdi-magnify" clearable
+                                            outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                                        <v-treeview :items="filteredItems" item-key="name" activatable open-on-click
+                                            dense :open.sync="openNodes" @update:open="updateOpenNodes">
+                                            <template v-slot:label="{ item }">
+                                                <span :class="{ 'search-highlight': item.matches }">
+                                                    <strong>{{ item.name }}</strong>
+                                                    <span v-if="item.description" class="caption ml-2" style="color: #666;">— {{ item.description }}</span>
+                                                </span>
+                                            </template>
+                                        </v-treeview>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
                     </v-container>
                 </transition>
             </v-main>
@@ -123,11 +146,72 @@
                 categoryIcons: {
                     'Source': 'mdi-food-variant',
                     'Spice': 'mdi-shaker-outline',
-                }
+                },
+                searchQuery: '',
+                filteredItems: [],
+                openNodes: [],
+                TreeData: [
+                    {
+                        name: 'Condiments',
+                        children: [
+                            { name: 'Ginger', description: 'Adds a pungent, warm aroma that tightens any dish.' },
+                            { name: 'Garlic', description: 'Strong pungent aroma stimulates appetite.' },
+                            { name: 'Green onion', description: 'Refreshing pungency suits Japanese, Western, and Chinese cuisine.' },
+                            { name: 'Shiso', description: 'Refreshing fragrance essential for summer dishes and washoku.' },
+                            { name: 'Myoga', description: 'Unique aroma and crunchy texture make it an ideal condiment.' },
+                            { name: 'Wasabi', description: 'Sharp pungency is a must for sashimi and soba.' },
+                            { name: 'Sansho pepper', description: 'Numbing spiciness pairs perfectly with eel and meat.' },
+                            { name: 'Chili pepper', description: 'The king of heat. Adds kick and depth to any dish.' },
+                            { name: 'Cilantro', description: 'Distinctive fragrance indispensable in Asian cuisine.' },
+                        ]
+                    },
+                    {
+                        name: 'Spices',
+                        children: [
+                            { name: 'Black pepper', description: 'All-purpose spice. Freshly ground elevates any dish.' },
+                            { name: 'Cumin', description: 'Warm aroma essential for curry and Latin American cuisine.' },
+                            { name: 'Paprika', description: 'Adds sweetness and vibrant color. Staple in Hungarian cooking.' },
+                            { name: 'Turmeric', description: 'Vibrant yellow hue. Essential for coloring curry.' },
+                            { name: 'Cinnamon', description: 'Sweet fragrance works from desserts to curries.' },
+                            { name: 'Nutmeg', description: 'Sweet aroma ideal for white sauce and baked goods.' },
+                            { name: 'Cardamom', description: 'Refreshing sweet scent perfect for chai and Nordic pastries.' },
+                            { name: 'Oregano', description: 'Essential Italian herb. Pairs beautifully with tomatoes.' },
+                            { name: 'Rosemary', description: 'Pine-like strong fragrance suits meat dishes and bread.' },
+                            { name: 'Thyme', description: 'Refreshing herbal aroma. Great for stews and soups.' },
+                        ]
+                    },
+                    {
+                        name: 'Dressings',
+                        children: [
+                            { name: 'French dressing', description: 'Classic vinegar-and-oil base. Simple and versatile.' },
+                            { name: 'Italian dressing', description: 'Olive oil with herbs and vinegar for a refreshing taste.' },
+                            { name: 'Caesar dressing', description: 'Rich dressing with cheese and garlic punch.' },
+                            { name: 'Japanese dressing', description: 'Light soy sauce and vinegar based dressing.' },
+                            { name: 'Sesame dressing', description: 'Rich dressing with ground sesame fragrance.' },
+                            { name: 'Balsamic dressing', description: 'Sweet-tart balsamic vinegar adds depth to salads.' },
+                            { name: 'Thousand Island', description: 'Mayonnaise-based sweet and creamy dressing.' },
+                            { name: 'Chinese dressing', description: 'Aromatic sesame oil and soy sauce based dressing.' },
+                        ]
+                    },
+                    {
+                        name: 'Sauces',
+                        children: [
+                            { name: 'Tomato sauce', description: 'Essential red sauce for pasta, pizza, and stews.' },
+                            { name: 'White sauce', description: 'Creamy classic made with milk and butter.' },
+                            { name: 'Pesto', description: 'Vibrant green Italian sauce with basil and pine nuts.' },
+                            { name: 'BBQ sauce', description: 'Sweet and tangy American-style grilling sauce.' },
+                            { name: 'Teriyaki sauce', description: 'Sweet-savory soy and mirin glaze, Japanese staple.' },
+                            { name: 'Hollandaise sauce', description: 'Rich yellow sauce with egg yolk and butter.' },
+                            { name: 'Tartar sauce', description: 'Mayonnaise with onion and pickles, perfect for fried foods.' },
+                            { name: 'Worcestershire sauce', description: 'Concentrated umami of vegetables and fruit, born in England.' },
+                        ]
+                    },
+                ],
             },
             mounted() {
                 this.filteredVideos = this.Videos;
                 this.dialog = this.Videos.map(() => false);
+                this.filteredItems = JSON.parse(JSON.stringify(this.TreeData));
             },
             methods: {
                 ChangeDrawer(value) {
@@ -142,6 +226,51 @@
                 },
                 getIcon(category) {
                     return this.categoryIcons[category] || 'mdi-silverware-fork-knife';
+                },
+                collectAllNodeIds(items) {
+                    const ids = [];
+                    const collect = (nodes) => {
+                        nodes.forEach((node) => {
+                            ids.push(node.name);
+                            if (node.children) {
+                                collect(node.children);
+                            }
+                        });
+                    };
+                    collect(items);
+                    return ids;
+                },
+                updateOpenNodes(newOpen) {
+                    this.openNodes = newOpen;
+                },
+                filterTreeview() {
+                    const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+                    if (!query) {
+                        this.filteredItems = JSON.parse(JSON.stringify(this.TreeData));
+                        this.openNodes = [];
+                        return;
+                    }
+                    const filterTree = (items) => {
+                        return items.reduce((acc, item) => {
+                            const itemCopy = { ...item };
+                            const matchesName = item.name.toLowerCase().includes(query);
+                            const matchesDesc = item.description ? item.description.toLowerCase().includes(query) : false;
+                            const matches = matchesName || matchesDesc;
+                            if (item.children) {
+                                itemCopy.children = filterTree(item.children);
+                                if (itemCopy.children.length > 0 || matches) {
+                                    itemCopy.matches = matches;
+                                    acc.push(itemCopy);
+                                }
+                            } else if (matches) {
+                                itemCopy.matches = true;
+                                acc.push(itemCopy);
+                            }
+                            return acc;
+                        }, []);
+                    };
+                    this.filteredItems = filterTree(JSON.parse(JSON.stringify(this.TreeData)));
+                    this.openNodes = this.collectAllNodeIds(this.filteredItems);
                 }
             }
         });

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Lobster&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+    <link href="../../Asset/CSS/Cooking.css?v=1.0" rel="stylesheet" />
+
+    <title>Soy Milk</title>
+    <meta name="robots" content="index, follow">
+</head>
+
+<body>
+    <!-- 背景レイヤー1: グラデーション -->
+    <div class="cooking-background-layer">
+        <!-- アニメーションする料理アイコン -->
+        <div class="cooking-icon-float">🍳</div>
+        <div class="cooking-icon-float">🍝</div>
+        <div class="cooking-icon-float">🥗</div>
+        <div class="cooking-icon-float">🍰</div>
+        <div class="cooking-icon-float">🐟</div>
+        <div class="cooking-icon-float">🥩</div>
+        <div class="cooking-icon-float">🍜</div>
+        <div class="cooking-icon-float">🧁</div>
+        <div class="cooking-icon-float">🦐</div>
+        <div class="cooking-icon-float">🥕</div>
+        <div class="cooking-icon-float">🍕</div>
+        <div class="cooking-icon-float">🥘</div>
+    </div>
+
+    <!-- 背景レイヤー2: パターン -->
+    <div class="cooking-pattern-overlay"></div>
+
+    <v-app id="App">
+        <template>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Cooking > Soy Milk</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container v-show="Ready_Page" fluid class="pa-5">
+                        <v-row justify="center" class="page-title-wrapper">
+                            <h1 class="page-title">Cooking Soy Milk</h1>
+                        </v-row>
+                        <v-row>
+                            <v-col cols="12">
+                                <v-select v-model="selectedCategory" :items="categories" label="Category"
+                                    class="category-select" @change="filterVideos">
+                                    <template v-slot:selection="{ item }">
+                                        <v-icon class="ml-2 mr-4">{{ getIcon(item) }}</v-icon>
+                                        {{ item }}
+                                    </template>
+                                    <template v-slot:item="{ item }">
+                                        <v-icon class="mr-4">{{ getIcon(item) }}</v-icon>
+                                        {{ item }}
+                                    </template>
+                                </v-select>
+                            </v-col>
+                        </v-row>
+                        <v-row justify="center">
+                            <v-col class="Youtube_Col" cols="12" md="3" v-for="(video, index) in filteredVideos"
+                                :key="index">
+                                <div class="video-title">
+                                    <v-icon :color="'#e67e22'" class="mr-2">{{ getIcon(video.category) }}</v-icon>
+                                    {{ video.title }}
+                                </div>
+                                <iframe class="Youtube" :src="'https://www.youtube-nocookie.com/embed/' + video.id"
+                                    frameborder="0" allow="encrypted-media;" allowfullscreen></iframe>
+                                <div class="video-description">
+                                    <v-icon small :color="'#e67e22'" class="mr-2" style="top: -3px;">mdi-information</v-icon>{{ video.description }}
+                                </div>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </transition>
+            </v-main>
+
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+    <script>
+        let vue = new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Youtube],
+            data: {
+                selectedCategory: 'All',
+                categories: ['All'],
+                Videos: [
+                    // { id: '', title: '', category: '', description: '' },
+                ],
+                filteredVideos: [],
+                dialog: [],
+                categoryIcons: {
+                }
+            },
+            mounted() {
+                this.filteredVideos = this.Videos;
+                this.dialog = this.Videos.map(() => false);
+            },
+            methods: {
+                ChangeDrawer(value) {
+                    this.Drawer = value;
+                },
+                filterVideos() {
+                    if (this.selectedCategory === 'All') {
+                        this.filteredVideos = this.Videos;
+                    } else {
+                        this.filteredVideos = this.Videos.filter(video => video.category === this.selectedCategory);
+                    }
+                },
+                getIcon(category) {
+                    return this.categoryIcons[category] || 'mdi-silverware-fork-knife';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
