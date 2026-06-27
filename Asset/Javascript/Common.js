@@ -1022,6 +1022,12 @@ Vue.component('main-navigation', {
                     <v-list-item-icon><v-icon>mdi-brain</v-icon></v-list-item-icon>
                 </v-list-item>
 
+                <v-list-item href="./Note_Brain3D.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>思考 3D</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-cube-outline</v-icon></v-list-item-icon>
+                </v-list-item>
+
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>コンピュータ</v-list-item-title>
