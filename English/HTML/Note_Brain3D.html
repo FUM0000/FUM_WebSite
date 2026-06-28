@@ -294,7 +294,7 @@
                             <span class="control-label">自動回転速度</span>
                             <span class="control-value" id="val-rotate">0.00</span>
                         </div>
-                        <input type="range" id="slider-rotate" min="0" max="2" step="0.01" value="0.30">
+                        <input type="range" id="slider-rotate" min="0" max="2" step="0.01" value="0.00">
                     </div>
 
                     <div class="control-group">
@@ -311,6 +311,14 @@
                             <span class="control-value" id="val-labels">ON</span>
                         </div>
                         <input type="range" id="slider-labels" min="0" max="1" step="1" value="1">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span class="control-label">全て展開</span>
+                            <span class="control-value" id="val-expand">OFF</span>
+                        </div>
+                        <input type="range" id="slider-expand" min="0" max="1" step="1" value="0">
                     </div>
 
                 </div>
@@ -374,6 +382,7 @@
 
             stringSag: 0.5,
             showLabels: true,
+            expandAll: false,
         };
 
         const collapsedState = new Map();
@@ -994,6 +1003,15 @@
                 }
             }
 
+            function expandAll(item) {
+                collapsedState.set(item, false);
+                if (item.children) {
+                    for (const child of item.children) {
+                        expandAll(child);
+                    }
+                }
+            }
+
             function expandOneLevel(item) {
                 collapsedState.set(item, false);
                 if (item.children) {
@@ -1025,7 +1043,11 @@
                     if (item && item.children && item.children.length > 0) {
                         const isCollapsed = collapsedState.get(item) || false;
                         if (isCollapsed) {
-                            expandOneLevel(item);
+                            if (config.expandAll) {
+                                expandAll(item);
+                            } else {
+                                expandOneLevel(item);
+                            }
                         } else {
                             collapseAll(item);
                         }
@@ -1133,6 +1155,11 @@
                     e.label.element.style.opacity = (e.depth === 0 || !config.showLabels) ? '0' : '1';
                 }
             }
+        });
+
+        document.getElementById('slider-expand').addEventListener('input', function () {
+            config.expandAll = parseInt(this.value) === 1;
+            document.getElementById('val-expand').textContent = config.expandAll ? 'ON' : 'OFF';
         });
 
         let uiVisible = true;
