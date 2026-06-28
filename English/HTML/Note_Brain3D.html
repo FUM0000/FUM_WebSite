@@ -294,7 +294,7 @@
                             <span class="control-label">自動回転速度</span>
                             <span class="control-value" id="val-rotate">0.00</span>
                         </div>
-                        <input type="range" id="slider-rotate" min="0" max="2" step="0.01" value="0.00">
+                        <input type="range" id="slider-rotate" min="0" max="2" step="0.01" value="0">
                     </div>
 
                     <div class="control-group">
@@ -378,7 +378,7 @@
         const config = {
             maxDepth: 5,
             connectionOpacity: 0.55,
-            autoRotateSpeed: 0.3,
+            autoRotateSpeed: 0,
 
             stringSag: 0.5,
             showLabels: true,
@@ -826,7 +826,12 @@
                 mesh.userData = { item, depth, color: dotColor };
                 group.add(mesh);
 
-                const hitRadius = depth === 1 ? 2.5 : depth === 2 ? 2.0 : depth === 3 ? 1.6 : 1.2;
+                const labelDir = position.clone();
+                if (labelDir.length() > 0.01) labelDir.normalize();
+                else labelDir.set(0, 1, 0);
+                const labelPos = position.clone().add(labelDir.multiplyScalar(1.4));
+
+                const hitRadius = depth === 1 ? 1.5 : depth === 2 ? 1.2 : depth === 3 ? 1.0 : 0.8;
                 const hitGeo = new THREE.SphereGeometry(hitRadius, 8, 8);
                 const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
                 const hitMesh = new THREE.Mesh(hitGeo, hitMat);
@@ -849,10 +854,7 @@
                 div.style.color = `hsl(${hsl.h * 360}, ${hsl.s * 80}%, ${Math.min(90, hsl.l * 100 + 20)}%)`;
 
                 const label = new CSS2DObject(div);
-                const dir = position.clone();
-                if (dir.length() > 0.01) dir.normalize();
-                else dir.set(0, 1, 0);
-                label.position.copy(position.clone().add(dir.multiplyScalar(1.4)));
+                label.position.copy(labelPos);
                 group.add(label);
 
                 const entryData = { item, mesh, label, position, depth, color, parentItem, hitMesh: entry.hitMesh || null };
@@ -968,26 +970,38 @@
 
             const clickables = allEntries.map(e => e.depth === 0 ? e.mesh : (e.hitMesh || e.mesh));
 
-            window._brainPointerHandler = (e) => {
+            function getItemAtScreenPos(cx, cy) {
                 const rect = renderer.domElement.getBoundingClientRect();
-                mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-                mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+                mouse.x = ((cx - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((cy - rect.top) / rect.height) * 2 + 1;
                 raycaster.setFromCamera(mouse, camera);
-                const intersects = raycaster.intersectObjects(clickables);
-                if (intersects.length > 0) {
-                    const hit = intersects[0].object;
-                    const item = hit.userData.item;
-                    if (item) {
-                        let path = item.name;
-                        let pi = nodeParentMap.get(item);
-                        while (pi) {
-                            path = pi.name + ' > ' + path;
-                            pi = nodeParentMap.get(pi);
-                        }
-                        infoEl.textContent = path;
-                        infoEl.classList.add('visible');
-                        renderer.domElement.style.cursor = 'pointer';
+                const hits = raycaster.intersectObjects(clickables);
+                let best = { item: null, dist: Infinity };
+                for (const h of hits) {
+                    const it = h.object.userData.item;
+                    if (it && h.distance < best.dist) best = { item: it, dist: h.distance };
+                }
+                for (const e of allEntries) {
+                    if (!e.label || !e.label.element) continue;
+                    const el = e.label.element;
+                    const r = el.getBoundingClientRect();
+                    if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
+                        const d = camera.position.distanceTo(e.position);
+                        if (d < best.dist) best = { item: e.item, dist: d };
                     }
+                }
+                return best.item;
+            }
+
+            window._brainPointerHandler = (e) => {
+                const item = getItemAtScreenPos(e.clientX, e.clientY);
+                if (item) {
+                    let path = item.name;
+                    let pi = nodeParentMap.get(item);
+                    while (pi) { path = pi.name + ' > ' + path; pi = nodeParentMap.get(pi); }
+                    infoEl.textContent = path;
+                    infoEl.classList.add('visible');
+                    renderer.domElement.style.cursor = 'pointer';
                 } else {
                     infoEl.classList.remove('visible');
                     renderer.domElement.style.cursor = 'grab';
@@ -1032,27 +1046,19 @@
                 const dx = e.clientX - _clickPos.x;
                 const dy = e.clientY - _clickPos.y;
                 if (dx * dx + dy * dy > 25) return;
-                const rect = renderer.domElement.getBoundingClientRect();
-                mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-                mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-                raycaster.setFromCamera(mouse, camera);
-                const intersects = raycaster.intersectObjects(clickables);
-                if (intersects.length > 0) {
-                    const hit = intersects[0].object;
-                    const item = hit.userData.item;
-                    if (item && item.children && item.children.length > 0) {
-                        const isCollapsed = collapsedState.get(item) || false;
-                        if (isCollapsed) {
-                            if (config.expandAll) {
-                                expandAll(item);
-                            } else {
-                                expandOneLevel(item);
-                            }
+                const item = getItemAtScreenPos(e.clientX, e.clientY);
+                if (item && item.children && item.children.length > 0) {
+                    const isCollapsed = collapsedState.get(item) || false;
+                    if (isCollapsed) {
+                        if (config.expandAll) {
+                            expandAll(item);
                         } else {
-                            collapseAll(item);
+                            expandOneLevel(item);
                         }
-                        applyVisibility();
+                    } else {
+                        collapseAll(item);
                     }
+                    applyVisibility();
                 }
             };
 
@@ -1073,13 +1079,16 @@
                 if (fogGroup) fogGroup.scale.setScalar(p);
             }
 
-            group.rotation.y = t * config.autoRotateSpeed * 0.15;
-            for (let si = 0; si < allShells.length; si++) {
-                allShells[si].rotation.y += 0.003 * (1 + si * 0.5) * config.autoRotateSpeed;
-                allShells[si].rotation.x += 0.001 * (1 + si * 0.3) * config.autoRotateSpeed;
+            if (config.autoRotateSpeed > 0) {
+                const inc = 0.002 * config.autoRotateSpeed;
+                group.rotation.y += inc;
+                for (let si = 0; si < allShells.length; si++) {
+                    allShells[si].rotation.y += inc * 0.6 * (1 + si * 0.5);
+                    allShells[si].rotation.x += inc * 0.3 * (1 + si * 0.3);
+                }
+                stars.rotation.x += inc * 0.15;
+                stars.rotation.y += inc * 0.25;
             }
-            stars.rotation.x = t * 0.003;
-            stars.rotation.y = t * 0.005;
             controls.update();
             renderer.render(scene, camera);
             labelRenderer.render(scene, camera);
