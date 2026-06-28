@@ -188,32 +188,41 @@
             background: rgba(230, 238, 255, 0.22);
         }
 
-        #node-info {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 50;
-            padding: 8px 16px;
-            background: rgba(7, 11, 20, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(230, 238, 255, 0.1);
-            border-radius: 8px;
-            font-size: 13px;
-            color: rgba(238, 245, 255, 0.7);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            text-align: center;
-            max-width: 80vw;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        #tree-popup {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 200; display: none;
+            background: rgba(7,11,20,0.96); backdrop-filter: blur(16px);
+            border: 1px solid rgba(230,238,255,0.15); border-radius: 14px;
+            padding: 24px 28px;
+            width: 480px; height: 520px;
+            overflow-y: auto;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
         }
-
-        #node-info.visible {
-            opacity: 1;
+        @media (max-width: 600px) {
+            #tree-popup { width: 92vw; height: 70vh; padding: 16px 18px; }
         }
+        #tree-popup.visible { display: block; }
+        #tree-popup .tree-label {
+            padding: 3px 0; font-size: 13px;
+            color: rgba(238,245,255,0.8); line-height: 1.5;
+            white-space: nowrap; cursor: pointer;
+            transition: color 0.15s;
+        }
+        #tree-popup .tree-label:hover { color: #88ddff; }
+        #tree-popup .tree-toggle {
+            display: inline-block; width: 1em; text-align: center;
+            font-size: 10px; color: rgba(230,238,255,0.3);
+            margin-right: 2px;
+        }
+        #tree-popup .tree-children { padding-left: 16px; }
+        #tree-popup-close {
+            position: absolute; top: 6px; right: 10px;
+            background: none; border: none; color: rgba(238,245,255,0.35);
+            font-size: 20px; cursor: pointer; font-family: 'Space Mono', monospace;
+            line-height: 1; padding: 4px;
+        }
+        #tree-popup-close:hover { color: rgba(238,245,255,0.8); }
 
         ::-webkit-scrollbar {
             width: 4px;
@@ -323,7 +332,10 @@
 
                 </div>
 
-                <div id="node-info"></div>
+                <div id="tree-popup">
+                    <button id="tree-popup-close">&times;</button>
+                    <div id="tree-popup-content"></div>
+                </div>
             </v-main>
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
             <main-footer></main-footer>
@@ -956,19 +968,20 @@
             updateCameraForDepth(config.maxDepth);
             applyVisibility();
 
-            const infoEl = document.getElementById('node-info');
-
             if (window._brainPointerHandler) {
                 renderer.domElement.removeEventListener('pointermove', window._brainPointerHandler);
             }
-            if (window._brainClickHandler) {
-                renderer.domElement.removeEventListener('pointerdown', window._brainClickHandler);
+            if (window._brainDownHandler) {
+                renderer.domElement.removeEventListener('pointerdown', window._brainDownHandler);
+            }
+            if (window._brainUpHandler) {
+                renderer.domElement.removeEventListener('pointerup', window._brainUpHandler);
             }
 
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
-
             const clickables = allEntries.map(e => e.depth === 0 ? e.mesh : (e.hitMesh || e.mesh));
+            const _clickPos = { x: 0, y: 0 };
 
             function getItemAtScreenPos(cx, cy) {
                 const rect = renderer.domElement.getBoundingClientRect();
@@ -993,56 +1006,85 @@
                 return best.item;
             }
 
+            // ツリー表示用HTML生成（開閉可能、初期は全て閉じた状態）
+            function buildSubtreeHtml(item) {
+                const hasCh = item.children && item.children.length > 0;
+                let html = '<div class="tree-node">';
+                html += '<div class="tree-label">';
+                if (hasCh) html += '<span class="tree-toggle">&#9654;</span> ';
+                else html += '<span style="display:inline-block;width:1em"></span> ';
+                html += item.name + '</div>';
+                if (hasCh) {
+                    html += '<div class="tree-children" style="display:none">';
+                    for (const ch of item.children) html += buildSubtreeHtml(ch);
+                    html += '</div>';
+                }
+                html += '</div>';
+                return html;
+            }
+
+            // 長押しポップアップ
+            const treePopup = document.getElementById('tree-popup');
+            const treePopupContent = document.getElementById('tree-popup-content');
+            document.getElementById('tree-popup-close').addEventListener('click', function () { treePopup.classList.remove('visible'); });
+            treePopup.addEventListener('click', function (e) { if (e.target === treePopup) treePopup.classList.remove('visible'); });
+            // ツリーの開閉はイベントデリゲーション
+            treePopupContent.addEventListener('click', function (e) {
+                const label = e.target.closest('.tree-label');
+                if (!label) return;
+                const node = label.parentElement;
+                const children = node.querySelector('.tree-children');
+                if (!children) return;
+                const toggle = label.querySelector('.tree-toggle');
+                const hidden = children.style.display === 'none';
+                children.style.display = hidden ? 'block' : 'none';
+                if (toggle) toggle.innerHTML = hidden ? '&#9660;' : '&#9654;';
+            });
+
             window._brainPointerHandler = (e) => {
                 const item = getItemAtScreenPos(e.clientX, e.clientY);
-                if (item) {
-                    let path = item.name;
-                    let pi = nodeParentMap.get(item);
-                    while (pi) { path = pi.name + ' > ' + path; pi = nodeParentMap.get(pi); }
-                    infoEl.textContent = path;
-                    infoEl.classList.add('visible');
-                    renderer.domElement.style.cursor = 'pointer';
-                } else {
-                    infoEl.classList.remove('visible');
-                    renderer.domElement.style.cursor = 'grab';
+                renderer.domElement.style.cursor = item ? 'pointer' : 'grab';
+                // 長押しキャンセル
+                if (window._longPressTimer) {
+                    const dx = e.clientX - _clickPos.x;
+                    const dy = e.clientY - _clickPos.y;
+                    if (dx * dx + dy * dy > 36) { clearTimeout(window._longPressTimer); window._longPressTimer = null; }
                 }
             };
 
             function collapseAll(item) {
                 collapsedState.set(item, true);
-                if (item.children) {
-                    for (const child of item.children) {
-                        collapseAll(child);
-                    }
-                }
+                if (item.children) { for (const child of item.children) collapseAll(child); }
             }
-
             function expandAll(item) {
                 collapsedState.set(item, false);
-                if (item.children) {
-                    for (const child of item.children) {
-                        expandAll(child);
-                    }
-                }
+                if (item.children) { for (const child of item.children) expandAll(child); }
             }
-
             function expandOneLevel(item) {
                 collapsedState.set(item, false);
-                if (item.children) {
-                    for (const child of item.children) {
-                        collapsedState.set(child, true);
-                    }
-                }
+                if (item.children) { for (const child of item.children) collapsedState.set(child, true); }
             }
-
-            const _clickPos = { x: 0, y: 0 };
 
             window._brainDownHandler = (e) => {
                 _clickPos.x = e.clientX;
                 _clickPos.y = e.clientY;
+                window._longPressed = false;
+                treePopup.classList.remove('visible');
+                if (window._longPressTimer) clearTimeout(window._longPressTimer);
+                window._longPressTimer = setTimeout(function () {
+                    const item = getItemAtScreenPos(_clickPos.x, _clickPos.y);
+                    if (item) {
+                        treePopupContent.innerHTML = buildSubtreeHtml(item);
+                        treePopup.classList.add('visible');
+                    }
+                    window._longPressTimer = null;
+                    window._longPressed = true;
+                }, 500);
             };
 
             window._brainUpHandler = (e) => {
+                if (window._longPressTimer) { clearTimeout(window._longPressTimer); window._longPressTimer = null; }
+                if (window._longPressed) { window._longPressed = false; return; }
                 const dx = e.clientX - _clickPos.x;
                 const dy = e.clientY - _clickPos.y;
                 if (dx * dx + dy * dy > 25) return;
@@ -1050,14 +1092,8 @@
                 if (item && item.children && item.children.length > 0) {
                     const isCollapsed = collapsedState.get(item) || false;
                     if (isCollapsed) {
-                        if (config.expandAll) {
-                            expandAll(item);
-                        } else {
-                            expandOneLevel(item);
-                        }
-                    } else {
-                        collapseAll(item);
-                    }
+                        if (config.expandAll) { expandAll(item); } else { expandOneLevel(item); }
+                    } else { collapseAll(item); }
                     applyVisibility();
                 }
             };
