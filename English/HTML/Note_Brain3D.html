@@ -283,14 +283,6 @@
 
                     <div class="control-group">
                         <div class="control-header">
-                            <span class="control-label">表示深度</span>
-                            <span class="control-value" id="val-depth">3</span>
-                        </div>
-                        <input type="range" id="slider-depth" min="1" max="10" step="1" value="3">
-                    </div>
-
-                    <div class="control-group">
-                        <div class="control-header">
                             <span class="control-label">接続線の透明度</span>
                             <span class="control-value" id="val-opacity">0.55</span>
                         </div>
@@ -300,7 +292,7 @@
                     <div class="control-group">
                         <div class="control-header">
                             <span class="control-label">自動回転速度</span>
-                            <span class="control-value" id="val-rotate">0.30</span>
+                            <span class="control-value" id="val-rotate">0.00</span>
                         </div>
                         <input type="range" id="slider-rotate" min="0" max="2" step="0.01" value="0.30">
                     </div>
@@ -371,11 +363,7 @@
             .then(function (data) {
                 items = data;
                 computeMaxDepth(data, 1);
-                const depthSlider = document.getElementById('slider-depth');
-                depthSlider.max = maxTreeDepth;
-                depthSlider.value = Math.min(parseInt(depthSlider.value), maxTreeDepth);
-                config.maxDepth = parseInt(depthSlider.value);
-                document.getElementById('val-depth').textContent = config.maxDepth;
+                config.maxDepth = 1;
                 buildScene();
             });
 
@@ -997,11 +985,20 @@
                 }
             };
 
-            function setDescendantsCollapsed(item, state) {
-                collapsedState.set(item, state);
+            function collapseAll(item) {
+                collapsedState.set(item, true);
                 if (item.children) {
                     for (const child of item.children) {
-                        setDescendantsCollapsed(child, state);
+                        collapseAll(child);
+                    }
+                }
+            }
+
+            function expandOneLevel(item) {
+                collapsedState.set(item, false);
+                if (item.children) {
+                    for (const child of item.children) {
+                        collapsedState.set(child, true);
                     }
                 }
             }
@@ -1026,8 +1023,12 @@
                     const hit = intersects[0].object;
                     const item = hit.userData.item;
                     if (item && item.children && item.children.length > 0) {
-                        const cur = collapsedState.get(item) || false;
-                        setDescendantsCollapsed(item, !cur);
+                        const isCollapsed = collapsedState.get(item) || false;
+                        if (isCollapsed) {
+                            expandOneLevel(item);
+                        } else {
+                            collapseAll(item);
+                        }
                         applyVisibility();
                     }
                 }
@@ -1074,19 +1075,6 @@
         }
 
         window.addEventListener('resize', onResize);
-
-        document.getElementById('slider-depth').addEventListener('input', function () {
-            config.maxDepth = parseInt(this.value);
-            document.getElementById('val-depth').textContent = this.value;
-            collapsedState.clear();
-            for (const e of allEntries) {
-                if (e.depth >= config.maxDepth && e.item.children && e.item.children.length > 0) {
-                    collapsedState.set(e.item, true);
-                }
-            }
-            updateCameraForDepth(config.maxDepth);
-            applyVisibility();
-        });
 
         document.getElementById('slider-opacity').addEventListener('input', function () {
             config.connectionOpacity = parseFloat(this.value);
