@@ -32,8 +32,17 @@ Vue.component('card-word-general', {
                         <slot name="second"></slot>
                     </div>
                 </v-card-title>
-                <v-card-actions class="justify-center">
+                <v-card-actions class="justify-center" style="position: relative;">
                     <v-btn color="teal accent-4" @click="show = false" text>Close</v-btn>
+                    <v-btn 
+                        v-if="audioSrc2 || ttsText2" 
+                        icon 
+                        @click="toggleAudio2" 
+                        color="primary"
+                        style="position: absolute; right: 16px;"
+                    >
+                        <v-icon>{{ isPlaying2 ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-expand-transition>
@@ -42,34 +51,65 @@ Vue.component('card-word-general', {
     data: function () {
         return {
             show: false,
-            audio: null,      // Audioオブジェクトを保持
-            isPlaying: false, // 再生状態を管理
-            synthUtterance: null, // TTS発話オブジェクト
+            audio: null,
+            isPlaying: false,
+            synthUtterance: null,
+            ttsVoice: null,
+            isPlaying2: false,
+            synthUtterance2: null,
+            ttsVoice2: null,
+        }
+    },
+    created: function () {
+        var self = this;
+        if (window.speechSynthesis) {
+            var voices = window.speechSynthesis.getVoices();
+            if (voices.length) {
+                self.ttsVoice = self.pickVoiceForLang(self.ttsLang, voices);
+                self.ttsVoice2 = self.pickVoiceForLang(self.ttsLang2, voices);
+            }
+            window.speechSynthesis.onvoiceschanged = function () {
+                var v = window.speechSynthesis.getVoices();
+                self.ttsVoice = self.pickVoiceForLang(self.ttsLang, v);
+                self.ttsVoice2 = self.pickVoiceForLang(self.ttsLang2, v);
+            };
         }
     },
     props: {
         showall: Boolean,
-        // 音声ファイルのURLを受け取るプロパティ
         audioSrc: {
             type: String,
             default: null
         },
-        // TTS (Text-to-Speech) を使用するか
+        audioSrc2: {
+            type: String,
+            default: null
+        },
         useTts: {
             type: Boolean,
             default: false
         },
-        // TTSで読み上げる日本語テキスト
-        japaneseText: {
+        ttsText: {
             type: String,
             default: ''
+        },
+        ttsLang: {
+            type: String,
+            default: 'ja-JP'
+        },
+        ttsText2: {
+            type: String,
+            default: ''
+        },
+        ttsLang2: {
+            type: String,
+            default: 'en-US'
         }
     },
     watch: {
         showall: function (newVal, _old) {
             this.show = newVal;
         },
-        // audioSrcプロパティが変更された場合、既存のオーディオをリセット
         audioSrc: function () {
             if (this.audio) {
                 this.audio.pause();
@@ -79,6 +119,40 @@ Vue.component('card-word-general', {
         }
     },
     methods: {
+        pickVoiceForLang: function (langPref, voices) {
+            var preferred = null, fallback = null;
+            var langPrefix = langPref.split('-')[0];
+            for (var i = 0; i < voices.length; i++) {
+                var v = voices[i];
+                if (v.lang && v.lang.indexOf(langPrefix) === 0) {
+                    if (!fallback) fallback = v;
+                    if (v.name.indexOf('Google') !== -1) {
+                        if (v.name.indexOf('女性') !== -1 || v.name.indexOf('Female') !== -1) return v;
+                        if (!preferred) preferred = v;
+                    }
+                    if (langPrefix === 'ja') {
+                        if (v.name.indexOf('Haruka') !== -1 || v.name.indexOf('Ichiro') !== -1) {
+                            if (!preferred) preferred = v;
+                        }
+                    }
+                    if (langPrefix === 'en') {
+                        if (v.name.indexOf('Samantha') !== -1 || v.name.indexOf('Zira') !== -1 || v.name.indexOf('David') !== -1) {
+                            if (!preferred) preferred = v;
+                        }
+                    }
+                }
+            }
+            return preferred || fallback || null;
+        },
+        speak: function (text, lang, voice, onEnd) {
+            var utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            utterance.rate = 0.85;
+            if (voice) utterance.voice = voice;
+            utterance.onend = onEnd;
+            window.speechSynthesis.speak(utterance);
+            return utterance;
+        },
         toggleAudio() {
             if (this.isPlaying) {
                 if (this.synthUtterance) {
@@ -92,39 +166,29 @@ Vue.component('card-word-general', {
                 return;
             }
 
-            if (this.useTts && this.japaneseText) {
-                const utterance = new SpeechSynthesisUtterance(this.japaneseText);
-                utterance.lang = 'ja-JP';
-                utterance.rate = 0.8;
-                utterance.onend = () => {
+            if (this.useTts && this.ttsText) {
+                this.synthUtterance = this.speak(this.ttsText, this.ttsLang, this.ttsVoice, function () {
                     this.isPlaying = false;
                     this.synthUtterance = null;
-                };
-                this.synthUtterance = utterance;
-                window.speechSynthesis.speak(utterance);
+                }.bind(this));
                 this.isPlaying = true;
                 return;
             }
 
             if (!this.audio && this.audioSrc) {
                 this.audio = new Audio(this.audioSrc);
-                this.audio.addEventListener('ended', () => {
+                this.audio.addEventListener('ended', function () {
                     this.isPlaying = false;
-                });
-                this.audio.addEventListener('error', () => {
+                }.bind(this));
+                this.audio.addEventListener('error', function () {
                     this.isPlaying = false;
-                    if (this.japaneseText) {
-                        const utterance = new SpeechSynthesisUtterance(this.japaneseText);
-                        utterance.lang = 'ja-JP';
-                        utterance.rate = 0.8;
-                        utterance.onend = () => {
+                    if (this.ttsText) {
+                        this.synthUtterance = this.speak(this.ttsText, this.ttsLang, this.ttsVoice, function () {
                             this.isPlaying = false;
                             this.synthUtterance = null;
-                        };
-                        this.synthUtterance = utterance;
-                        window.speechSynthesis.speak(utterance);
+                        }.bind(this));
                     }
-                });
+                }.bind(this));
             }
 
             if (this.audio) {
@@ -132,14 +196,49 @@ Vue.component('card-word-general', {
                 this.audio.play();
                 this.isPlaying = true;
             }
+        },
+        toggleAudio2() {
+            if (this.isPlaying2) {
+                if (this.synthUtterance2) {
+                    window.speechSynthesis.cancel();
+                    this.synthUtterance2 = null;
+                }
+                this.isPlaying2 = false;
+                return;
+            }
+
+            if (this.ttsText2) {
+                this.synthUtterance2 = this.speak(this.ttsText2, this.ttsLang2, this.ttsVoice2, function () {
+                    this.isPlaying2 = false;
+                    this.synthUtterance2 = null;
+                }.bind(this));
+                this.isPlaying2 = true;
+                return;
+            }
+
+            if (!this.audio2 && this.audioSrc2) {
+                this.audio2 = new Audio(this.audioSrc2);
+                this.audio2.addEventListener('ended', function () {
+                    this.isPlaying2 = false;
+                }.bind(this));
+            }
+
+            if (this.audio2) {
+                this.audio2.currentTime = 0;
+                this.audio2.play();
+                this.isPlaying2 = true;
+            }
         }
     },
     beforeDestroy() {
-        // コンポーネントが破棄される前に、音声を停止してリソースをクリーンアップ
         window.speechSynthesis.cancel();
         if (this.audio) {
             this.audio.pause();
             this.audio = null;
+        }
+        if (this.audio2) {
+            this.audio2.pause();
+            this.audio2 = null;
         }
     }
 })
