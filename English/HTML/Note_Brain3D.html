@@ -82,6 +82,7 @@
             align-items: center;
             justify-content: center;
             line-height: 1;
+            padding: 0 0 4px 0;
         }
 
         #toggle-ui:hover {
@@ -299,26 +300,10 @@
 
                     <div class="control-group">
                         <div class="control-header">
-                            <span class="control-label">接続線の透明度</span>
-                            <span class="control-value" id="val-opacity">0.55</span>
+                            <span class="control-label">全て展開</span>
+                            <span class="control-value" id="val-expand">OFF</span>
                         </div>
-                        <input type="range" id="slider-opacity" min="0" max="1" step="0.01" value="0.55">
-                    </div>
-
-                    <div class="control-group">
-                        <div class="control-header">
-                            <span class="control-label">自動回転速度</span>
-                            <span class="control-value" id="val-rotate">0.00</span>
-                        </div>
-                        <input type="range" id="slider-rotate" min="0" max="2" step="0.01" value="0">
-                    </div>
-
-                    <div class="control-group">
-                        <div class="control-header">
-                            <span class="control-label">紐のたわみ量</span>
-                            <span class="control-value" id="val-sag">0.50</span>
-                        </div>
-                        <input type="range" id="slider-sag" min="0" max="1" step="0.01" value="0.50">
+                        <input type="range" id="slider-expand" min="0" max="1" step="1" value="0">
                     </div>
 
                     <div class="control-group">
@@ -331,10 +316,26 @@
 
                     <div class="control-group">
                         <div class="control-header">
-                            <span class="control-label">全て展開</span>
-                            <span class="control-value" id="val-expand">OFF</span>
+                            <span class="control-label">自動回転速度</span>
+                            <span class="control-value" id="val-rotate">0.00</span>
                         </div>
-                        <input type="range" id="slider-expand" min="0" max="1" step="1" value="0">
+                        <input type="range" id="slider-rotate" min="0" max="2" step="0.01" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span class="control-label">紐のたわみ</span>
+                            <span class="control-value" id="val-sag">0.00</span>
+                        </div>
+                        <input type="range" id="slider-sag" min="0" max="1" step="0.01" value="0.00">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span class="control-label">接続線の透明度</span>
+                            <span class="control-value" id="val-opacity">0.55</span>
+                        </div>
+                        <input type="range" id="slider-opacity" min="0" max="1" step="0.01" value="0.55">
                     </div>
 
                 </div>
@@ -375,6 +376,9 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
+        const CAMERA_NEAR = 0.1;
+        const CAMERA_FAR = 600;
+
         let items = [];
         let maxTreeDepth = 0;
 
@@ -410,10 +414,8 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020814);
-        scene.fog = new THREE.Fog(0x020814, 0, 300);
-
         const container = document.getElementById('three-container');
-        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 600);
+        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, CAMERA_NEAR, CAMERA_FAR);
         camera.position.set(55, 39, 55);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -939,7 +941,12 @@
                 const d = end.clone().sub(start).normalize();
                 mesh.quaternion.setFromUnitVectors(upRef, d);
                 group.add(mesh);
-                allConnections.push({ mesh, material: mat, from: conn.from, to: conn.to });
+                const randSag = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                ).normalize();
+                allConnections.push({ mesh, material: mat, from: conn.from, to: conn.to, sagDir: randSag });
             }
 
             // Orbital shells (atomic electron shell rings)
@@ -1132,6 +1139,16 @@
                 if (fogGroup) fogGroup.scale.setScalar(p);
             }
 
+            // Keep depth-1 sprites at consistent screen size regardless of camera distance
+            const refDist = 55;
+            for (const e of allEntries) {
+                if (e.depth === 1 && e.mesh && e.mesh.isSprite) {
+                    const dist = camera.position.distanceTo(e.position);
+                    const s = 2.0 * (dist / refDist);
+                    e.mesh.scale.set(s, s, 1);
+                }
+            }
+
             if (config.autoRotateSpeed > 0) {
                 const inc = 0.002 * config.autoRotateSpeed;
                 group.rotation.y += inc;
@@ -1191,11 +1208,9 @@
                     : p0.clone();
                 const end = p3.clone();
                 const mid = start.clone().add(end).multiplyScalar(0.5);
-                const perpDir = new THREE.Vector3(-dirN.z, Math.abs(dirN.x) * 0.5, dirN.x).normalize();
                 const sag = config.stringSag * dist * 0.25;
-                const sagDir = new THREE.Vector3(0, -1, 0).add(perpDir).normalize();
-                const p1 = mid.clone().add(sagDir.clone().multiplyScalar(sag));
-                const p2 = mid.clone().add(sagDir.clone().multiplyScalar(sag * 0.4));
+                const p1 = mid.clone().add(c.sagDir.clone().multiplyScalar(sag));
+                const p2 = mid.clone().add(c.sagDir.clone().multiplyScalar(sag * 0.4));
                 const curve = new THREE.CatmullRomCurve3([start, p1, p2, end]);
                 const tubeSegments = Math.max(8, Math.min(20, Math.floor(dist * 3)));
                 const tubeGeo = new THREE.TubeGeometry(curve, tubeSegments, 0.04, 4, false);
