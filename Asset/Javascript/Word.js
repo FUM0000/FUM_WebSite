@@ -267,8 +267,26 @@ window.Mixins_Word = {
             }
             this.List = list;
         },
+        applyMainColor() {
+            try {
+                const saved = localStorage.getItem('appSettings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    if (settings.mainColor) {
+                        document.documentElement.style.backgroundColor = settings.mainColor;
+                        const vApp = document.querySelector('.v-application');
+                        if (vApp) {
+                            vApp.style.setProperty('background-color', settings.mainColor, 'important');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to apply main color:', error);
+            }
+        }
     },
     mounted() {
+        this.applyMainColor();
         $(window).ready(() => { this.Ready_Page = true; });
         $(window).on('beforeunload', () => {
             $('#App').css('opacity', '0');
