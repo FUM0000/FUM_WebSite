@@ -96,41 +96,105 @@
               <v-col xs="12" md="6">
                 <v-card class="mt-6">
                   <v-card-title class="content-text">太陽と地球の楕円軌道</v-card-title>
-                  <v-card-text>
+                  <v-card-text class="pb-0">
                     <div id="OrbitContainer"></div>
-                    <div class="text-center mt-2">
-                      <v-btn small outlined @click="ToggleOrbitAnimation">
-                        <v-icon small>{{ OrbitPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
-                        {{ OrbitPlaying ? '一時停止' : '再生' }}
-                      </v-btn>
-                      <v-btn small outlined @click="ResetOrbitCamera" class="ml-2">
-                        <v-icon small>mdi-camera</v-icon>
-                        視点リセット
-                      </v-btn>
-                    </div>
-                    <div class="d-flex align-center justify-center mt-3">
-                      <v-text-field
-                        v-model="SpeedExpr"
-                        label="倍率 (式)"
-                        dense
-                        hide-details="auto"
-                        solo
-                        class="speed-input"
-                        :error-messages="SpeedError"
-                        @keydown.enter="ApplySpeed"
-                      ></v-text-field>
-                      <span class="ml-2 body-2" style="color:#80b0ff;white-space:nowrap;">
-                        {{ SpeedMultiplier.toLocaleString() }} 倍
-                      </span>
-                      <v-btn small outlined class="ml-2" @click="ApplySpeed">適応</v-btn>
-                    </div>
-                    <div class="d-flex flex-wrap justify-center mt-2">
-                      <v-btn x-small outlined class="mr-1 mb-1" @click="SetSpeedPreset(1, '1')">×1</v-btn>
-                      <v-btn x-small outlined class="mr-1 mb-1" @click="SetSpeedPreset(365, '365')">×365</v-btn>
-                      <v-btn x-small outlined class="mr-1 mb-1" @click="SetSpeedPreset(8760, '365*24')">×8760</v-btn>
-                      <v-btn x-small outlined class="mr-1 mb-1" @click="SetSpeedPreset(525600, '365*24*60')">×525600</v-btn>
-                      <v-btn x-small outlined class="mb-1" @click="SetSpeedPreset(31536000, '365*24*60*60')">最大</v-btn>
-                    </div>
+                    <v-row class="mt-2" no-gutters>
+                      <v-col class="text-center">
+                        <v-btn small outlined @click="ToggleOrbitAnimation">
+                          <v-icon small>{{ OrbitPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                          {{ OrbitPlaying ? '一時停止' : '再生' }}
+                        </v-btn>
+                        <v-btn small outlined @click="ResetOrbitCamera" class="ml-2">
+                          <v-icon small>mdi-camera</v-icon>
+                          視点リセット
+                        </v-btn>
+                      </v-col>
+                    </v-row>
+
+                    <v-divider class="my-3" style="border-color:rgba(80,120,255,0.15);"></v-divider>
+
+                    <v-sheet outlined class="pa-3 mb-4" style="border-color:rgba(80,120,255,0.2);background:transparent;">
+                      <v-row no-gutters>
+                        <v-col cols="7">
+                          <div class="caption mb-1" style="color:#80b0ff;">公転速度</div>
+                          <div class="body-1 mb-4" style="color:#fff;font-weight:500;">{{ SpeedMultiplier.toLocaleString() }} 倍</div>
+                          <div class="d-flex align-center">
+                            <v-text-field
+                              v-model="SpeedExpr"
+                              label="倍率 (式)"
+                              dense hide-details="auto" solo
+                              class="speed-input"
+                              :error-messages="SpeedError"
+                              @keydown.enter="ApplySpeed"
+                            ></v-text-field>
+                            <v-btn small outlined class="ml-2" @click="ApplySpeed">適用</v-btn>
+                          </div>
+                        </v-col>
+                        <v-col cols="5" class="pl-3">
+                          <div class="d-flex flex-column align-start">
+                            <v-btn x-small outlined class="mb-1" style="min-width:80px;" @click="SetSpeedPreset(1, '1')">×1</v-btn>
+                            <v-btn x-small outlined class="mb-1" style="min-width:80px;" @click="SetSpeedPreset(365, '365')">×365</v-btn>
+                            <v-btn x-small outlined class="mb-1" style="min-width:80px;" @click="SetSpeedPreset(8760, '365*24')">×8,760</v-btn>
+                            <v-btn x-small outlined class="mb-1" style="min-width:80px;" @click="SetSpeedPreset(525600, '365*24*60')">×525,600</v-btn>
+                            <v-btn x-small outlined style="min-width:80px;" @click="SetSpeedPreset(31536000, '365*24*60*60')">×31,536,000</v-btn>
+                          </div>
+                        </v-col>
+                      </v-row>
+                    </v-sheet>
+
+                    <v-sheet outlined class="pa-3 mb-4" style="border-color:rgba(80,120,255,0.2);background:transparent;">
+                      <v-row no-gutters>
+                        <v-col cols="7">
+                          <div class="caption mb-1" style="color:#80b0ff;">惑星サイズ</div>
+                          <div class="body-1 mb-4" style="color:#fff;font-weight:500;">{{ SizeMultiplier.toLocaleString() }} 倍</div>
+                          <div class="d-flex align-center">
+                            <v-text-field
+                              v-model="SizeExpr"
+                              label="倍率 (式)"
+                              dense hide-details="auto" solo
+                              class="speed-input"
+                              :error-messages="SizeError"
+                              @keydown.enter="ApplySize"
+                            ></v-text-field>
+                            <v-btn small outlined class="ml-2" @click="ApplySize">適用</v-btn>
+                          </div>
+                        </v-col>
+                        <v-col cols="5" class="pl-3">
+                          <div class="d-flex flex-column align-start">
+                            <v-btn x-small outlined class="mb-1" style="min-width:80px;" @click="SetSizePreset(1, '1')">×1</v-btn>
+                            <v-btn x-small outlined class="mb-1" style="min-width:80px;" @click="SetSizePreset(10, '10')">×10</v-btn>
+                            <v-btn x-small outlined class="mb-1" style="min-width:80px;" @click="SetSizePreset(100, '100')">×100</v-btn>
+                            <v-btn x-small outlined style="min-width:80px;" @click="SetSizePreset(1000, '1000')">×1,000</v-btn>
+                          </div>
+                        </v-col>
+                      </v-row>
+                    </v-sheet>
+
+                    <v-sheet outlined class="pa-3 mb-2" style="border-color:rgba(80,120,255,0.2);background:transparent;">
+                      <v-row no-gutters>
+                        <v-col cols="7">
+                          <div class="caption mb-1" style="color:#80b0ff;">太陽サイズ</div>
+                          <div class="body-1 mb-4" style="color:#fff;font-weight:500;">{{ SunSizeMultiplier.toLocaleString() }} 倍</div>
+                          <div class="d-flex align-center">
+                            <v-text-field
+                              v-model="SunSizeExpr"
+                              label="倍率 (式)"
+                              dense hide-details="auto" solo
+                              class="speed-input"
+                              :error-messages="SunSizeError"
+                              @keydown.enter="ApplySunSize"
+                            ></v-text-field>
+                            <v-btn small outlined class="ml-2" @click="ApplySunSize">適用</v-btn>
+                          </div>
+                        </v-col>
+                        <v-col cols="5" class="pl-3">
+                          <div class="d-flex flex-column align-start">
+                            <v-btn x-small outlined class="mb-1" style="min-width:80px;" @click="SetSunSizePreset(1, '1')">×1</v-btn>
+                            <v-btn x-small outlined style="min-width:80px;" @click="SetSunSizePreset(10, '10')">×10</v-btn>
+                          </div>
+                        </v-col>
+                      </v-row>
+                    </v-sheet>
                   </v-card-text>
                 </v-card>
 
@@ -159,7 +223,13 @@
         OrbitPlaying: true,
         SpeedExpr: '365*24*60',
         SpeedMultiplier: 525600,
-        SpeedError: ''
+        SpeedError: '',
+        SizeExpr: '1000',
+        SizeMultiplier: 1000,
+        SizeError: '',
+        SunSizeExpr: '10',
+        SunSizeMultiplier: 10,
+        SunSizeError: ''
       },
       methods: {
         SafeEval(expr) {
@@ -182,6 +252,46 @@
           this.SpeedError = '';
           window.OrbitSpeedMultiplier = val;
         },
+        ApplySize() {
+          this.SizeError = '';
+          const result = this.SafeEval(this.SizeExpr);
+          if (result === null || result <= 0 || !isFinite(result)) {
+            this.SizeError = '無効な式';
+            return;
+          }
+          this.SizeMultiplier = result;
+          if (window.SetSizeMultiplier) {
+            window.SetSizeMultiplier(result);
+          }
+        },
+        SetSizePreset(val, expr) {
+          this.SizeExpr = expr;
+          this.SizeMultiplier = val;
+          this.SizeError = '';
+          if (window.SetSizeMultiplier) {
+            window.SetSizeMultiplier(val);
+          }
+        },
+        ApplySunSize() {
+          this.SunSizeError = '';
+          const result = this.SafeEval(this.SunSizeExpr);
+          if (result === null || result <= 0 || !isFinite(result)) {
+            this.SunSizeError = '無効な式';
+            return;
+          }
+          this.SunSizeMultiplier = result;
+          if (window.SetSunSizeMultiplier) {
+            window.SetSunSizeMultiplier(result);
+          }
+        },
+        SetSunSizePreset(val, expr) {
+          this.SunSizeExpr = expr;
+          this.SunSizeMultiplier = val;
+          this.SunSizeError = '';
+          if (window.SetSunSizeMultiplier) {
+            window.SetSunSizeMultiplier(val);
+          }
+        },
         ToggleOrbitAnimation() {
           this.OrbitPlaying = !this.OrbitPlaying;
           window.OrbitPlaying = this.OrbitPlaying;
@@ -199,9 +309,6 @@
     import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
     import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
 
-    const VIS_MULT = 628;
-    const SUN_VIS_RADIUS = 0.25;
-
     function parseHex(c) { return parseInt(c.slice(1), 16); }
 
     async function initOrbit() {
@@ -214,14 +321,17 @@
       const resp = await fetch('../../Asset/Python/Data/Planet_Orbit.json');
       const data = await resp.json();
 
+      const sunVisRadius = data.sun.radius;
+      const glowVisRadius = sunVisRadius * 1.8;
+
       const width = container.clientWidth;
       const height = container.clientHeight;
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x0a0a1a);
 
-      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-      camera.position.set(50, 30, 60);
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200);
+      camera.position.set(3, 2, 4);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(width, height);
@@ -244,27 +354,28 @@
       dirLight.position.set(10, 20, 10);
       scene.add(dirLight);
 
-      const sunGeo = new THREE.SphereGeometry(SUN_VIS_RADIUS, 32, 32);
+      const sunGeo = new THREE.SphereGeometry(1, 32, 32);
       const sunMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xff6600, emissiveIntensity: 0.8 });
       const sunMesh = new THREE.Mesh(sunGeo, sunMat);
       sunMesh.position.set(data.sun.x, data.sun.y, data.sun.z);
+      sunMesh.scale.set(sunVisRadius, sunVisRadius, sunVisRadius);
       scene.add(sunMesh);
 
-      const glowGeo = new THREE.SphereGeometry(SUN_VIS_RADIUS * 1.8, 32, 32);
+      const glowGeo = new THREE.SphereGeometry(1, 32, 32);
       const glowMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.15 });
       const glowMesh = new THREE.Mesh(glowGeo, glowMat);
       glowMesh.position.copy(sunMesh.position);
+      glowMesh.scale.set(glowVisRadius, glowVisRadius, glowVisRadius);
       scene.add(glowMesh);
 
       const planetMeshes = [];
 
       for (const planet of data.planets) {
         const color = parseHex(planet.color);
-        const visualRadius = Math.max(planet.radius * VIS_MULT, 0.005);
-
-        const geo = new THREE.SphereGeometry(visualRadius, 24, 24);
+        const geo = new THREE.SphereGeometry(1, 16, 16);
         const mat = new THREE.MeshStandardMaterial({ color });
         const mesh = new THREE.Mesh(geo, mat);
+        mesh.scale.set(planet.radius, planet.radius, planet.radius);
         scene.add(mesh);
 
         const pts = planet.orbit.map(p => new THREE.Vector3(p.x, p.y, p.z));
@@ -275,6 +386,23 @@
 
         planetMeshes.push({ mesh, points: pts, angle: Math.random() });
       }
+
+      window.SetSunSizeMultiplier = function(mult) {
+        const s = Math.max(mult, 0.001);
+        sunMesh.scale.set(sunVisRadius * s, sunVisRadius * s, sunVisRadius * s);
+        glowMesh.scale.set(glowVisRadius * s, glowVisRadius * s, glowVisRadius * s);
+      };
+
+      window.SetSizeMultiplier = function(mult) {
+        const s = Math.max(mult, 0.001);
+        for (let i = 0; i < planetMeshes.length; i++) {
+          const r = data.planets[i].radius;
+          planetMeshes[i].mesh.scale.set(r * s, r * s, r * s);
+        }
+      };
+
+      if (window.SetSizeMultiplier) window.SetSizeMultiplier(1000);
+      if (window.SetSunSizeMultiplier) window.SetSunSizeMultiplier(1);
 
       window.OrbitPlaying = true;
       window.OrbitSpeedMultiplier = 525600;
@@ -287,7 +415,7 @@
       }
 
       window.ResetOrbitCameraFn = function() {
-        camera.position.set(50, 30, 60);
+        camera.position.set(3, 2, 4);
         controls.target.set(0, 0, 0);
         controls.update();
       };

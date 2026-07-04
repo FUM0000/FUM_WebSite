@@ -44,6 +44,14 @@
     .cat-noble { background: #f8bbd0 !important; }
     .cat-lanthanide { background: #c5cae9 !important; }
     .cat-actinide { background: #b2ebf2 !important; }
+
+    #MoleculeContainer {
+      width: 100%;
+      height: 500px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 4px;
+    }
   </style>
     <meta name="robots" content="index, follow">
 </head>
@@ -146,6 +154,42 @@
               </v-col>
             </v-row>
 
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">分子モデル (球棒モデル)</v-card-title>
+                  <v-card-text>
+                    <div class="d-flex align-center mb-2 flex-wrap">
+                      <v-select
+                        v-model="SelectedMolecule"
+                        :items="MoleculeOptions"
+                        label="分子を選択"
+                        dense
+                        hide-details
+                        solo
+                        class="mr-2 mb-1"
+                        style="max-width:260px;"
+                        @change="ChangeMolecule"
+                      ></v-select>
+                      <span class="body-1 font-weight-bold ml-1" style="color:#80b0ff;">{{ MoleculeFormula }}</span>
+                    </div>
+                    <div id="MoleculeContainer"></div>
+                    <div class="text-center mt-2">
+                      <v-btn small outlined @click="ToggleMoleculeRotation">
+                        <v-icon small>{{ MoleculeRotating ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                        {{ MoleculeRotating ? '回転停止' : '自動回転' }}
+                      </v-btn>
+                      <v-btn small outlined @click="ResetMoleculeCamera" class="ml-2">
+                        <v-icon small>mdi-camera</v-icon>
+                        視点リセット
+                      </v-btn>
+                    </div>
+                    <div class="mt-2 text-caption" style="color:#80b0ff;">{{ MoleculeDescription }}</div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
             <v-dialog v-model="elementDialog" max-width="760">
               <v-card v-if="selectedElement">
                 <v-card-title class="headline">{{ selectedElement.symbol }} - {{ selectedElement.name }}</v-card-title>
@@ -183,6 +227,11 @@
         Count_Step_1: 1,
         searchQuery: '',
         elementDialog: false,
+        SelectedMolecule: 0,
+        MoleculeOptions: [],
+        MoleculeRotating: true,
+        MoleculeFormula: '',
+        MoleculeDescription: '',
         selectedElement: null,
         groupHeaders: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18],
         periodLabels: ['1','2','3','4','5','6','7','6*','7*'],
@@ -271,6 +320,13 @@
         this.filteredChemistryBasics = JSON.parse(JSON.stringify(this.ChemistryBasics));
         this.filteredChemistryReactions = JSON.parse(JSON.stringify(this.ChemistryReactions));
         this.filteredChemistryLife = JSON.parse(JSON.stringify(this.ChemistryLife));
+        const self = this;
+        window.__onMoleculeDataReady = function(data) {
+          self.MoleculeOptions = data.molecules.map((m, i) => ({ text: m.name + ' (' + m.formula + ')', value: i }));
+          self.SelectedMolecule = 0;
+          self.MoleculeFormula = data.molecules[0].formula;
+          self.MoleculeDescription = data.molecules[0].description;
+        };
       },
       methods: {
         collectAllNodeIds(items) {
@@ -424,9 +480,242 @@
           this.openNodesChemistryReactions = this.collectAllNodeIds(this.filteredChemistryReactions);
           this.filteredChemistryLife = filterTree(JSON.parse(JSON.stringify(this.ChemistryLife)));
           this.openNodesChemistryLife = this.collectAllNodeIds(this.filteredChemistryLife);
+        },
+        ChangeMolecule(index) {
+          this.MoleculeFormula = '';
+          this.MoleculeDescription = '';
+          if (window.__MoleculeData && window.__MoleculeData.molecules[index]) {
+            this.MoleculeFormula = window.__MoleculeData.molecules[index].formula;
+            this.MoleculeDescription = window.__MoleculeData.molecules[index].description;
+          }
+          if (window.switchMoleculeFn) window.switchMoleculeFn(index);
+        },
+        ToggleMoleculeRotation() {
+          this.MoleculeRotating = !this.MoleculeRotating;
+          if (window.setMoleculeRotateFn) window.setMoleculeRotateFn(this.MoleculeRotating);
+        },
+        ResetMoleculeCamera() {
+          if (window.resetMoleculeCameraFn) window.resetMoleculeCameraFn();
         }
       }
     });
   </script>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
+
+    let scene, camera, renderer, controls;
+    let moleculeGroup = null;
+    let currentMoleculeIndex = 0;
+    let autoRotate = true;
+    let molData = null;
+
+    function createBondCylinder(p1, p2, radius, color, order) {
+      const start = new THREE.Vector3(p1.x, p1.y, p1.z);
+      const end = new THREE.Vector3(p2.x, p2.y, p2.z);
+      const direction = new THREE.Vector3().copy(end).sub(start);
+      const length = direction.length();
+      direction.normalize();
+      const mid = new THREE.Vector3().copy(start).add(end).multiplyScalar(0.5);
+
+      if (order === 1) {
+        const geo = new THREE.CylinderGeometry(radius, radius, length, 8);
+        const mat = new THREE.MeshStandardMaterial({ color });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(mid);
+        const up = new THREE.Vector3(0, 1, 0);
+        const quat = new THREE.Quaternion().setFromUnitVectors(up, direction);
+        mesh.quaternion.copy(quat);
+        return mesh;
+      }
+
+      const perp = new THREE.Vector3();
+      if (Math.abs(direction.y) < 0.9) {
+        perp.crossVectors(direction, new THREE.Vector3(0, 1, 0));
+      } else {
+        perp.crossVectors(direction, new THREE.Vector3(1, 0, 0));
+      }
+      perp.normalize();
+      const offset = radius * 1.8;
+
+      const group = new THREE.Group();
+      for (let k = 0; k < order; k++) {
+        const off = (k - (order - 1) / 2) * offset;
+        const pos = new THREE.Vector3().copy(mid).add(perp.clone().multiplyScalar(off));
+        const geo = new THREE.CylinderGeometry(radius * 0.7, radius * 0.7, length, 8);
+        const mat = new THREE.MeshStandardMaterial({ color });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pos);
+        const up = new THREE.Vector3(0, 1, 0);
+        const quat = new THREE.Quaternion().setFromUnitVectors(up, direction);
+        mesh.quaternion.copy(quat);
+        group.add(mesh);
+      }
+      return group;
+    }
+
+    function buildMolecule(index) {
+      if (moleculeGroup) {
+        scene.remove(moleculeGroup);
+        moleculeGroup.traverse(child => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        });
+        moleculeGroup = null;
+      }
+
+      if (!molData || !molData.molecules[index]) return;
+
+      const mol = molData.molecules[index];
+      const elements = molData.elements;
+      const bondRadius = molData.bond_radius;
+      moleculeGroup = new THREE.Group();
+
+      const atomPositions = [];
+      for (const atom of mol.atoms) {
+        const elem = elements[atom.element];
+        const radius = elem ? elem.radius : 0.3;
+        const color = elem ? elem.color : '#888888';
+        const geo = new THREE.SphereGeometry(radius, 24, 24);
+        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color) });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(atom.x, atom.y, atom.z);
+        moleculeGroup.add(mesh);
+        atomPositions.push(new THREE.Vector3(atom.x, atom.y, atom.z));
+      }
+
+      for (const bond of mol.bonds) {
+        const p1 = mol.atoms[bond.i];
+        const p2 = mol.atoms[bond.j];
+        const bondMesh = createBondCylinder(p1, p2, bondRadius, 0x888888, bond.order || 1);
+        moleculeGroup.add(bondMesh);
+      }
+
+      if (atomPositions.length > 0) {
+        const center = new THREE.Vector3();
+        for (const p of atomPositions) center.add(p);
+        center.divideScalar(atomPositions.length);
+        moleculeGroup.position.sub(center);
+
+        let maxDist = 0;
+        for (const p of atomPositions) {
+          const d = p.distanceTo(center);
+          if (d > maxDist) maxDist = d;
+        }
+        const camDist = maxDist * 3.5 + 3;
+        camera.position.set(camDist * 0.8, camDist * 0.6, camDist);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      }
+
+      scene.add(moleculeGroup);
+    }
+
+    async function initMoleculeViewer() {
+      const container = document.getElementById('MoleculeContainer');
+      if (!container) {
+        setTimeout(initMoleculeViewer, 200);
+        return;
+      }
+
+      if (container.clientWidth === 0 || container.clientHeight === 0) {
+        setTimeout(initMoleculeViewer, 200);
+        return;
+      }
+
+      const resp = await fetch('../../Asset/Python/Data/Molecule.json');
+      molData = await resp.json();
+
+      window.__MoleculeData = molData;
+      if (window.__onMoleculeDataReady) window.__onMoleculeDataReady(molData);
+
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0a0a1a);
+
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.set(6, 4, 8);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.target.set(0, 0, 0);
+
+      const ambientLight = new THREE.AmbientLight(0x404060);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7);
+      scene.add(dirLight);
+
+      const dirLight2 = new THREE.DirectionalLight(0x8888ff, 0.3);
+      dirLight2.position.set(-5, -3, -5);
+      scene.add(dirLight2);
+
+      buildMolecule(currentMoleculeIndex);
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (autoRotate && moleculeGroup) {
+          moleculeGroup.rotation.y += 0.008;
+        }
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      const resizeObserver = new ResizeObserver(() => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        if (w === 0 || h === 0) return;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      });
+      resizeObserver.observe(container);
+    }
+
+    window.switchMoleculeFn = function(index) {
+      currentMoleculeIndex = index;
+      buildMolecule(index);
+    };
+
+    window.setMoleculeRotateFn = function(val) {
+      autoRotate = val;
+    };
+
+    window.resetMoleculeCameraFn = function() {
+      if (!molData || !molData.molecules[currentMoleculeIndex]) return;
+      const mol = molData.molecules[currentMoleculeIndex];
+      let maxDist = 0;
+      const center = new THREE.Vector3();
+      let count = 0;
+      for (const atom of mol.atoms) {
+        center.x += atom.x;
+        center.y += atom.y;
+        center.z += atom.z;
+        count++;
+      }
+      if (count > 0) center.divideScalar(count);
+      for (const atom of mol.atoms) {
+        const d = Math.sqrt((atom.x - center.x) ** 2 + (atom.y - center.y) ** 2 + (atom.z - center.z) ** 2);
+        if (d > maxDist) maxDist = d;
+      }
+      const camDist = maxDist * 3.5 + 3;
+      camera.position.set(camDist * 0.8, camDist * 0.6, camDist);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    };
+
+    initMoleculeViewer();
+  </script>
 </body>
+
 </html>
