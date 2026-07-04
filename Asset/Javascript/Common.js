@@ -492,6 +492,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Kitchen</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Japanese_Life_Positive.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Positive</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Japanese_Life_Time.html">
                         <v-list-item-icon />
                         <v-list-item-title>Time</v-list-item-title>

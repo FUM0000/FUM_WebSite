@@ -14,7 +14,7 @@ Vue.component('card-word-general', {
             <v-btn color="primary" @click="show = true" text>Answer</v-btn>
             
             <v-btn 
-                v-if="audioSrc" 
+                v-if="audioSrc || useTts" 
                 icon 
                 @click="toggleAudio" 
                 color="primary" 
@@ -43,7 +43,8 @@ Vue.component('card-word-general', {
         return {
             show: false,
             audio: null,      // Audioオブジェクトを保持
-            isPlaying: false  // 再生状態を管理
+            isPlaying: false, // 再生状態を管理
+            synthUtterance: null, // TTS発話オブジェクト
         }
     },
     props: {
@@ -52,6 +53,16 @@ Vue.component('card-word-general', {
         audioSrc: {
             type: String,
             default: null
+        },
+        // TTS (Text-to-Speech) を使用するか
+        useTts: {
+            type: Boolean,
+            default: false
+        },
+        // TTSで読み上げる日本語テキスト
+        japaneseText: {
+            type: String,
+            default: ''
         }
     },
     watch: {
@@ -69,31 +80,63 @@ Vue.component('card-word-general', {
     },
     methods: {
         toggleAudio() {
-            // Audioオブジェクトがまだ初期化されていなければ、生成する
+            if (this.isPlaying) {
+                if (this.synthUtterance) {
+                    window.speechSynthesis.cancel();
+                    this.synthUtterance = null;
+                }
+                if (this.audio) {
+                    this.audio.pause();
+                }
+                this.isPlaying = false;
+                return;
+            }
+
+            if (this.useTts && this.japaneseText) {
+                const utterance = new SpeechSynthesisUtterance(this.japaneseText);
+                utterance.lang = 'ja-JP';
+                utterance.rate = 0.8;
+                utterance.onend = () => {
+                    this.isPlaying = false;
+                    this.synthUtterance = null;
+                };
+                this.synthUtterance = utterance;
+                window.speechSynthesis.speak(utterance);
+                this.isPlaying = true;
+                return;
+            }
+
             if (!this.audio && this.audioSrc) {
                 this.audio = new Audio(this.audioSrc);
-                // 再生が終了したときのイベントを設定
                 this.audio.addEventListener('ended', () => {
                     this.isPlaying = false;
                 });
+                this.audio.addEventListener('error', () => {
+                    this.isPlaying = false;
+                    if (this.japaneseText) {
+                        const utterance = new SpeechSynthesisUtterance(this.japaneseText);
+                        utterance.lang = 'ja-JP';
+                        utterance.rate = 0.8;
+                        utterance.onend = () => {
+                            this.isPlaying = false;
+                            this.synthUtterance = null;
+                        };
+                        this.synthUtterance = utterance;
+                        window.speechSynthesis.speak(utterance);
+                    }
+                });
             }
 
-            // Audioオブジェクトが存在する場合のみ処理
             if (this.audio) {
-                if (this.isPlaying) {
-                    this.audio.pause();
-                    this.isPlaying = false;
-                } else {
-                    // 再開時は常に最初から再生する
-                    this.audio.currentTime = 0;
-                    this.audio.play();
-                    this.isPlaying = true;
-                }
+                this.audio.currentTime = 0;
+                this.audio.play();
+                this.isPlaying = true;
             }
         }
     },
     beforeDestroy() {
         // コンポーネントが破棄される前に、音声を停止してリソースをクリーンアップ
+        window.speechSynthesis.cancel();
         if (this.audio) {
             this.audio.pause();
             this.audio = null;
