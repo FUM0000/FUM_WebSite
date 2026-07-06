@@ -14,7 +14,7 @@ Vue.component('card-word-general', {
             <v-btn color="primary" @click="show = true" text>Answer</v-btn>
             
             <v-btn 
-                v-if="audioSrc || useTts" 
+                v-if="japanese" 
                 icon 
                 @click="toggleAudio" 
                 color="primary" 
@@ -35,7 +35,7 @@ Vue.component('card-word-general', {
                 <v-card-actions class="justify-center" style="position: relative;">
                     <v-btn color="teal accent-4" @click="show = false" text>Close</v-btn>
                     <v-btn 
-                        v-if="audioSrc2 || ttsText2" 
+                        v-if="english" 
                         icon 
                         @click="toggleAudio2" 
                         color="primary"
@@ -51,7 +51,6 @@ Vue.component('card-word-general', {
     data: function () {
         return {
             show: false,
-            audio: null,
             isPlaying: false,
             synthUtterance: null,
             ttsVoice: null,
@@ -77,19 +76,7 @@ Vue.component('card-word-general', {
     },
     props: {
         showall: Boolean,
-        audioSrc: {
-            type: String,
-            default: null
-        },
-        audioSrc2: {
-            type: String,
-            default: null
-        },
-        useTts: {
-            type: Boolean,
-            default: false
-        },
-        ttsText: {
+        japanese: {
             type: String,
             default: ''
         },
@@ -97,7 +84,7 @@ Vue.component('card-word-general', {
             type: String,
             default: 'ja-JP'
         },
-        ttsText2: {
+        english: {
             type: String,
             default: ''
         },
@@ -109,13 +96,6 @@ Vue.component('card-word-general', {
     watch: {
         showall: function (newVal, _old) {
             this.show = newVal;
-        },
-        audioSrc: function () {
-            if (this.audio) {
-                this.audio.pause();
-                this.audio = null;
-                this.isPlaying = false;
-            }
         }
     },
     methods: {
@@ -159,43 +139,15 @@ Vue.component('card-word-general', {
                     window.speechSynthesis.cancel();
                     this.synthUtterance = null;
                 }
-                if (this.audio) {
-                    this.audio.pause();
-                }
                 this.isPlaying = false;
                 return;
             }
 
-            if (this.useTts && this.ttsText) {
-                this.synthUtterance = this.speak(this.ttsText, this.ttsLang, this.ttsVoice, function () {
-                    this.isPlaying = false;
-                    this.synthUtterance = null;
-                }.bind(this));
-                this.isPlaying = true;
-                return;
-            }
-
-            if (!this.audio && this.audioSrc) {
-                this.audio = new Audio(this.audioSrc);
-                this.audio.addEventListener('ended', function () {
-                    this.isPlaying = false;
-                }.bind(this));
-                this.audio.addEventListener('error', function () {
-                    this.isPlaying = false;
-                    if (this.ttsText) {
-                        this.synthUtterance = this.speak(this.ttsText, this.ttsLang, this.ttsVoice, function () {
-                            this.isPlaying = false;
-                            this.synthUtterance = null;
-                        }.bind(this));
-                    }
-                }.bind(this));
-            }
-
-            if (this.audio) {
-                this.audio.currentTime = 0;
-                this.audio.play();
-                this.isPlaying = true;
-            }
+            this.synthUtterance = this.speak(this.japanese, this.ttsLang, this.ttsVoice, function () {
+                this.isPlaying = false;
+                this.synthUtterance = null;
+            }.bind(this));
+            this.isPlaying = true;
         },
         toggleAudio2() {
             if (this.isPlaying2) {
@@ -207,39 +159,15 @@ Vue.component('card-word-general', {
                 return;
             }
 
-            if (this.ttsText2) {
-                this.synthUtterance2 = this.speak(this.ttsText2, this.ttsLang2, this.ttsVoice2, function () {
-                    this.isPlaying2 = false;
-                    this.synthUtterance2 = null;
-                }.bind(this));
-                this.isPlaying2 = true;
-                return;
-            }
-
-            if (!this.audio2 && this.audioSrc2) {
-                this.audio2 = new Audio(this.audioSrc2);
-                this.audio2.addEventListener('ended', function () {
-                    this.isPlaying2 = false;
-                }.bind(this));
-            }
-
-            if (this.audio2) {
-                this.audio2.currentTime = 0;
-                this.audio2.play();
-                this.isPlaying2 = true;
-            }
+            this.synthUtterance2 = this.speak(this.english, this.ttsLang2, this.ttsVoice2, function () {
+                this.isPlaying2 = false;
+                this.synthUtterance2 = null;
+            }.bind(this));
+            this.isPlaying2 = true;
         }
     },
     beforeDestroy() {
         window.speechSynthesis.cancel();
-        if (this.audio) {
-            this.audio.pause();
-            this.audio = null;
-        }
-        if (this.audio2) {
-            this.audio2.pause();
-            this.audio2 = null;
-        }
     }
 })
 
