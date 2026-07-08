@@ -132,8 +132,12 @@ Vue.component('main-navigation', {
     <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right temporary>
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
-        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" style="height: 50px; background-color: #333333; color: white;">
-            MENU
+        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" style="height: 50px; background-color: rgba(0, 0, 0, 0.54); color: white;">
+            <div style="display: flex; width: 100%; align-items: center;">
+                <span style="flex: 1;"></span>
+                <span>MENU</span>
+                <span style="flex: 1; text-align: right;">➡</span>
+            </div>
         </v-btn>
         <!-- ▲ Title ▲ ------------------------------------------------------------------------------------>
 
@@ -950,6 +954,35 @@ Vue.component('main-navigation', {
 
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
+                        <v-list-item-title>Action</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-sword</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Game_KittyHopper.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Kitty Hopper</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-cat</v-icon></v-list-item-icon>
+                    </v-list-item>
+                    <v-list-item href="./Game_Ball.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Ping Pong</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-circle-outline</v-icon></v-list-item-icon>
+                    </v-list-item>
+
+                    <v-list-item href="./Game_SpaceShip.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Space Ship</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-space-station</v-icon></v-list-item-icon>
+                    </v-list-item>
+                    <v-list-item href="./Game_Shooting.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Warp Shot</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-target</v-icon></v-list-item-icon>
+                    </v-list-item>
+                </v-list-group sub-group>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
                         <v-list-item-title>Camera</v-list-item-title>
                         <v-list-item-icon><v-icon>mdi-camera</v-icon></v-list-item-icon>
                     </template>
@@ -961,55 +994,58 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Game_HandShooter.html">
                         <v-list-item-icon />
                         <v-list-item-title>Hand Shooting</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-gun</v-icon></v-list-item-icon>
+                        <v-list-item-icon><v-icon>mdi-fruit-cherries</v-icon></v-list-item-icon>
                     </v-list-item>
                 </v-list-group sub-group>
-                
-                <v-list-item href="./Game_KittyHopper.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Kitty Hopper</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-cat</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_Checkbox.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Checkman</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-checkbox-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_Market.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Market</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-cart-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_Ball.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Ping Pong</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-circle-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_ReflexSpeed.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Reflex Speed</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-speedometer-slow</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_RandomQuestion.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Random Question</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-comment-question-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_Shooting.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Warp Shot</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-target</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_SpaceShip.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Space Ship</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-space-station</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Game_TypeInfinity.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Type Infinity</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-keyboard-outline</v-icon></v-list-item-icon>
-                </v-list-item>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Simple</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-puzzle-outline</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Game_Checkbox.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Checkman</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-checkbox-outline</v-icon></v-list-item-icon>
+                    </v-list-item>
+                    <v-list-item href="./Game_RandomQuestion.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Random Question</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-comment-question-outline</v-icon></v-list-item-icon>
+                    </v-list-item>
+                </v-list-group sub-group>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Simulation</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-earth</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Game_Market.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Market</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-cart-outline</v-icon></v-list-item-icon>
+                    </v-list-item>
+                </v-list-group sub-group>
+
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Training</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-school</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Game_ReflexSpeed.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Reflex Speed</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-speedometer-slow</v-icon></v-list-item-icon>
+                    </v-list-item>
+                    <v-list-item href="./Game_TypeInfinity.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Type Infinity</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-keyboard-outline</v-icon></v-list-item-icon>
+                    </v-list-item>
+                </v-list-group sub-group>
             </v-list-group>
             <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->
 
