@@ -115,12 +115,44 @@
         font-size: 12px;
       }
     }
+
+    html, body {
+      background: #0a0a14 !important;
+      min-height: 100%;
+    }
+
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    #App {
+      position: relative;
+      z-index: 1;
+      background: transparent !important;
+    }
+
+    .v-application,
+    .v-application--wrap,
+    .v-main,
+    .v-main__wrap,
+    .container,
+    .container.fill-height {
+      background: transparent !important;
+    }
   </style>
     <meta name="robots" content="index, follow">
 </head>
 
 <body>
-  <v-app id="App" v-cloak>
+  <canvas id="bg-canvas"></canvas>
+  <v-app id="App" v-cloak style="background: transparent !important;">
     <template>
       <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > サイエンス > 数学</main-system-bar>
 
@@ -250,6 +282,92 @@
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
 
   <script>
+    (function() {
+      var canvas = document.getElementById('bg-canvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+
+      var width, height, triangles = [], grid = [];
+      var S = Math.random() * 9999;
+
+      function det(s) { var x = Math.sin(s + S) * 43758.5453; return x - Math.floor(x); }
+      function detRng(a, b, s) { return det(s) * (b - a) + a; }
+
+      function build() {
+        triangles = [];
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+
+        var spanW = width * 1.1, spanH = height * 1.1;
+        var offsetX = (spanW - width) / -2, offsetY = (spanH - height) / -2;
+        var cols = 50, rows = 28;
+        var cw = spanW / cols, ch = spanH / rows;
+
+        grid = [];
+        for (var r = 0; r <= rows; r++) {
+          grid[r] = [];
+          for (var c = 0; c <= cols; c++) {
+            var bx = offsetX + c * cw, by = offsetY + r * ch;
+            grid[r][c] = {
+              bx: bx, by: by,
+              ox: detRng(-cw*0.3, cw*0.3, r*999+c*2+1),
+              oy: detRng(-ch*0.3, ch*0.3, r*999+c*2+2)
+            };
+          }
+        }
+
+        for (var r = 0; r < rows; r++) {
+          for (var c = 0; c < cols; c++) {
+            var p0 = grid[r][c], p1 = grid[r][c+1];
+            var p2 = grid[r+1][c+1], p3 = grid[r+1][c];
+
+            var hue = ((c / cols) * 50 + (r / rows) * 25 + detRng(-12, 12, r*555+c*3+3) + 360) % 360;
+            var sat = 28 + detRng(0, 20, r*555+c*3+4);
+            var lig = 62 + detRng(0, 25, r*555+c*3+5);
+
+            if (det(r*777+c*4+6) > 0.5) {
+              triangles.push({ pts: [p0, p1, p3], hue: hue+detRng(-6,6,r*777+c*4+7), sat, lig, seed: detRng(0,6.28,r*777+c*4+8) });
+              triangles.push({ pts: [p1, p2, p3], hue: hue+detRng(-6,6,r*777+c*4+9), sat, lig, seed: detRng(0,6.28,r*777+c*4+10) });
+            } else {
+              triangles.push({ pts: [p0, p1, p2], hue: hue+detRng(-6,6,r*777+c*4+11), sat, lig, seed: detRng(0,6.28,r*777+c*4+12) });
+              triangles.push({ pts: [p0, p2, p3], hue: hue+detRng(-6,6,r*777+c*4+13), sat, lig, seed: detRng(0,6.28,r*777+c*4+14) });
+            }
+          }
+        }
+      }
+
+      function draw(t) {
+        requestAnimationFrame(draw);
+        ctx.clearRect(0, 0, width, height);
+
+        for (var r = 0; r < grid.length; r++) {
+          for (var c = 0; c < grid[r].length; c++) {
+            var g = grid[r][c];
+            g.x = g.bx + g.ox;
+            g.y = g.by + g.oy;
+          }
+        }
+
+        for (var i = 0; i < triangles.length; i++) {
+          var tri = triangles[i];
+          ctx.fillStyle = 'hsl(' + tri.hue + ', ' + tri.sat + '%, ' + tri.lig + '%)';
+          ctx.beginPath();
+          ctx.moveTo(tri.pts[0].x, tri.pts[0].y);
+          ctx.lineTo(tri.pts[1].x, tri.pts[1].y);
+          ctx.lineTo(tri.pts[2].x, tri.pts[2].y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = 'hsla(0, 0%, 88%, 0.18)';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+
+      build();
+      window.addEventListener('resize', build);
+      requestAnimationFrame(draw);
+    })();
+
     new Vue({
       el: '#App',
       vuetify: new Vuetify(),
