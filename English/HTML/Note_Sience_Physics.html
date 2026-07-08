@@ -668,18 +668,31 @@
       scene.background = new THREE.Color(0x020208);
 
       const camera = new THREE.PerspectiveCamera(28, W / H, 0.1, 200);
-      camera.position.set(14, 9, 14);
-      camera.lookAt(0, -0.4, 0);
+      camera.position.set(13, 8, 13);
+      camera.lookAt(0, -0.5, 0);
 
-      const A = 2.8;
-      const sigma = 3.5;
+      // Multiple gravity wells (Sun + planets)
+      const wells = [
+        [ 0.0,  0.0, 2.8, 3.8],  // Sun
+        [ 5.5,  1.2, 0.7, 1.6],  // Jupiter
+        [-3.8,  4.8, 0.5, 1.3],  // Saturn
+        [-4.2, -4.8, 0.4, 1.1],  // Neptune
+        [ 2.6, -2.2, 0.2, 0.7],  // Earth
+      ];
 
-      function wellY(x, z) {
-        const r2 = x * x + z * z;
-        return -A * Math.exp(-r2 / (2 * sigma * sigma));
+      function totalY(x, z) {
+        let y = 0;
+        for (const [cx, cz, A, s] of wells) {
+          const dx = x - cx;
+          const dz = z - cz;
+          const r2 = dx * dx + dz * dz;
+          y -= A * Math.exp(-r2 / (2 * s * s));
+        }
+        return y;
       }
 
-      const size = 34;
+      // Grid
+      const size = 32;
       const N = 100;
       const half = size / 2;
       const step = size / N;
@@ -690,7 +703,7 @@
         const x = -half + i * step;
         for (let j = 0; j <= N; j++) {
           const z = -half + j * step;
-          pts[i][j] = [x, wellY(x, z), z];
+          pts[i][j] = [x, totalY(x, z), z];
         }
       }
 
@@ -718,21 +731,21 @@
       const grid = new THREE.LineSegments(gridGeo, gridMat);
       scene.add(grid);
 
+      // Orbit rings (barely visible, follow the curved surface)
+      const orbitRadii = [2.6, 4.2, 5.8, 7.0];
       const ringMat = new THREE.LineBasicMaterial({
         color: 0x4080c0,
         transparent: true,
-        opacity: 0.13
+        opacity: 0.06
       });
-
-      const ringRadii = [1.8, 3.2, 5.0, 7.5, 11.0];
-      const ringSegs = 72;
-      for (const r of ringRadii) {
+      const ringSegs = 80;
+      for (const r of orbitRadii) {
         const rpos = [];
         for (let k = 0; k <= ringSegs; k++) {
           const theta = (k / ringSegs) * Math.PI * 2;
           const x = r * Math.cos(theta);
           const z = r * Math.sin(theta);
-          rpos.push(x, wellY(x, z), z);
+          rpos.push(x, totalY(x, z), z);
         }
         const rgeo = new THREE.BufferGeometry();
         rgeo.setAttribute('position', new THREE.Float32BufferAttribute(rpos, 3));
@@ -740,29 +753,8 @@
         scene.add(ring);
       }
 
-      const spokeMat = new THREE.LineBasicMaterial({
-        color: 0x4080c0,
-        transparent: true,
-        opacity: 0.09
-      });
-
-      const numSpokes = 16;
-      const spokeLen = 15;
-      const spokeSteps = 80;
-      for (let k = 0; k < numSpokes; k++) {
-        const theta = (k / numSpokes) * Math.PI * 2;
-        const spos = [];
-        for (let t = 0; t <= spokeSteps; t++) {
-          const r = (t / spokeSteps) * spokeLen;
-          const x = r * Math.cos(theta);
-          const z = r * Math.sin(theta);
-          spos.push(x, wellY(x, z), z);
-        }
-        const sgeo = new THREE.BufferGeometry();
-        sgeo.setAttribute('position', new THREE.Float32BufferAttribute(spos, 3));
-        const spoke = new THREE.Line(sgeo, spokeMat);
-        scene.add(spoke);
-      }
+      // Fog: distant grid fades into the background
+      scene.fog = new THREE.Fog(0x020208, 14, 32);
 
       function resize() {
         const w = window.innerWidth, h = window.innerHeight;
