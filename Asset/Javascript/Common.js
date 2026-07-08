@@ -136,7 +136,7 @@ Vue.component('main-navigation', {
             <div style="display: flex; width: 100%; align-items: center;">
                 <span style="flex: 1;"></span>
                 <span>MENU</span>
-                <span style="flex: 1; text-align: right;">➡</span>
+                <span style="flex: 1; text-align: right; white-space: nowrap;"><v-icon small style="color: white;">mdi-chevron-right</v-icon><v-icon small style="color: white; margin-left: -10px;">mdi-chevron-right</v-icon></span>
             </div>
         </v-btn>
         <!-- ▲ Title ▲ ------------------------------------------------------------------------------------>
