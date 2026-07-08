@@ -1150,6 +1150,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>文化</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Note_Life_Society.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>社会</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
                 <v-list-group sub-group :value="false">

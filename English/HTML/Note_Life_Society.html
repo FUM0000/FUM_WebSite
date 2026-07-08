@@ -1,0 +1,401 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+    rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>社会</title>
+  <meta name="robots" content="index, follow">
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > 生活 > 社会</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height class="pa-5" style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card class="mt-6">
+                  <v-card-title class="content-text">社会</v-card-title>
+                  <v-card-text>
+                    <v-text-field v-model="searchQuery" label="植民地支配が与えた影響を検索" prepend-inner-icon="mdi-magnify"
+                      clearable outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+
+                    <v-stepper v-model="Count_Step_1">
+                      <v-stepper-header>
+                        <v-stepper-step :complete="Count_Step_1 > 1" step="1"
+                          @click="Count_Step_1 = 1">環境</v-stepper-step>
+                        <v-divider></v-divider>
+                        <v-stepper-step :complete="Count_Step_1 > 2" step="2"
+                          @click="Count_Step_1 = 2">植民地支配が与えた影響</v-stepper-step>
+                      </v-stepper-header>
+
+                      <v-stepper-items>
+                        <v-stepper-content step="1">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">環境</v-card-title>
+                              <v-treeview :items="filteredEnvironment" item-key="id" activatable open-on-click dense
+                                :open.sync="openNodesEnvironment" @update:open="updateOpenNodesEnvironment">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn color="primary" @click="Count_Step_1 = 2">次へ</v-btn>
+                          </div>
+                        </v-stepper-content>
+
+                        <v-stepper-content step="2">
+                          <v-card class="mb-12">
+                            <v-card-text>
+                              <v-card-title class="text-subtitle-2 font-weight-bold">植民地支配が与えた影響</v-card-title>
+                              <v-treeview :items="filteredSociety" item-key="id" activatable open-on-click
+                                dense :open.sync="openNodesSociety" @update:open="updateOpenNodesSociety">
+                                <template v-slot:label="{ item }">
+                                  <span :class="{ 'search-highlight': item.matches }">{{ item.name }}</span>
+                                </template>
+                              </v-treeview>
+                            </v-card-text>
+                          </v-card>
+                          <div class="button-container">
+                            <v-btn text @click="Count_Step_1 = 1">戻る</v-btn>
+                          </div>
+                        </v-stepper-content>
+                      </v-stepper-items>
+                    </v-stepper>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    var Society = [
+      {
+        name: '植民地支配が与えた影響', children: [
+          {
+            name: '支配側（宗主国）', children: [
+              {
+                name: '恩恵', children: [
+                  { name: '経済', children: [
+                    { name: '資源の安価な確保' },
+                    { name: '新たな市場の獲得' },
+                    { name: '貿易・税収の増加' },
+                    { name: '企業・金融業の発展' },
+                  ]},
+                  { name: '産業', children: [
+                    { name: '原材料の安定供給' },
+                    { name: '工業化の促進' },
+                    { name: '雇用の創出' },
+                  ]},
+                  { name: '軍事・外交', children: [
+                    { name: '軍港・補給基地の確保' },
+                    { name: '海外への軍事展開' },
+                    { name: '国際的影響力の拡大' },
+                  ]},
+                  { name: '政治', children: [
+                    { name: '帝国としての威信向上' },
+                    { name: '列強間競争での優位性' },
+                  ]},
+                ]
+              },
+              {
+                name: '害', children: [
+                  { name: '財政', children: [
+                    { name: '軍・行政維持費' },
+                    { name: 'インフラ整備費' },
+                    { name: '植民地経営の負担' },
+                  ]},
+                  { name: '戦争', children: [
+                    { name: '植民地獲得競争' },
+                    { name: '現地反乱への対応' },
+                    { name: '独立戦争' },
+                  ]},
+                  { name: '国内', children: [
+                    { name: '植民地主義批判' },
+                    { name: '歴史認識問題' },
+                    { name: '補償問題' },
+                  ]},
+                  { name: '倫理・人権', children: [
+                    { name: '強制労働' },
+                    { name: '差別政策' },
+                    { name: '国際的評価の低下' },
+                  ]},
+                ]
+              },
+            ]
+          },
+          {
+            name: '植民地側', children: [
+              {
+                name: '歴史', children: [
+                  { name: '支配開始', children: [
+                    { name: '軍事侵攻' },
+                    { name: '条約締結' },
+                    { name: '外交圧力' },
+                    { name: '武力制圧' },
+                  ]},
+                  { name: '統治', children: [
+                    { name: '行政制度' },
+                    { name: '法制度' },
+                    { name: '税制度' },
+                    { name: '警察・軍' },
+                    { name: '資源開発' },
+                  ]},
+                  { name: '社会変化', children: [
+                    { name: '教育制度' },
+                    { name: '医療制度' },
+                    { name: 'インフラ整備' },
+                    { name: '現金経済への移行' },
+                    { name: '宗教・文化の変化' },
+                  ]},
+                  { name: '独立', children: [
+                    { name: '独立運動' },
+                    { name: '第二次世界大戦後の独立' },
+                    { name: '新国家の成立' },
+                  ]},
+                ]
+              },
+              {
+                name: '恩恵', children: [
+                  { name: 'インフラ', children: [
+                    { name: '鉄道' },
+                    { name: '道路' },
+                    { name: '港湾' },
+                    { name: '橋' },
+                    { name: '上下水道' },
+                    { name: '通信網' },
+                  ]},
+                  { name: '医療', children: [
+                    { name: '病院' },
+                    { name: 'ワクチン' },
+                    { name: '衛生改善' },
+                    { name: '近代医学' },
+                  ]},
+                  { name: '教育', children: [
+                    { name: '学校制度' },
+                    { name: '識字率向上' },
+                    { name: '科学教育' },
+                    { name: '高等教育' },
+                  ]},
+                  { name: '行政・法制度', children: [
+                    { name: '行政組織' },
+                    { name: '裁判制度' },
+                    { name: '戸籍制度' },
+                    { name: '会計制度' },
+                  ]},
+                  { name: '経済', children: [
+                    { name: '港湾都市の発展' },
+                    { name: '国際貿易への参加' },
+                    { name: '一部産業の近代化' },
+                  ]},
+                  { name: '言語', children: [
+                    { name: '英語' },
+                    { name: 'フランス語' },
+                    { name: 'スペイン語' },
+                    { name: 'ポルトガル語の普及' },
+                  ]},
+                ]
+              },
+              {
+                name: '害', children: [
+                  { name: '経済', children: [
+                    { name: '資源の収奪' },
+                    { name: '利益の海外流出' },
+                    { name: '現地産業の衰退' },
+                    { name: 'モノカルチャー経済' },
+                  ]},
+                  { name: '人権', children: [
+                    { name: '強制労働' },
+                    { name: '奴隷制度（地域・時代による）' },
+                    { name: '差別' },
+                    { name: '暴力' },
+                    { name: '虐殺' },
+                  ]},
+                  { name: '政治', children: [
+                    { name: '自治権の制限' },
+                    { name: '参政権の制限' },
+                    { name: '独立運動の弾圧' },
+                  ]},
+                  { name: '社会', children: [
+                    { name: '民族対立' },
+                    { name: '恣意的な国境線' },
+                    { name: '格差拡大' },
+                  ]},
+                  { name: '文化', children: [
+                    { name: '現地言語の衰退' },
+                    { name: '伝統文化の衰退' },
+                    { name: '宗教への介入' },
+                    { name: '同化政策' },
+                  ]},
+                  { name: '経済構造', children: [
+                    { name: '宗主国への依存' },
+                    { name: '自立産業の未発達' },
+                    { name: '独立後も残る経済的不均衡' },
+                  ]},
+                ]
+              },
+            ]
+          },
+          {
+            name: '現状', children: [
+              { name: '継承されたもの', children: [
+                { name: '行政・法制度' },
+                { name: '教育制度' },
+                { name: '医療制度' },
+                { name: '鉄道・道路・港湾' },
+                { name: '公用語' },
+                { name: '国際貿易ネットワーク' },
+              ]},
+              { name: '残る課題', children: [
+                { name: '国境問題' },
+                { name: '民族・宗教対立' },
+                { name: '政治的不安定' },
+                { name: '貧困・所得格差' },
+                { name: '一次産品依存' },
+                { name: '教育・医療格差' },
+                { name: '歴史認識・補償問題' },
+              ]},
+              { name: '現在の評価', children: [
+                { name: '資源収奪・人権侵害は歴史的事実として広く認められている' },
+                { name: 'インフラ・教育・医療・行政制度は現在も利用される例がある' },
+                { name: '長期的な利益・損失の評価は地域・時代によって異なる' },
+                { name: '「全面的に善」「全面的に悪」とする単純な評価は現在の歴史学では一般的ではない' },
+              ]},
+            ]
+          },
+        ]
+      }
+    ];
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Count_Step_1: 1,
+        dialog: false,
+        searchQuery: '',
+        filteredEnvironment: [],
+        filteredSociety: [],
+        openNodesEnvironment: [],
+        openNodesSociety: [],
+        Environment: [],
+        Society: Society,
+      },
+      created() {
+        var assignIds = function(items, prefix) {
+          if (!prefix) prefix = '';
+          items.forEach(function(item, index) {
+            item.id = prefix + index;
+            if (item.children) {
+              assignIds(item.children, item.id + '-');
+            }
+          });
+        };
+        assignIds(this.Society);
+        this.filteredSociety = JSON.parse(JSON.stringify(this.Society));
+        assignIds(this.Environment);
+        this.filteredEnvironment = JSON.parse(JSON.stringify(this.Environment));
+      },
+      methods: {
+        collectAllNodeIds: function(items) {
+          var ids = [];
+          var collect = function(nodes) {
+            nodes.forEach(function(node) {
+              ids.push(node.id);
+              if (node.children) {
+                collect(node.children);
+              }
+            });
+          };
+          collect(items);
+          return ids;
+        },
+        updateOpenNodesEnvironment: function(newOpen) {
+          this.openNodesEnvironment = newOpen;
+        },
+        updateOpenNodesSociety: function(newOpen) {
+          this.openNodesSociety = newOpen;
+        },
+        filterTreeview: function() {
+          var query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
+          if (!query) {
+            this.filteredEnvironment = JSON.parse(JSON.stringify(this.Environment));
+            this.openNodesEnvironment = [];
+            this.filteredSociety = JSON.parse(JSON.stringify(this.Society));
+            this.openNodesSociety = [];
+            return;
+          }
+
+          var filterTree = function(items) {
+            return items.reduce(function(acc, item) {
+              var itemCopy = Object.assign({}, item);
+              var matches = item.name.toLowerCase().indexOf(query) !== -1;
+
+              if (item.children) {
+                itemCopy.children = filterTree(item.children);
+                if (itemCopy.children.length > 0 || matches) {
+                  itemCopy.matches = matches;
+                  acc.push(itemCopy);
+                }
+              } else if (matches) {
+                itemCopy.matches = true;
+                acc.push(itemCopy);
+              }
+              return acc;
+            }, []);
+          };
+
+          this.filteredEnvironment = filterTree(JSON.parse(JSON.stringify(this.Environment)));
+          this.filteredSociety = filterTree(JSON.parse(JSON.stringify(this.Society)));
+
+          this.openNodesEnvironment = this.collectAllNodeIds(this.filteredEnvironment);
+          this.openNodesSociety = this.collectAllNodeIds(this.filteredSociety);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
