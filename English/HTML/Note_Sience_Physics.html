@@ -30,18 +30,16 @@
   <title>物理</title>
 
   <style>
-    html { background: #020208 !important; }
-    body { background: #020208 !important; min-height: 100vh; }
-    .v-application { background: transparent !important; }
 
-    #App { background: transparent !important; }
-
-    #Main {
-      background: transparent !important;
-    }
-
-    .v-main__wrap {
-      background: transparent !important;
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 0;
+      pointer-events: none;
     }
 
     .v-card {
@@ -107,11 +105,22 @@
       background: rgba(80, 120, 255, 0.2) !important;
       border-color: rgba(80, 120, 255, 0.4) !important;
     }
+
+    .v-application,
+    .v-application--wrap,
+    .v-main,
+    .v-main__wrap,
+    .container,
+    .container.fill-height {
+      background: transparent !important;
+    }
+    #App { position: relative; z-index: 1; }
   </style>
     <meta name="robots" content="index, follow">
 </head>
 
 <body>
+  <canvas id="bg-canvas"></canvas>
   <v-app id="App" v-cloak>
     <template>
       <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > サイエンス > 物理</main-system-bar>
@@ -639,6 +648,133 @@
       });
       resizeObserver.observe(container);
     };
+  </script>
+
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+
+    (function() {
+      const canvas = document.getElementById('bg-canvas');
+      if (!canvas) return;
+
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x020208);
+
+      const camera = new THREE.PerspectiveCamera(28, W / H, 0.1, 200);
+      camera.position.set(14, 9, 14);
+      camera.lookAt(0, -0.4, 0);
+
+      const A = 2.8;
+      const sigma = 3.5;
+
+      function wellY(x, z) {
+        const r2 = x * x + z * z;
+        return -A * Math.exp(-r2 / (2 * sigma * sigma));
+      }
+
+      const size = 34;
+      const N = 100;
+      const half = size / 2;
+      const step = size / N;
+
+      const pts = [];
+      for (let i = 0; i <= N; i++) {
+        pts[i] = [];
+        const x = -half + i * step;
+        for (let j = 0; j <= N; j++) {
+          const z = -half + j * step;
+          pts[i][j] = [x, wellY(x, z), z];
+        }
+      }
+
+      const pos = [];
+      for (let j = 0; j <= N; j++) {
+        for (let i = 0; i < N; i++) {
+          const a = pts[i][j], b = pts[i + 1][j];
+          pos.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+        }
+      }
+      for (let i = 0; i <= N; i++) {
+        for (let j = 0; j < N; j++) {
+          const a = pts[i][j], b = pts[i][j + 1];
+          pos.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+        }
+      }
+
+      const gridGeo = new THREE.BufferGeometry();
+      gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      const gridMat = new THREE.LineBasicMaterial({
+        color: 0x4080c0,
+        transparent: true,
+        opacity: 0.22
+      });
+      const grid = new THREE.LineSegments(gridGeo, gridMat);
+      scene.add(grid);
+
+      const ringMat = new THREE.LineBasicMaterial({
+        color: 0x4080c0,
+        transparent: true,
+        opacity: 0.13
+      });
+
+      const ringRadii = [1.8, 3.2, 5.0, 7.5, 11.0];
+      const ringSegs = 72;
+      for (const r of ringRadii) {
+        const rpos = [];
+        for (let k = 0; k <= ringSegs; k++) {
+          const theta = (k / ringSegs) * Math.PI * 2;
+          const x = r * Math.cos(theta);
+          const z = r * Math.sin(theta);
+          rpos.push(x, wellY(x, z), z);
+        }
+        const rgeo = new THREE.BufferGeometry();
+        rgeo.setAttribute('position', new THREE.Float32BufferAttribute(rpos, 3));
+        const ring = new THREE.Line(rgeo, ringMat);
+        scene.add(ring);
+      }
+
+      const spokeMat = new THREE.LineBasicMaterial({
+        color: 0x4080c0,
+        transparent: true,
+        opacity: 0.09
+      });
+
+      const numSpokes = 16;
+      const spokeLen = 15;
+      const spokeSteps = 80;
+      for (let k = 0; k < numSpokes; k++) {
+        const theta = (k / numSpokes) * Math.PI * 2;
+        const spos = [];
+        for (let t = 0; t <= spokeSteps; t++) {
+          const r = (t / spokeSteps) * spokeLen;
+          const x = r * Math.cos(theta);
+          const z = r * Math.sin(theta);
+          spos.push(x, wellY(x, z), z);
+        }
+        const sgeo = new THREE.BufferGeometry();
+        sgeo.setAttribute('position', new THREE.Float32BufferAttribute(spos, 3));
+        const spoke = new THREE.Line(sgeo, spokeMat);
+        scene.add(spoke);
+      }
+
+      function resize() {
+        const w = window.innerWidth, h = window.innerHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+        renderer.render(scene, camera);
+      }
+      window.addEventListener('resize', resize);
+
+      renderer.render(scene, camera);
+    })();
   </script>
 </body>
 

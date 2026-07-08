@@ -1467,15 +1467,16 @@ window.Mixins_Common = {
                     const settings = JSON.parse(saved);
                     if (settings.mainColor) {
                         // カスタム背景を持つページでは共通背景色の上書きを行わない
-                        const hasCustomBackground =
-                            !!document.querySelector('#ElectronShell, #interactive-ring, #matrix-rain, #CurlNoiseBg');
+                        // #App に z-index が設定されている場合( position: relative; z-index: 1 等)、
+                        // そのページは独自背景レイヤーを持つとみなす
+                        const app = document.querySelector('#App');
+                        const hasCustomBackground = app &&
+                            window.getComputedStyle(app).getPropertyValue('z-index') !== 'auto';
 
                         if (!hasCustomBackground) {
-                            // htmlの背景色を設定
                             document.documentElement.style.backgroundColor = settings.mainColor;
                         }
 
-                        // Vuetifyのv-applicationにも適用（カスタム背景ページは除く）
                         const vApp = document.querySelector('.v-application');
                         if (vApp && !hasCustomBackground) {
                             vApp.style.setProperty('background-color', settings.mainColor, 'important');
