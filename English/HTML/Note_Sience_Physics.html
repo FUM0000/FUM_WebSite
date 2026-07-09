@@ -668,16 +668,16 @@
       scene.background = new THREE.Color(0x020208);
 
       const camera = new THREE.PerspectiveCamera(28, W / H, 0.1, 200);
-      camera.position.set(13, 8, 13);
-      camera.lookAt(0, -0.5, 0);
+      camera.position.set(12, 7, 12);
+      camera.lookAt(0, -0.6, 0);
 
-      // Multiple gravity wells (Sun + planets)
+      // Multiple gravity wells (Sun + planets) — deeper for clarity
       const wells = [
-        [ 0.0,  0.0, 2.8, 3.8],  // Sun
-        [ 5.5,  1.2, 0.7, 1.6],  // Jupiter
-        [-3.8,  4.8, 0.5, 1.3],  // Saturn
-        [-4.2, -4.8, 0.4, 1.1],  // Neptune
-        [ 2.6, -2.2, 0.2, 0.7],  // Earth
+        [ 0.0,  0.0, 3.8, 3.5],  // Sun
+        [ 5.5,  1.2, 1.0, 1.4],  // Jupiter
+        [-3.8,  4.8, 0.7, 1.2],  // Saturn
+        [-4.2, -4.8, 0.55, 1.0], // Neptune
+        [ 2.6, -2.2, 0.3, 0.6],  // Earth
       ];
 
       function totalY(x, z) {
@@ -726,10 +726,34 @@
       const gridMat = new THREE.LineBasicMaterial({
         color: 0x4080c0,
         transparent: true,
-        opacity: 0.22
+        opacity: 0.26
       });
       const grid = new THREE.LineSegments(gridGeo, gridMat);
       scene.add(grid);
+
+      // Subtle lighting for spheres
+      const ambient = new THREE.AmbientLight(0x203060, 0.25);
+      scene.add(ambient);
+      const dirLight = new THREE.DirectionalLight(0x8090c0, 0.35);
+      dirLight.position.set(8, 12, 6);
+      scene.add(dirLight);
+      const fillLight = new THREE.DirectionalLight(0x405080, 0.12);
+      fillLight.position.set(-6, 4, -8);
+      scene.add(fillLight);
+
+      // Deep indigo-black spheres at well bottoms
+      const sphereMat = new THREE.MeshStandardMaterial({
+        color: 0x06081a,
+        roughness: 0.4,
+        metalness: 0.15
+      });
+
+      for (const [cx, cz, A, s] of wells) {
+        const r = Math.max(0.12, A * 0.18);
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 20), sphereMat);
+        sphere.position.set(cx, totalY(cx, cz) + r, cz);
+        scene.add(sphere);
+      }
 
       // Orbit rings (barely visible, follow the curved surface)
       const orbitRadii = [2.6, 4.2, 5.8, 7.0];
