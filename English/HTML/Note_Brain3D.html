@@ -532,6 +532,19 @@
         let childrenMap = new Map();
         let occupiedByDepth = new Map();
 
+        function collapseAllItems(item) {
+            collapsedState.set(item, true);
+            if (item.children) { for (const child of item.children) collapseAllItems(child); }
+        }
+        function expandAllItems(item) {
+            collapsedState.set(item, false);
+            if (item.children) { for (const child of item.children) expandAllItems(child); }
+        }
+        function expandOneLevelItems(item) {
+            collapsedState.set(item, false);
+            if (item.children) { for (const child of item.children) collapsedState.set(child, true); }
+        }
+
         function computeMinAngle(depth) {
             return Math.max(0.22, 0.95 - depth * 0.1);
         }
@@ -563,6 +576,34 @@
                 }
                 camera.position.copy(controls.target).add(dir.multiplyScalar(targetDistance));
             }
+        }
+
+        function fitCameraToVisibleNodes() {
+            const origin = new THREE.Vector3(0, 0, 0);
+
+            let maxRadius = 0;
+            for (const e of allEntries) {
+                if (isItemVisible(e.item)) {
+                    const d = e.position.distanceTo(origin);
+                    if (d > maxRadius) maxRadius = d;
+                }
+            }
+            maxRadius = Math.max(maxRadius, 5);
+
+            const fov = camera.fov * (Math.PI / 180);
+            const distance = (maxRadius / Math.sin(fov / 2)) * 1.15;
+
+            const dir = camera.position.clone().sub(controls.target);
+            if (dir.lengthSq() < 0.000001) {
+                dir.set(0.6, 0.35, 0.6).normalize();
+            } else {
+                dir.normalize();
+            }
+
+            controls.target.copy(origin);
+            camera.position.copy(origin).add(dir.multiplyScalar(distance));
+            controls.maxDistance = Math.max(600, distance * 3);
+            controls.minDistance = Math.min(12, distance * 0.15);
         }
 
         function layoutItems(items, parentPos, depth, maxDepth, parentColor, parentItem) {
@@ -1086,19 +1127,6 @@
                 }
             };
 
-            function collapseAll(item) {
-                collapsedState.set(item, true);
-                if (item.children) { for (const child of item.children) collapseAll(child); }
-            }
-            function expandAll(item) {
-                collapsedState.set(item, false);
-                if (item.children) { for (const child of item.children) expandAll(child); }
-            }
-            function expandOneLevel(item) {
-                collapsedState.set(item, false);
-                if (item.children) { for (const child of item.children) collapsedState.set(child, true); }
-            }
-
             window._brainDownHandler = (e) => {
                 _clickPos.x = e.clientX;
                 _clickPos.y = e.clientY;
@@ -1126,9 +1154,10 @@
                 if (item && item.children && item.children.length > 0) {
                     const isCollapsed = collapsedState.get(item) || false;
                     if (isCollapsed) {
-                        if (config.expandAll) { expandAll(item); } else { expandOneLevel(item); }
-                    } else { collapseAll(item); }
+                        if (config.expandAll) { expandAllItems(item); } else { expandOneLevelItems(item); }
+                    } else { collapseAllItems(item); }
                     applyVisibility();
+                    fitCameraToVisibleNodes();
                 }
             };
 
