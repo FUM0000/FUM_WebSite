@@ -659,25 +659,49 @@
                         if (this.hobbyExpanded) {
                             var self = this;
                             this.hobbyContentVisible = false;
-                            this.stopHobbyPhysics();
                             setTimeout(function () {
+                                self.stopHobbyPhysics();
                                 self.hobbyExpanded = false;
-                            }, 300);
+                            }, 350);
                             return;
                         } else {
                             this.hobbyExpanded = true;
                             var self = this;
-                            this.$nextTick(function () {
-                                var el = self.$el.querySelector('.hobby-card .v-card__text');
-                                if (el) {
-                                    var speed = 600;
-                                    var ms = Math.round((el.scrollHeight / speed) * 1000);
-                                    setTimeout(function () {
-                                        self.hobbyContentVisible = true;
-                                        self.$nextTick(self.initHobbyPhysics);
-                                    }, ms);
+                            var btn = event && event.currentTarget;
+                            if (btn) {
+                                var cardEl = btn.closest('.v-card');
+                                if (cardEl) {
+                                    var sysBar = document.querySelector('main-system-bar');
+                                    var offset = sysBar ? 56 : 70;
+                                    this.$nextTick(function () {
+                                        var el = self.$el.querySelector('.hobby-card .v-card__text');
+                                        var speed = 600;
+                                        var expandMs = el ? Math.round((el.scrollHeight / speed) * 1000) : 0;
+                                        setTimeout(function () {
+                                            var rect = cardEl.getBoundingClientRect();
+                                            var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                                            var targetY = Math.max(0, scrollTop + rect.top - offset);
+                                            var startY = scrollTop;
+                                            var diff = targetY - startY;
+                                            var duration = 1000;
+                                            var startTime = null;
+                                            function ease(t) { return 1 - Math.pow(1 - t, 3); }
+                                            function animate(time) {
+                                                if (!startTime) startTime = time;
+                                                var elapsed = time - startTime;
+                                                var p = Math.min(1, elapsed / duration);
+                                                window.scrollTo(0, startY + diff * ease(p));
+                                                if (p < 1) requestAnimationFrame(animate);
+                                            }
+                                            requestAnimationFrame(animate);
+                                        }, expandMs);
+                                        setTimeout(function () {
+                                            self.hobbyContentVisible = true;
+                                            self.$nextTick(self.initHobbyPhysics);
+                                        }, expandMs);
+                                    });
                                 }
-                            });
+                            }
                         }
                     } else {
                         this[card + 'Expanded'] = !this[card + 'Expanded'];
