@@ -657,21 +657,6 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Japanese Culture</v-list-item-title>
                 </template>
 
-                <!-- ▼ Season ▼ ------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Season</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-cloud-outline</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_Season_Tsuyu.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Tsuyu</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Season ▲ ------------------------------------------------------------------------------->
-
                 <!-- ▼ Shop ▼ --------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
@@ -679,32 +664,17 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-store</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Japan_Japanese_Shop_List.html">
+                    <v-list-item href="./Japan_Shop_List.html">
                         <v-list-item-icon />
                         <v-list-item-title>Overview</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Japan_Japanese_Shop_Daiso.html">
+                    <v-list-item href="./Japan_Shop_Daiso.html">
                         <v-list-item-icon />
                         <v-list-item-title>DAISO</v-list-item-title>
                     </v-list-item>
 
                 </v-list-group sub-group>
                 <!-- ▲ Shop ▲ --------------------------------------------------------------------------------->
-
-                <!-- ▼ Traffic ▼ ------------------------------------------------------------------------------>
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Traffic</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-plane-train</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_Travel.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Travel</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Traffic ▲ ------------------------------------------------------------------------------>
 
                 <!-- ▼ Food ▼ --------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
@@ -732,6 +702,51 @@ Vue.component('main-navigation', {
 
                 </v-list-group sub-group>
                 <!-- ▲ Food ▲ --------------------------------------------------------------------------------->
+
+                <!-- ▼ Festival ▼ ----------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Festival</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-fire</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Japan_Festival_Firework.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Firework</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Festival ▲ ----------------------------------------------------------------------------->
+
+                <!-- ▼ Season ▼ ------------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Season</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-cloud-outline</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Japan_Season_Tsuyu.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Tsuyu</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Season ▲ ------------------------------------------------------------------------------->
+
+                <!-- ▼ Traffic ▼ ------------------------------------------------------------------------------>
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Traffic</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-plane-train</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Japan_Travel.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Travel</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Traffic ▲ ------------------------------------------------------------------------------>
 
                 <v-list-item href="./Japan_Statistics.html">
                     <v-list-item-icon />
