@@ -83,6 +83,32 @@
                 <div class="menu-guide-ring menu-guide-ring-inner"></div>
             </div>
 
+            <!-- LOG Panel -->
+            <div id="log-panel" :class="{ 'is-open': LogOpen }">
+                <div class="log-frame">
+                    <div class="log-corner log-corner-tl"></div>
+                    <div class="log-corner log-corner-tr"></div>
+                    <div class="log-corner log-corner-bl"></div>
+                    <div class="log-corner log-corner-br"></div>
+                    <div class="log-scanline"></div>
+                    <div class="log-header" @click="LogOpen = !LogOpen">
+                        <span class="log-title">LOG</span>
+                        <span class="log-chevron" :class="{ 'open': LogOpen }">&#9662;</span>
+                    </div>
+                    <div class="log-body">
+                        <div class="log-entry" v-for="(entry, i) in LogEntries" :key="i">
+                            <div class="log-date">{{ entry.date }}</div>
+                            <div class="log-items">
+                                <div class="log-row" v-for="(item, j) in entry.items" :key="j">
+                                    <span class="log-page">{{ item.page }}</span>
+                                    <span class="log-desc">{{ item.desc }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 吹き出し -->
             <div :class="['speech-bubble', { 'show': ShowMessage }]" :style="MessageStyle">
                 {{ CurrentMessage }}
@@ -522,6 +548,168 @@
             100% { filter: none; }
         }
 
+        /* ── LOG Panel ── */
+        #log-panel {
+            position: fixed;
+            bottom: 56px;
+            left: 20px;
+            z-index: 10;
+            pointer-events: auto;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .log-frame {
+            position: relative;
+            border: 1px solid rgba(0, 255, 204, 0.5);
+            background: rgba(2, 4, 12, 0.82);
+            backdrop-filter: blur(6px);
+            min-width: 280px;
+            max-width: 360px;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.4s ease;
+        }
+
+        .log-frame::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(0, 255, 204, 0.08);
+            margin: 3px;
+            pointer-events: none;
+        }
+
+        /* Corner decorations */
+        .log-corner {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            pointer-events: none;
+        }
+        .log-corner-tl { top: -1px; left: -1px; border-top: 2px solid #00ffcc; border-left: 2px solid #00ffcc; }
+        .log-corner-tr { top: -1px; right: -1px; border-top: 2px solid #00ffcc; border-right: 2px solid #00ffcc; }
+        .log-corner-bl { bottom: -1px; left: -1px; border-bottom: 2px solid #00ffcc; border-left: 2px solid #00ffcc; }
+        .log-corner-br { bottom: -1px; right: -1px; border-bottom: 2px solid #00ffcc; border-right: 2px solid #00ffcc; }
+
+        /* Scan line overlay */
+        .log-scanline {
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 255, 204, 0.015) 2px,
+                rgba(0, 255, 204, 0.015) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0, 255, 204, 0.25);
+            user-select: none;
+            position: relative;
+            z-index: 2;
+        }
+
+        .log-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #00ffcc;
+            text-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
+        }
+
+        .log-chevron {
+            font-size: 12px;
+            color: #00ffcc;
+            transition: transform 0.3s ease;
+            transform: rotate(0deg);
+        }
+
+        .log-chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .log-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .log-frame .log-body {
+            padding: 0 14px;
+        }
+
+        #log-panel.is-open .log-body {
+            max-height: 240px;
+            padding: 8px 14px 12px;
+            overflow-y: auto;
+        }
+
+        #log-panel.is-open .log-body::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        #log-panel.is-open .log-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #log-panel.is-open .log-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 204, 0.3);
+            border-radius: 2px;
+        }
+
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 255, 204, 0.1);
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-date {
+            font-size: 10px;
+            color: #00ffcc;
+            letter-spacing: 1px;
+            margin-bottom: 3px;
+            background: rgba(0, 255, 204, 0.08);
+            padding: 2px 6px;
+            display: inline-block;
+        }
+
+        .log-items {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .log-row {
+            display: flex;
+            gap: 8px;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+        .log-page {
+            color: #00ffcc;
+            font-weight: 700;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+
+        .log-desc {
+            color: rgba(255, 255, 255, 0.65);
+        }
+
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -550,9 +738,17 @@
             data: {
                 ShowMessage: false,
                 CurrentMessage: '',
-                MessageStyle: { top: '0px', left: '0px' }
+                MessageStyle: { top: '0px', left: '0px' },
+                LogOpen: false,
+                LogEntries: []
             },
         })
+
+        fetch('../../Asset/Data/Log.json')
+            .then(r => r.json())
+            .then(data => { window.vue.LogEntries = data; })
+            .catch(() => {});
+
         window.addEventListener('load', () => {
             const overlay = document.getElementById('loading-overlay');
             const loadingRing = document.getElementById('loadingRing');
