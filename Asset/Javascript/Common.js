@@ -1407,7 +1407,7 @@ Vue.component('card-explanation-image', {
             <v-btn color="primary" block outlined @click="Show_Explanation = true">Explanation</v-btn>
         </v-card-actions>
 
-        <v-card-actions v-if="recommend" style="flex: 0 1 auto;">
+        <v-card-actions v-if="recommend" style="margin-top: auto; flex: 0 1 auto;">
           <v-btn color="primary" block outlined @click="Toggle_Recommend">
             {{ Show_Recommend ? 'Image' : 'Recommend' }}
           </v-btn>
