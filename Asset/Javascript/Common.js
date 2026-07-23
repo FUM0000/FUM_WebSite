@@ -1395,7 +1395,7 @@ Vue.component('card-explanation-image', {
             </transition>
         </v-img>
 
-        <v-card-title class="text-h5 font-weight-medium" style="flex: 0 1 auto;">
+        <v-card-title class="text-subtitle-1 font-weight-medium" style="flex: 0 1 auto; height: 3.8rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-break: break-word; padding: 8px 16px;">
             {{ title }}
         </v-card-title>
 
