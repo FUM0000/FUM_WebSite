@@ -707,7 +707,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Festival</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-fire</v-icon></v-list-item-icon>
+                        <v-list-item-icon><v-icon>mdi-balloon</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Japan_Festival_Firework.html">
