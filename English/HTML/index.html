@@ -1863,7 +1863,7 @@ const animateGalaxy = () => {
         controls.enablePan = false;
         controls.maxPolarAngle = Math.PI - 0.1;
         controls.minPolarAngle = 0.1;
-        camera.position.copy(new THREE.Vector3(0, 1, 0).multiplyScalar(10000));
+        camera.position.copy(new THREE.Vector3(0, 1, 0).multiplyScalar(2000));
         camera.lookAt(new THREE.Vector3(0, 0, 0));
         function easeInOutCubic(t) {
             return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -2229,6 +2229,7 @@ const animateGalaxy = () => {
 
         // カメラアニメーション
         let Flag_CameraAnimation = true;
+        let cameraFreeze = true;
         let Time_CameraAnimation_Start = null;
         let Position_Trun_Start = null;
         let Elapsed;
@@ -2954,7 +2955,17 @@ const animateGalaxy = () => {
                     Time_CameraAnimation_Start = currentTime;
                     Position_Trun_Start = camera.position.clone();
                 }
-                Elapsed = currentTime - Time_CameraAnimation_Start;
+
+                if (cameraFreeze) {
+                    Elapsed = 0;
+                    if (currentTime - Time_CameraAnimation_Start >= 1000) {
+                        cameraFreeze = false;
+                        Time_CameraAnimation_Start = currentTime;
+                    }
+                } else {
+                    Elapsed = currentTime - Time_CameraAnimation_Start;
+                }
+
                 if (Elapsed < DURATION_ALL) {
                     Calculate_Radius();
                     Calculate_Theta();
