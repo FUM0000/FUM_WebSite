@@ -287,6 +287,21 @@
             }
         }
 
+        @keyframes blink-greeting {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 10px rgba(120, 200, 255, 0.3);
+            }
+            50% {
+                opacity: 0.25;
+                box-shadow: 0 0 30px rgba(120, 200, 255, 0.8), 0 0 60px rgba(120, 200, 255, 0.4);
+            }
+        }
+
+        .theme-bubble.blink-greeting {
+            animation: blink-greeting 1s ease-in-out infinite;
+        }
+
         @keyframes emojiBounce {
             0%, 100% {
                 transform: scale(1) translateY(0) rotate(0deg);
@@ -426,7 +441,7 @@
                         <div id="interactive-space">
                             <div class="intro-message">Thanks for Coming!</div>
                             <div v-for="bubble in bubbles" :key="bubble.theme" class="theme-bubble"
-                                :class="{ 'is-dragging': bubble.isDragging }" :style="bubble.style"
+                                :class="{ 'is-dragging': bubble.isDragging, 'blink-greeting': bubble.theme === 'Greeting' && !greetingClicked }" :style="bubble.style"
                                 @click="handleBubbleClick(bubble)" @mousedown.prevent="dragStart(bubble, $event)"
                                 @touchstart.prevent="dragStart(bubble, $event)">
                                 {{ bubble.theme }}
@@ -607,6 +622,7 @@
                 draggedBubble: null,
                 dragInfo: { lastX: 0, lastY: 0, startX: 0, startY: 0, lastTime: 0, vx: 0, vy: 0, moveEvent: null, upEvent: null },
                 didDrag: false,
+                greetingClicked: false,
 
                 chat: {
                     visible: false,
@@ -712,10 +728,10 @@
                 },
                 dragStart(bubble, event) { if (this.modal.visible) return; this.didDrag = false; this.draggedBubble = bubble; const isTouchEvent = event.type === 'touchstart'; const moveEvent = isTouchEvent ? 'touchmove' : 'mousemove'; const upEvent = isTouchEvent ? 'touchend' : 'mouseup'; this.dragInfo.moveEvent = moveEvent; this.dragInfo.upEvent = upEvent; bubble.isDragging = true; const point = isTouchEvent ? event.touches[0] : event; const rect = event.target.closest('#interactive-space').getBoundingClientRect(); this.dragInfo.lastX = point.clientX - rect.left; this.dragInfo.lastY = point.clientY - rect.top; this.dragInfo.startX = this.dragInfo.lastX; this.dragInfo.startY = this.dragInfo.lastY; this.dragInfo.lastTime = Date.now(); this.dragInfo.vx = 0; this.dragInfo.vy = 0; bubble.vx = 0; bubble.vy = 0; window.addEventListener(moveEvent, this.dragMove, { passive: false }); window.addEventListener(upEvent, this.dragEnd, { once: true }); },
                 dragMove(event) { if (event.cancelable) event.preventDefault(); if (!this.draggedBubble) return; const point = event.touches ? event.touches[0] : event; const rect = document.getElementById('interactive-space').getBoundingClientRect(); const newX = point.clientX - rect.left; const newY = point.clientY - rect.top; const dxFromStart = newX - this.dragInfo.startX; const dyFromStart = newY - this.dragInfo.startY; if (!this.didDrag && ((dxFromStart * dxFromStart) + (dyFromStart * dyFromStart)) < 64) return; this.didDrag = true; const now = Date.now(); const dt = now - this.dragInfo.lastTime; if (dt > 1) { this.dragInfo.vx = this.dragInfo.vx * 0.7 + ((newX - this.draggedBubble.x) / dt) * 0.3; this.dragInfo.vy = this.dragInfo.vy * 0.7 + ((newY - this.draggedBubble.y) / dt) * 0.3; this.dragInfo.lastTime = now; } const half = this.draggedBubble.size / 2; this.draggedBubble.x = Math.max(half, Math.min(rect.width - half, newX)); this.draggedBubble.y = Math.max(half, Math.min(rect.height - half, newY)); },
-                dragEnd() { if (!this.draggedBubble) return; window.removeEventListener(this.dragInfo.moveEvent, this.dragMove); if (!this.didDrag) { this.openModal(this.draggedBubble.theme); this.didDrag = true; } else { this.draggedBubble.vx = this.dragInfo.vx * 20; this.draggedBubble.vy = this.dragInfo.vy * 20; } this.draggedBubble.isDragging = false; this.draggedBubble = null; setTimeout(() => { this.didDrag = false; }, 50); },
-                handleBubbleClick(bubble) { if (!this.didDrag) { this.openModal(bubble.theme); } },
+                dragEnd() { if (!this.draggedBubble) return; window.removeEventListener(this.dragInfo.moveEvent, this.dragMove); if (!this.didDrag) { if (this.draggedBubble.theme === 'Greeting') this.greetingClicked = true; this.openModal(this.draggedBubble.theme); this.didDrag = true; } else { this.draggedBubble.vx = this.dragInfo.vx * 20; this.draggedBubble.vy = this.dragInfo.vy * 20; } this.draggedBubble.isDragging = false; this.draggedBubble = null; setTimeout(() => { this.didDrag = false; }, 50); },
+                handleBubbleClick(bubble) { if (!this.didDrag) { if (bubble.theme === 'Greeting') this.greetingClicked = true; this.openModal(bubble.theme); } },
                 resolveCollision(b1, b2, dx, dy, dist, minDist) { if (dist < 0.001) { const angle = Math.random() * 2 * Math.PI; const push = minDist * 0.5; b1.x += Math.cos(angle) * push; b1.y += Math.sin(angle) * push; b2.x -= Math.cos(angle) * push; b2.y -= Math.sin(angle) * push; return; } const overlap = (minDist - dist) * 0.5; const nx = dx / dist; const ny = dy / dist; b1.x -= nx * overlap; b1.y -= ny * overlap; b2.x += nx * overlap; b2.y += ny * overlap; const v1n = b1.vx * nx + b1.vy * ny; const v1t = b1.vy * nx - b1.vx * ny; const v2n = b2.vx * nx + b2.vy * ny; const v2t = b2.vy * nx - b2.vx * ny; b1.vx = v2n * nx - v1t * ny; b1.vy = v2n * ny + v1t * nx; b2.vx = v1n * nx - v2t * ny; b2.vy = v1n * ny + v2t * nx; },
-                openModal(theme) { this.modal.visible = true; this.modal.theme = theme; this.modal.pageIndex = 0; this.updateModalContent(); },
+                openModal(theme) { if (theme === 'Greeting') this.greetingClicked = true; this.modal.visible = true; this.modal.theme = theme; this.modal.pageIndex = 0; this.updateModalContent(); },
                 closeModal() { this.modal.visible = false; clearTimeout(this.typewriterTimer); },
                 changeModalPage(direction) { const newIndex = this.modal.pageIndex + direction; const contents = this.ThemeContents[this.modal.theme]; if (newIndex >= 0 && newIndex < contents.length) { this.modal.pageIndex = newIndex; this.updateModalContent(); } },
                 updateModalContent() { clearTimeout(this.typewriterTimer); const text = this.ThemeContents[this.modal.theme][this.modal.pageIndex]; this.startTypewriter(text); },
