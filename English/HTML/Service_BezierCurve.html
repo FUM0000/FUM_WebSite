@@ -26,6 +26,14 @@
 
   <title>Bezier Curve</title>
     <meta name="robots" content="index, follow">
+  <style>
+    canvas#curveCanvas {
+      max-width: 100%;
+      height: auto !important;
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
 </head>
 
 <body>
@@ -128,14 +136,24 @@
         copyButtonText: 'Copy',
       },
       watch: {
+        Ready_Page(val) {
+          if (val) {
+            this.$nextTick(() => {
+              this.resizeCanvas();
+            });
+          }
+        },
         points: {
           deep: true,
           handler: 'updateCurve'
         }
       },
       mounted() {
-        this.updateCurve();
+        window.addEventListener('resize', this.resizeCanvas);
         this.initCanvasEvents();
+      },
+      beforeDestroy() {
+        window.removeEventListener('resize', this.resizeCanvas);
       },
       methods: {
         drawCurve() {
@@ -269,6 +287,19 @@
           setTimeout(() => {
             this.copyButtonText = 'Copy';
           }, 2000);
+        },
+        resizeCanvas() {
+          const canvas = document.getElementById('curveCanvas');
+          if (!canvas) return;
+          const parent = canvas.parentElement;
+          if (!parent) return;
+          const width = Math.min(parent.clientWidth, 400);
+          const height = width / 2;
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+            this.updateCurve();
+          }
         },
         initCanvasEvents() {
           const canvas = document.getElementById('curveCanvas');
