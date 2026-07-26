@@ -352,7 +352,7 @@
 
                     if (Math.abs(this.mesh.position.y - targetY) < 0.01) {
                         this.mesh.position.y = targetY;
-                        player.Position.y = targetFloor * this.floorHeight + 1.74 - 0.08;
+                        player.Position.y = targetFloor * this.floorHeight + (isCrouched ? 0.6 : (1.74 - 0.08));
                         this.currentFloor = targetFloor;
                         this.isMoving = false;
                         player.Control_Enable = true;
@@ -558,7 +558,7 @@
 
                 Camera.Initialize();
                 Camera.Target = Player;
-                Player.Position = new THREE.Vector3(0, 1.74, 4);
+                Player.Position = new THREE.Vector3(0, isCrouched ? 0.5 : (1.74 - 0.08), 4);
                 Camera._Yaw = 0;
                 Camera._Pitch = 0.22;
                 Camera._Forward = new THREE.Vector3(0, 0, 1);
@@ -1106,6 +1106,20 @@
         const Cat = new C_Cat();
         const Player = new FC_Player_Controller(Scene);
         let PressedButtonType = null;
+        let isCrouched = false;
+
+        document.addEventListener('keyup', (event) => {
+            if (event.key === 'Control' || event.code === 'ControlLeft' || event.code === 'ControlRight') {
+                isCrouched = !isCrouched;
+                const defaultHeight = 1.74 - 0.08;
+                const crouchedHeight = 0.5; // しゃがみ時（かなり低め）
+                Player.Position = new THREE.Vector3(
+                    Player.Position.x,
+                    isCrouched ? crouchedHeight : defaultHeight,
+                    Player.Position.z
+                );
+            }
+        });
 
         Manager.Initialize();
         Manager.Update();
