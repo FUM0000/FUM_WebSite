@@ -352,7 +352,8 @@
 
                     if (Math.abs(this.mesh.position.y - targetY) < 0.01) {
                         this.mesh.position.y = targetY;
-                        player.Position.y = targetFloor * this.floorHeight + (isCrouched ? 0.6 : (1.74 - 0.08));
+                        const floorBaseY = targetFloor * this.floorHeight;
+                        player.Position.y = floorBaseY + (isCrouched ? 0.5 : (1.74 - 0.08));
                         this.currentFloor = targetFloor;
                         this.isMoving = false;
                         player.Control_Enable = true;
@@ -383,7 +384,7 @@
             _Flag_Loaded = false;
             _State = "Walking"; // "Walking", "Running", "Sitting"
             _TargetPosition = new THREE.Vector3();
-            _MoveSpeed = 0.4;
+            _MoveSpeed = 0.1;
             _RunSpeed = 2.0;
 
             get Flag_Loaded() { return this._Flag_Loaded; }
@@ -486,7 +487,7 @@
                     }
                 }
 
-                this._AnimationControler.update(0.005);
+                this._AnimationControler.update(0.0025);
             }
         }
 
@@ -786,6 +787,15 @@
                 }
                 this.updateFrameVisibilityByPlayerFloor();
                 this.resolvePlayerCollision(Player);
+
+                // Smoothly interpolate player Y position for crouching / standing
+                const floorBaseY = playerFloor * 5;
+                const defaultHeight = floorBaseY + (this._Frame_BaseY);
+                const crouchedHeight = floorBaseY + 0.5;
+                const desiredY = isCrouched ? crouchedHeight : defaultHeight;
+                if (!this._Elevator.isMoving) {
+                    Player.Position.y += (desiredY - Player.Position.y) * 10 * FC_Environment.TIME_DELTA;
+                }
             }
             buildCollisionBoxes() {
                 this._CollisionBoxes = [];
@@ -1107,17 +1117,15 @@
         const Player = new FC_Player_Controller(Scene);
         let PressedButtonType = null;
         let isCrouched = false;
+        let targetPlayerY = 1.74 - 0.08;
 
         document.addEventListener('keyup', (event) => {
             if (event.key === 'Control' || event.code === 'ControlLeft' || event.code === 'ControlRight') {
                 isCrouched = !isCrouched;
-                const defaultHeight = 1.74 - 0.08;
-                const crouchedHeight = 0.5; // しゃがみ時（かなり低め）
-                Player.Position = new THREE.Vector3(
-                    Player.Position.x,
-                    isCrouched ? crouchedHeight : defaultHeight,
-                    Player.Position.z
-                );
+                const floorBaseY = Manager ? Manager.getFloorIndexFromY(Player.Position.y) * 5 : 0;
+                const defaultHeight = floorBaseY + (1.74 - 0.08);
+                const crouchedHeight = floorBaseY + 0.5;
+                targetPlayerY = isCrouched ? crouchedHeight : defaultHeight;
             }
         });
 
