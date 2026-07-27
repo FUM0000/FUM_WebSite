@@ -427,6 +427,29 @@
                         this._Object = _model;
                         Scene.add(this._Object);
 
+                        // Create debug rings at floor level (y = 0 relative to player or floor base)
+                        const createRing = (radius, color) => {
+                            const segments = 64;
+                            const geometry = new THREE.BufferGeometry();
+                            const points = [];
+                            for (let i = 0; i <= segments; i++) {
+                                const theta = (i / segments) * Math.PI * 2;
+                                points.push(new THREE.Vector3(Math.cos(theta) * radius, 0, Math.sin(theta) * radius));
+                            }
+                            geometry.setFromPoints(points);
+                            const material = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.9, linewidth: 3, fog: false });
+                            const ring = new THREE.Line(geometry, material);
+                            return ring;
+                        };
+
+                        this._ring3 = createRing(1.5, 0xff3333);
+                        this._ring5 = createRing(4.0, 0x3333ff);
+                        this._ring3.position.set(0, 0, 0);
+                        this._ring5.position.set(0, 0, 0);
+                        // Add to scene, not player, and update position in Update_System
+                        Scene.add(this._ring3);
+                        Scene.add(this._ring5);
+
                         this._Flag_Loaded = true;
                         this._PickNewRandomTarget(null);
                     },
@@ -461,7 +484,8 @@
                         valid = true;
                     } else {
                         const distToPlayer = new THREE.Vector3(playerPos.x, this.Position.y, playerPos.z).distanceTo(target);
-                        if (distToPlayer >= 5.0) {
+                        // ランダム散歩は1.5m〜4mの間（および1.5m以内）に入らないようにする
+                        if (distToPlayer >= 4.0 || distToPlayer <= 1.5) {
                             valid = true;
                         }
                     }
@@ -488,27 +512,49 @@
                 let isRunningState = false;
                 let shouldSit = false;
 
-                if (isPlayerInElevator || (distToPlayer < 3.0 && !isCrouched && !isMovingInput)) {
+                if (this._FleeTarget) {
                     isRunningState = true;
-                    if (isPlayerInElevator) {
-                        desiredTarget = new THREE.Vector3(0, this.Position.y, 0);
-                        if (new THREE.Vector3(0, this.Position.y, 0).distanceTo(this.Position) < 0.3) {
-                            shouldSit = true;
-                        }
-                    } else {
-                        const dirFromPlayer = new THREE.Vector3().subVectors(this.Position, playerPos);
-                        dirFromPlayer.y = 0;
-                        if (dirFromPlayer.length() < 0.01) {
-                            dirFromPlayer.set(1, 0, 0);
-                        }
-                        dirFromPlayer.normalize();
-                        desiredTarget = playerPos.clone().addScaledVector(dirFromPlayer, 10);
-                        desiredTarget.y = this.Position.y;
+                    desiredTarget = this._FleeTarget;
+                    if (this.Position.distanceTo(this._FleeTarget) < 0.3) {
+                        this._FleeTarget = null;
                     }
-                } else if (distToPlayer < 5.0 && isCrouched) {
+                } else if (isPlayerInElevator) {
+                    isRunningState = true;
+                    desiredTarget = new THREE.Vector3(0, this.Position.y, 0);
+                    if (new THREE.Vector3(0, this.Position.y, 0).distanceTo(this.Position) < 0.3) {
+                        shouldSit = true;
+                    }
+                } else if (distToPlayer < 1.5 && !isCrouched && !isMovingInput) {
+                    isRunningState = true;
+                    const dirFromPlayer = new THREE.Vector3().subVectors(this.Position, playerPos);
+                    dirFromPlayer.y = 0;
+                    if (dirFromPlayer.length() < 0.01) {
+                        dirFromPlayer.set(1, 0, 0);
+                    }
+                    dirFromPlayer.normalize();
+                    this._FleeTarget = playerPos.clone().addScaledVector(dirFromPlayer, 10);
+                    this._FleeTarget.y = this.Position.y;
+                    desiredTarget = this._FleeTarget;
+                } else if (distToPlayer >= 1.5 && distToPlayer <= 4.0 && !isCrouched && !isMovingInput) {
+                    if (this._State !== "Walking") {
+                        this._State = "Walking";
+                        this._PlayAnimation(0, true);
+                    }
+                    const dirFromPlayer = new THREE.Vector3().subVectors(this.Position, playerPos);
+                    dirFromPlayer.y = 0;
+                    if (dirFromPlayer.length() < 0.01) {
+                        dirFromPlayer.set(1, 0, 0);
+                    }
+                    dirFromPlayer.normalize();
+                    desiredTarget = this.Position.clone().addScaledVector(dirFromPlayer, 50);
+                    desiredTarget.y = this.Position.y;
+                } else if (distToPlayer < 4.0 && isCrouched) {
+                    if (this._State === "Sitting" && distToPlayer <= 1.5) {
+                        shouldSit = true;
+                    }
                     desiredTarget = playerPos.clone();
                     desiredTarget.y = this.Position.y;
-                    if (distToPlayer <= 0.3) {
+                    if (distToPlayer <= 0.2) {
                         shouldSit = true;
                     }
                 } else {
@@ -527,7 +573,7 @@
                     return;
                 }
 
-                const animNeeded = isRunningState ? "Running" : (distToPlayer < 5.0 && isCrouched ? "Walking" : "Walking");
+                const animNeeded = isRunningState ? "Running" : (distToPlayer < 4.0 && isCrouched ? "Walking" : "Walking");
                 if (animNeeded === "Running") {
                     if (this._State !== "Running") {
                         this._State = "Running";
@@ -545,7 +591,7 @@
                 toTarget.y = 0;
                 const distToTarget = toTarget.length();
 
-                const stopDistance = (distToPlayer < 5.0 && isCrouched) ? 0.2 : 0.1;
+                const stopDistance = (distToPlayer < 4.0 && isCrouched) ? 0.2 : 0.1;
 
                 if (distToTarget > stopDistance) {
                     toTarget.normalize();
@@ -557,10 +603,10 @@
                     this._Object.quaternion.slerp(targetQuaternion, 3.0 * FC_Environment.TIME_DELTA);
 
                     const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(this._Object.quaternion);
-                    const currentSpeed = isRunningState ? this._RunSpeed : (distToPlayer < 5.0 && isCrouched ? this._MoveSpeed : this._MoveSpeed);
+                    const currentSpeed = isRunningState ? this._RunSpeed : (distToPlayer < 4.0 && isCrouched ? this._MoveSpeed : this._MoveSpeed);
 
                     this._Object.position.addScaledVector(forwardDir, currentSpeed * FC_Environment.TIME_DELTA);
-                } else if (distToPlayer < 5.0 && isCrouched) {
+                } else if (distToPlayer < 4.0 && isCrouched) {
                     if (this._State !== "Sitting") {
                         this._State = "Sitting";
                         this._PlayAnimation(3, false);
@@ -813,6 +859,11 @@
                 this._Timer_Input.Update();
                 if (!this._Elevator || !this._Elevator.isMoving) {
                     this.updateHomeMusicAnchor();
+                }
+                if (Cat && Cat._ring3 && Cat._ring5) {
+                    const floorBaseY = this.getFloorIndexFromY(Player.Position.y) * this._Floor_Height;
+                    Cat._ring3.position.set(Player.Position.x, floorBaseY + 0.05, Player.Position.z);
+                    Cat._ring5.position.set(Player.Position.x, floorBaseY + 0.05, Player.Position.z);
                 }
             }
             updateHomeMusicAnchor() {
