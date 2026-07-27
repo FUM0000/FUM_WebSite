@@ -350,14 +350,32 @@
                     this.mesh.position.y += deltaY;
                     player.Position.y += deltaY;
 
+                    if (Manager && Manager._UI_Home && Manager._UI_Music) {
+                        Manager._UI_Home.Position.y += deltaY;
+                        Manager._UI_Music.Position.y += deltaY;
+                        if (Manager._Button_Home) Manager._Button_Home.position.y += deltaY;
+                        if (Manager._Button_Music) Manager._Button_Music.position.y += deltaY;
+                        const lookTarget = new THREE.Vector3(player.Position.x, player.Position.y, player.Position.z);
+                        Manager._UI_Home.LookAt(lookTarget);
+                        Manager._UI_Music.LookAt(lookTarget);
+                    }
+
+                    if (Cat && Cat._Object) {
+                        Cat._Object.position.y += deltaY;
+                    }
+
                     if (Math.abs(this.mesh.position.y - targetY) < 0.01) {
                         this.mesh.position.y = targetY;
                         const floorBaseY = targetFloor * this.floorHeight;
                         player.Position.y = floorBaseY + (isCrouched ? 0.5 : (1.74 - 0.08));
+                        if (Cat && Cat._Object) {
+                            Cat._Object.position.y = floorBaseY;
+                        }
                         this.currentFloor = targetFloor;
                         this.isMoving = false;
                         player.Control_Enable = true;
                         this.updateButtonVisuals();
+                        Manager.updateHomeMusicAnchor();
                     } else {
                         requestAnimationFrame(moveElevator);
                     }
@@ -440,7 +458,7 @@
 
                 // Match floor y with the exact floor level (floorIndex * 5)
                 const targetFloorY = playerFloor * 5;
-                if (Math.abs(this.Position.y - targetFloorY) > 0.01) {
+                if (!Manager._Elevator.isMoving && Math.abs(this.Position.y - targetFloorY) > 0.01) {
                     this.Position = new THREE.Vector3(this.Position.x, targetFloorY, this.Position.z);
                 }
 
@@ -731,7 +749,9 @@
             }
             Update_System() {
                 this._Timer_Input.Update();
-                this.updateHomeMusicAnchor();
+                if (!this._Elevator || !this._Elevator.isMoving) {
+                    this.updateHomeMusicAnchor();
+                }
             }
             updateHomeMusicAnchor() {
                 const playerFloor = this.getFloorIndexFromY(Player.Position.y);
