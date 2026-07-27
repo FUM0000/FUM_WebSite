@@ -402,8 +402,10 @@
             _Flag_Loaded = false;
             _State = "Walking"; // "Walking", "Running", "Sitting"
             _TargetPosition = new THREE.Vector3();
-            _MoveSpeed = 0.1;
-            _RunSpeed = 2.0;
+            _MoveSpeed = 0.05;
+            _RunSpeed = 1.5;
+            _Timer_TargetChange = 0;
+            _TargetChangeInterval = 7 + Math.random() * 15; // 5 to 10 seconds
 
             get Flag_Loaded() { return this._Flag_Loaded; }
             get Position() { return this._Object ? this._Object.position : new THREE.Vector3(); }
@@ -426,7 +428,7 @@
                         Scene.add(this._Object);
 
                         this._Flag_Loaded = true;
-                        this._PickNewRandomTarget();
+                        this._PickNewRandomTarget(null);
                     },
                 );
             }
@@ -447,13 +449,30 @@
                 this._CurrentAction.reset().play();
             }
 
-            _PickNewRandomTarget() {
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.random() * 20; // Within 20 radius from center
-                this._TargetPosition.set(Math.cos(angle) * radius, this.Position.y, Math.sin(angle) * radius);
+            _PickNewRandomTarget(playerPos) {
+                let angle, radius, target;
+                let valid = false;
+                let attempts = 0;
+                while (!valid && attempts < 15) {
+                    angle = Math.random() * Math.PI * 2;
+                    radius = Math.random() * 20;
+                    target = new THREE.Vector3(Math.cos(angle) * radius, this.Position.y, Math.sin(angle) * radius);
+                    if (!playerPos) {
+                        valid = true;
+                    } else {
+                        const distToPlayer = new THREE.Vector3(playerPos.x, this.Position.y, playerPos.z).distanceTo(target);
+                        if (distToPlayer >= 5.0) {
+                            valid = true;
+                        }
+                    }
+                    attempts++;
+                }
+                this._TargetPosition.copy(target || new THREE.Vector3(0, this.Position.y, 0));
+                this._TargetChangeInterval = 5 + Math.random() * 5;
+                this._Timer_TargetChange = 0;
             }
 
-            Update(playerFloor, isPlayerInElevator) {
+            Update(playerFloor, isPlayerInElevator, playerPos, isCrouched, isMovingInput) {
                 if (!this._Flag_Loaded || !this._Object) return;
 
                 // Match floor y with the exact floor level (floorIndex * 5)
@@ -462,46 +481,89 @@
                     this.Position = new THREE.Vector3(this.Position.x, targetFloorY, this.Position.z);
                 }
 
-                if (isPlayerInElevator) {
-                    // Run to elevator (center 0,0)
-                    if (this._State !== "Running" && this._State !== "Sitting") {
+                const distToPlayer = playerPos ? new THREE.Vector3(playerPos.x, this.Position.y, playerPos.z).distanceTo(this.Position) : 999;
+                this._Timer_TargetChange += FC_Environment.TIME_DELTA;
+
+                let desiredTarget = null;
+                let isRunningState = false;
+                let shouldSit = false;
+
+                if (isPlayerInElevator || (distToPlayer < 3.0 && !isCrouched && !isMovingInput)) {
+                    isRunningState = true;
+                    if (isPlayerInElevator) {
+                        desiredTarget = new THREE.Vector3(0, this.Position.y, 0);
+                        if (new THREE.Vector3(0, this.Position.y, 0).distanceTo(this.Position) < 0.3) {
+                            shouldSit = true;
+                        }
+                    } else {
+                        const dirFromPlayer = new THREE.Vector3().subVectors(this.Position, playerPos);
+                        dirFromPlayer.y = 0;
+                        if (dirFromPlayer.length() < 0.01) {
+                            dirFromPlayer.set(1, 0, 0);
+                        }
+                        dirFromPlayer.normalize();
+                        desiredTarget = playerPos.clone().addScaledVector(dirFromPlayer, 10);
+                        desiredTarget.y = this.Position.y;
+                    }
+                } else if (distToPlayer < 5.0 && isCrouched) {
+                    desiredTarget = playerPos.clone();
+                    desiredTarget.y = this.Position.y;
+                    if (distToPlayer <= 0.3) {
+                        shouldSit = true;
+                    }
+                } else {
+                    if (this._Timer_TargetChange >= this._TargetChangeInterval) {
+                        this._PickNewRandomTarget(playerPos);
+                    }
+                    desiredTarget = this._TargetPosition.clone();
+                }
+
+                if (shouldSit) {
+                    if (this._State !== "Sitting") {
+                        this._State = "Sitting";
+                        this._PlayAnimation(3, false);
+                    }
+                    this._AnimationControler.update(0.0025);
+                    return;
+                }
+
+                const animNeeded = isRunningState ? "Running" : (distToPlayer < 5.0 && isCrouched ? "Walking" : "Walking");
+                if (animNeeded === "Running") {
+                    if (this._State !== "Running") {
                         this._State = "Running";
                         this._PlayAnimation(2, true);
                     }
-
-                    const center = new THREE.Vector3(0, this.Position.y, 0);
-                    const dir = new THREE.Vector3().subVectors(center, this.Position);
-                    const dist = dir.length();
-
-                    if (dist > 0.3) {
-                        dir.normalize();
-                        this._Object.position.addScaledVector(dir, this._RunSpeed * FC_Environment.TIME_DELTA);
-                        this._Object.lookAt(center);
-                    } else {
-                        if (this._State !== "Sitting") {
-                            this._State = "Sitting";
-                            this._PlayAnimation(3, false); // Sit down without looping
-                        }
-                    }
                 } else {
-                    // Normal walking within 20 radius from center
                     if (this._State === "Sitting" || this._State === "Running") {
                         this._State = "Walking";
                         this._PlayAnimation(0, true);
                     }
+                }
 
-                    const dir = new THREE.Vector3().subVectors(this._TargetPosition, this.Position);
-                    dir.y = 0;
-                    const dist = dir.length();
+                const currentPos = this.Position.clone();
+                const toTarget = new THREE.Vector3().subVectors(desiredTarget, currentPos);
+                toTarget.y = 0;
+                const distToTarget = toTarget.length();
 
-                    if (dist < 0.5) {
-                        this._PickNewRandomTarget();
-                    } else {
-                        dir.normalize();
-                        this._Object.position.addScaledVector(dir, this._MoveSpeed * FC_Environment.TIME_DELTA);
-                        const lookTarget = this._TargetPosition.clone();
-                        lookTarget.y = this.Position.y;
-                        this._Object.lookAt(lookTarget);
+                const stopDistance = (distToPlayer < 5.0 && isCrouched) ? 0.2 : 0.1;
+
+                if (distToTarget > stopDistance) {
+                    toTarget.normalize();
+                    const dummy = this._Object.clone();
+                    dummy.position.copy(currentPos);
+                    dummy.lookAt(desiredTarget);
+                    const targetQuaternion = dummy.quaternion.clone();
+
+                    this._Object.quaternion.slerp(targetQuaternion, 3.0 * FC_Environment.TIME_DELTA);
+
+                    const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(this._Object.quaternion);
+                    const currentSpeed = isRunningState ? this._RunSpeed : (distToPlayer < 5.0 && isCrouched ? this._MoveSpeed : this._MoveSpeed);
+
+                    this._Object.position.addScaledVector(forwardDir, currentSpeed * FC_Environment.TIME_DELTA);
+                } else if (distToPlayer < 5.0 && isCrouched) {
+                    if (this._State !== "Sitting") {
+                        this._State = "Sitting";
+                        this._PlayAnimation(3, false);
                     }
                 }
 
@@ -788,7 +850,7 @@
                     this._Input_Look.multiplyScalar(100);
                 }
                 if (this._Input_Move.length() > 0) this._Input_Move.normalize();
-                Player.Update(this._Input_Move, Camera.Forward);
+                Player.Update(this._Input_Move, Camera.Forward, isCrouched);
                 Camera.Update(this._Input_Look, this._SENSIVILITY);
 
                 this._Images.forEach(_image => {
@@ -796,7 +858,8 @@
                 });
                 const playerFloor = this.getFloorIndexFromY(Player.Position.y);
                 const isInElevator = this._Elevator.checkPlayerInElevator(Player) || this._Elevator.isMoving;
-                Cat.Update(playerFloor, isInElevator);
+                const isMovingInput = this._Input_Move.length() > 0;
+                Cat.Update(playerFloor, isInElevator, Player.Position, isCrouched, isMovingInput);
                 this._Category_Texts.forEach(_text => {
                     _text.Update();
                 });

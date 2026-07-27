@@ -942,7 +942,7 @@ class FC_Player_Controller extends FC_GameObject {
         this._Speed = this._Speed_Past;
         this.Position = new THREE.Vector3(0, 1.74 - 0.08, 0);
     }
-    Update(_input_move = new THREE.Vector2(0, 0), _forward_camera = new THREE.Vector3(0, 0, 0)) {
+    Update(_input_move = new THREE.Vector2(0, 0), _forward_camera = new THREE.Vector3(0, 0, 0), _isCrouched = false) {
         if (!this._Control_Enable) return;
 
         const forward = _forward_camera.clone();
@@ -958,7 +958,8 @@ class FC_Player_Controller extends FC_GameObject {
             forward.z * _input_move.y + right.z * _input_move.x
         );
 
-        this.Position = this.Position.clone().add(moveDirection.multiplyScalar(this._Speed * FC_Environment.TIME_DELTA));
+        const currentSpeed = _isCrouched ? (this._Speed * 0.25) : this._Speed;
+        this.Position = this.Position.clone().add(moveDirection.multiplyScalar(currentSpeed * FC_Environment.TIME_DELTA));
     }
 }
 
