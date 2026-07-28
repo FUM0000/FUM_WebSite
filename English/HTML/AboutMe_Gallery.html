@@ -446,15 +446,28 @@
                         this._ring5 = createRing(4.0, 0x3333ff);
                         this._ring3.position.set(0, 0, 0);
                         this._ring5.position.set(0, 0, 0);
-                        // Add to scene, not player, and update position in Update_System
+                        this._ring3.visible = false;
+                        this._ring5.visible = false;
                         Scene.add(this._ring3);
                         Scene.add(this._ring5);
+
+                        const glowCanvas = document.createElement('canvas');
+                        glowCanvas.width = 64; glowCanvas.height = 64;
+                        const gCtx = glowCanvas.getContext('2d');
+                        const grad = gCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+                        grad.addColorStop(0, 'rgba(255,255,255,1)');
+                        grad.addColorStop(0.15, 'rgba(200,220,255,0.7)');
+                        grad.addColorStop(0.5, 'rgba(160,200,255,0.2)');
+                        grad.addColorStop(1, 'rgba(160,200,255,0)');
+                        gCtx.fillStyle = grad;
+                        gCtx.fillRect(0, 0, 64, 64);
+                        const glowTexture = new THREE.CanvasTexture(glowCanvas);
 
                         const meshes = [];
                         _model.traverse((child) => { if (child.isMesh) meshes.push(child); });
                         this._SkinnedPointsData = [];
                         for (const mesh of meshes) {
-                            const ptsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.008, sizeAttenuation: true, fog: false });
+                            const ptsMat = new THREE.PointsMaterial({ color: 0xbbddff, size: 0.002, map: glowTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, sizeAttenuation: true });
                             const pts = new THREE.Points(mesh.geometry.clone(), ptsMat);
                             mesh.add(pts);
                             mesh.material.transparent = true;
