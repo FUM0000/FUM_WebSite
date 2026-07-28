@@ -450,6 +450,29 @@
                         Scene.add(this._ring3);
                         Scene.add(this._ring5);
 
+                        const meshes = [];
+                        _model.traverse((child) => { if (child.isMesh) meshes.push(child); });
+                        this._SkinnedPointsData = [];
+                        for (const mesh of meshes) {
+                            const ptsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.008, sizeAttenuation: true, fog: false });
+                            const pts = new THREE.Points(mesh.geometry.clone(), ptsMat);
+                            mesh.add(pts);
+                            mesh.material.transparent = true;
+                            mesh.material.opacity = 0;
+                            mesh.material.depthWrite = false;
+                            if (mesh.isSkinnedMesh) {
+                                const pos = mesh.geometry.attributes.position.array.slice();
+                                this._SkinnedPointsData.push({
+                                    mesh: mesh,
+                                    points: pts,
+                                    bindPositions: pos,
+                                    ptsPositions: pts.geometry.attributes.position.array,
+                                    skinIndex: mesh.geometry.attributes.skinIndex,
+                                    skinWeight: mesh.geometry.attributes.skinWeight,
+                                });
+                            }
+                        }
+
                         this._Flag_Loaded = true;
                         this._PickNewRandomTarget(null);
                     },
@@ -570,6 +593,7 @@
                         this._PlayAnimation(3, false);
                     }
                     this._AnimationControler.update(0.0025);
+                    this._UpdateSkinnedPoints();
                     return;
                 }
 
@@ -614,6 +638,46 @@
                 }
 
                 this._AnimationControler.update(0.0025);
+                this._UpdateSkinnedPoints();
+            }
+
+            _UpdateSkinnedPoints() {
+                if (!this._SkinnedPointsData) return;
+                for (const data of this._SkinnedPointsData) {
+                    const mesh = data.mesh;
+                    const skeleton = mesh.skeleton;
+                    skeleton.update();
+                    const bm = skeleton.boneMatrices;
+                    const bindM = mesh.bindMatrix.elements;
+                    const bindMI = mesh.bindMatrixInverse.elements;
+                    const src = data.bindPositions;
+                    const dst = data.ptsPositions;
+                    const sidx = data.skinIndex.array;
+                    const swgt = data.skinWeight.array;
+                    const n = src.length / 3;
+                    for (let i = 0; i < n; i++) {
+                        const i3 = i * 3, i4 = i * 4;
+                        const lx = src[i3], ly = src[i3 + 1], lz = src[i3 + 2];
+                        const bx = bindM[0] * lx + bindM[4] * ly + bindM[8] * lz + bindM[12];
+                        const by = bindM[1] * lx + bindM[5] * ly + bindM[9] * lz + bindM[13];
+                        const bz = bindM[2] * lx + bindM[6] * ly + bindM[10] * lz + bindM[14];
+                        const bw = bindM[3] * lx + bindM[7] * ly + bindM[11] * lz + bindM[15];
+                        let sx = 0, sy = 0, sz = 0, sw = 0;
+                        for (let j = 0; j < 4; j++) {
+                            const w = swgt[i4 + j];
+                            if (w === 0) continue;
+                            const idx = sidx[i4 + j] * 16;
+                            sx += (bm[idx] * bx + bm[idx + 4] * by + bm[idx + 8] * bz + bm[idx + 12] * bw) * w;
+                            sy += (bm[idx + 1] * bx + bm[idx + 5] * by + bm[idx + 9] * bz + bm[idx + 13] * bw) * w;
+                            sz += (bm[idx + 2] * bx + bm[idx + 6] * by + bm[idx + 10] * bz + bm[idx + 14] * bw) * w;
+                            sw += (bm[idx + 3] * bx + bm[idx + 7] * by + bm[idx + 11] * bz + bm[idx + 15] * bw) * w;
+                        }
+                        dst[i3] = bindMI[0] * sx + bindMI[4] * sy + bindMI[8] * sz + bindMI[12] * sw;
+                        dst[i3 + 1] = bindMI[1] * sx + bindMI[5] * sy + bindMI[9] * sz + bindMI[13] * sw;
+                        dst[i3 + 2] = bindMI[2] * sx + bindMI[6] * sy + bindMI[10] * sz + bindMI[14] * sw;
+                    }
+                    data.points.geometry.attributes.position.needsUpdate = true;
+                }
             }
         }
 
