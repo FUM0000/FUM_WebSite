@@ -2594,22 +2594,35 @@ const animateGalaxy = () => {
         // ── FUM WEBSITE 3D Title ──
         let textMeshTitle;
         loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-            const textString = "F U M   W E B S I T E";
-            const textGeometryTitle = new THREE.TextGeometry(textString, {
-                font: font,
-                size: 0.55,
-                height: 0.12,
-                curveSegments: 6,
-                bevelEnabled: true,
-                bevelThickness: 0.025,
-                bevelSize: 0.012,
-                bevelOffset: 0,
-                bevelSegments: 4
-            });
-            textGeometryTitle.computeBoundingBox();
-            const textWidthTitle = textGeometryTitle.boundingBox.max.x - textGeometryTitle.boundingBox.min.x;
-            textGeometryTitle.translate(-textWidthTitle / 2, 0, 0);
+            const chars = "FUM WEBSITE".split("");
+            const group = new THREE.Group();
+            const fontSize = 0.55;
+            const letterSpacing = 0.12;
+            let totalWidth = 0;
 
+            const geometries = chars.map(char => {
+                if (char === " ") {
+                    return { width: fontSize * 0.4 };
+                }
+                const geo = new THREE.TextGeometry(char, {
+                    font: font,
+                    size: fontSize,
+                    height: 0.12,
+                    curveSegments: 6,
+                    bevelEnabled: true,
+                    bevelThickness: 0.025,
+                    bevelSize: 0.012,
+                    bevelOffset: 0,
+                    bevelSegments: 4
+                });
+                geo.computeBoundingBox();
+                const width = geo.boundingBox.max.x - geo.boundingBox.min.x;
+                return { geo, width };
+            });
+
+            const fullWidth = geometries.reduce((acc, item) => acc + item.width + letterSpacing, -letterSpacing);
+
+            let currentX = -fullWidth / 2;
             const textMaterialTitle = new THREE.MeshPhysicalMaterial({
                 color: 0x00ffcc,
                 emissive: 0x004433,
@@ -2620,7 +2633,16 @@ const animateGalaxy = () => {
                 fog: false
             });
 
-            textMeshTitle = new THREE.Mesh(textGeometryTitle, textMaterialTitle);
+            geometries.forEach(item => {
+                if (item.geo) {
+                    const mesh = new THREE.Mesh(item.geo, textMaterialTitle);
+                    mesh.position.x = currentX;
+                    group.add(mesh);
+                }
+                currentX += item.width + letterSpacing;
+            });
+
+            textMeshTitle = group;
             textMeshTitle.position.set(0, 10, 0);
             scene.add(textMeshTitle);
         });
