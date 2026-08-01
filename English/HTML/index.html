@@ -452,8 +452,9 @@
         }
 
         .loading-label.glitch,
-        .loading-percent.glitch {
-            animation: glitchEffect 0.12s ease-in-out 3;
+        .loading-percent.glitch,
+        .progress-ring.glitch {
+            animation: glitchEffect 0.12s ease-in-out infinite !important;
         }
 
         @keyframes glitchEffect {
@@ -492,7 +493,7 @@
         }
 
         .progress-ring.glitch {
-            animation: ringGlitch 0.12s ease-in-out 3;
+            animation: ringGlitch 0.12s ease-in-out infinite !important;
         }
 
         @keyframes ringGlitch {
@@ -711,7 +712,8 @@
             mixins: [window.Mixins_Common, window.Mixins_Index],
             data: {
                 LogOpen: false,
-                LogEntries: []
+                LogEntries: [],
+                Ready_Page: false
             },
         })
 
@@ -1069,39 +1071,6 @@ const animateGalaxy = () => {
                         const speedFactor = (0.08 + normalized * normalized * 7) * delta;
                         orbitAngle += speedFactor;
                         orbitContainer.style.transform = `translate(-50%, -50%) rotate(${orbitAngle}deg)`;
-
-                        if (progress >= 100 && orbitLetters) {
-                            exploded = true;
-                            const angleRad = orbitAngle * (Math.PI / 180);
-                            const circleRadius = 112.5;
-
-                            orbitContainer.style.transform = `translate(-50%, -50%) rotate(0deg)`;
-                            Array.from(orbitLetters).forEach((letter) => {
-                                const baseAngle = parseFloat(letter.dataset.angle);
-                                const currentAngle = baseAngle + angleRad;
-                                const cx = circleRadius * Math.cos(currentAngle);
-                                const cy = circleRadius * Math.sin(currentAngle);
-                                letter.style.left = `calc(50% + ${cx}px)`;
-                                letter.style.top = `calc(50% + ${cy}px)`;
-                                const idx = parseInt(letter.dataset.index);
-                                letter.style.transform = `translate(-50%, -50%) rotate(${orbitAngle + idx * 30}deg)`;
-                            });
-
-                            void orbitContainer.offsetHeight;
-
-                            Array.from(orbitLetters).forEach((letter) => {
-                                const baseAngle = parseFloat(letter.dataset.angle);
-                                const currentAngle = baseAngle + angleRad;
-                                const dist = 600;
-                                const ex = dist * Math.cos(currentAngle);
-                                const ey = dist * Math.sin(currentAngle);
-                                letter.style.transition = 'all 1.2s cubic-bezier(0.22, 0.61, 0.36, 1)';
-                                letter.style.left = `calc(50% + ${ex}px)`;
-                                letter.style.top = `calc(50% + ${ey}px)`;
-                                letter.style.opacity = '0';
-                            });
-                            return;
-                        }
                     }
 
                     requestAnimationFrame(tickRotation);
@@ -1110,20 +1079,59 @@ const animateGalaxy = () => {
 
                 setTimeout(() => {
                     overlay.classList.add('fade-out');
+                    if (loadingPercent) loadingPercent.classList.add('glitch');
+                    if (loadingLabel) loadingLabel.classList.add('glitch');
+                    if (progressRing) progressRing.classList.add('glitch');
+                    if (orbitContainer && orbitLetters && !exploded) {
+                        exploded = true;
+                        const angleRad = orbitAngle * (Math.PI / 180);
+                        const circleRadius = 112.5;
+
+                        orbitContainer.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+                        Array.from(orbitLetters).forEach((letter) => {
+                            const baseAngle = parseFloat(letter.dataset.angle);
+                            const currentAngle = baseAngle + angleRad;
+                            const cx = circleRadius * Math.cos(currentAngle);
+                            const cy = circleRadius * Math.sin(currentAngle);
+                            letter.style.left = `calc(50% + ${cx}px)`;
+                            letter.style.top = `calc(50% + ${cy}px)`;
+                            const idx = parseInt(letter.dataset.index);
+                            letter.style.transform = `translate(-50%, -50%) rotate(${orbitAngle + idx * 30}deg)`;
+                        });
+
+                        void orbitContainer.offsetHeight;
+
+                        Array.from(orbitLetters).forEach((letter) => {
+                            const baseAngle = parseFloat(letter.dataset.angle);
+                            const currentAngle = baseAngle + angleRad;
+                            const dist = 600;
+                            const ex = dist * Math.cos(currentAngle);
+                            const ey = dist * Math.sin(currentAngle);
+                            letter.style.transition = 'all 1.2s cubic-bezier(0.22, 0.61, 0.36, 1)';
+                            letter.style.left = `calc(50% + ${ex}px)`;
+                            letter.style.top = `calc(50% + ${ey}px)`;
+                            letter.style.opacity = '0';
+                        });
+                    }
+
                     setTimeout(() => {
                         if (destroyLoadingGalaxy) {
                             destroyLoadingGalaxy();
                             destroyLoadingGalaxy = null;
                         }
                         overlay.remove();
+                        setTimeout(() => {
+                            window.vue.Ready_Page = true;
+                        }, 100);
                         tryBindMenuGuide();
                     }, 2000);
-                }, 4000);
+                }, 4250);
             } else {
                 if (destroyLoadingGalaxy) {
                     destroyLoadingGalaxy();
                     destroyLoadingGalaxy = null;
                 }
+                window.vue.Ready_Page = true;
                 tryBindMenuGuide();
             }
 
