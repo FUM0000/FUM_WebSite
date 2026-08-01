@@ -717,12 +717,38 @@
             },
         })
 
+        const realLoading = (() => {
+            let loaded = 0;
+            let real = 0;
+            const listeners = [];
+            const total = 100;
+            const bump = (weight) => {
+                loaded += weight;
+                real = Math.min((loaded / total) * 100, 100);
+                listeners.forEach(fn => fn(real));
+            };
+            return {
+                get value() { return real; },
+                isDone() { return real >= 100; },
+                bump
+            };
+        })();
+
+        const deferScripts = document.querySelectorAll('script[defer]');
+        deferScripts.forEach((s) => {
+            const done = () => realLoading.bump(55 / deferScripts.length);
+            s.addEventListener('load', done);
+            s.addEventListener('error', done);
+        });
+
+        window.addEventListener('load', () => realLoading.bump(30));
+
         fetch('../../Asset/Data/Log.json')
             .then(r => r.json())
-            .then(data => { window.vue.LogEntries = data; })
-            .catch(() => {});
+            .then(data => { window.vue.LogEntries = data; realLoading.bump(15); })
+            .catch(() => { realLoading.bump(15); });
 
-        window.addEventListener('load', () => {
+        window.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('loading-overlay');
             const loadingRing = document.getElementById('loadingRing');
             const loadingPercent = document.getElementById('loadingPercent');
@@ -1023,16 +1049,18 @@ const animateGalaxy = () => {
             }
             if (overlay && loadingRing) {
                 let progress = 0;
-                const duration = 4000;
-                const interval = 50;
                 const circumference = 816.81;
+                const MIN_DURATION = 2000;
+                const MAX_DURATION = 15000;
+                const startTime = performance.now();
+                let progressTimer = null;
 
-                const timer = setInterval(() => {
-                    progress += (100 / (duration / interval));
-                    if (progress >= 100) {
-                        progress = 100;
-                        clearInterval(timer);
-                    }
+                const tickProgress = () => {
+                    const elapsed = performance.now() - startTime;
+                    const minCurve = Math.min((elapsed / MIN_DURATION) * 100, 100);
+                    progress = Math.max(minCurve, realLoading.value);
+                    if (progress >= 100) progress = 100;
+
                     const offset = circumference * (1 - progress / 100);
                     loadingRing.style.strokeDashoffset = offset;
                     if (loadingPercent) {
@@ -1057,7 +1085,14 @@ const animateGalaxy = () => {
                         const glow = normalized * 15;
                         innerCircle.style.boxShadow = `0 0 ${glow}px rgba(0,100,150,${0.2 + normalized * 0.5})`;
                     }
-                }, interval);
+
+                    if ((realLoading.isDone() && elapsed >= MIN_DURATION) || elapsed >= MAX_DURATION) {
+                        clearInterval(progressTimer);
+                        finishLoading();
+                    }
+                };
+
+                progressTimer = setInterval(tickProgress, 50);
 
                 // Smooth rotation via requestAnimationFrame
                 let lastRafTime = 0;
@@ -1077,13 +1112,14 @@ const animateGalaxy = () => {
                 }
                 requestAnimationFrame(tickRotation);
 
-                setTimeout(() => {
+                const finishLoading = () => {
+                    if (exploded) return;
+                    exploded = true;
                     overlay.classList.add('fade-out');
                     if (loadingPercent) loadingPercent.classList.add('glitch');
                     if (loadingLabel) loadingLabel.classList.add('glitch');
                     if (progressRing) progressRing.classList.add('glitch');
-                    if (orbitContainer && orbitLetters && !exploded) {
-                        exploded = true;
+                    if (orbitContainer && orbitLetters) {
                         const angleRad = orbitAngle * (Math.PI / 180);
                         const circleRadius = 112.5;
 
@@ -1102,11 +1138,10 @@ const animateGalaxy = () => {
                         void orbitContainer.offsetHeight;
 
                         Array.from(orbitLetters).forEach((letter) => {
-                            const baseAngle = parseFloat(letter.dataset.angle);
-                            const currentAngle = baseAngle + angleRad;
-                            const dist = 600;
-                            const ex = dist * Math.cos(currentAngle);
-                            const ey = dist * Math.sin(currentAngle);
+                            const idx = parseInt(letter.dataset.index);
+                            const dist = 700;
+                            const ex = dist + idx * 25;
+                            const ey = 0;
                             letter.style.transition = 'all 1.2s cubic-bezier(0.22, 0.61, 0.36, 1)';
                             letter.style.left = `calc(50% + ${ex}px)`;
                             letter.style.top = `calc(50% + ${ey}px)`;
@@ -1125,7 +1160,7 @@ const animateGalaxy = () => {
                         }, 100);
                         tryBindMenuGuide();
                     }, 2000);
-                }, 4300);
+                };
             } else {
                 if (destroyLoadingGalaxy) {
                     destroyLoadingGalaxy();
