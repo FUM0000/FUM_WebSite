@@ -736,17 +736,17 @@
 
         const deferScripts = document.querySelectorAll('script[defer]');
         deferScripts.forEach((s) => {
-            const done = () => realLoading.bump(55 / deferScripts.length);
+            const done = () => realLoading.bump(40 / deferScripts.length);
             s.addEventListener('load', done);
             s.addEventListener('error', done);
         });
 
-        window.addEventListener('load', () => realLoading.bump(30));
+        window.addEventListener('load', () => realLoading.bump(25));
 
         fetch('../../Asset/Data/Log.json')
             .then(r => r.json())
-            .then(data => { window.vue.LogEntries = data; realLoading.bump(15); })
-            .catch(() => { realLoading.bump(15); });
+            .then(data => { window.vue.LogEntries = data; realLoading.bump(10); })
+            .catch(() => { realLoading.bump(10); });
 
         window.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('loading-overlay');
@@ -2896,6 +2896,7 @@ const animateGalaxy = () => {
         let time = 0.0;
         let countDistance = Math.PI;
         let countTheata = Math.PI;
+        let firstRenderDone = false;
         function animate() {
             requestAnimationFrame(animate);
 
@@ -3013,6 +3014,13 @@ const animateGalaxy = () => {
             renderer.autoClear = false;
             renderer.render(scene, camera);
             renderer.autoClear = prevAutoClear;
+
+            if (!firstRenderDone) {
+                firstRenderDone = true;
+                if (typeof realLoading !== 'undefined') {
+                    realLoading.bump(25);
+                }
+            }
         }
         animate();
     </script>
