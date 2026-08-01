@@ -1166,7 +1166,7 @@ const animateGalaxy = () => {
         const vue = window.vue;
         const isMobile = window.innerWidth <= 768;
         const scene = new THREE.Scene();
-        const faceScene = new THREE.Scene();
+
         scene.fog = new THREE.Fog(0x020202, 0, 5000);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({
@@ -1193,6 +1193,7 @@ const animateGalaxy = () => {
         const composer = new THREE.EffectComposer(renderer, msaaTarget || undefined);
         const renderPass = new THREE.RenderPass(scene, camera);
         composer.addPass(renderPass);
+        let fxaaPass;
         let blackholeWarpPass;
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -2553,45 +2554,10 @@ const animateGalaxy = () => {
         diskGlow.position.set(0, 0, 0);
         diskGlow.scale.set(40, 8, 1);
         scene.add(diskGlow);
-        let textMesh1, textMeshMouthClosed, textMeshMouthOpen;
-        const loader = new THREE.FontLoader();
-        loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-            const textGeometry1 = new THREE.TextGeometry('. .', { font: font, size: 4, height: 0.25, curveSegments: 2, bevelEnabled: true, bevelThickness: 0, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 0 });
-            const textGeometryMouthClosed = new THREE.TextGeometry('-', { font: font, size: 2, height: 0.25, curveSegments: 2, bevelEnabled: true, bevelThickness: 0, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 0 });
-            const textGeometryMouthOpen = new THREE.TextGeometry('Ο', { font: font, size: 1, height: 0.25, curveSegments: 2, bevelEnabled: true, bevelThickness: 0, bevelSize: 0.02, bevelOffset: 0, bevelSegments: 0 });
 
-            const textMaterial = new THREE.MeshBasicMaterial({
-                color: 0x00ff88,
-                fog: false
-            });
-
-            textMesh1 = new THREE.Mesh(textGeometry1, textMaterial);
-            textMeshMouthClosed = new THREE.Mesh(textGeometryMouthClosed, textMaterial);
-            textMeshMouthOpen = new THREE.Mesh(textGeometryMouthOpen, textMaterial);
-
-            textGeometry1.computeBoundingBox();
-            const textWidth1 = textGeometry1.boundingBox.max.x - textGeometry1.boundingBox.min.x;
-            textMesh1.position.set(-textWidth1 / 2, 0, 0);
-            textMesh1.renderOrder = 1;
-
-            textGeometryMouthClosed.computeBoundingBox();
-            const textWidthClosed = textGeometryMouthClosed.boundingBox.max.x - textGeometryMouthClosed.boundingBox.min.x;
-            textMeshMouthClosed.position.set(-textWidthClosed / 2, -1, 0);
-            textMeshMouthClosed.renderOrder = 1;
-
-            textGeometryMouthOpen.computeBoundingBox();
-            const textWidthOpen = textGeometryMouthOpen.boundingBox.max.x - textGeometryMouthOpen.boundingBox.min.x;
-            textMeshMouthOpen.position.set(-textWidthOpen / 2, -1, 0);
-            textMeshMouthOpen.renderOrder = 1;
-
-            textMeshMouthOpen.visible = false;
-
-            faceScene.add(textMesh1);
-            faceScene.add(textMeshMouthClosed);
-            faceScene.add(textMeshMouthOpen);
-        });
 
         // ── FUM WEBSITE 3D Title ──
+        const loader = new THREE.FontLoader();
         let textMeshTitle;
         loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
             const chars = "FUM WEBSITE".split("");
@@ -2649,94 +2615,7 @@ const animateGalaxy = () => {
         });
         const jetLength = 200;
         const jetOffset = 6;
-        const messages = [
-            "やぁ！",
-            "ようこそ！FUM Websiteへ！",
-            "調子はどう？",
-            "ん...何かよう？",
-            "宇宙はひろいなぁ～。",
-            "冒険しようよ！",
-            "新しいことを学ぶのって楽しいよね！",
-            "SpaceX。かっこいいよね！わかるぅ～！",
-            "それぞれの場ってどうやって繋がってるんだろう？",
-            "宇宙生物って絶対いるよね！",
-            "君も宇宙に行きたいの？",
-            "...あれ？...ボクのこと見えてるの？",
-            "ボクの中ってどうなってると思う？",
-            "FUMはたぶん元気だよ。",
-            "FUMはたぶん退屈なんだよ。"
-        ];
-        const MESSAGE_DISTANCE_THRESHOLD = 35;
-        let messageVisible = false;
-        let messageCooldown = false;
-        let isFirstMessage = true;
-        function updateSpeechBubble() {
-            if (!blackhole || !vue) return;
 
-            const distance = camera.position.distanceTo(blackhole.position);
-
-            if (distance < MESSAGE_DISTANCE_THRESHOLD && !messageVisible && !messageCooldown) {
-                messageVisible = true;
-                messageCooldown = true;
-                vue.ShowMessage = true;
-
-                if (isFirstMessage) {
-                    vue.CurrentMessage = messages[0];
-                    isFirstMessage = false;
-                } else {
-                    const randomIndex = Math.floor(Math.random() * messages.length);
-                    vue.CurrentMessage = messages[randomIndex];
-                }
-
-                setTimeout(() => {
-                    messageVisible = false;
-                    vue.ShowMessage = false;
-                    setTimeout(() => {
-                        messageCooldown = false;
-                    }, 3000);
-                }, 4000);
-            }
-
-            if (vue.ShowMessage) {
-                const screenPosition = blackhole.position.clone().project(camera);
-                const x = (screenPosition.x * 0.5 + 0.5) * window.innerWidth;
-                const MAX_DISTANCE = MESSAGE_DISTANCE_THRESHOLD;
-                const MIN_DISTANCE = 15;
-                const currentDistance = camera.position.distanceTo(blackhole.position);
-                let proximityFactor = (MAX_DISTANCE - currentDistance) / (MAX_DISTANCE - MIN_DISTANCE);
-                proximityFactor = Math.max(0, Math.min(1, proximityFactor));
-                const yOffsetFar = 0.45;
-                const yOffsetClose = 0.38;
-                const dynamicOffsetY = yOffsetFar + (yOffsetClose - yOffsetFar) * proximityFactor;
-                const y = (-screenPosition.y * 0.5 + dynamicOffsetY) * window.innerHeight;
-
-                vue.MessageStyle = {
-                    top: `${y}px`,
-                    left: `${x}px`
-                };
-            }
-        }
-        let blinkTimer = 0;
-        function updateFace(delta) {
-            blinkTimer += delta;
-            if (blinkTimer > 3 + Math.random() * 3) {
-                if (textMesh1) textMesh1.visible = false;
-
-                setTimeout(() => {
-                    if (textMesh1) textMesh1.visible = true;
-                }, 120);
-
-                blinkTimer = 0;
-            }
-            if (vue && vue.ShowMessage && textMeshMouthClosed && textMeshMouthOpen) {
-                const isMouthOpen = Math.floor(time * 2) % 2 === 0;
-                textMeshMouthClosed.visible = !isMouthOpen;
-                textMeshMouthOpen.visible = isMouthOpen;
-            } else if (textMeshMouthClosed && textMeshMouthOpen) {
-                textMeshMouthClosed.visible = true;
-                textMeshMouthOpen.visible = false;
-            }
-        }
         const particleCount = 1000;
         const particleGeometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
@@ -2960,7 +2839,6 @@ const animateGalaxy = () => {
             return texture;
         }
         let glitchPass;
-        let fxaaPass;
         glitchPass = new THREE.ShaderPass(DigitalGlitchShader);
         glitchPass.uniforms.tDisp.value = generateNoiseTextureForGlitch();
         glitchPass.renderToScreen = false;
@@ -3088,8 +2966,7 @@ const animateGalaxy = () => {
                     textMeshTitle.rotation.y = 0;
                 }
             }
-            updateFace(delta);
-            updateSpeechBubble();
+
             updateJetParticles();
             accretionDisk.rotation.y += delta * 0.6;
             bhGlow.material.opacity = 0.5 + Math.sin(time * 0.5) * 0.1;
@@ -3123,7 +3000,6 @@ const animateGalaxy = () => {
             composer.render();
             const prevAutoClear = renderer.autoClear;
             renderer.autoClear = false;
-            renderer.render(faceScene, camera);
             renderer.render(scene, camera);
             renderer.autoClear = prevAutoClear;
         }
