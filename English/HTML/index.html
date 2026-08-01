@@ -2590,6 +2590,40 @@ const animateGalaxy = () => {
             faceScene.add(textMeshMouthClosed);
             faceScene.add(textMeshMouthOpen);
         });
+
+        // ── FUM WEBSITE 3D Title ──
+        let textMeshTitle;
+        loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+            const textString = "F U M   W E B S I T E";
+            const textGeometryTitle = new THREE.TextGeometry(textString, {
+                font: font,
+                size: 0.55,
+                height: 0.12,
+                curveSegments: 6,
+                bevelEnabled: true,
+                bevelThickness: 0.025,
+                bevelSize: 0.012,
+                bevelOffset: 0,
+                bevelSegments: 4
+            });
+            textGeometryTitle.computeBoundingBox();
+            const textWidthTitle = textGeometryTitle.boundingBox.max.x - textGeometryTitle.boundingBox.min.x;
+            textGeometryTitle.translate(-textWidthTitle / 2, 0, 0);
+
+            const textMaterialTitle = new THREE.MeshPhysicalMaterial({
+                color: 0x00ffcc,
+                emissive: 0x004433,
+                roughness: 0.1,
+                metalness: 0.9,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.1,
+                fog: false
+            });
+
+            textMeshTitle = new THREE.Mesh(textGeometryTitle, textMaterialTitle);
+            textMeshTitle.position.set(0, 10, 0);
+            scene.add(textMeshTitle);
+        });
         const jetLength = 200;
         const jetOffset = 6;
         const messages = [
@@ -3022,6 +3056,9 @@ const animateGalaxy = () => {
             const bhDist = camera.position.length();
             const bhScale = THREE.MathUtils.clamp(0.1 + bhDist * 0.003, 0.1, 10.0);
             blackhole.scale.set(bhScale, bhScale, bhScale);
+            if (textMeshTitle) {
+                textMeshTitle.position.set(0, 6, 0);
+            }
             updateFace(delta);
             updateSpeechBubble();
             updateJetParticles();
@@ -3058,6 +3095,7 @@ const animateGalaxy = () => {
             const prevAutoClear = renderer.autoClear;
             renderer.autoClear = false;
             renderer.render(faceScene, camera);
+            renderer.render(scene, camera);
             renderer.autoClear = prevAutoClear;
         }
         animate();
