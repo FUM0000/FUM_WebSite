@@ -606,6 +606,14 @@ class FC_TextPlane extends FC_Animation {
         this._Material_Front.fog = _bool;
         this._Material_Back.fog = _bool;
     }
+    set Depth_Test(_bool) {
+        this._Material_Front.depthTest = _bool;
+        this._Material_Back.depthTest = _bool;
+    }
+    set Depth_Write(_bool) {
+        this._Material_Front.depthWrite = _bool;
+        this._Material_Back.depthWrite = _bool;
+    }
     set Position(_vector3) {
         this._Mesh_Front.position.set(_vector3.x, _vector3.y, _vector3.z);
         this._Mesh_Back.position.set(_vector3.x, _vector3.y, _vector3.z);
@@ -784,6 +792,7 @@ class FC_ImagePlane extends FC_Animation {
             side: THREE.FrontSide,
             transparent: true,
             opacity: 0.0,
+            depthWrite: false,
         });
         this._Mesh_Front = new THREE.Mesh(this._Geometry, this._Material_Front);
         this._Scene.add(this._Mesh_Front);
@@ -793,6 +802,7 @@ class FC_ImagePlane extends FC_Animation {
             side: THREE.BackSide,
             transparent: true,
             opacity: 0.0,
+            depthWrite: false,
         });
         this._Mesh_Back = new THREE.Mesh(this._Geometry, this._Material_Back);
         this._Scene.add(this._Mesh_Back);
@@ -874,12 +884,16 @@ class FC_ImagePlane extends FC_Animation {
     #LoadTexture() {
         this._Material_Front.map = this.#_CreateImageTexture(this._Image);
         this._Material_Back.map = this.#_CreateImageTexture(this._Image, true);
+        this._Material_Front.depthWrite = true;
+        this._Material_Back.depthWrite = true;
         this._Material_Front.needsUpdate = true;
         this._Material_Back.needsUpdate = true;
         this._TextureLoaded = true;
         this.Show();
     }
     #UnloadTexture() {
+        this._Material_Front.depthWrite = false;
+        this._Material_Back.depthWrite = false;
         this.Hide();
         setTimeout(() => {
             if (!this._TextureLoaded) {
