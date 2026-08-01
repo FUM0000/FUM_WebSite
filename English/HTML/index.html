@@ -37,14 +37,14 @@
                     <canvas id="loadingGalaxyCanvas" aria-hidden="true"></canvas>
                 </div>
             </div>
-            <div class="text-orbit">
-                <span class="orbit-letter">F</span><span class="orbit-letter">U</span><span
-                    class="orbit-letter">M</span><span class="orbit-letter"></span><span
-                    class="orbit-letter"></span><span class="orbit-letter"></span><span
-                    class="orbit-letter"></span><span class="orbit-letter"></span><span
-                    class="orbit-letter"></span><span class="orbit-letter"></span><span
-                    class="orbit-letter"></span><span class="orbit-letter"></span>
-            </div>
+        </div>
+        <div class="text-orbit">
+            <span class="orbit-letter">F</span><span class="orbit-letter">U</span><span
+                class="orbit-letter">M</span><span class="orbit-letter"></span><span
+                class="orbit-letter"></span><span class="orbit-letter"></span><span
+                class="orbit-letter"></span><span class="orbit-letter"></span><span
+                class="orbit-letter"></span><span class="orbit-letter"></span><span
+                class="orbit-letter"></span><span class="orbit-letter"></span>
         </div>
         <svg class="progress-ring" width="280" height="280" viewBox="0 0 280 280">
             <circle class="progress-ring-bg" cx="140" cy="140" r="130" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2.5" />
@@ -1052,8 +1052,25 @@ const animateGalaxy = () => {
                 const circumference = 816.81;
                 const MIN_DURATION = 2000;
                 const MAX_DURATION = 15000;
+                const ORBIT_SPEED = 2;
                 const startTime = performance.now();
                 let progressTimer = null;
+                let pendingFinish = false;
+                let cleanupDone = false;
+
+                const cleanupOverlay = () => {
+                    if (cleanupDone) return;
+                    cleanupDone = true;
+                    if (destroyLoadingGalaxy) {
+                        destroyLoadingGalaxy();
+                        destroyLoadingGalaxy = null;
+                    }
+                    overlay.remove();
+                    setTimeout(() => {
+                        window.vue.Ready_Page = true;
+                    }, 100);
+                    tryBindMenuGuide();
+                };
 
                 const tickProgress = () => {
                     const elapsed = performance.now() - startTime;
@@ -1086,81 +1103,40 @@ const animateGalaxy = () => {
                         innerCircle.style.boxShadow = `0 0 ${glow}px rgba(0,100,150,${0.2 + normalized * 0.5})`;
                     }
 
-                    if ((realLoading.isDone() && elapsed >= MIN_DURATION) || elapsed >= MAX_DURATION) {
+                    if (realLoading.isDone() && elapsed >= MIN_DURATION) {
                         clearInterval(progressTimer);
-                        finishLoading();
+                        pendingFinish = true;
+                        overlay.classList.add('fade-out');
+                        if (loadingPercent) loadingPercent.classList.add('glitch');
+                        if (loadingLabel) loadingLabel.classList.add('glitch');
+                        if (progressRing) progressRing.classList.add('glitch');
+                        setTimeout(cleanupOverlay, 2000);
+                    } else if (elapsed >= MAX_DURATION && !pendingFinish) {
+                        clearInterval(progressTimer);
+                        pendingFinish = true;
+                        overlay.classList.add('fade-out');
+                        setTimeout(cleanupOverlay, 2000);
                     }
                 };
 
                 progressTimer = setInterval(tickProgress, 50);
 
-                // Smooth rotation via requestAnimationFrame
+                // Slow continuous orbit via requestAnimationFrame
                 let lastRafTime = 0;
                 function tickRotation(time) {
+                    if (cleanupDone) return;
                     if (!lastRafTime) lastRafTime = time;
                     const delta = Math.min((time - lastRafTime) / 16.67, 3);
                     lastRafTime = time;
 
-                    if (orbitContainer && !exploded) {
-                        const normalized = Math.min(progress / 100, 1);
-                        const speedFactor = (0.08 + normalized * normalized * 7) * delta;
-                        orbitAngle += speedFactor;
+                    if (orbitContainer) {
+                        orbitAngle += ORBIT_SPEED * delta;
                         orbitContainer.style.transform = `translate(-50%, -50%) rotate(${orbitAngle}deg)`;
                     }
 
                     requestAnimationFrame(tickRotation);
                 }
                 requestAnimationFrame(tickRotation);
-
-                const finishLoading = () => {
-                    if (exploded) return;
-                    exploded = true;
-                    overlay.classList.add('fade-out');
-                    if (loadingPercent) loadingPercent.classList.add('glitch');
-                    if (loadingLabel) loadingLabel.classList.add('glitch');
-                    if (progressRing) progressRing.classList.add('glitch');
-                    if (orbitContainer && orbitLetters) {
-                        const angleRad = orbitAngle * (Math.PI / 180);
-                        const circleRadius = 112.5;
-
-                        orbitContainer.style.transform = `translate(-50%, -50%) rotate(0deg)`;
-                        Array.from(orbitLetters).forEach((letter) => {
-                            const baseAngle = parseFloat(letter.dataset.angle);
-                            const currentAngle = baseAngle + angleRad;
-                            const cx = circleRadius * Math.cos(currentAngle);
-                            const cy = circleRadius * Math.sin(currentAngle);
-                            letter.style.left = `calc(50% + ${cx}px)`;
-                            letter.style.top = `calc(50% + ${cy}px)`;
-                            const idx = parseInt(letter.dataset.index);
-                            letter.style.transform = `translate(-50%, -50%) rotate(${orbitAngle + idx * 30}deg)`;
-                        });
-
-                        void orbitContainer.offsetHeight;
-
-                        Array.from(orbitLetters).forEach((letter) => {
-                            const idx = parseInt(letter.dataset.index);
-                            const dist = 700;
-                            const ex = dist + idx * 25;
-                            const ey = 0;
-                            letter.style.transition = 'all 1.2s cubic-bezier(0.22, 0.61, 0.36, 1)';
-                            letter.style.left = `calc(50% + ${ex}px)`;
-                            letter.style.top = `calc(50% + ${ey}px)`;
-                            letter.style.opacity = '0';
-                        });
-                    }
-
-                    setTimeout(() => {
-                        if (destroyLoadingGalaxy) {
-                            destroyLoadingGalaxy();
-                            destroyLoadingGalaxy = null;
-                        }
-                        overlay.remove();
-                        setTimeout(() => {
-                            window.vue.Ready_Page = true;
-                        }, 100);
-                        tryBindMenuGuide();
-                    }, 2000);
-                };
             } else {
                 if (destroyLoadingGalaxy) {
                     destroyLoadingGalaxy();
