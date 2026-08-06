@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js 3D Realistic Tree</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #1a2a3a, #0b1015);
+            font-family: sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: #ffffff;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px 20px;
+            border-radius: 8px;
+            pointer-events: none;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 { margin: 0 0 5px 0; font-size: 18px; letter-spacing: 1px; }
+        p { margin: 0; font-size: 12px; color: #aaa; }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>Procedural 3D Tree</h1>
+        <p>Drag to rotate | Scroll to zoom</p>
+    </div>
+    <div id="loading">Generating Tree...</div>
+
+    <!-- Three.js and OrbitControls via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Simplex Noise CDN removed as it's no longer needed -->
+
+    <script>
+        // Setup Scene, Camera, Renderer
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0b1015, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 10, 25);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Don't go below ground
+        controls.minDistance = 5;
+        controls.maxDistance = 50;
+        controls.target.set(0, 6, 0);
+
+        // Lighting (Restored sun intensity, lower ambient)
+        const ambientLight = new THREE.AmbientLight(0xddeeff, 0.4);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.8);
+        sunLight.position.set(20, 30, 20);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.bias = -0.0001;
+        const d = 15;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 100;
+        scene.add(sunLight);
+
+        // Fill light for soft shadows
+        const fillLight = new THREE.DirectionalLight(0x88bbff, 0.6);
+        fillLight.position.set(-20, 15, -20);
+        scene.add(fillLight);
+
+        // Ground removed as requested
+
+        // --- PROCEDURAL TREE GENERATION (Deciduous / Spade-like Canopy) ---
+        const treeGroup = new THREE.Group();
+        scene.add(treeGroup);
+
+        // Sakura / Cherry Blossom Material (Soft pink and white petals)
+        const sakuraMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffb7c5,
+            roughness: 0.9,
+            metalness: 0.0,
+            side: THREE.DoubleSide,
+            shadowSide: THREE.BackSide
+        });
+
+        // Dark grayish-brown bark typical of Cherry trees
+        const barkMaterial = new THREE.MeshStandardMaterial({
+            color: 0x3d3532,
+            roughness: 0.88,
+            metalness: 0.05
+        });
+
+        // Soft cloud-like cherry blossom cluster geometry
+        const blossomGeometry = new THREE.DodecahedronGeometry(0.8, 1);
+        const bPos = blossomGeometry.attributes.position;
+        for(let i=0; i<bPos.count; i++) {
+            bPos.setXYZ(i, 
+                bPos.getX(i) + (Math.random()-0.5)*0.35,
+                bPos.getY(i) + (Math.random()-0.5)*0.35,
+                bPos.getZ(i) + (Math.random()-0.5)*0.35
+            );
+        }
+        blossomGeometry.computeVertexNormals();
+
+        // Recursive branch generator tailored for Sakura (spreading horizontal & upward umbrella canopy, dark sturdy bark)
+        function createBranch(startPoint, dir, radius, length, level, maxLevel) {
+            if (level > maxLevel) {
+                // Dense cloud-like cherry blossom clusters forming voluminous mounds
+                const clusterCount = 4 + Math.floor(Math.random() * 3);
+                for(let c=0; c<clusterCount; c++) {
+                    const blossomMesh = new THREE.Mesh(blossomGeometry, sakuraMaterial);
+                    
+                    const offset = new THREE.Vector3(
+                        (Math.random() - 0.5) * length * 2.5,
+                        (Math.random() - 0.5) * length * 1.5,
+                        (Math.random() - 0.5) * length * 2.5
+                    );
+                    const clusterCenter = startPoint.clone().add(offset);
+                    blossomMesh.position.copy(clusterCenter);
+                    
+                    const shade = 0.85 + Math.random() * 0.3;
+                    const r = Math.min(1, (255 * shade) / 255);
+                    const g = Math.min(1, ((180 + Math.random() * 40) * shade) / 255);
+                    const b = Math.min(1, ((195 + Math.random() * 40) * shade) / 255);
+                    
+                    blossomMesh.material = sakuraMaterial.clone();
+                    blossomMesh.material.color.setRGB(r, g, b);
+                    
+                    const scale = 0.8 + Math.random() * 1.0;
+                    blossomMesh.scale.set(scale * 1.3, scale * 0.85, scale * 1.3);
+                    blossomMesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+                    blossomMesh.castShadow = true;
+                    blossomMesh.receiveShadow = true;
+                    treeGroup.add(blossomMesh);
+                }
+                return;
+            }
+
+            // Natural organic curves for cherry branches (spreading wide horizontally)
+            const segmentCount = 3;
+            let currentStart = startPoint.clone();
+            let currentDir = dir.clone().normalize();
+            let currentRadius = radius;
+
+            for (let s = 0; s < segmentCount; s++) {
+                const segLength = (length / segmentCount) * (0.8 + Math.random() * 0.4);
+                
+                currentDir.x += (Math.random() - 0.5) * 0.2;
+                currentDir.y += (Math.random() - 0.4) * 0.12;
+                currentDir.z += (Math.random() - 0.5) * 0.2;
+                currentDir.normalize();
+
+                const segEndPoint = currentStart.clone().add(currentDir.clone().multiplyScalar(segLength));
+                const endRadius = currentRadius * (0.78 + Math.random() * 0.1);
+
+                const radialSegments = Math.max(5, 8 - level);
+                const branchGeo = new THREE.CylinderGeometry(endRadius, currentRadius, segLength, radialSegments, 1, false);
+                branchGeo.translate(0, segLength / 2, 0);
+
+                const mesh = new THREE.Mesh(branchGeo, barkMaterial);
+                mesh.position.copy(currentStart);
+                const upwards = new THREE.Vector3(0, 1, 0);
+                mesh.quaternion.setFromUnitVectors(upwards, currentDir);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                treeGroup.add(mesh);
+
+                currentStart = segEndPoint;
+                currentRadius = endRadius;
+            }
+
+            const endPoint = currentStart;
+
+            const subCount = level === 0 ? (4 + Math.floor(Math.random() * 2)) : (Math.random() < 0.7 ? 2 : 3);
+            const lengthDecay = 0.72 + Math.random() * 0.1;
+            const radiusDecay = 0.58 + Math.random() * 0.1;
+
+            for (let i = 0; i < subCount; i++) {
+                const angle = (i / subCount) * Math.PI * 2 + (Math.random() - 0.5) * 1.0;
+                const newDir = currentDir.clone();
+                
+                const axis1 = new THREE.Vector3(1, 0, 0).applyAxisAngle(currentDir, angle);
+                const axis2 = new THREE.Vector3(0, 0, 1).applyAxisAngle(currentDir, angle);
+                
+                let spread = level === 0 ? (0.7 + Math.random() * 0.3) : (0.5 + Math.random() * 0.3);
+                
+                newDir.applyAxisAngle(axis1, spread);
+                newDir.applyAxisAngle(axis2, (Math.random() - 0.5) * 0.6);
+                newDir.normalize();
+
+                newDir.y += 0.15;
+                newDir.normalize();
+
+                createBranch(
+                    endPoint,
+                    newDir,
+                    currentRadius * radiusDecay,
+                    length * lengthDecay,
+                    level + 1,
+                    maxLevel
+                );
+            }
+        }
+
+        // Generate Trunk with natural initial curve/lean
+        const rootPos = new THREE.Vector3(0, 0, 0);
+        const initialDir = new THREE.Vector3((Math.random()-0.5)*0.15, 1, (Math.random()-0.5)*0.15).normalize();
+        createBranch(rootPos, initialDir, 1.3, 4.5, 0, 5);
+
+        // Hide loading indicator once generated
+        document.getElementById('loading').style.opacity = '0';
+        setTimeout(() => document.getElementById('loading').remove(), 500);
+
+        // Animation Loop
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+            
+            // Subtle wind effect on tree branches / foliage
+            const sway = Math.sin(elapsedTime * 1.5) * 0.015;
+            treeGroup.rotation.z = sway;
+            treeGroup.rotation.x = Math.cos(elapsedTime * 1.1) * 0.008;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
