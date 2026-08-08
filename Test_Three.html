@@ -13,9 +13,42 @@
         }
         #respawnBtn {
             position: absolute;
+            top: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        #controls {
+            position: absolute;
             bottom: 60px;
             left: 50%;
             transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        #controlsRow {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+        }
+        #stateBox {
+            width: 70vw;
+            max-width: 720px;
+            height: 110px;
+            background: rgba(10, 15, 20, 0.85);
+            color: #7ee787;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            resize: vertical;
+            outline: none;
+        }
+        button {
             color: #ffffff;
             background: rgba(255, 130, 160, 0.9);
             padding: 12px 28px;
@@ -26,11 +59,16 @@
             cursor: pointer;
             border: 1px solid rgba(255,255,255,0.3);
             box-shadow: 0 6px 20px rgba(255, 100, 140, 0.4);
-            transition: background 0.2s ease, transform 0.1s ease;
+            transition: background 0.2s ease;
             user-select: none;
         }
-        #respawnBtn:hover { background: rgba(255, 150, 180, 1); }
-        #respawnBtn:active { transform: translateX(-50%) scale(0.96); }
+        button:hover { background: rgba(255, 150, 180, 1); }
+        button:active { background: rgba(255, 170, 195, 1); }
+        #copyBtn, #applyBtn {
+            background: rgba(50, 70, 95, 0.9);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        #copyBtn:hover, #applyBtn:hover { background: rgba(70, 95, 125, 1); }
         #loading {
             position: absolute;
             top: 50%;
@@ -51,7 +89,14 @@
 </head>
 <body>
     <div id="loading">Blooming Sakura...</div>
-    <button id="respawnBtn">Grow New Sakura</button>
+    <button id="respawnBtn">Resporn</button>
+    <div class="controls" id="controls">
+        <textarea id="stateBox" spellcheck="false"></textarea>
+        <div id="controlsRow">
+            <button id="copyBtn">Copy</button>
+            <button id="applyBtn">Apply</button>
+        </div>
+    </div>
 
     <!-- Three.js and OrbitControls via CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -60,10 +105,9 @@
     <script>
         // Setup Scene, Camera, Renderer
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x0b0f15, 0.012);
 
         const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 14, 32);
+        camera.position.set(0, 25, 55);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -79,7 +123,7 @@
         controls.dampingFactor = 0.04;
         controls.maxPolarAngle = Math.PI / 2 - 0.01;
         controls.minDistance = 5;
-        controls.maxDistance = 60;
+        controls.maxDistance = 100;
         controls.target.set(0, 8, 0);
 
         // Lighting
@@ -275,6 +319,95 @@
             e.stopPropagation();
             generateTree();
             growFullTree();
+            refreshStateBox();
+        });
+
+        // Serialize the current tree to JSON
+        function serializeTree() {
+            const state = { meshes: [] };
+            treeGroup.children.forEach((mesh) => {
+                const geom = mesh.geometry;
+                const p = geom.parameters;
+                state.meshes.push({
+                    bark: geom.type === 'CylinderGeometry',
+                    params: {
+                        radiusTop: p.radiusTop,
+                        radiusBottom: p.radiusBottom,
+                        height: p.height,
+                        radialSegments: p.radialSegments,
+                        heightSegments: p.heightSegments,
+                        radius: p.radius,
+                        detail: p.detail
+                    },
+                    pos: mesh.position.toArray(),
+                    quat: mesh.quaternion.toArray(),
+                    scale: mesh.scale.toArray(),
+                    color: [mesh.material.color.r, mesh.material.color.g, mesh.material.color.b]
+                });
+            });
+            return JSON.stringify(state);
+        }
+
+        // Rebuild the tree from saved JSON
+        function loadTreeState(json) {
+            const state = JSON.parse(json);
+            scene.remove(treeGroup);
+            treeGroup = new THREE.Group();
+            scene.add(treeGroup);
+            state.meshes.forEach((data) => {
+                let mesh;
+                if (data.bark) {
+                    const geo = new THREE.CylinderGeometry(
+                        data.params.radiusTop, data.params.radiusBottom, data.params.height,
+                        data.params.radialSegments, data.params.heightSegments
+                    );
+                    geo.translate(0, data.params.height / 2, 0);
+                    mesh = new THREE.Mesh(geo, barkMaterial);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                } else {
+                    const geo = new THREE.IcosahedronGeometry(data.params.radius, data.params.detail);
+                    const mat = blossomMaterial.clone();
+                    mat.color.setRGB(data.color[0], data.color[1], data.color[2]);
+                    mesh = new THREE.Mesh(geo, mat);
+                    mesh.castShadow = true;
+                }
+                mesh.position.fromArray(data.pos);
+                mesh.quaternion.fromArray(data.quat);
+                mesh.scale.fromArray(data.scale);
+                treeGroup.add(mesh);
+            });
+        }
+
+        const stateBox = document.getElementById('stateBox');
+
+        function refreshStateBox() {
+            stateBox.value = serializeTree();
+        }
+        refreshStateBox();
+
+        // Copy button
+        document.getElementById('copyBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            stateBox.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Copy failed:', err);
+            }
+        });
+
+        // Apply button
+        document.getElementById('applyBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            try {
+                loadTreeState(stateBox.value);
+                refreshStateBox();
+                console.log('Tree state applied.');
+            } catch (err) {
+                console.error('Apply failed:', err);
+                alert('Invalid JSON');
+            }
         });
 
         // Render loop with gentle breeze
