@@ -1,0 +1,615 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+  <title>Binary Viewer</title>
+
+  <style>
+    .hex-page {
+      user-select: text;
+    }
+
+    .hex-dropzone {
+      border: 2px dashed rgba(25, 118, 210, 0.5);
+      border-radius: 16px;
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: background-color 0.2s, border-color 0.2s;
+      position: relative;
+    }
+
+    .hex-dropzone:hover,
+    .hex-dropzone.dragover {
+      background-color: rgba(25, 118, 210, 0.06);
+      border-color: #1976D2;
+    }
+
+    .hex-dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .hex-viewport {
+      max-height: 560px;
+      overflow: auto;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      background-color: #FFFFFF;
+    }
+
+    .hex-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .hex-table th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background-color: #ECEFF1;
+      color: rgba(0, 0, 0, 0.7);
+      font-weight: 700;
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      white-space: nowrap;
+    }
+
+    .hex-table td {
+      padding: 4px 10px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      white-space: nowrap;
+      vertical-align: top;
+    }
+
+    .hex-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .hex-table tr:hover td {
+      background-color: rgba(25, 118, 210, 0.06);
+    }
+
+    .hex-offset {
+      color: #9E9E9E;
+      padding-right: 18px;
+      font-size: 12px;
+    }
+
+    .hex-bytes {
+      letter-spacing: 0.04em;
+    }
+
+    .hex-bytes .sep {
+      color: #CFD8DC;
+      margin: 0 4px;
+    }
+
+    .hex-byte {
+      display: inline-block;
+      width: 2ch;
+      text-align: center;
+    }
+
+    .hex-byte.matched {
+      background-color: #FFEB3B;
+      color: #000;
+      border-radius: 3px;
+    }
+
+    .hex-ascii {
+      color: #616161;
+      padding-left: 14px;
+    }
+
+    .hex-ascii .matched {
+      background-color: #FFEB3B;
+      color: #000;
+      border-radius: 3px;
+    }
+
+    .hex-text-preview {
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 400px;
+      overflow: auto;
+      background-color: #FFFFFF;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .file-chip {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+    }
+
+    @media (max-width: 600px) {
+      .hex-viewport {
+        max-height: 420px;
+      }
+    }
+  </style>
+    <meta name="robots" content="index, follow">
+</head>
+
+<body>
+
+  <v-app id="App">
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Binary Viewer</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" class="pa-5" fluid fill-height style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="8">
+
+                <v-card class="mb-6" rounded="xl" elevation="2">
+                  <v-card-title>
+                    <v-icon large left>mdi-file-code-outline</v-icon>
+                    Binary Viewer
+                  </v-card-title>
+                  <v-card-text class="pt-3">
+                    <div class="hex-dropzone" :class="{ dragover: dragging }" @click="$refs.fileInput.click()"
+                      @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">
+                      <input ref="fileInput" type="file" style="display:none" @change="onFileSelected">
+                      <v-icon x-large color="primary">mdi-file-upload-outline</v-icon>
+                      <div class="mt-2 font-weight-bold">Drop a file here, or click to select</div>
+                      <div class="mt-1" style="color: rgba(0,0,0,0.5); font-size: 13px;">
+                        View the raw bytes of any binary file (PNG, PDF, EXE, ZIP, ...)
+                      </div>
+                    </div>
+
+                    <v-divider class="my-4"></v-divider>
+
+                    <div v-if="fileLoaded">
+                      <v-row class="mb-2">
+                        <v-col cols="12" md="8">
+                          <v-chip class="mr-2 mb-1 file-chip" color="primary" outlined label>
+                            <v-icon left small>mdi-file-document-outline</v-icon>{{ fileName }}
+                          </v-chip>
+                          <v-chip class="mr-2 mb-1 file-chip" outlined label>
+                            <v-icon left small>mdi-weight</v-icon>{{ fileSizeText }}
+                          </v-chip>
+                          <v-chip class="mb-1 file-chip" outlined label v-if="fileType">
+                            <v-icon left small>mdi-tag-outline</v-icon>{{ fileType }}
+                          </v-chip>
+                        </v-col>
+                        <v-col cols="12" md="4" class="text-md-right">
+                          <v-btn small outlined color="primary" @click="$refs.fileInput.click()">
+                            <v-icon left small>mdi-refresh</v-icon>Open Another
+                          </v-btn>
+                        </v-col>
+                      </v-row>
+
+                      <v-tabs v-model="activeTab" background-color="transparent" color="primary" class="mb-2">
+                        <v-tab>
+                          <v-icon left small>mdi-hexadecimal</v-icon>Hex Dump
+                        </v-tab>
+                        <v-tab>
+                          <v-icon left small>mdi-text-box-outline</v-icon>Text
+                        </v-tab>
+                      </v-tabs>
+
+                      <v-tabs-items v-model="activeTab">
+                        <v-tab-item>
+                          <v-row align="center" class="mb-2">
+                            <v-col cols="auto">
+                              <v-select v-model="bytesPerRow" :items="[8, 16]" dense outlined hide-details
+                                style="width: 110px;" label="Bytes/Row"></v-select>
+                            </v-col>
+                            <v-col cols="auto">
+                              <v-text-field v-model="pageSizeText" dense outlined hide-details
+                                style="width: 150px;" label="Bytes / Page" @change="onPageSizeChange"></v-text-field>
+                            </v-col>
+                            <v-spacer></v-spacer>
+                            <v-col cols="auto">
+                              <v-text-field v-model="gotoOffsetText" dense outlined hide-details
+                                style="width: 170px;" label="Go to offset" prepend-inner-icon="mdi-map-marker"
+                                @keyup.enter="goToOffset" @blur="goToOffset"></v-text-field>
+                            </v-col>
+                          </v-row>
+
+                          <v-alert v-if="fileSize > maxBytes" color="warning" outlined dense class="mb-2">
+                            This file is {{ fileSizeText }}. Only the first {{ maxBytesText }} are loaded for display.
+                          </v-alert>
+
+                          <div class="hex-viewport" ref="viewport">
+                            <table class="hex-table">
+                              <thead>
+                                <tr>
+                                  <th class="hex-offset">Offset</th>
+                                  <th class="hex-bytes">Bytes</th>
+                                  <th class="hex-ascii">ASCII</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr v-for="row in rows" :key="row.offset">
+                                  <td class="hex-offset">{{ row.offsetText }}</td>
+                                  <td class="hex-bytes">
+                                    <template v-for="(cell, i) in row.cells">
+                                      <span v-if="i > 0 && i % 8 === 0" :key="'s' + i" class="sep">|</span>
+                                      <span class="hex-byte" :class="{ matched: cell.matched }" :key="'b' + i">{{ cell.hex }}</span>
+                                    </template>
+                                  </td>
+                                  <td class="hex-ascii">
+                                    <template v-for="(cell, i) in row.cells">
+                                      <span class="ascii-char" :class="{ matched: cell.matched }" :key="'a' + i">{{ cell.ascii }}</span>
+                                    </template>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <v-row align="center" class="mt-2">
+                            <v-col cols="auto">
+                              <v-btn small outlined :disabled="pageOffset === 0" @click="pageOffset -= pageSizeBytes">
+                                <v-icon left small>mdi-chevron-double-left</v-icon>Prev
+                              </v-btn>
+                            </v-col>
+                            <v-col class="text-center" cols="auto" style="flex: 1;">
+                              <span style="font-size: 13px; color: rgba(0,0,0,0.6);">
+                                Page {{ currentPage }} / {{ totalPages }}
+                              </span>
+                            </v-col>
+                            <v-col cols="auto">
+                              <v-btn small outlined :disabled="pageOffset + pageSizeBytes >= displayBytes"
+                                @click="pageOffset += pageSizeBytes">
+                                Next<v-icon right small>mdi-chevron-double-right</v-icon>
+                              </v-btn>
+                            </v-col>
+                          </v-row>
+                        </v-tab-item>
+
+                        <v-tab-item>
+                          <v-row align="center" class="mb-2">
+                            <v-col cols="auto">
+                              <v-select v-model="textEncoding" :items="encodings" dense outlined hide-details
+                                style="width: 200px;" label="Encoding"></v-select>
+                            </v-col>
+                            <v-col cols="auto">
+                              <v-btn small outlined @click="copyText">
+                                <v-icon left small>mdi-content-copy</v-icon>Copy
+                              </v-btn>
+                            </v-col>
+                          </v-row>
+                          <pre class="hex-text-preview">{{ textPreview }}</pre>
+                        </v-tab-item>
+                      </v-tabs-items>
+
+                      <v-divider class="my-4"></v-divider>
+
+                      <v-row align="center">
+                        <v-col cols="12" md="6">
+                          <v-text-field v-model="searchQuery" dense outlined hide-details label="Search text in bytes"
+                            prepend-inner-icon="mdi-magnify" @keyup.enter="searchBytes"></v-text-field>
+                        </v-col>
+                        <v-col cols="12" md="6">
+                          <v-text-field v-model="searchHex" dense outlined hide-details label="Search hex (e.g. 89504E47)"
+                            prepend-inner-icon="mdi-magnify" @keyup.enter="searchBytes"></v-text-field>
+                        </v-col>
+                      </v-row>
+                      <v-row align="center" class="mt-1">
+                        <v-col cols="auto">
+                          <v-btn color="primary" small @click="searchBytes">
+                            <v-icon left small>mdi-magnify</v-icon>Search
+                          </v-btn>
+                        </v-col>
+                        <v-col cols="auto" v-if="searchMatches.length > 0">
+                          <v-btn small outlined @click="prevMatch" class="mr-1">
+                            <v-icon left small>mdi-chevron-up</v-icon>Prev
+                          </v-btn>
+                          <v-btn small outlined @click="nextMatch">
+                            Next<v-icon right small>mdi-chevron-down</v-icon>
+                          </v-btn>
+                          <span class="ml-2" style="font-size: 13px; color: rgba(0,0,0,0.6);">
+                            Match {{ currentMatchIndex + 1 }} / {{ searchMatches.length }}
+                            @ 0x{{ searchMatches[currentMatchIndex].toString(16).toUpperCase() }}
+                          </span>
+                        </v-col>
+                        <v-col cols="auto" v-if="searched && searchMatches.length === 0">
+                          <span style="font-size: 13px; color: #C62828;">No matches found.</span>
+                        </v-col>
+                      </v-row>
+                    </div>
+
+                    <v-alert v-else type="info" outlined class="mt-2">
+                      Select a file to inspect its raw binary contents.
+                    </v-alert>
+
+                  </v-card-text>
+                </v-card>
+
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        activeTab: 0,
+        dragging: false,
+        fileLoaded: false,
+        fileName: '',
+        fileType: '',
+        fileSize: 0,
+        bytes: null,
+        maxBytes: 1048576,
+        bytesPerRow: 16,
+        pageSizeBytes: 4096,
+        pageSizeText: '4096',
+        pageOffset: 0,
+        gotoOffsetText: '',
+        textEncoding: 'UTF-8',
+        encodings: ['UTF-8', 'Shift_JIS', 'ISO-8859-1'],
+        searchQuery: '',
+        searchHex: '',
+        searchMatches: [],
+        currentMatchIndex: -1,
+        searched: false
+      },
+      computed: {
+        fileSizeText() {
+          return this.formatBytes(this.fileSize);
+        },
+        maxBytesText() {
+          return this.formatBytes(this.maxBytes);
+        },
+        displayBytes() {
+          if (!this.bytes) return 0;
+          return Math.min(this.bytes.length, this.maxBytes);
+        },
+        totalPages() {
+          if (!this.displayBytes) return 1;
+          return Math.ceil(this.displayBytes / this.pageSizeBytes);
+        },
+        currentPage() {
+          return Math.floor(this.pageOffset / this.pageSizeBytes) + 1;
+        },
+        rows() {
+          if (!this.bytes) return [];
+          const start = this.pageOffset;
+          const end = Math.min(start + this.pageSizeBytes, this.displayBytes);
+          const rows = [];
+          const matchSet = this.matchSetForRange(start, end);
+          for (let off = start; off < end; off += this.bytesPerRow) {
+            const cells = [];
+            for (let i = 0; i < this.bytesPerRow; i++) {
+              const idx = off + i;
+              if (idx < end) {
+                const b = this.bytes[idx];
+                cells.push({
+                  hex: b.toString(16).padStart(2, '0').toUpperCase(),
+                  ascii: b >= 0x20 && b <= 0x7E ? String.fromCharCode(b) : '.',
+                  matched: matchSet.has(idx)
+                });
+              } else {
+                cells.push({ hex: '  ', ascii: ' ', matched: false });
+              }
+            }
+            rows.push({
+              offset: off,
+              offsetText: off.toString(16).padStart(8, '0').toUpperCase(),
+              cells: cells
+            });
+          }
+          return rows;
+        },
+        textPreview() {
+          if (!this.bytes) return '';
+          const slice = this.bytes.slice(0, this.displayBytes);
+          try {
+            if (this.textEncoding === 'UTF-8') {
+              return new TextDecoder('utf-8').decode(slice);
+            } else if (this.textEncoding === 'Shift_JIS') {
+              return new TextDecoder('shift_jis').decode(slice);
+            }
+            return new TextDecoder('iso-8859-1').decode(slice);
+          } catch (e) {
+            return new TextDecoder('utf-8').decode(slice);
+          }
+        }
+      },
+      watch: {
+        pageSizeBytes() {
+          this.pageOffset = Math.min(this.pageOffset, Math.max(0, this.displayBytes - 1));
+        }
+      },
+      methods: {
+        formatBytes(bytes) {
+          if (bytes < 1024) return bytes + ' B';
+          if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+          return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        },
+        onDrop(event) {
+          this.dragging = false;
+          const file = event.dataTransfer.files[0];
+          if (file) this.loadFile(file);
+        },
+        onFileSelected(event) {
+          const file = event.target.files[0];
+          if (file) this.loadFile(file);
+          event.target.value = '';
+        },
+        loadFile(file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const buf = new Uint8Array(e.target.result);
+            this.bytes = buf;
+            this.fileName = file.name;
+            this.fileType = file.type || 'binary';
+            this.fileSize = buf.length;
+            this.fileLoaded = true;
+            this.pageOffset = 0;
+            this.gotoOffsetText = '';
+            this.searchQuery = '';
+            this.searchHex = '';
+            this.searchMatches = [];
+            this.currentMatchIndex = -1;
+            this.searched = false;
+            this.activeTab = 0;
+          };
+          reader.onerror = () => {
+            alert('Failed to read the file.');
+          };
+          reader.readAsArrayBuffer(file);
+        },
+        onPageSizeChange() {
+          const val = parseInt(this.pageSizeText, 10);
+          if (!isNaN(val) && val > 0) {
+            this.pageSizeBytes = Math.min(val, 65536);
+          }
+          this.pageOffset = 0;
+        },
+        goToOffset() {
+          let text = (this.gotoOffsetText || '').trim();
+          if (!text) return;
+          let off;
+          if (/^0x/i.test(text)) off = parseInt(text.slice(2), 16);
+          else if (/[a-f]/i.test(text)) off = parseInt(text, 16);
+          else off = parseInt(text, 10);
+          if (isNaN(off) || off < 0) return;
+          off = Math.min(off, Math.max(0, this.displayBytes - 1));
+          off = Math.floor(off / this.bytesPerRow) * this.bytesPerRow;
+          this.pageOffset = off;
+          this.gotoOffsetText = '0x' + off.toString(16).toUpperCase();
+        },
+        matchSetForRange(start, end) {
+          const set = new Set();
+          if (this.searchMatches.length === 0 || !this.matchLen) return set;
+          const len = this.matchLen;
+          for (const m of this.searchMatches) {
+            if (m >= end || m + len <= start) continue;
+            for (let i = 0; i < len; i++) {
+              if (m + i >= start && m + i < end) set.add(m + i);
+            }
+          }
+          return set;
+        },
+        searchBytes() {
+          this.searchMatches = [];
+          this.currentMatchIndex = -1;
+          this.searched = true;
+          if (!this.bytes) return;
+
+          let pattern = null;
+          const hexQuery = (this.searchHex || '').replace(/[\s:]/g, '');
+          if (hexQuery.length > 0) {
+            if (!/^[0-9a-fA-F]+$/.test(hexQuery) || hexQuery.length % 2 !== 0) {
+              alert('Hex must be an even number of hex digits.');
+              return;
+            }
+            pattern = new Uint8Array(hexQuery.match(/.{2}/g).map(h => parseInt(h, 16)));
+          } else if (this.searchQuery) {
+            pattern = new TextEncoder().encode(this.searchQuery);
+          } else {
+            return;
+          }
+
+          if (pattern.length === 0) return;
+          this.matchLen = pattern.length;
+          const limit = this.displayBytes;
+          for (let i = 0; i + pattern.length <= limit; i++) {
+            let ok = true;
+            for (let j = 0; j < pattern.length; j++) {
+              if (this.bytes[i + j] !== pattern[j]) { ok = false; break; }
+            }
+            if (ok) this.searchMatches.push(i);
+          }
+
+          if (this.searchMatches.length > 0) {
+            this.currentMatchIndex = 0;
+            this.jumpToMatch(0);
+          }
+        },
+        jumpToMatch(index) {
+          const off = this.searchMatches[index];
+          if (off == null) return;
+          const rowStart = Math.floor(off / this.bytesPerRow) * this.bytesPerRow;
+          this.pageOffset = Math.min(rowStart, Math.max(0, this.displayBytes - 1));
+          this.$nextTick(() => {
+            const vp = this.$refs.viewport;
+            if (!vp) return;
+            const trs = vp.querySelectorAll('tbody tr');
+            const matchOffset = rowStart;
+            for (let i = 0; i < trs.length; i++) {
+              const off = parseInt(trs[i].querySelector('.hex-offset').textContent, 16);
+              if (off === matchOffset) {
+                trs[i].scrollIntoView({ block: 'center' });
+                break;
+              }
+            }
+          });
+        },
+        prevMatch() {
+          if (this.searchMatches.length === 0) return;
+          this.currentMatchIndex = (this.currentMatchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+          this.jumpToMatch(this.currentMatchIndex);
+        },
+        nextMatch() {
+          if (this.searchMatches.length === 0) return;
+          this.currentMatchIndex = (this.currentMatchIndex + 1) % this.searchMatches.length;
+          this.jumpToMatch(this.currentMatchIndex);
+        },
+        copyText() {
+          if (!this.textPreview) return;
+          navigator.clipboard.writeText(this.textPreview).then(() => {
+            alert('Copied to clipboard.');
+          });
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

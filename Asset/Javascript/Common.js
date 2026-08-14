@@ -201,9 +201,17 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-account-group</v-icon></v-list-item-icon>
                     </template>
 
+                    <v-list-item href="./Service_AudioEditor.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Audio Editor</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Service_BezierCurve.html">
                         <v-list-item-icon />
                         <v-list-item-title>Bezier Curve</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Service_BinaryViewer.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Binary Viewer</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Service_ColorDesign.html">
                         <v-list-item-icon />
@@ -224,10 +232,6 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Service_QRCode.html">
                         <v-list-item-icon />
                         <v-list-item-title>QR Code</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_Audio.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Creator Audio</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Service_Creator_Font.html">
                         <v-list-item-icon />
