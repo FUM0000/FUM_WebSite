@@ -214,6 +214,8 @@
             _Speed_Acceleration = 1;
             _Jump_Acceleration = 1.2;
             _Jump_Velocity = 2.5;
+            _AnimationSpeed = 0.01;
+            _LastUpdateTime = performance.now();
 
             get Flag_Loaded() { return this._Flag_Loaded; }
             get Flag_Jumping() { return this._Flag_Jumping; }
@@ -263,11 +265,15 @@
                 }
             }
             Update() {
+                const now = performance.now();
+                const animationDelta = Math.min((now - this._LastUpdateTime) / 1000, 0.1) * (this._AnimationSpeed * FC_Environment.FPS);
+                this._LastUpdateTime = now;
+
                 this._Speed *= this._Speed_Acceleration;
                 this.Move(new THREE.Vector3(0, 0, this._Speed * FC_Environment.TIME_DELTA));
                 this.Gravity();
 
-                this._AnimationControler.update(0.005);
+                this._AnimationControler.update(animationDelta);
             }
 
             Move(_vector3) {

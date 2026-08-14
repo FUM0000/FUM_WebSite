@@ -402,10 +402,13 @@
             _Flag_Loaded = false;
             _State = "Walking"; // "Walking", "Running", "Sitting"
             _TargetPosition = new THREE.Vector3();
-            _MoveSpeed = 0.05;
+            _MoveSpeed = 0.1;
             _RunSpeed = 1.5;
             _Timer_TargetChange = 0;
             _TargetChangeInterval = 7 + Math.random() * 15; // 5 to 10 seconds
+            _AnimationSpeed = 0.01;
+            _LastUpdateTime = performance.now();
+            _AnimationDelta = 0;
 
             get Flag_Loaded() { return this._Flag_Loaded; }
             get Position() { return this._Object ? this._Object.position : new THREE.Vector3(); }
@@ -535,6 +538,10 @@
             Update(playerFloor, isPlayerInElevator, playerPos, isCrouched, isMovingInput) {
                 if (!this._Flag_Loaded || !this._Object) return;
 
+                const now = performance.now();
+                this._AnimationDelta = Math.min((now - this._LastUpdateTime) / 1000, 0.1) * (this._AnimationSpeed * FC_Environment.FPS);
+                this._LastUpdateTime = now;
+
                 // Match floor y with the exact floor level (floorIndex * 5)
                 const targetFloorY = playerFloor * 5;
                 if (!Manager._Elevator.isMoving && Math.abs(this.Position.y - targetFloorY) > 0.01) {
@@ -605,7 +612,7 @@
                         this._State = "Sitting";
                         this._PlayAnimation(3, false);
                     }
-                    this._AnimationControler.update(0.0025);
+                    this._AnimationControler.update(this._AnimationDelta);
                     this._UpdateSkinnedPoints();
                     return;
                 }
@@ -651,7 +658,7 @@
                     }
                 }
 
-                this._AnimationControler.update(0.0025);
+                this._AnimationControler.update(this._AnimationDelta);
                 this._UpdateSkinnedPoints();
             }
 
