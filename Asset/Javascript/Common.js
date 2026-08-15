@@ -40,7 +40,7 @@ Vue.component('main-system-bar', {
 })
 
 
-Default_BGM = 'clair_de_lune.wav';
+Default_BGM = 'Clair_de_Lune.wav';
 Default_Volume_BGM = 0.5;
 function Get_Name_BGM() {
     const saved = localStorage.getItem('appSettings');
@@ -82,7 +82,7 @@ $(function () {
 
             // Settingから最新のBGM設定を取得
             Name = Get_Name_BGM();
-            audio.src = "../../Asset/Audio/" + Name;
+            audio.src = "../../Asset/Audio/BGM/" + Name;
 
             audio.oncanplaythrough = function () {
                 $this.removeClass("mdi-loading mdi-spin");
@@ -106,7 +106,7 @@ function Change_BGM() {
     if (Playing) {
         const audio = $("#BGM")[0];
         audio.pause();
-        audio.src = "../../Asset/Audio/" + Get_Name_BGM();
+        audio.src = "../../Asset/Audio/BGM/" + Get_Name_BGM();
         audio.play();
     }
 }
