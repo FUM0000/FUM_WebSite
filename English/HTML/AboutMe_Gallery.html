@@ -990,6 +990,7 @@
                     }
                 }
                 this.updateFrameVisibilityByPlayerFloor();
+                this.updateSakuraFade();
                 this.resolvePlayerCollision(Player);
 
                 // Smoothly interpolate player Y position for crouching / standing
@@ -1116,13 +1117,14 @@
             }
             display3DCategory(subcategory_x, subcategory_z, category_y) {
                 this._Sakura = new THREE.Group();
+                this._SakuraTarget = false;
                 this._Sakura.position.set(subcategory_x, category_y + 1.5, subcategory_z);
                 this._Sakura.scale.setScalar(0.05);
                 this._Sakura.visible = false;
                 Scene.add(this._Sakura);
 
                 const pedestal = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 16);
-                const pedestalMaterial = new THREE.MeshBasicMaterial({ color: 0x070B14, fog: false });
+                const pedestalMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false, fog: false });
                 this._SakuraPedestal = new THREE.Mesh(pedestal, pedestalMaterial);
                 this._SakuraPedestal.position.set(subcategory_x, category_y + 0.75, subcategory_z);
                 this._SakuraPedestal.visible = false;
@@ -1136,32 +1138,40 @@
                 });
 
                 this._SakuraLights = [];
+                this._SakuraLightBase = [];
                 const ambientLight = new THREE.AmbientLight(0xe8f0ff, 0.3);
                 Scene.add(ambientLight);
                 this._SakuraLights.push(ambientLight);
+                this._SakuraLightBase.push(0.3);
 
                 const sunLight = new THREE.DirectionalLight(0xfff8ee, 0.35);
                 sunLight.position.set(20, 35, 20);
                 Scene.add(sunLight);
                 this._SakuraLights.push(sunLight);
+                this._SakuraLightBase.push(0.35);
 
                 const fillLight = new THREE.DirectionalLight(0x88bbff, 0.2);
                 fillLight.position.set(-20, 15, -20);
                 Scene.add(fillLight);
                 this._SakuraLights.push(fillLight);
+                this._SakuraLightBase.push(0.2);
                 this._SakuraLights.forEach(_light => _light.visible = false);
 
                 const barkMaterial = new THREE.MeshStandardMaterial({
                     color: 0x3d3532,
                     roughness: 0.85,
-                    metalness: 0.05
+                    metalness: 0.05,
+                    transparent: true,
+                    opacity: 0
                 });
 
                 const blossomMaterial = new THREE.MeshStandardMaterial({
                     color: 0xffb7c5,
                     roughness: 0.85,
                     metalness: 0.0,
-                    side: THREE.DoubleSide
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0
                 });
 
                 fetch('../../Asset/Model/JSON/Sakura_1.json')
@@ -1187,6 +1197,19 @@
                             mesh.scale.fromArray(data.scale);
                             this._Sakura.add(mesh);
                         });
+                        this._SakuraMaterials = null;
+                        if (this._SakuraTarget === false) {
+                            this._Sakura.visible = false;
+                            if (this._SakuraPedestal) this._SakuraPedestal.visible = false;
+                        } else if (this._SakuraTarget === true) {
+                            this._SakuraMaterials = [];
+                            if (this._SakuraPedestal) this._SakuraMaterials.push(this._SakuraPedestal.material);
+                            this._Sakura.traverse((child) => { if (child.isMesh) this._SakuraMaterials.push(child.material); });
+                            this._SakuraMaterials.forEach(mat => { if (mat) mat.opacity = 1; });
+                            this._SakuraLights.forEach(_light => { _light.visible = true; _light.intensity = 0.01; });
+                            this._Sakura.visible = true;
+                            if (this._SakuraPedestal) this._SakuraPedestal.visible = true;
+                        }
                     })
                     .catch(_error => {
                         console.error('Sakura JSON load failed:', _error);
@@ -1194,9 +1217,44 @@
             }
             setSakuraVisibility(visible) {
                 if (!this._Sakura || !this._SakuraLights) return;
-                this._Sakura.visible = visible;
-                if (this._SakuraPedestal) this._SakuraPedestal.visible = visible;
-                this._SakuraLights.forEach(_light => _light.visible = visible);
+                if (this._SakuraTarget === visible) return;
+                this._SakuraTarget = visible;
+                if (!this._SakuraMaterials) {
+                    this._SakuraMaterials = [];
+                    if (this._SakuraPedestal) this._SakuraMaterials.push(this._SakuraPedestal.material);
+                    this._Sakura.traverse((child) => {
+                        if (child.isMesh) this._SakuraMaterials.push(child.material);
+                    });
+                }
+            }
+            updateSakuraFade() {
+                if (this._SakuraTarget === undefined || !this._SakuraMaterials) return;
+                const target = this._SakuraTarget ? 1 : 0;
+                const speed = 2.5;
+                let done = true;
+                for (const mat of this._SakuraMaterials) {
+                    if (!mat) continue;
+                    mat.opacity += (target - mat.opacity) * speed * FC_Environment.TIME_DELTA;
+                    if (mat.opacity < 0) mat.opacity = 0;
+                    if (mat.opacity > 1) mat.opacity = 1;
+                    if (Math.abs(mat.opacity - target) > 0.001) done = false;
+                }
+                if (this._SakuraLights && this._SakuraLightBase) {
+                    for (let i = 0; i < this._SakuraLights.length; i++) {
+                        const light = this._SakuraLights[i];
+                        const base = this._SakuraLightBase[i];
+                        light.intensity += (base * target - light.intensity) * speed * FC_Environment.TIME_DELTA;
+                        if (Math.abs(light.intensity - base * target) > 0.001) done = false;
+                    }
+                }
+                this._Sakura.visible = true;
+                if (this._SakuraPedestal) this._SakuraPedestal.visible = true;
+                if (done) {
+                    this._Sakura.visible = this._SakuraTarget;
+                    if (this._SakuraPedestal) this._SakuraPedestal.visible = this._SakuraTarget;
+                    this._SakuraMaterials.forEach(mat => { if (mat) mat.opacity = target; });
+                    if (this._SakuraLights && this._SakuraLightBase) this._SakuraLights.forEach((_light, i) => { _light.visible = this._SakuraTarget; _light.intensity = this._SakuraLightBase[i] * target; });
+                }
             }
             displayOtherCategory(images, category_y, category_name, _range) {
                 const placedPositions = [];
