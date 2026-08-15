@@ -83,6 +83,7 @@
       margin: 0;
     }
     .trim-num-input {
+      appearance: textfield;
       -moz-appearance: textfield;
     }
 
@@ -163,13 +164,14 @@
                   <!-- ===== EDITING SECTIONS (scrollable) ===== -->
                   <div class="edit-scroll" ref="editScroll">
 
-<!-- Volume & Compressor -->
+<!-- Volume -->
                     <v-card class="mb-3">
                       <v-card-text class="pa-3">
                         <div class="d-flex align-center mb-1">
                           <v-icon small class="mr-1">mdi-volume-high</v-icon>
-                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Volume &amp; Compressor</span>
-                          <v-btn icon small class="ml-auto" @click="toggleCollapse('volume')">
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Volume</span>
+                          <v-switch v-model="volumeEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                          <v-btn icon small @click="toggleCollapse('volume')">
                             <v-icon>{{ collapsed.volume ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
                           </v-btn>
                         </div>
@@ -178,11 +180,22 @@
                           color="primary" thumb-label>
                           <template v-slot:append>{{ volume }}%</template>
                         </v-slider>
-                        <div class="d-flex align-center">
+                        </template>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Compressor -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
                           <v-icon small class="mr-1">mdi-compress</v-icon>
-                          <span class="font-weight-medium" style="font-size:12px">Compressor</span>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Compressor</span>
                           <v-switch v-model="compressorEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                          <v-btn icon small @click="toggleCollapse('compressor')">
+                            <v-icon>{{ collapsed.compressor ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
+                          </v-btn>
                         </div>
+                        <template v-if="!collapsed.compressor">
                         <v-slider v-model="compressorThreshold" min="-60" max="0" step="1" label="Threshold (dB)"
                           color="primary" :disabled="!compressorEnabled" thumb-label></v-slider>
                         <v-slider v-model="compressorRatio" min="1" max="20" step="0.5" label="Ratio"
@@ -203,13 +216,14 @@
                       </v-card-text>
                     </v-card>
 
-                    <!-- Trim & Fade -->
+                    <!-- Trim -->
                     <v-card class="mb-3">
                       <v-card-text class="pa-3">
                         <div class="d-flex align-center mb-1">
                           <v-icon small class="mr-1">mdi-content-cut</v-icon>
-                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Trim &amp; Fade</span>
-                          <v-btn icon small class="ml-auto" @click="toggleCollapse('trim')">
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Trim</span>
+                          <v-switch v-model="trimEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                          <v-btn icon small @click="toggleCollapse('trim')">
                             <v-icon>{{ collapsed.trim ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
                           </v-btn>
                         </div>
@@ -226,7 +240,22 @@
                             <input type="number" class="trim-num-input" v-model="trimEndText" step="0.01" min="0" @focus="focusTrimInput('trimEnd', $event)" @change="commitTrimEnd" @blur="commitTrimEnd">
                           </template>
                         </v-slider>
+                        </template>
+                      </v-card-text>
+                    </v-card>
 
+                    <!-- Fade -->
+                    <v-card class="mb-3">
+                      <v-card-text class="pa-3">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon small class="mr-1">mdi-waveform</v-icon>
+                          <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Fade</span>
+                          <v-switch v-model="fadeEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                          <v-btn icon small @click="toggleCollapse('fade')">
+                            <v-icon>{{ collapsed.fade ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
+                          </v-btn>
+                        </div>
+                        <template v-if="!collapsed.fade">
                         <div class="d-flex align-center mb-1 mt-2">
                           <v-icon small class="mr-1">mdi-fan-in</v-icon>
                           <span class="font-weight-medium" style="font-size:12px">Fade In</span>
@@ -301,7 +330,8 @@
                         <div class="d-flex align-center mb-1">
                           <v-icon small class="mr-1">mdi-sine-wave</v-icon>
 <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Frequency Filter</span>
-                          <v-btn icon small class="ml-auto" @click="toggleCollapse('filter')">
+                          <v-switch v-model="filterEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                          <v-btn icon small @click="toggleCollapse('filter')">
                             <v-icon>{{ collapsed.filter ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
                           </v-btn>
                         </div>
@@ -352,7 +382,8 @@
                         <div class="d-flex align-center mb-1">
                           <v-icon small class="mr-1">mdi-speedometer</v-icon>
 <span class="font-weight-medium" style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em">Tempo &amp; Pitch</span>
-                          <v-btn icon small class="ml-auto" @click="toggleCollapse('tempo')">
+                          <v-switch v-model="tempoEnabled" inset hide-details class="ml-auto mt-0"></v-switch>
+                          <v-btn icon small @click="toggleCollapse('tempo')">
                             <v-icon>{{ collapsed.tempo ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
                           </v-btn>
                         </div>
@@ -455,6 +486,7 @@
         nrThreshold: 0.5,
 
         filterType: 'off',
+        filterEnabled: false,
         filterCutoff: 1000,
         filterTypes: [
           { text: 'Off', value: 'off' },
@@ -473,10 +505,12 @@
         eqHighNode: null,
 
         tempo: 1.0,
+        tempoEnabled: false,
         preservePitch: false,
         pitchShift: 0,
 
         volume: 100,
+        volumeEnabled: false,
         gainNode: null,
 
         compressorEnabled: false,
@@ -493,6 +527,8 @@ downloadFileName: 'Name',
 
         trimStart: 0,
         trimEnd: 0,
+        trimEnabled: false,
+        fadeEnabled: false,
         fadeInEnabled: false,
         fadeInDuration: 1,
         fadeOutEnabled: false,
@@ -507,7 +543,9 @@ fadeGainNode: null,
         editingInput: null,
         collapsed: {
           volume: true,
+          compressor: true,
           trim: true,
+          fade: true,
           noise: true,
           noiseReduction: true,
           filter: true,
@@ -522,6 +560,12 @@ fadeGainNode: null,
         trimDuration() {
           return Math.max(0, (this.trimEnd || 0) - (this.trimStart || 0));
         },
+        effTrimStart() {
+          return this.trimEnabled ? this.trimStart : 0;
+        },
+        effTrimEnd() {
+          return this.trimEnabled ? this.trimEnd : this.duration;
+        },
       },
 
       watch: {
@@ -535,8 +579,9 @@ fadeGainNode: null,
         nrEnabled() { this.rebuildGraph(); },
         nrThreshold() { this.rebuildGraph(); },
         filterType() { this.rebuildGraph(); },
+        filterEnabled() { this.rebuildGraph(); },
         filterCutoff() {
-          if (this.filterNode && this.filterType !== 'off') {
+          if (this.filterNode && this.filterEnabled && this.filterType !== 'off') {
             this.filterNode.frequency.setValueAtTime(this.filterCutoff, this.audioContext.currentTime);
           }
         },
@@ -559,6 +604,9 @@ fadeGainNode: null,
         tempo() {
           if (this.isPlaying) this.updateSourceParams();
         },
+        tempoEnabled() {
+          if (this.isPlaying) this.updateSourceParams();
+        },
         pitchShift() {
           if (this.isPlaying) this.updateSourceParams();
         },
@@ -567,9 +615,10 @@ fadeGainNode: null,
         },
         volume(val) {
           if (this.gainNode) {
-            this.gainNode.gain.setValueAtTime(val / 100, this.audioContext.currentTime);
+            this.gainNode.gain.setValueAtTime((this.volumeEnabled ? val : 100) / 100, this.audioContext.currentTime);
           }
         },
+        volumeEnabled() { this.rebuildGraph(); },
         compressorEnabled() { this.rebuildGraph(); },
         compressorThreshold(val) {
           if (this.compressorNode) {
@@ -602,6 +651,8 @@ fadeGainNode: null,
         trimEnd(val) {
           if (this.editingInput !== 'trimEnd') this.trimEndText = (val || 0).toFixed(2);
         },
+        trimEnabled() { this.rebuildGraph(); },
+        fadeEnabled() { this.rebuildGraph(); },
         fadeInDuration(val) {
           if (this.editingInput !== 'fadeIn') this.fadeInText = (val || 0).toFixed(2);
         },
@@ -660,7 +711,7 @@ this.isLoaded = true;
             this.audioContext.resume();
           }
 
-this.sourceOffset = this.startPosition;
+this.sourceOffset = Math.max(this.effTrimStart, Math.min(this.effTrimEnd, this.startPosition));
           this.buildGraph();
           this.sourceStartTime = this.audioContext.currentTime;
           this.isPlaying = true;
@@ -711,23 +762,23 @@ if (this.sourceNode) {
           this.updateSourceParams();
 
 this.gainNode = ctx.createGain();
-          this.gainNode.gain.setValueAtTime(this.volume / 100, ctx.currentTime);
+          this.gainNode.gain.setValueAtTime((this.volumeEnabled ? this.volume : 100) / 100, ctx.currentTime);
 
           this.fadeGainNode = ctx.createGain();
           this.fadeGainNode.gain.setValueAtTime(1, ctx.currentTime);
           const playRate = this.sourceNode.playbackRate.value || 1;
-          const offsetInTrim = Math.max(0, this.sourceOffset - this.trimStart);
-          const playDur = Math.max(0, this.trimDuration - offsetInTrim);
+          const offsetInTrim = Math.max(0, this.sourceOffset - this.effTrimStart);
+          const playDur = Math.max(0, (this.effTrimEnd - this.effTrimStart) - offsetInTrim);
           const t0 = ctx.currentTime;
           const tEnd = t0 + playDur / playRate;
-          if (this.fadeInEnabled && this.fadeInDuration > 0) {
+          if (this.fadeEnabled && this.fadeInEnabled && this.fadeInDuration > 0) {
             const fadeInDur = Math.max(0, this.fadeInDuration - offsetInTrim);
             if (fadeInDur > 0) {
               this.fadeGainNode.gain.setValueAtTime(0, t0);
               this.fadeGainNode.gain.linearRampToValueAtTime(1, t0 + fadeInDur / playRate);
             }
           }
-          if (this.fadeOutEnabled && this.fadeOutDuration > 0) {
+          if (this.fadeEnabled && this.fadeOutEnabled && this.fadeOutDuration > 0) {
             const fadeOutStart = t0 + Math.max(0, playDur - this.fadeOutDuration) / playRate;
             this.fadeGainNode.gain.setValueAtTime(1, fadeOutStart);
             this.fadeGainNode.gain.linearRampToValueAtTime(0.0001, tEnd);
@@ -772,7 +823,7 @@ let node = this.sourceNode;
             node = this.compressorNode;
           }
 
-          if (this.filterType !== 'off') {
+          if (this.filterEnabled && this.filterType !== 'off') {
             node.connect(this.filterNode);
             node = this.filterNode;
           }
@@ -794,8 +845,8 @@ let node = this.sourceNode;
         updateSourceParams() {
           if (!this.sourceNode || !this.audioContext) return;
           const ctx = this.audioContext;
-          const ratio = this.tempo;
-          const pitchRatio = Math.pow(2, this.pitchShift / 12);
+          const ratio = this.tempoEnabled ? this.tempo : 1.0;
+          const pitchRatio = Math.pow(2, (this.tempoEnabled ? this.pitchShift : 0) / 12);
           this.sourceNode.playbackRate.setValueAtTime(ratio * pitchRatio, ctx.currentTime);
           this.sourceNode.detune.setValueAtTime(0, ctx.currentTime);
         },
@@ -916,7 +967,7 @@ let node = this.sourceNode;
           }
           if (this.fadeInDuration > this.trimDuration) this.fadeInDuration = this.trimDuration;
           if (this.fadeOutDuration > this.trimDuration) this.fadeOutDuration = this.trimDuration;
-          this.startPosition = Math.max(this.trimStart, Math.min(this.trimEnd, this.startPosition));
+          this.startPosition = Math.max(this.effTrimStart, Math.min(this.effTrimEnd, this.startPosition));
           if (this.isPlaying) {
             this.adjustPlaybackForTrim();
           }
@@ -928,12 +979,12 @@ let node = this.sourceNode;
           const actual = this.audioContext.currentTime - this.sourceStartTime + this.sourceOffset;
           const rate = this.sourceNode.playbackRate.value || 1;
           const absPos = actual / rate;
-          if (absPos >= this.trimEnd || this.trimDuration <= 0) {
+          if (absPos >= this.effTrimEnd || this.trimDuration <= 0) {
             this.stopAudio();
-            this.drawPlayhead(this.trimEnd / this.duration);
+            this.drawPlayhead(this.effTrimEnd / this.duration);
             return;
           }
-          const newOffset = Math.max(this.trimStart, Math.min(this.trimEnd, absPos));
+          const newOffset = Math.max(this.effTrimStart, Math.min(this.effTrimEnd, absPos));
           this.stopAudio();
           this.startPosition = newOffset;
           this.playAudio();
@@ -952,14 +1003,14 @@ let node = this.sourceNode;
           if (!this.isLoaded || !this.audioBuffer) return;
           const frac = this.waveformFraction(e);
           this.isSelecting = true;
-          this.startPosition = Math.max(this.trimStart, Math.min(this.trimEnd, frac * this.duration));
+          this.startPosition = Math.max(this.effTrimStart, Math.min(this.effTrimEnd, frac * this.duration));
           this.drawFullWaveform();
         },
 
         onWaveformMouseMove(e) {
           if (!this.isSelecting) return;
           const frac = this.waveformFraction(e);
-          this.startPosition = Math.max(this.trimStart, Math.min(this.trimEnd, frac * this.duration));
+          this.startPosition = Math.max(this.effTrimStart, Math.min(this.effTrimEnd, frac * this.duration));
           this.drawFullWaveform();
         },
 
@@ -1027,19 +1078,21 @@ let node = this.sourceNode;
 const elapsed = this.audioContext.currentTime - this.sourceStartTime + this.sourceOffset;
             const rate = this.sourceNode ? this.sourceNode.playbackRate.value : 1;
             const actual = elapsed / rate;
-            const trimDur = this.trimDuration;
+            const effStart = this.effTrimStart;
+            const effEnd = this.effTrimEnd;
+            const trimDur = Math.max(0, effEnd - effStart);
             if (trimDur <= 0) {
               this.stopAudio();
               this.drawPlayhead(0);
               return;
             }
-            const inTrim = actual - this.trimStart;
+            const inTrim = actual - effStart;
             this.currentTime = Math.max(0, inTrim);
             this.playProgress = Math.min(100, (this.currentTime / trimDur) * 100);
 
-            if (actual >= this.trimEnd || inTrim < 0) {
+            if (actual >= effEnd || inTrim < 0) {
               this.stopAudio();
-              this.drawPlayhead(this.trimEnd / this.duration);
+              this.drawPlayhead(effEnd / this.duration);
               return;
             }
 
@@ -1081,7 +1134,7 @@ c.moveTo(i, y1);
           }
           c.stroke();
 
-          if (this.duration > 0 && this.trimDuration > 0.001) {
+          if (this.trimEnabled && this.duration > 0 && this.trimDuration > 0.001) {
             const x0 = (this.trimStart / this.duration) * canvas.width;
             const x1 = (this.trimEnd / this.duration) * canvas.width;
             c.fillStyle = 'rgba(25,118,210,0.15)';
@@ -1091,11 +1144,11 @@ c.moveTo(i, y1);
             c.strokeRect(x0, 0, x1 - x0, canvas.height);
 
             c.fillStyle = 'rgba(255,87,34,0.22)';
-            if (this.fadeInEnabled && this.fadeInDuration > 0) {
+            if (this.fadeEnabled && this.fadeInEnabled && this.fadeInDuration > 0) {
               const fw = Math.min((this.fadeInDuration / this.duration) * canvas.width, x1 - x0);
               c.fillRect(x0, 0, fw, canvas.height);
             }
-            if (this.fadeOutEnabled && this.fadeOutDuration > 0) {
+            if (this.fadeEnabled && this.fadeOutEnabled && this.fadeOutDuration > 0) {
               const fw = Math.min((this.fadeOutDuration / this.duration) * canvas.width, x1 - x0);
               c.fillRect(x1 - fw, 0, fw, canvas.height);
             }
@@ -1144,12 +1197,12 @@ c.moveTo(i, y1);
 
           try {
 let buffer = this.audioBuffer;
-            const ratio = this.tempo;
-            const pitchRatio = Math.pow(2, this.pitchShift / 12);
-            const needsTP = ratio !== 1.0 || this.pitchShift !== 0;
+            const ratio = this.tempoEnabled ? this.tempo : 1.0;
+            const pitchRatio = Math.pow(2, (this.tempoEnabled ? this.pitchShift : 0) / 12);
+            const needsTP = ratio !== 1.0 || pitchRatio !== 1.0;
 
             // Step 0: Trim to the selected range
-            if (this.trimDuration > 0) {
+            if (this.trimEnabled && this.trimDuration > 0) {
               buffer = this.sliceBuffer(buffer, this.trimStart, this.trimEnd);
             }
 
@@ -1174,7 +1227,7 @@ let buffer = this.audioBuffer;
             }
 
             // Step 5: Apply fade in / fade out
-            if (this.fadeInEnabled || this.fadeOutEnabled) {
+            if (this.fadeEnabled && (this.fadeInEnabled || this.fadeOutEnabled)) {
               buffer = this.applyFades(buffer);
             }
 
@@ -1309,7 +1362,7 @@ let buffer = this.audioBuffer;
             source.buffer = buffer;
 
             const gainNode = offline.createGain();
-            gainNode.gain.setValueAtTime(this.volume / 100, 0);
+            gainNode.gain.setValueAtTime((this.volumeEnabled ? this.volume : 100) / 100, 0);
 
             let node = source;
             node.connect(gainNode);
@@ -1326,7 +1379,7 @@ let buffer = this.audioBuffer;
               node = comp;
             }
 
-            if (this.filterType !== 'off') {
+            if (this.filterEnabled && this.filterType !== 'off') {
               const flt = offline.createBiquadFilter();
               flt.type = this.filterType;
               flt.frequency.setValueAtTime(this.filterCutoff, 0);
