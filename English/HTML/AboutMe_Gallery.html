@@ -724,7 +724,8 @@
                 "Art": {
                     "AI": ["1.png", "2.png", "3.png"],
                     "CG": ["1.png", "2.png", "3.png", "4.png"],
-                    "Handmade": ["1.png", "2.png", "3.png", "4.png"]
+                    "Handmade": ["1.png", "2.png", "3.png", "4.png"],
+                    "3D": []
                 },
                 "Cat": [
                     "1.png", "2.png", "3.png", "4.png", "5.png", "6.png", "7.png", "8.png", "9.png", "10.png",
@@ -1002,6 +1003,7 @@
             }
             buildCollisionBoxes() {
                 this._CollisionBoxes = [];
+                this._CollisionCylinders = [];
             }
             resolvePlayerCollision(player) {
                 const half = new THREE.Vector3(0.28, 0.82, 0.28);
@@ -1034,6 +1036,21 @@
                         p.z += centerPlayer.z < centerBox.z ? -overlapZ : overlapZ;
                     }
                 }
+
+                if (this._CollisionCylinders) {
+                    for (let i = 0; i < this._CollisionCylinders.length; i++) {
+                        const c = this._CollisionCylinders[i];
+                        const dx = p.x - c.x;
+                        const dz = p.z - c.z;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+                        const minDist = c.radius + half.x;
+                        if (dist < minDist && dist > 0.0001) {
+                            const push = (minDist - dist) / dist;
+                            p.x += dx * push;
+                            p.z += dz * push;
+                        }
+                    }
+                }
                 player.Position.copy(p);
             }
 
@@ -1053,6 +1070,11 @@
                     subcategory_text.Depth_Test = true;
                     subcategory_text.Position = new THREE.Vector3(subcategory_x, category_y + 3, subcategory_z);
                     this._Category_Texts.push(subcategory_text);
+
+                    if (subcategory === "3D") {
+                        this.display3DCategory(subcategory_x, subcategory_z, category_y);
+                        return;
+                    }
 
                     const number = 10;
                     const angle_category = -(Math.atan2(subcategory_x, subcategory_z) - Math.PI * 0.25);
@@ -1091,6 +1113,90 @@
                 geometry.setFromPoints(points);
                 const circle = new THREE.Line(geometry, material);
                 Scene.add(circle);
+            }
+            display3DCategory(subcategory_x, subcategory_z, category_y) {
+                this._Sakura = new THREE.Group();
+                this._Sakura.position.set(subcategory_x, category_y + 1.5, subcategory_z);
+                this._Sakura.scale.setScalar(0.05);
+                this._Sakura.visible = false;
+                Scene.add(this._Sakura);
+
+                const pedestal = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 16);
+                const pedestalMaterial = new THREE.MeshBasicMaterial({ color: 0x070B14, fog: false });
+                this._SakuraPedestal = new THREE.Mesh(pedestal, pedestalMaterial);
+                this._SakuraPedestal.position.set(subcategory_x, category_y + 0.75, subcategory_z);
+                this._SakuraPedestal.visible = false;
+                Scene.add(this._SakuraPedestal);
+
+                this._CollisionCylinders = this._CollisionCylinders || [];
+                this._CollisionCylinders.push({
+                    x: subcategory_x,
+                    z: subcategory_z,
+                    radius: 0.3
+                });
+
+                this._SakuraLights = [];
+                const ambientLight = new THREE.AmbientLight(0xe8f0ff, 0.3);
+                Scene.add(ambientLight);
+                this._SakuraLights.push(ambientLight);
+
+                const sunLight = new THREE.DirectionalLight(0xfff8ee, 0.35);
+                sunLight.position.set(20, 35, 20);
+                Scene.add(sunLight);
+                this._SakuraLights.push(sunLight);
+
+                const fillLight = new THREE.DirectionalLight(0x88bbff, 0.2);
+                fillLight.position.set(-20, 15, -20);
+                Scene.add(fillLight);
+                this._SakuraLights.push(fillLight);
+                this._SakuraLights.forEach(_light => _light.visible = false);
+
+                const barkMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x3d3532,
+                    roughness: 0.85,
+                    metalness: 0.05
+                });
+
+                const blossomMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xffb7c5,
+                    roughness: 0.85,
+                    metalness: 0.0,
+                    side: THREE.DoubleSide
+                });
+
+                fetch('../../Asset/Model/JSON/Sakura_1.json')
+                    .then(_response => _response.json())
+                    .then(_state => {
+                        _state.meshes.forEach((data) => {
+                            let mesh;
+                            if (data.bark) {
+                                const geo = new THREE.CylinderGeometry(
+                                    data.params.radiusTop, data.params.radiusBottom, data.params.height,
+                                    data.params.radialSegments, data.params.heightSegments
+                                );
+                                geo.translate(0, data.params.height / 2, 0);
+                                mesh = new THREE.Mesh(geo, barkMaterial);
+                            } else {
+                                const geo = new THREE.IcosahedronGeometry(data.params.radius, data.params.detail);
+                                const mat = blossomMaterial.clone();
+                                mat.color.setRGB(data.color[0], data.color[1], data.color[2]);
+                                mesh = new THREE.Mesh(geo, mat);
+                            }
+                            mesh.position.fromArray(data.pos);
+                            mesh.quaternion.fromArray(data.quat);
+                            mesh.scale.fromArray(data.scale);
+                            this._Sakura.add(mesh);
+                        });
+                    })
+                    .catch(_error => {
+                        console.error('Sakura JSON load failed:', _error);
+                    });
+            }
+            setSakuraVisibility(visible) {
+                if (!this._Sakura || !this._SakuraLights) return;
+                this._Sakura.visible = visible;
+                if (this._SakuraPedestal) this._SakuraPedestal.visible = visible;
+                this._SakuraLights.forEach(_light => _light.visible = visible);
             }
             displayOtherCategory(images, category_y, category_name, _range) {
                 const placedPositions = [];
@@ -1225,6 +1331,8 @@
             updateFrameVisibilityByFloor(floor_index) {
                 if (!this.instancedMesh || floor_index === this._CurrentVisibleFrameFloor) return;
                 this._CurrentVisibleFrameFloor = floor_index;
+
+                this.setSakuraVisibility(floor_index === 1);
 
                 const matrix = new THREE.Matrix4();
                 const position = new THREE.Vector3();
