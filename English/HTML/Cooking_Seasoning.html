@@ -62,7 +62,7 @@
                         <v-row>
                             <v-col cols="12">
                                 <v-select v-model="selectedCategory" :items="categories" label="Category"
-                                    class="category-select" @change="filterVideos">
+                                    class="category-select mb-8" @change="filterVideos">
                                     <template v-slot:selection="{ item }">
                                         <v-icon class="ml-2 mr-4">{{ getIcon(item) }}</v-icon>
                                         {{ item }}
@@ -90,22 +90,36 @@
                         </v-row>
 
                         <v-row justify="center">
-                            <v-col cols="12" md="10">
-                                <v-card class="mt-6">
-                                    <v-card-title class="content-text">Condiments, Spices, Dressings &amp; Sauces</v-card-title>
-                                    <v-card-text>
-                                        <v-text-field v-model="searchQuery" label="Search" prepend-inner-icon="mdi-magnify" clearable
-                                            outlined dense class="mb-4" @input="filterTreeview"></v-text-field>
+                            <v-col cols="12">
+                                <div class="seasoning-section-title">Flavor &amp; Seasoning</div>
+                            </v-col>
+                        </v-row>
 
-                                        <v-treeview :items="filteredItems" item-key="name" activatable open-on-click
-                                            dense :open.sync="openNodes" @update:open="updateOpenNodes">
-                                            <template v-slot:label="{ item }">
-                                                <span :class="{ 'search-highlight': item.matches }">
-                                                    <strong>{{ item.name }}</strong>
-                                                    <span v-if="item.description" class="caption ml-2" style="color: #666;">— {{ item.description }}</span>
-                                                </span>
-                                            </template>
-                                        </v-treeview>
+                        <v-row justify="center">
+                            <v-col cols="12" md="4">
+                                <v-text-field v-model="searchQuery" label="Search" prepend-inner-icon="mdi-magnify" clearable
+                                    outlined dense class="mb-4 mt-6" @input="filterTreeview"></v-text-field>
+                            </v-col>
+                        </v-row>
+
+                        <v-row justify="center">
+                            <v-col cols="12" sm="6" lg class="d-flex" v-for="(group, index) in filteredItems" :key="index">
+                                <v-card class="seasoning-card" :class="'seasoning-card-' + group.name.toLowerCase()">
+                                    <v-card-title class="content-text seasoning-card-title">
+                                        {{ group.name }}
+                                    </v-card-title>
+                                    <v-card-text>
+                                        <template v-for="(sub, subIndex) in group.children">
+                                            <div :key="'s' + subIndex" class="seasoning-subcategory">{{ sub.name }}</div>
+                                            <ul :key="'u' + subIndex" class="seasoning-list">
+                                                <li v-for="(item, itemIndex) in sub.children" :key="item.name">
+                                                    <span :class="{ 'search-highlight': item.matches }">
+                                                        <strong>{{ item.name }}</strong>
+                                                        <span v-if="item.description" class="caption" style="color: #666;">— {{ item.description }}</span>
+                                                    </span>
+                                                </li>
+                                            </ul>
+                                        </template>
                                     </v-card-text>
                                 </v-card>
                             </v-col>
@@ -142,7 +156,6 @@
                 },
                 searchQuery: '',
                 filteredItems: [],
-                openNodes: [],
                 TreeData: [
                     {
                         name: 'Condiments',
@@ -197,6 +210,28 @@
                             {
                                 name: 'Pungent', children: [
                                     { name: 'Black pepper', description: 'All-purpose spice. Freshly ground elevates any dish.' },
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        name: 'Nuts',
+                        children: [
+                            {
+                                name: 'Tree Nuts', children: [
+                                    { name: 'Almond', description: 'Rich in vitamin E and fiber, supports heart health. Caution: High in oxalates.' },
+                                    { name: 'Walnut', description: 'High in omega-3 fatty acids, good for brain and heart.' },
+                                    { name: 'Cashew', description: 'Good source of iron and magnesium. Caution: High in oxalates.' },
+                                    { name: 'Pecan', description: 'Rich in antioxidants and healthy fats.' },
+                                    { name: 'Hazelnut', description: 'High in vitamin E and folate. Caution: High in oxalates.' },
+                                    { name: 'Pistachio', description: 'High protein and potassium, lower in calories.' },
+                                ]
+                            },
+                            {
+                                name: 'Other Nuts', children: [
+                                    { name: 'Peanut', description: 'Rich in protein, niacin, and resveratrol. Caution: A common allergen, high in oxalates.' },
+                                    { name: 'Chestnut', description: 'Low in fat, rich in vitamin C and fiber. Caution: High in carbs.' },
+                                    { name: 'Pine nut', description: 'Good source of vitamin K and zinc.' },
                                 ]
                             },
                         ]
@@ -304,27 +339,10 @@
                 getIcon(category) {
                     return this.categoryIcons[category] || 'mdi-silverware-fork-knife';
                 },
-                collectAllNodeIds(items) {
-                    const ids = [];
-                    const collect = (nodes) => {
-                        nodes.forEach((node) => {
-                            ids.push(node.name);
-                            if (node.children) {
-                                collect(node.children);
-                            }
-                        });
-                    };
-                    collect(items);
-                    return ids;
-                },
-                updateOpenNodes(newOpen) {
-                    this.openNodes = newOpen;
-                },
                 filterTreeview() {
                     const query = this.searchQuery ? this.searchQuery.toLowerCase().trim() : '';
                     if (!query) {
                         this.filteredItems = JSON.parse(JSON.stringify(this.TreeData));
-                        this.openNodes = [];
                         return;
                     }
                     const filterTree = (items) => {
@@ -347,7 +365,6 @@
                         }, []);
                     };
                     this.filteredItems = filterTree(JSON.parse(JSON.stringify(this.TreeData)));
-                    this.openNodes = this.collectAllNodeIds(this.filteredItems);
                 }
             }
         });
