@@ -644,6 +644,7 @@ class FC_TextPlane extends FC_Animation {
             opacity: 1.0,
             depthTest: _depth_enable,
             depthWrite: _depth_enable,
+            alphaTest: 0.5,
         });
         this._Mesh_Front = new THREE.Mesh(this._Geometry, this._Material_Front);
         if (_order) this._Mesh_Front.renderOrder = _order;
@@ -655,6 +656,7 @@ class FC_TextPlane extends FC_Animation {
             opacity: 1.0,
             depthTest: _depth_enable,
             depthWrite: _depth_enable,
+            alphaTest: 0.5,
         });
         this._Mesh_Back = new THREE.Mesh(this._Geometry, this._Material_Back);
         this._Scene.add(this._Mesh_Back);
