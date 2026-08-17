@@ -940,7 +940,9 @@
         }
 
         // 銀河全体を覆う円盤用テクスチャ生成（低周波ノイズで滑らかなベースグロー）
-        function createGalaxyDiskTexture(seed) {
+        // ── 共有：銀河円盤テクスチャ生成（ローディング中とメイン画面の両方で使用）
+            // ロード中の星雲の中心幅（ブラックホール領域）を holeRadiusParam で指定
+            function createGalaxyDiskTexture(seed, holeRadiusParam) {
             const size = 512;
             const canvas = document.createElement('canvas');
             canvas.width = canvas.height = size;
@@ -1012,7 +1014,7 @@
                     const falloffSoft = falloff * falloff * (3 - 2 * falloff);
 
                     // 中央は丸くグラデーションで星雲を消す（ブラックホール領域を空ける）
-                    const holeRadius = 0.02;
+                    const holeRadius = holeRadiusParam !== undefined ? holeRadiusParam : 0.02;
                     const holeFeather = 0.18;
                     const holeMask = Math.max(0, Math.min(1, (dist - holeRadius) / holeFeather));
                     const holeSmooth = holeMask * holeMask * (3 - 2 * holeMask);
@@ -1053,12 +1055,12 @@
             return new THREE.CanvasTexture(canvas);
         }
 
-        // 銀河全体を覆う円盤（xz平面に寝かせた1枚板）
+        // ── 共有：銀河全体を覆う円盤（xz平面に寝かせた1枚板） ── ローディング中とメイン画面の両方で使用
         function createGalaxyDiskMesh(parent, opts) {
             opts = opts || {};
             const size = opts.size || 420;
             const opacity = opts.opacity || 0.3;
-            const tex = createGalaxyDiskTexture(opts.seed || 7);
+            const tex = createGalaxyDiskTexture(opts.seed || 7, opts.holeRadius);
             const geometry = new THREE.PlaneGeometry(size, size);
             const material = new THREE.MeshBasicMaterial({
                 map: tex,
@@ -1165,8 +1167,11 @@
             let orbitAngle = 0;
             let exploded = false;
 
-            const setupLoadingGalaxy = (canvas) => {
+            // ── ローディング用：ローディング画面の天の川銀河を生成 ──
+            // opts.holeRadius で中央のブラックホール幅（星雲中心幅）を指定できる
+            const setupLoadingGalaxy = (canvas, opts) => {
                 if (!canvas || !window.THREE) return null;
+                opts = opts || {};
 
                 const renderer = new THREE.WebGLRenderer({
                     canvas,
@@ -1205,7 +1210,8 @@
                 }
                 const loadingParticleTex = createLoadingParticleTexture();
 
-                // ── ローディング中天の川銀河（渦巻銀河） ── ローディング後と同じ計算式
+                // ── ローディング用：ローディング中天の川銀河（渦巻銀河） ── ローディング後に表示する銀河と同じ計算式
+                // 以下の milkyWayTotal / armConfig / diskSpread / starSizeGroups はローディング用の専用設定
                 const milkyWayTotal = 5000;
                 const armConfig = [
                     { armCount: 2, weight: 0.65, twist: 0.045, scatterBase: 0.4, scatterGrowth: 0.008 },
@@ -1307,12 +1313,13 @@
                 const core = new THREE.Points(coreGeometry, coreMaterial);
                 galaxyGroup.add(core);
 
-                // 銀河全体を覆う円盤（xz平面の1枚板）
+                // ── ローディング用：銀河全体を覆う円盤（xz平面の1枚板）
                 createGalaxyDiskMesh(galaxyGroup, {
                     size: 700,
                     opacity: 0.25,
                     seed: 7,
-                    y: 0
+                    y: 0,
+                    holeRadius: opts.holeRadius
                 });
 
                 let rafId = 0;
@@ -1355,7 +1362,9 @@
                 };
             };
 
-            destroyLoadingGalaxy = setupLoadingGalaxy(loadingGalaxyCanvas);
+            // ── ローディング用：ローディング画面の銀河アニメーション開始 ──
+            // { holeRadius: 0.02 } を変えるとロード中の星雲の中心幅が変わる
+            destroyLoadingGalaxy = setupLoadingGalaxy(loadingGalaxyCanvas, { holeRadius: 0 });
 
             const findMenuButton = () => {
                 const buttons = Array.from(document.querySelectorAll('#App .v-system-bar .v-btn'));
