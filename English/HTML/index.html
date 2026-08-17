@@ -902,9 +902,30 @@
                     alpha = Math.min(1, alpha);
 
                     const mixT = Math.max(0, Math.min(1, (n3 + n2) * 0.35 + 0.35 + mixBias));
-                    const r = lerp(255, 170, mixT);
-                    const g = lerp(120, 175, mixT);
-                    const b = lerp(175, 255, mixT);
+
+                    // シードごとに青白緑のトーンを変えて単調さを防ぐ
+                    const coolPalettes = [
+                        [80, 200, 255],   // シアン
+                        [110, 175, 255],  // 青
+                        [60, 225, 175]    // 青緑
+                    ];
+                    const pal = coolPalettes[Math.floor(rand() * coolPalettes.length)];
+                    const coolR = lerp(pal[0] * 0.7, pal[0], mixT);
+                    const coolG = lerp(pal[1] * 0.85, pal[1], mixT);
+                    const coolB = lerp(pal[2] * 0.9, pal[2], mixT);
+
+                    // 中心ほど淡い黄（星の光）に寄せ、外縁は青白緑のリアルな配色
+                    const warmT = Math.max(0, Math.min(1, (1 - dist) * 1.15));
+                    let r = lerp(coolR, 255, warmT * 0.7);
+                    let g = lerp(coolG, 232, warmT * 0.7);
+                    let b = lerp(coolB, 185, warmT * 0.7);
+
+                    // 彩度を引き上げて低Opacityでも色をはっきり出す
+                    const luma = r * 0.299 + g * 0.587 + b * 0.114;
+                    const sat = 1.4;
+                    r = Math.max(0, luma + (r - luma) * sat);
+                    g = Math.max(0, luma + (g - luma) * sat);
+                    b = Math.max(0, luma + (b - luma) * sat);
                     const bright = 0.85 + density2 * 0.3;
 
                     const idx = (y * size + x) * 4;
@@ -1004,9 +1025,22 @@
                     alpha = Math.min(1, alpha);
 
                     const mixT = Math.max(0, Math.min(1, (n2 + n) * 0.3 + 0.5));
-                    const r = lerp(255, 175, mixT);
-                    const g = lerp(135, 180, mixT);
-                    const b = lerp(190, 255, mixT);
+
+                    // 中央ほど濃い黄、外縁は青白緑のリアルな配色
+                    const warmT = Math.max(0, Math.min(1, (1 - dist) * 1.5));
+                    const coolR = lerp(185, 220, mixT);
+                    const coolG = lerp(225, 250, mixT);
+                    const coolB = lerp(235, 255, mixT);
+                    let r = lerp(coolR, 255, warmT * 0.9);
+                    let g = lerp(coolG, 215, warmT * 0.9);
+                    let b = lerp(coolB, 115, warmT * 0.9);
+
+                    // 彩度を引き上げて低Opacityでも色をはっきり出す
+                    const luma = r * 0.299 + g * 0.587 + b * 0.114;
+                    const sat = 1.35;
+                    r = Math.max(0, luma + (r - luma) * sat);
+                    g = Math.max(0, luma + (g - luma) * sat);
+                    b = Math.max(0, luma + (b - luma) * sat);
 
                     const idx = (y * size + x) * 4;
                     data[idx] = r;
