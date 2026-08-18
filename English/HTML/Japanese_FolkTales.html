@@ -26,8 +26,18 @@
     <meta name="robots" content="index, follow">
 
     <style>
+        /* Center the select screen on the page */
+        #Main .container {
+            min-height: calc(100vh - 50px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
         /* Game Selection Carousel / Coverflow Styles */
         .game-select-section {
+            display: flex;
+            flex-direction: column;
             background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
             border-radius: 20px;
             padding: 28px 16px;
@@ -36,6 +46,7 @@
             margin-bottom: 24px;
             position: relative;
             overflow: hidden;
+            min-height: calc(100vh - 110px);
         }
 
         .game-select-header {
@@ -56,12 +67,13 @@
         }
 
         .game-carousel-container {
+            flex: 1 1 auto;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             width: 100%;
-            height: 380px;
+            min-height: 380px;
             perspective: 1000px;
             overflow: hidden;
         }
@@ -86,7 +98,8 @@
         }
 
         .game-carousel-track {
-            position: relative;
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
             display: flex;
@@ -99,6 +112,10 @@
             position: absolute;
             width: 210px;
             height: 320px;
+            top: 50%;
+            left: 50%;
+            margin-top: -160px;
+            margin-left: -105px;
             background: #ffffff;
             border-radius: 16px;
             box-shadow: 0 12px 35px rgba(0,0,0,0.3);
@@ -167,6 +184,16 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        .game-card-summary {
+            font-size: 0.72rem;
+            line-height: 1.4;
+            color: rgba(0, 0, 0, 0.72);
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            max-height: 3em;
         }
 
         .game-nav-buttons {
@@ -538,17 +565,70 @@
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid class="pa-5">
 
+                        <!-- ▼ Game Selection Carousel ▼ ---------------------------------------------------->
                         <v-row justify="center">
                             <v-col cols="12" lg="10">
-                                <v-alert type="info" outlined dense class="mb-4">
-                                    <v-icon x-small left>mdi-information-outline</v-icon>
-                                    How to use: press <b>Read</b> to listen and follow along (日本語を読み上げます). Hiragana words are separated with spaces — each word shows its part of speech and English meaning underneath. Click any sentence to read it aloud.
-                                </v-alert>
+                                <div class="game-select-section">
+                                    <div class="game-select-header">
+                                        <div class="game-select-title">JAPANESE FOLK TALES SELECT</div>
+                                        <div class="game-select-subtitle">Use the ← → keys or buttons to select a tale</div>
+                                    </div>
+
+                                    <div class="game-carousel-container" @click="HandleCarouselAreaClick">
+                                        <div class="game-fade-left"></div>
+                                        <div class="game-fade-right"></div>
+                                        
+                                        <div class="game-carousel-track">
+                                            <div class="game-card-item"
+                                                 v-for="(tale, index) in FolkTales"
+                                                 :key="tale.id"
+                                                 :class="{ 'is-selected': SelectedIndex === index }"
+                                                 :style="GetCardStyle(index)"
+                                                 @click.stop="SelectCard(index)">
+                                                <div class="game-card-inner">
+                                                    <div style="font-size: 0.75rem; font-weight: 700; color: #90a4ae;">
+                                                        {{ String(index + 1).padStart(2, '0') }}
+                                                    </div>
+                                                    <div class="game-card-top-icon" :style="{ backgroundColor: tale.color }">
+                                                        <v-icon large>{{ tale.icon }}</v-icon>
+                                                    </div>
+                                                    <div class="game-card-titles">
+                                                        <div class="game-card-main-title">{{ tale.title }}</div>
+                                                        <div class="game-card-sub-title">{{ tale.titleHiragana }}</div>
+                                                    </div>
+                                                    <div class="game-card-meta">
+                                                        <div class="game-card-summary" v-if="SelectedIndex === index">{{ ShortSummary(tale.summary) }}</div>
+                                                        <v-chip x-small outlined color="primary" class="mx-auto">
+                                                            <v-icon x-small left>mdi-clock-outline</v-icon>{{ tale.time }}
+                                                        </v-chip>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="game-nav-buttons">
+                                        <v-btn class="game-nav-btn" rounded @click="PrevCard">
+                                            <v-icon left>mdi-chevron-left</v-icon> ← PREV
+                                        </v-btn>
+                                        <v-btn class="game-nav-btn" rounded color="amber darken-2" dark @click="ConfirmCurrentCard" :disabled="SelectedIndex === null">
+                                            <v-icon left>mdi-check-circle</v-icon> DECIDE
+                                        </v-btn>
+                                        <v-btn class="game-nav-btn" rounded @click="NextCard">
+                                            NEXT → <v-icon right>mdi-chevron-right</v-icon>
+                                        </v-btn>
+                                    </div>
+
+                                    <div class="game-select-prompt">
+                                        {{ SelectedIndex === null ? 'Select a card or use the left/right buttons to move (nothing selected yet)' : SelectedTitleText }}
+                                    </div>
+                                </div>
                             </v-col>
                         </v-row>
+                        <!-- ▲ Game Selection Carousel ▲ ---------------------------------------------------->
 
                         <!-- ▼ Player ▼ --------------------------------------------------------------------->
-                        <v-row justify="center">
+                        <v-row justify="center" v-if="TaleChosen">
                             <v-col cols="12" lg="10">
                                 <v-card class="player-hero" id="PlayerHero" :style="{ '--tale-bg': ActiveTale.bg }">
                                     <div class="player-banner">
@@ -632,46 +712,7 @@
                         </v-row>
                         <!-- ▲ Player ▲ --------------------------------------------------------------------->
 
-                        <!-- ▼ Playlist ▼ ------------------------------------------------------------------->
-                        <v-row justify="center" class="mt-6">
-                            <v-col cols="12" lg="10">
-                                <div class="playlist-header">Folk Tale Playlist</div>
-                                <div class="playlist-sub">Classic おとぎばなし (otogibanashi) for reading aloud to children — 日本語はひらがな・英単語つき</div>
 
-                                <v-row dense>
-                                    <v-col cols="12" md="6" v-for="(tale, i) in FolkTales" :key="tale.id">
-                                        <v-card class="tale-card" :class="{ 'is-now': IsActive(tale.id) }" @click="ToggleExpand(tale.id)">
-                                            <div class="tale-card-inner">
-                                                <div class="tale-card-top">
-                                                    <span class="tale-num">{{ String(i + 1).padStart(2, '0') }}</span>
-                                                    <v-icon large :color="tale.color">{{ tale.icon }}</v-icon>
-                                                    <div class="tale-title-box">
-                                                        <div class="tale-title">{{ tale.title }}</div>
-                                                        <div class="tale-title-ja">{{ tale.titleHiragana }}</div>
-                                                    </div>
-                                                    <v-chip x-small outlined color="primary" class="mr-1">
-                                                        <v-icon x-small left>mdi-clock-outline</v-icon>{{ tale.time }}
-                                                    </v-chip>
-                                                    <v-btn small color="primary" dark class="read-btn" @click.stop="PlayTale(tale)">
-                                                        <v-icon x-small left>{{ IsActive(tale.id) && Playing ? 'mdi-pause' : 'mdi-play' }}</v-icon>
-                                                        {{ IsActive(tale.id) && Playing ? 'Stop' : 'Read' }}
-                                                    </v-btn>
-                                                </div>
-                                                <div class="tale-summary" :class="{ expanded: ExpandedId === tale.id }">{{ tale.summary }}</div>
-                                                <div class="tale-moral" v-if="ExpandedId === tale.id">
-                                                    <v-icon x-small>mdi-lightbulb-on-outline</v-icon> Moral: {{ tale.moral }}
-                                                </div>
-                                                <div class="tale-toggle" @click.stop="ToggleExpand(tale.id)">
-                                                    {{ ExpandedId === tale.id ? 'Show less' : 'Show summary' }}
-                                                    <v-icon x-small>{{ ExpandedId === tale.id ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
-                                                </div>
-                                            </div>
-                                        </v-card>
-                                    </v-col>
-                                </v-row>
-                            </v-col>
-                        </v-row>
-                        <!-- ▲ Playlist ▲ ------------------------------------------------------------------->
 
                     </v-container>
                 </transition>
@@ -697,6 +738,8 @@
                 Playing: false,
                 ActiveLineIndex: 0,
                 ExpandedId: null,
+                SelectedIndex: 0,
+                TaleChosen: false,
                 synthVoice: null,
                 utterance: null,
                 FolkTales: [
@@ -2383,6 +2426,11 @@
                 },
                 LineStatus() {
                     return 'Line ' + (this.ActiveLineIndex + 1) + ' / ' + this.ActiveTale.lines.length;
+                },
+                SelectedTitleText() {
+                    if (this.SelectedIndex === null || !this.FolkTales[this.SelectedIndex]) return '';
+                    const t = this.FolkTales[this.SelectedIndex];
+                    return `Selected: ${t.title} (${t.titleHiragana})`;
                 }
             },
             created() {
@@ -2539,6 +2587,71 @@
                         'interj': '#c62828'
                     };
                     return map[pos] || '#78909c';
+                },
+                SelectCard(index) {
+                    this.SelectedIndex = index;
+                },
+                ShortSummary(text) {
+                    if (!text) return '';
+                    const len = 78;
+                    if (text.length <= len) return text;
+                    return text.slice(0, len).trimEnd() + '...';
+                },
+                NextCard() {
+                    if (this.SelectedIndex === null) {
+                        this.SelectedIndex = 0;
+                    } else {
+                        this.SelectedIndex = (this.SelectedIndex + 1) % this.FolkTales.length;
+                    }
+                },
+                PrevCard() {
+                    if (this.SelectedIndex === null) {
+                        this.SelectedIndex = this.FolkTales.length - 1;
+                    } else {
+                        this.SelectedIndex = (this.SelectedIndex - 1 + this.FolkTales.length) % this.FolkTales.length;
+                    }
+                },
+                ConfirmSelection(tale) {
+                    const idx = this.FolkTales.findIndex(t => t.id === tale.id);
+                    if (idx !== -1) {
+                        this.SelectedIndex = idx;
+                    }
+                    this.TaleChosen = true;
+                    this.PlayTale(tale);
+                },
+                ConfirmCurrentCard() {
+                    if (this.SelectedIndex !== null && this.FolkTales[this.SelectedIndex]) {
+                        this.TaleChosen = true;
+                        this.PlayTale(this.FolkTales[this.SelectedIndex]);
+                    } else {
+                        this.SelectedIndex = 0;
+                        this.TaleChosen = true;
+                        this.PlayTale(this.FolkTales[0]);
+                    }
+                },
+                HandleCarouselAreaClick(e) {
+                    // clicking background or empty space can do nothing or cycle
+                },
+                GetCardStyle(index) {
+                    const total = this.FolkTales.length;
+                    const focus = this.SelectedIndex !== null ? this.SelectedIndex : 0;
+                    let diff = index - focus;
+                    if (diff > total / 2) diff -= total;
+                    if (diff < -total / 2) diff += total;
+                    const distance = Math.abs(diff);
+                    const spacing = 160;
+                    const x = diff * spacing;
+                    const z = -distance * 120;
+                    const rotateY = diff * -15;
+                    const opacity = distance > 2 ? 0 : Math.max(0.15, 1 - distance * 0.35);
+                    const pointerEvents = distance <= 2 ? 'auto' : 'none';
+                    return {
+                        transform: `translateX(${x}px) translateZ(${z}px) rotateY(${rotateY}deg) scale(${distance === 0 ? 1.05 : Math.max(0.75, 1 - distance * 0.1)})`,
+                        opacity: opacity,
+                        filter: distance === 0 ? 'none' : `blur(${distance * 1.5}px)`,
+                        zIndex: 10 - distance,
+                        pointerEvents: pointerEvents
+                    };
                 }
             },
             beforeDestroy() {
