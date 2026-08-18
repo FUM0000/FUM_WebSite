@@ -632,6 +632,15 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Verb ▲ ------------------------------------------------------------------------------------->
                 
+                <!-- ▼ Folk Tales ▼ --------------------------------------------------------------------------------->
+                <v-list-item href="./Japanese_FolkTales.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Folk Tales</v-list-item-title>
+
+                    <v-list-item-icon><v-icon>mdi-book-open-page-variant-outline</v-icon></v-list-item-icon>
+                </v-list-item>
+                <!-- ▲ Folk Tales ▲ --------------------------------------------------------------------------------->
+
                 <!-- ▼ Quiz ▼ ------------------------------------------------------------------------------------->
                 <v-list-item href="./Japanese_Quiz.html">
                     <v-list-item-icon />
