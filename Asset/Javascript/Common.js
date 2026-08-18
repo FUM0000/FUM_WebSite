@@ -622,7 +622,7 @@ Vue.component('main-navigation', {
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
                         <v-list-item-title>Verb</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-book-open-page-variant</v-icon></v-list-item-icon>
+                        <v-list-item-icon><v-icon>mdi-walk</v-icon></v-list-item-icon>
                     </template>
 
                     <v-list-item href="./Japanese_Verb_Type.html">
