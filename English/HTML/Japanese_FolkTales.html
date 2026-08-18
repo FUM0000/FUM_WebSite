@@ -450,6 +450,35 @@
             background: #fafcfe;
         }
 
+        .story-english-row {
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .english-read-btn {
+            color: #1a237e !important;
+            border-color: #1a237e !important;
+            background: rgba(255, 255, 255, 0.6) !important;
+            text-transform: none !important;
+            letter-spacing: 0.02em;
+            font-size: 0.8rem !important;
+            font-weight: 700 !important;
+        }
+
+        .english-dialog-title {
+            color: #1a237e;
+            font-weight: 700;
+        }
+
+        .english-dialog-text {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: rgba(0, 0, 0, 0.87);
+            white-space: pre-line;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
         .story-line {
             padding: 10px 12px;
             border-radius: 12px;
@@ -468,6 +497,10 @@
             border-left-color: #1976D2;
         }
 
+.word-unit.is-punc {
+            margin: 0 2px 4px 0;
+        }
+
         .line-words {
             display: flex;
             flex-wrap: wrap;
@@ -480,10 +513,6 @@
             align-items: center;
             margin: 0 12px 4px 0;
             line-height: 1.25;
-        }
-
-        .word-unit.is-punc {
-            margin: 0 2px 4px -6px;
         }
 
         .word-ja {
@@ -518,6 +547,9 @@
             font-size: 1.32rem;
             font-weight: 700;
             color: #455a64;
+            line-height: 1.25;
+            position: relative;
+            top: 0.1em;
         }
 
         .playlist-header {
@@ -628,7 +660,7 @@
                 padding: 12px 10px 18px;
             }
 
-            .word-ja {
+        .word-ja {
                 font-size: 1.1rem;
             }
 
@@ -786,8 +818,8 @@
                                                      :class="{ 'is-active': Playing && i === ActiveLineIndex }"
                                                      @click="ReadLine(i)">
                                                     <div class="line-words">
+                                                        <template v-for="(w, wi) in line.words">
                                                         <span class="word-unit"
-                                                              v-for="(w, wi) in line.words"
                                                               :key="wi"
                                                               :class="{ 'is-punc': !w.pos }">
                                                             <span class="word-ja">{{ w.t }}</span>
@@ -796,11 +828,27 @@
                                                             </span>
                                                             <span class="word-punc-char" v-else>{{ w.t }}</span>
                                                         </span>
+                                                        </template>
                                                     </div>
                                                 </div>
+                                            <div class="story-english-row">
+                                                <v-btn class="english-read-btn" small rounded outlined @click="ShowEnglish = true">
+                                                    <v-icon left>mdi-translate</v-icon> Read in English
+                                                </v-btn>
                                             </div>
                                         </div>
                                     </div>
+
+                                    <v-dialog v-model="ShowEnglish" max-width="640">
+                                        <v-card>
+                                            <v-card-title class="english-dialog-title">{{ ActiveTale.title }}</v-card-title>
+                                            <v-card-text class="english-dialog-text">{{ FullEnglishText }}</v-card-text>
+                                            <v-card-actions>
+                                                <v-spacer></v-spacer>
+                                                <v-btn text color="primary" @click="ShowEnglish = false">Close</v-btn>
+                                            </v-card-actions>
+                                        </v-card>
+                                    </v-dialog>
                                 </v-card>
                             </v-col>
                         </v-row>
@@ -836,6 +884,7 @@
                 SelectedIndex: 0,
                 TaleChosen: false,
                 ShowLegend: false,
+                ShowEnglish: false,
                 synthVoice: null,
                 utterance: null,
                 PosColors: {
@@ -2537,6 +2586,9 @@
                 },
                 LineStatus() {
                     return 'Line ' + (this.ActiveLineIndex + 1) + ' / ' + this.ActiveTale.lines.length;
+                },
+                FullEnglishText() {
+                    return this.ActiveTale.lines.map(line => line.trans).join('\n');
                 },
                 SelectedTitleText() {
                     if (this.SelectedIndex === null || !this.FolkTales[this.SelectedIndex]) return '';
