@@ -218,6 +218,12 @@
             background: rgba(255, 255, 255, 0.3) !important;
         }
 
+        .game-nav-btn.is-decided {
+            background: #ffa000 !important;
+            border-color: #ffa000 !important;
+            color: #fff !important;
+        }
+
         .game-select-prompt {
             text-align: center;
             margin-top: 12px;
@@ -227,10 +233,87 @@
         }
 
         .player-hero {
+            position: relative;
             border-radius: 18px;
             overflow: hidden;
             border: 1px solid #cfd8dc;
             box-shadow: 0 8px 28px rgba(0, 0, 0, 0.10);
+        }
+
+        .player-back-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 18px 0;
+            margin-bottom: 8px;
+        }
+
+        .player-back-btn {
+            color: #1a237e !important;
+            border-color: #1a237e !important;
+            background: rgba(255, 255, 255, 0.6) !important;
+            text-transform: none !important;
+            letter-spacing: 0.02em;
+            font-size: 0.78rem !important;
+            font-weight: 700 !important;
+        }
+
+        .player-back-btn:hover {
+            background: rgba(26, 35, 126, 0.1) !important;
+        }
+
+        .player-hint-btn {
+            color: #1a237e !important;
+            background: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        .pos-legend-panel {
+            position: absolute;
+            top: 52px;
+            right: 4px;
+            z-index: 10;
+            background: #fff;
+            border-radius: 10px;
+            padding: 12px 14px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+            width: 180px;
+        }
+
+        .pos-legend-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #1a237e;
+            margin-bottom: 8px;
+        }
+
+        .pos-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 0;
+        }
+
+        .pos-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .pos-label {
+            font-size: 0.78rem;
+            color: #37474f;
+        }
+
+        .Fade_Card-enter-active,
+        .Fade_Card-leave-active {
+            transition: opacity 0.45s ease;
+        }
+
+        .Fade_Card-enter,
+        .Fade_Card-leave-to {
+            opacity: 0;
         }
 
         .player-banner {
@@ -245,6 +328,13 @@
             align-items: center;
             justify-content: center;
             text-align: center;
+        }
+
+        .player-disc-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
         .player-disc {
@@ -430,13 +520,6 @@
             color: #455a64;
         }
 
-        .line-trans {
-            font-style: italic;
-            color: rgba(0, 0, 0, 0.48);
-            font-size: 0.8rem;
-            margin: -2px 0 2px 4px;
-        }
-
         .playlist-header {
             font-size: 1.1rem;
             font-weight: 700;
@@ -566,7 +649,8 @@
                     <v-container v-show="Ready_Page" fluid class="pa-5">
 
                         <!-- ▼ Game Selection Carousel ▼ ---------------------------------------------------->
-                        <v-row justify="center">
+                        <transition name="Fade_Card" mode="out-in">
+                        <v-row v-if="!TaleChosen" key="select" justify="center">
                             <v-col cols="12" lg="10">
                                 <div class="game-select-section">
 
@@ -607,8 +691,8 @@
                                         <v-btn class="game-nav-btn" rounded @click="PrevCard">
                                             <v-icon left>mdi-chevron-left</v-icon>PREV
                                         </v-btn>
-                                        <v-btn class="game-nav-btn" rounded color="amber darken-2" dark @click="ConfirmCurrentCard" :disabled="SelectedIndex === null">
-                                            <v-icon left>mdi-check-circle</v-icon> DECIDE
+                                        <v-btn class="game-nav-btn" :class="{ 'is-decided': TaleChosen }" rounded dark @click="ConfirmCurrentCard" :disabled="SelectedIndex === null">
+                                            <v-icon left>{{ TaleChosen ? 'mdi-check-circle' : 'mdi-check-circle-outline' }}</v-icon> DECIDE
                                         </v-btn>
                                         <v-btn class="game-nav-btn" rounded @click="NextCard">
                                             NEXT<v-icon right>mdi-chevron-right</v-icon>
@@ -621,17 +705,40 @@
                                 </div>
                             </v-col>
                         </v-row>
-                        <!-- ▲ Game Selection Carousel ▲ ---------------------------------------------------->
 
-                        <!-- ▼ Player ▼ --------------------------------------------------------------------->
-                        <v-row justify="center" v-if="TaleChosen">
+                        <v-row v-else key="player" justify="center">
                             <v-col cols="12" lg="10">
                                 <v-card class="player-hero" id="PlayerHero" :style="{ '--tale-bg': ActiveTale.bg }">
+                                    <div class="player-back-bar">
+                                        <v-btn class="player-back-btn" small rounded outlined @click="BackToSelection">
+                                            <v-icon left>mdi-arrow-left</v-icon> Back to selection
+                                        </v-btn>
+                                        <v-btn class="player-hint-btn" small icon @click="ToggleLegend" title="Part of speech colors">
+                                            <v-icon>mdi-help-circle-outline</v-icon>
+                                        </v-btn>
+                                    </div>
+                                    <transition name="Fade_Card">
+                                        <div class="pos-legend-panel" v-if="ShowLegend">
+                                            <div class="pos-legend-title">Part of speech colors</div>
+                                            <div class="pos-legend-item" v-for="item in PosLegend" :key="item.pos">
+                                                <span class="pos-swatch" :style="{ backgroundColor: item.color }"></span>
+                                                <span class="pos-label">{{ item.label }}</span>
+                                            </div>
+                                        </div>
+                                    </transition>
                                     <div class="player-banner">
                                         <v-row align="center">
                                             <v-col cols="12" sm="4" class="player-disc-col">
-                                                <div class="player-disc" :class="{ 'is-playing': Playing }" :style="{ backgroundColor: ActiveTale.color }">
-                                                    <v-icon large>mdi-music-note</v-icon>
+                                                <div class="player-disc-nav">
+                                                    <v-btn icon small color="grey darken-2" @click="PrevTale" title="Previous tale">
+                                                        <v-icon>mdi-chevron-left</v-icon>
+                                                    </v-btn>
+                                                    <div class="player-disc" :class="{ 'is-playing': Playing }" :style="{ backgroundColor: ActiveTale.color }">
+                                                        <v-icon large>mdi-music-note</v-icon>
+                                                    </div>
+                                                    <v-btn icon small color="grey darken-2" @click="NextTale" title="Next tale">
+                                                        <v-icon>mdi-chevron-right</v-icon>
+                                                    </v-btn>
                                                 </div>
                                                 <div class="player-title">{{ ActiveTale.title }}</div>
                                                 <div class="player-title-ja">{{ ActiveTale.titleHiragana }}</div>
@@ -655,14 +762,8 @@
                                                 </div>
 
                                                 <div class="player-controls mt-3">
-                                                    <v-btn icon small color="grey darken-2" @click="PrevTale" title="Previous tale">
-                                                        <v-icon>mdi-skip-previous</v-icon>
-                                                    </v-btn>
                                                     <v-btn icon color="primary" :style="'width: 44px; height: 44px;'" @click="TogglePlay" title="Play / Pause">
                                                         <v-icon large>{{ Playing ? 'mdi-pause' : 'mdi-play' }}</v-icon>
-                                                    </v-btn>
-                                                    <v-btn icon small color="grey darken-2" @click="NextTale" title="Next tale">
-                                                        <v-icon>mdi-skip-next</v-icon>
                                                     </v-btn>
                                                     <v-btn icon small color="grey darken-2" @click="RestartTale" title="Restart tale">
                                                         <v-icon>mdi-restart</v-icon>
@@ -678,8 +779,7 @@
                                     </div>
 
                                     <div class="story-area">
-                                        <transition name="Fade_Page">
-                                            <div :key="ActiveTale.id">
+                                        <div :key="ActiveTale.id">
                                                 <div class="story-line"
                                                      v-for="(line, i) in ActiveTale.lines"
                                                      :key="i"
@@ -692,20 +792,19 @@
                                                               :class="{ 'is-punc': !w.pos }">
                                                             <span class="word-ja">{{ w.t }}</span>
                                                             <span class="word-meta" v-if="w.pos">
-                                                                <span class="word-pos" :style="{ color: PosColor(w.pos) }">{{ w.pos }}</span>
-                                                                <span class="word-en">{{ w.en }}</span>
+                                                                <span class="word-en" :style="{ color: PosColor(w.pos) }">{{ w.en }}</span>
                                                             </span>
                                                             <span class="word-punc-char" v-else>{{ w.t }}</span>
                                                         </span>
                                                     </div>
-                                                    <div class="line-trans">{{ line.trans }}</div>
                                                 </div>
                                             </div>
-                                        </transition>
+                                        </div>
                                     </div>
                                 </v-card>
                             </v-col>
                         </v-row>
+                        </transition>
                         <!-- ▲ Player ▲ --------------------------------------------------------------------->
 
 
@@ -736,8 +835,24 @@
                 ExpandedId: null,
                 SelectedIndex: 0,
                 TaleChosen: false,
+                ShowLegend: false,
                 synthVoice: null,
                 utterance: null,
+                PosColors: {
+                    'noun': '#1565c0',
+                    'verb': '#e65100',
+                    'i-adj': '#2e7d32',
+                    'na-adj': '#00695c',
+                    'adj': '#1b5e20',
+                    'adv': '#6a1b9a',
+                    'particle': '#78909c',
+                    'conj': '#283593',
+                    'aux': '#6d4c41',
+                    'pron': '#ad1457',
+                    'num': '#00838f',
+                    'suffix': '#546e7a',
+                    'interj': '#c62828'
+                },
                 FolkTales: [
                     {
                         id: 'momotaro',
@@ -748,7 +863,7 @@
                         bg: '#fce4ec',
                         time: '2 min',
                         moral: 'Courage and kindness bring victory.',
-                        summary: 'A boy born from a peach travels to Onigashima with a dog, a monkey, and a pheasant to defeat the demons and bring back their treasure.',
+                        summary: 'A giant peach floats down the river — what awaits inside?',
                         lines: [
                             {
                                 trans: 'Long, long ago, in a certain place, there lived an old man and an old woman.',
@@ -1044,7 +1159,7 @@
                         bg: '#e1f5fe',
                         time: '2 min',
                         moral: 'True happiness is found in everyday life.',
-                        summary: 'A young fisherman saves a turtle and is taken to the beautiful Dragon Palace under the sea, where he stays for what feels like a few days — but is actually many years.',
+                        summary: 'A turtle takes a fisherman to a world beneath the sea.',
                         lines: [
                             {
                                 trans: 'Urashima Taro helped a beautiful turtle at the seaside.',
@@ -1260,7 +1375,7 @@
                         bg: '#e0f7fa',
                         time: '2 min',
                         moral: 'Kindness should not be broken by curiosity.',
-                        summary: 'A man rescues a crane caught in a trap. A beautiful woman later becomes his wife and weaves wonderful cloth in secret, but she is actually the crane he saved.',
+                        summary: 'A man rescues a crane who swears to repay him.',
                         lines: [
                             {
                                 trans: 'Long ago, in a mountain village in the snow country, there lived a man named Makoto.',
@@ -1493,7 +1608,7 @@
                         bg: '#fbe9e7',
                         time: '2 min',
                         moral: 'Strength grows when used to protect others.',
-                        summary: 'A super-strong boy grows up in the mountains, making friends with the animals. When demons bully the mountain\'s creatures, Kintaro defeats them and brings peace.',
+                        summary: 'A boy raised by mountain animals grows into a hero.',
                         lines: [
                             {
                                 trans: 'Long ago, on a mountain called Kumagayama, there lived a strong child named Kintaro.',
@@ -1651,7 +1766,7 @@
                         bg: '#ede7f6',
                         time: '2 min',
                         moral: 'Parting is part of living, and memories last forever.',
-                        summary: 'An old bamboo cutter finds a tiny girl inside a shining bamboo stalk. She grows into a beautiful princess, turns down many suitors, and is finally taken back to the moon.',
+                        summary: 'A glowing light hides inside a shining bamboo stalk.',
                         lines: [
                             {
                                 trans: 'Long ago, an old bamboo cutter found a shining bamboo at the foot of the mountain.',
@@ -1847,7 +1962,7 @@
                         bg: '#fff8e1',
                         time: '2 min',
                         moral: 'Even the smallest person can achieve great things.',
-                        summary: 'A boy the size of a fingertip sets off for the capital with a chopstick and a bowl. He defeats a demon, gains a magic mallet, and becomes tall and handsome.',
+                        summary: 'A fingertip-sized boy sets off on a great quest.',
                         lines: [
                             {
                                 trans: 'Long ago, there lived an old man and an old woman who had no children.',
@@ -2042,7 +2157,7 @@
                         bg: '#efebe9',
                         time: '2 min',
                         moral: 'Trickery and cruelty will be repaid.',
-                        summary: 'A selfish monkey tricks a crab out of a rice ball. Later, the crab\'s friends — a mortar, a bee, and a chestnut — teach the monkey a lesson.',
+                        summary: 'A sneaky monkey steals a crab\'s rice ball...',
                         lines: [
                             {
                                 trans: 'Long ago, a crab picked up a rice ball.',
@@ -2224,7 +2339,7 @@
                         bg: '#e0f2f1',
                         time: '2 min',
                         moral: 'Kindness is rewarded; greed brings loss.',
-                        summary: 'A kind old man\'s sparrow has its tongue cut by a mean old woman. The old man searches for it, and the grateful sparrow gives him a box full of treasure.',
+                        summary: 'A kind old man follows a small sparrow into the hills.',
                         lines: [
                             {
                                 trans: 'Long ago, an old man kept a mischievous sparrow.',
@@ -2427,6 +2542,24 @@
                     if (this.SelectedIndex === null || !this.FolkTales[this.SelectedIndex]) return '';
                     const t = this.FolkTales[this.SelectedIndex];
                     return `${t.title} (${t.titleHiragana})`;
+                },
+                PosLegend() {
+                    const names = {
+                        'noun': 'Noun',
+                        'verb': 'Verb',
+                        'i-adj': 'i-Adjective',
+                        'na-adj': 'na-Adjective',
+                        'adj': 'Adjective',
+                        'adv': 'Adverb',
+                        'particle': 'Particle',
+                        'conj': 'Conjunction',
+                        'aux': 'Auxiliary',
+                        'pron': 'Pronoun',
+                        'num': 'Number',
+                        'suffix': 'Suffix',
+                        'interj': 'Interjection'
+                    };
+                    return Object.keys(this.PosColors).map(key => ({ pos: key, label: names[key] || key, color: this.PosColors[key] }));
                 }
             },
             created() {
@@ -2505,21 +2638,6 @@
                     };
                     step(startIndex);
                 },
-                PlayTale(tale) {
-                    if (this.Playing && this.ActiveTaleId === tale.id) {
-                        this.stopSpeak();
-                        return;
-                    }
-                    this.stopSpeak();
-                    this.ActiveTaleId = tale.id;
-                    this.ActiveLineIndex = 0;
-                    this.Playing = true;
-                    this.ScrollToPlayer();
-                    const self = this;
-                    this.$nextTick(function () {
-                        self.playSequence(0);
-                    });
-                },
                 TogglePlay() {
                     if (this.Playing) {
                         this.stopSpeak();
@@ -2543,16 +2661,24 @@
                         });
                     });
                 },
+                SwitchTale(tale) {
+                    this.stopSpeak();
+                    this.ActiveTaleId = tale.id;
+                    this.ActiveLineIndex = 0;
+                    this.Playing = false;
+                },
                 NextTale() {
                     const next = (this.ActiveTaleIndex + 1) % this.FolkTales.length;
-                    this.PlayTale(this.FolkTales[next]);
+                    this.SwitchTale(this.FolkTales[next]);
                 },
                 PrevTale() {
                     const prev = (this.ActiveTaleIndex - 1 + this.FolkTales.length) % this.FolkTales.length;
-                    this.PlayTale(this.FolkTales[prev]);
+                    this.SwitchTale(this.FolkTales[prev]);
                 },
                 RestartTale() {
-                    this.PlayTale(this.ActiveTale);
+                    this.stopSpeak();
+                    this.ActiveLineIndex = 0;
+                    this.Playing = false;
                 },
                 ScrollToPlayer() {
                     const el = document.getElementById('PlayerHero');
@@ -2567,22 +2693,7 @@
                     return this.ActiveTaleId === id;
                 },
                 PosColor(pos) {
-                    const map = {
-                        'noun': '#1565c0',
-                        'verb': '#e65100',
-                        'i-adj': '#2e7d32',
-                        'na-adj': '#00695c',
-                        'adj': '#1b5e20',
-                        'adv': '#6a1b9a',
-                        'particle': '#78909c',
-                        'conj': '#283593',
-                        'aux': '#6d4c41',
-                        'pron': '#ad1457',
-                        'num': '#00838f',
-                        'suffix': '#546e7a',
-                        'interj': '#c62828'
-                    };
-                    return map[pos] || '#78909c';
+                    return this.PosColors[pos] || '#78909c';
                 },
                 SelectCard(index) {
                     this.SelectedIndex = index;
@@ -2607,22 +2718,38 @@
                         this.SelectedIndex = (this.SelectedIndex - 1 + this.FolkTales.length) % this.FolkTales.length;
                     }
                 },
+                ShowTale(tale) {
+                    this.stopSpeak();
+                    this.ActiveTaleId = tale.id;
+                    this.ActiveLineIndex = 0;
+                    this.Playing = false;
+                    this.TaleChosen = true;
+                    this.ScrollToPlayer();
+                },
+                BackToSelection() {
+                    this.stopSpeak();
+                    this.Playing = false;
+                    this.ActiveLineIndex = 0;
+                    this.ShowLegend = false;
+                    this.TaleChosen = false;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
+                ToggleLegend() {
+                    this.ShowLegend = !this.ShowLegend;
+                },
                 ConfirmSelection(tale) {
                     const idx = this.FolkTales.findIndex(t => t.id === tale.id);
                     if (idx !== -1) {
                         this.SelectedIndex = idx;
                     }
-                    this.TaleChosen = true;
-                    this.PlayTale(tale);
+                    this.ShowTale(tale);
                 },
                 ConfirmCurrentCard() {
                     if (this.SelectedIndex !== null && this.FolkTales[this.SelectedIndex]) {
-                        this.TaleChosen = true;
-                        this.PlayTale(this.FolkTales[this.SelectedIndex]);
+                        this.ShowTale(this.FolkTales[this.SelectedIndex]);
                     } else {
                         this.SelectedIndex = 0;
-                        this.TaleChosen = true;
-                        this.PlayTale(this.FolkTales[0]);
+                        this.ShowTale(this.FolkTales[0]);
                     }
                 },
                 HandleCarouselAreaClick(e) {
