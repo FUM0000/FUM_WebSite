@@ -473,6 +473,8 @@
         let allShells = [];
         let centerGroup = null;
         let initialCameraPos = null;
+        let tween = null;
+        const TWEEN_DURATION = 650;
 
         function getNodeColor(name, depth, parentColor, itemIndex, totalItems) {
             if (depth === 0) return new THREE.Color(0x88ddff);
@@ -582,6 +584,74 @@
             camera.position.copy(origin).add(dir.multiplyScalar(distance));
             controls.maxDistance = Math.max(600, distance * 3);
             controls.minDistance = Math.min(12, distance * 0.15);
+        }
+
+        function computeCameraForVisibleNodes() {
+            const origin = new THREE.Vector3(0, 0, 0);
+
+            let maxRadius = 0;
+            for (const e of allEntries) {
+                if (isItemVisible(e.item)) {
+                    const d = e.position.distanceTo(origin);
+                    if (d > maxRadius) maxRadius = d;
+                }
+            }
+            maxRadius = Math.max(maxRadius, 5);
+
+            const fov = camera.fov * (Math.PI / 180);
+            const distance = (maxRadius / Math.sin(fov / 2)) * 1.15;
+
+            const dir = camera.position.clone().sub(controls.target);
+            if (dir.lengthSq() < 0.000001) {
+                dir.set(0.6, 0.35, 0.6).normalize();
+            } else {
+                dir.normalize();
+            }
+
+            return {
+                position: origin.clone().add(dir.multiplyScalar(distance)),
+                target: origin.clone(),
+                distance: distance
+            };
+        }
+
+        function finalizeTween() {
+            if (!tween) return;
+            tween = null;
+            controls.enableDamping = true;
+            for (const e of allEntries) {
+                e.mesh.position.copy(e.position);
+                if (e.hitMesh) e.hitMesh.position.copy(e.position);
+                if (e.mesh.material && e.mesh.material.userData && e.mesh.material.userData.baseOpacity !== undefined) {
+                    e.mesh.material.opacity = e.mesh.material.userData.baseOpacity * config.lightOpacity;
+                }
+                if (e.depth !== 1 && e.mesh.isSprite) {
+                    const s = e.depth === 2 ? 1.4 : 1.0;
+                    e.mesh.scale.set(s, s, 1);
+                }
+            }
+            for (const c of allConnections) {
+                if (c.material) c.material.opacity = config.connectionOpacity;
+            }
+            applyVisibility();
+        }
+
+        function startTween(nodeTweens, connTweens, camTo, ctrlTo) {
+            if (tween) finalizeTween();
+            controls.enableDamping = false;
+            const targetDist = camTo.distanceTo(ctrlTo);
+            controls.maxDistance = Math.max(600, targetDist * 3);
+            controls.minDistance = Math.min(12, targetDist * 0.2);
+            tween = {
+                startTime: performance.now(),
+                duration: TWEEN_DURATION,
+                camFrom: camera.position.clone(),
+                camTo: camTo.clone(),
+                ctrlFrom: controls.target.clone(),
+                ctrlTo: ctrlTo.clone(),
+                nodeTweens: nodeTweens,
+                connTweens: connTweens,
+            };
         }
 
         function layoutItems(items, parentPos, depth, maxDepth, parentColor, parentItem) {
@@ -1134,21 +1204,90 @@
                 const item = getItemAtScreenPos(e.clientX, e.clientY);
                 if (item && item.children && item.children.length > 0) {
                     const isCollapsed = collapsedState.get(item) || false;
-                    if (isCollapsed) {
+                    const expanding = isCollapsed;
+
+                    const beforeVisible = new Map();
+                    for (const en of allEntries) beforeVisible.set(en, isItemVisible(en.item));
+
+                    if (expanding) {
                         if (config.expandAll) { expandAllItems(item); } else { expandOneLevelItems(item); }
                     } else { collapseAllItems(item); }
-                    applyVisibility();
-                    let maxVisibleDepth = 0;
-                    for (const e of allEntries) {
-                        if (isItemVisible(e.item) && e.depth > maxVisibleDepth) {
-                            maxVisibleDepth = e.depth;
+
+                    const changed = [];
+                    for (const en of allEntries) {
+                        if (beforeVisible.get(en) !== isItemVisible(en.item)) changed.push(en);
+                    }
+
+                    const clickedEntry = allEntries.find(n => n.item === item) || null;
+                    const anchorPos = clickedEntry ? clickedEntry.position.clone() : new THREE.Vector3(0, 0, 0);
+
+                    const nodeTweens = [];
+                    const connTweens = [];
+
+                    for (const en of changed) {
+                        en.mesh.visible = true;
+                        if (en.hitMesh) en.hitMesh.visible = true;
+                        if (en.label) en.label.visible = true;
+                        const base = (en.mesh.material && en.mesh.material.userData && en.mesh.material.userData.baseOpacity !== undefined)
+                            ? en.mesh.material.userData.baseOpacity
+                            : 1;
+                        const labelOn = (config.showLabels && en.depth > 0) ? 1 : 0;
+                        const targetScale = en.depth === 2 ? 1.4 : 1.0;
+                        if (expanding) {
+                            nodeTweens.push({
+                                entry: en,
+                                posFrom: anchorPos,
+                                posTo: en.position,
+                                opFrom: 0,
+                                opTo: base * config.lightOpacity,
+                                scaleFrom: 0.01,
+                                scaleTo: targetScale,
+                                labelFrom: 0,
+                                labelTo: labelOn,
+                            });
+                        } else {
+                            nodeTweens.push({
+                                entry: en,
+                                posFrom: en.position,
+                                posTo: anchorPos,
+                                opFrom: base * config.lightOpacity,
+                                opTo: 0,
+                                scaleFrom: targetScale,
+                                scaleTo: 0.01,
+                                labelFrom: labelOn,
+                                labelTo: 0,
+                            });
                         }
                     }
-                    if (maxVisibleDepth <= config.maxDepth && initialCameraPos) {
-                        camera.position.copy(initialCameraPos);
-                    } else {
-                        fitCameraToVisibleNodes();
+
+                    for (const c of allConnections) {
+                        const cBefore = beforeVisible.get(c.from) && beforeVisible.get(c.to);
+                        const cAfter = isItemVisible(c.from.item) && isItemVisible(c.to.item);
+                        if (cBefore === cAfter) continue;
+                        c.mesh.visible = true;
+                        connTweens.push(cAfter
+                            ? { conn: c, from: 0, to: config.connectionOpacity }
+                            : { conn: c, from: config.connectionOpacity, to: 0 });
                     }
+
+                    let maxVisibleDepth = 0;
+                    for (const en of allEntries) {
+                        if (isItemVisible(en.item) && en.depth > maxVisibleDepth) {
+                            maxVisibleDepth = en.depth;
+                        }
+                    }
+
+                    let camTo, ctrlTo;
+                    if (maxVisibleDepth <= config.maxDepth && initialCameraPos) {
+                        camTo = initialCameraPos.clone();
+                        ctrlTo = new THREE.Vector3(0, 0, 0);
+                    } else {
+                        const cam = computeCameraForVisibleNodes();
+                        camTo = cam.position;
+                        ctrlTo = cam.target;
+                    }
+
+                    startTween(nodeTweens, connTweens, camTo, ctrlTo);
                 }
             };
 
@@ -1160,6 +1299,28 @@
         function animate(time) {
             requestAnimationFrame(animate);
             const t = time * 0.001;
+
+            if (tween) {
+                const p = Math.min(1, (time - tween.startTime) / tween.duration);
+                camera.position.lerpVectors(tween.camFrom, tween.camTo, p);
+                controls.target.lerpVectors(tween.ctrlFrom, tween.ctrlTo, p);
+                for (const nt of tween.nodeTweens) {
+                    nt.entry.mesh.position.lerpVectors(nt.posFrom, nt.posTo, p);
+                    if (nt.entry.hitMesh) nt.entry.hitMesh.position.lerpVectors(nt.posFrom, nt.posTo, p);
+                    if (nt.entry.mesh.material) {
+                        nt.entry.mesh.material.opacity = nt.opFrom + (nt.opTo - nt.opFrom) * p;
+                    }
+                    const s = nt.scaleFrom + (nt.scaleTo - nt.scaleFrom) * p;
+                    nt.entry.mesh.scale.set(s, s, 1);
+                    if (nt.entry.label && nt.entry.label.element) {
+                        nt.entry.label.element.style.opacity = nt.labelFrom + (nt.labelTo - nt.labelFrom) * p;
+                    }
+                }
+                for (const ct of tween.connTweens) {
+                    if (ct.conn.material) ct.conn.material.opacity = ct.from + (ct.to - ct.from) * p;
+                }
+                if (p >= 1) finalizeTween();
+            }
 
             const centerEntry = allEntries.find(e => e.depth === 0);
             if (centerEntry && centerEntry.mesh && centerEntry.mesh.userData) {
