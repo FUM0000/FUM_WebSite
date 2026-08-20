@@ -699,54 +699,103 @@
                     this.updateBubbles();
                     requestAnimationFrame(this.animateScene);
                 },
+                repulsiveForce(r, epsilon, sigma) {
+                    return 48 * epsilon * Math.pow(sigma, 12) / Math.pow(r, 13);
+                },
+                attractiveForce(r, epsilon, sigma) {
+                    return -24 * epsilon * Math.pow(sigma, 6) / Math.pow(r, 7);
+                },
+                force(r, epsilon, sigma) {
+                    return this.repulsiveForce(r, epsilon, sigma) + this.attractiveForce(r, epsilon, sigma);
+                },
                 updateBubbles() {
                     const container = document.getElementById('interactive-space');
                     if (!container) return;
                     const rect = container.getBoundingClientRect();
+
+                    const LJ_EPSILON = 1.2;
+                    const LJ_RANGE = 2.5;
+                    const MAX_FORCE = 45;
+                    const THERMAL = 0.35;
+                    const DAMPING = 0.99;
+                    const MAX_SPEED = 4;
+
+                    for (let i = 0; i < this.bubbles.length; i++) {
+                        const b = this.bubbles[i];
+                        if (b.isDragging) continue;
+                        b.ax = 0;
+                        b.ay = 0;
+                    }
+
                     for (let i = 0; i < this.bubbles.length; i++) {
                         const b1 = this.bubbles[i];
-                        if (b1.isDragging) continue;
-                        b1.vx += (Math.random() - 0.5) * 0.02;
-                        b1.vy += (Math.random() - 0.5) * 0.02;
-                        const maxSpeed = 10;
-                        b1.vx = Math.max(-maxSpeed, Math.min(maxSpeed, b1.vx));
-                        b1.vy = Math.max(-maxSpeed, Math.min(maxSpeed, b1.vy));
-                        b1.vx *= 0.99;
-                        b1.vy *= 0.99;
-                        const speed = Math.sqrt(b1.vx * b1.vx + b1.vy * b1.vy);
-                        if (speed < 0.5 && speed > 0) {
-                            b1.vx = (b1.vx / speed) * 0.5;
-                            b1.vy = (b1.vy / speed) * 0.5;
-                        }
-                        b1.x += b1.vx;
-                        b1.y += b1.vy;
-                        if (b1.x - b1.size / 2 < 0 && b1.vx < 0) {
-                            b1.x = b1.size / 2;
-                            b1.vx *= -0.9;
-
-                        } if (b1.x + b1.size / 2 > rect.width && b1.vx > 0) {
-                            b1.x = rect.width - b1.size / 2;
-                            b1.vx *= -0.9;
-
-                        } if (b1.y - b1.size / 2 < 0 && b1.vy < 0) {
-                            b1.y = b1.size / 2;
-                            b1.vy *= -0.9;
-
-                        } if (b1.y + b1.size / 2 > rect.height && b1.vy > 0) {
-                            b1.y = rect.height - b1.size / 2;
-                            b1.vy *= -0.9;
-
-                        }
                         for (let j = i + 1; j < this.bubbles.length; j++) {
                             const b2 = this.bubbles[j];
                             const dx = b2.x - b1.x;
                             const dy = b2.y - b1.y;
-                            const dist = Math.sqrt(dx * dx + dy * dy);
-                            const minDist = (b1.size / 2) + (b2.size / 2);
-                            if (dist < minDist) {
-                                this.resolveCollision(b1, b2, dx, dy, dist, minDist);
+                            const distSq = dx * dx + dy * dy;
+                            if (distSq === 0) continue;
+                            const dist = Math.sqrt(distSq);
+                            const sigma = (b1.size / 2) + (b2.size / 2);
+                            if (dist / sigma > LJ_RANGE) continue;
+                            const r = Math.max(dist, sigma * 0.85);
+                            let F = this.force(r, LJ_EPSILON, sigma);
+                            F = Math.max(-MAX_FORCE, Math.min(MAX_FORCE, F));
+                            const nx = dx / dist;
+                            const ny = dy / dist;
+                            if (!b1.isDragging) {
+                                b1.ax -= F * nx;
+                                b1.ay -= F * ny;
+                            }
+                            if (!b2.isDragging) {
+                                b2.ax += F * nx;
+                                b2.ay += F * ny;
                             }
                         }
+                    }
+
+                    for (let i = 0; i < this.bubbles.length; i++) {
+                        const b = this.bubbles[i];
+                        if (b.isDragging) continue;
+
+                        b.ax += (Math.random() - 0.5) * THERMAL;
+                        b.ay += (Math.random() - 0.5) * THERMAL;
+
+                        const half = b.size / 2;
+                        const walls = [
+                            { d: b.x, sign: 1, axis: 'x' },
+                            { d: rect.width - b.x, sign: -1, axis: 'x' },
+                            { d: b.y, sign: 1, axis: 'y' },
+                            { d: rect.height - b.y, sign: -1, axis: 'y' }
+                        ];
+                        for (let w = 0; w < walls.length; w++) {
+                            const wall = walls[w];
+                            if (wall.d >= half * 1.4) continue;
+                            const r = Math.max(wall.d, half * 0.6);
+                            let Fw = this.repulsiveForce(r, LJ_EPSILON, half);
+                            Fw = Math.min(Fw, MAX_FORCE);
+                            if (wall.axis === 'x') b.ax += Fw * wall.sign;
+                            else b.ay += Fw * wall.sign;
+                        }
+
+                        b.vx += b.ax;
+                        b.vy += b.ay;
+
+                        const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+                        if (speed > MAX_SPEED) {
+                            b.vx = (b.vx / speed) * MAX_SPEED;
+                            b.vy = (b.vy / speed) * MAX_SPEED;
+                        }
+                        b.vx *= DAMPING;
+                        b.vy *= DAMPING;
+
+                        b.x += b.vx;
+                        b.y += b.vy;
+
+                        if (b.x < half) b.x = half;
+                        else if (b.x > rect.width - half) b.x = rect.width - half;
+                        if (b.y < half) b.y = half;
+                        else if (b.y > rect.height - half) b.y = rect.height - half;
                     }
 
                     this.bubbles.forEach(b => { b.style.transform = `translate(-50%, -50%) translate(${b.x}px, ${b.y}px)`; });
