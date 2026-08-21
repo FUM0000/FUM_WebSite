@@ -724,21 +724,48 @@
                     const parentRadius = parentPos.length();
                     const parentDir = parentRadius > 0.01 ? parentPos.clone().normalize() : new THREE.Vector3(0, 1, 0);
 
-                    // 親の球殻上の方向をベースにしつつ、同じ親を持つ兄弟同士は同じXZライン上に縦に並べ、
-                    // 異なる親（例：ABとAC）の間では、Y軸まわりの回転角（アジマス角）をずらして重ならないようにする
-                    const baseAngle = Math.atan2(parentDir.z, parentDir.x);
-                    // 親ごとの一意な回転オフセット（兄弟たちは全員同じ親なので同じオフセットを共有＝縦に綺麗に揃う。異なる親ならズレる）
-                    const parentHash = Math.sin(parentPos.x * 12.9898 + parentPos.z * 78.233 + parentPos.y * 37.719);
-                    const angleOffset = (parentHash - 0.5) * 0.8; // 適切な散らし加減
-                    const finalAngle = baseAngle + angleOffset;
+                    // 最初の6つのdepth-1ノード（index 0-5）の子、および孫以降で「接続する塊が一つ」のものは
+                    // 中心から親を通る延長線上に配置する
+                    const isFirstSixParent = depth === 2 && parentItem && parentItem.children &&
+                        parentItem.children.indexOf(item) < 6 && parentItem.children.indexOf(item) >= 0;
+                    
+                    // 親が最初の6つのノードのいずれかであるかチェック（孫以降も延長線上に）
+                    let parentIsFirstSix = false;
+                    if (parentItem) {
+                        let cur = parentItem;
+                        while (cur && nodeParentMap.has(cur)) {
+                            const p = nodeParentMap.get(cur);
+                            if (p && p.children && p.children.indexOf(cur) < 6 && p.children.indexOf(cur) >= 0) {
+                                parentIsFirstSix = true;
+                                break;
+                            }
+                            cur = p;
+                        }
+                    }
 
-                    const horizontalDist = Math.sqrt(parentDir.x * parentDir.x + parentDir.z * parentDir.z);
-                    const newX = Math.cos(finalAngle) * horizontalDist * targetRadius;
-                    const newZ = Math.sin(finalAngle) * horizontalDist * targetRadius;
-                    // Y座標は球殻の半径と高さを維持しつつ、リストの上下オフセットを加える
-                    const newY = parentDir.y * targetRadius + (i - (count - 1) / 2) * verticalSpacing;
+                    const useExtensionLine = isFirstSixParent || parentIsFirstSix;
 
-                    pos = new THREE.Vector3(newX, newY, newZ);
+                    let finalPos;
+                    if (useExtensionLine) {
+                        // 中心から親を通る延長線上に配置
+                        const dir = parentPos.clone().normalize();
+                        finalPos = dir.clone().multiplyScalar(targetRadius);
+                        // Y軸の調整：兄弟で少しずらす
+                        finalPos.y += (i - (count - 1) / 2) * verticalSpacing;
+                    } else {
+                        // 既存のロジック：親の球殻上の方向をベースに、Y軸回転オフセットを加えて配置
+                        const baseAngle = Math.atan2(parentDir.z, parentDir.x);
+                        const parentHash = Math.sin(parentPos.x * 12.9898 + parentPos.z * 78.233 + parentPos.y * 37.719);
+                        const angleOffset = (parentHash - 0.5) * 0.8;
+                        const finalAngle = baseAngle + angleOffset;
+
+                        const horizontalDist = Math.sqrt(parentDir.x * parentDir.x + parentDir.z * parentDir.z);
+                        const newX = Math.cos(finalAngle) * horizontalDist * targetRadius;
+                        const newZ = Math.sin(finalAngle) * horizontalDist * targetRadius;
+                        const newY = parentDir.y * targetRadius + (i - (count - 1) / 2) * verticalSpacing;
+                        finalPos = new THREE.Vector3(newX, newY, newZ);
+                    }
+                    pos = finalPos;
                     siblingOccupied.push(pos.clone());
                 }
                 const color = getNodeColor(item.name, depth, parentColor, i, items.length);
