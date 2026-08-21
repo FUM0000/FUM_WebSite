@@ -723,9 +723,22 @@
                     const verticalSpacing = 5;
                     const parentRadius = parentPos.length();
                     const parentDir = parentRadius > 0.01 ? parentPos.clone().normalize() : new THREE.Vector3(0, 1, 0);
-                    const basePos = parentDir.clone().multiplyScalar(targetRadius);
-                    pos = basePos.clone();
-                    pos.y += (i - (count - 1) / 2) * verticalSpacing;
+
+                    // 親の球殻上の方向をベースにしつつ、同じ親を持つ兄弟同士は同じXZライン上に縦に並べ、
+                    // 異なる親（例：ABとAC）の間では、Y軸まわりの回転角（アジマス角）をずらして重ならないようにする
+                    const baseAngle = Math.atan2(parentDir.z, parentDir.x);
+                    // 親ごとの一意な回転オフセット（兄弟たちは全員同じ親なので同じオフセットを共有＝縦に綺麗に揃う。異なる親ならズレる）
+                    const parentHash = Math.sin(parentPos.x * 12.9898 + parentPos.z * 78.233 + parentPos.y * 37.719);
+                    const angleOffset = (parentHash - 0.5) * 0.8; // 適切な散らし加減
+                    const finalAngle = baseAngle + angleOffset;
+
+                    const horizontalDist = Math.sqrt(parentDir.x * parentDir.x + parentDir.z * parentDir.z);
+                    const newX = Math.cos(finalAngle) * horizontalDist * targetRadius;
+                    const newZ = Math.sin(finalAngle) * horizontalDist * targetRadius;
+                    // Y座標は球殻の半径と高さを維持しつつ、リストの上下オフセットを加える
+                    const newY = parentDir.y * targetRadius + (i - (count - 1) / 2) * verticalSpacing;
+
+                    pos = new THREE.Vector3(newX, newY, newZ);
                     siblingOccupied.push(pos.clone());
                 }
                 const color = getNodeColor(item.name, depth, parentColor, i, items.length);
@@ -1020,7 +1033,7 @@
                     cx = child.position.x;
                     cz = child.position.z;
                 }
-                const pw = 3, pp = 1.5;
+                const pw = 2.0, pp = 0.8;
                 minY -= pp; maxY += pp;
                 const verts = new Float32Array([
                     cx - pw / 2, minY, cz,
