@@ -240,6 +240,25 @@
             background: rgba(238, 245, 255, 0.95);
         }
 
+        #button-collapse-all {
+            width: 100%;
+            padding: 7px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(230, 238, 255, 0.25);
+            background: rgba(130, 170, 255, 0.12);
+            color: rgba(238, 245, 255, 0.85);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        #button-collapse-all:hover {
+            background: rgba(130, 170, 255, 0.28);
+            border-color: rgba(230, 238, 255, 0.45);
+        }
+
         #tree-popup {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 200; display: none;
@@ -341,6 +360,10 @@
 
                 <div id="ui-panel" class="hidden">
                     <div class="panel-title">3D CONTROL</div>
+
+                    <div class="control-group">
+                        <button id="button-collapse-all" type="button">全て閉じる</button>
+                    </div>
 
                     <div class="control-group">
                         <div class="control-header">
@@ -1706,6 +1729,68 @@
                 c.curve = curve;
             }
             applyVisibility();
+        });
+
+        document.getElementById('button-collapse-all').addEventListener('click', function () {
+            const beforeVisible = new Map();
+            for (const en of allEntries) beforeVisible.set(en, isItemVisible(en.item));
+
+            // 全てのノードを折り畳み、1階層目まで閉じる
+            for (const rootItem of items) {
+                if (rootItem.children && rootItem.children.length > 0) {
+                    collapseAllItems(rootItem);
+                }
+            }
+
+            const changed = [];
+            for (const en of allEntries) {
+                if (beforeVisible.get(en) !== isItemVisible(en.item)) changed.push(en);
+            }
+
+            const nodeTweens = [];
+            const connTweens = [];
+
+            for (const en of changed) {
+                en.mesh.visible = true;
+                if (en.hitMesh) en.hitMesh.visible = true;
+                if (en.label) en.label.visible = true;
+                en._scaleAnimating = true;
+                const base = (en.mesh.material && en.mesh.material.userData && en.mesh.material.userData.baseOpacity !== undefined)
+                    ? en.mesh.material.userData.baseOpacity
+                    : 1;
+                const labelOn = (config.showLabels && en.depth > 0) ? 1 : 0;
+                nodeTweens.push({
+                    entry: en,
+                    posFrom: en.position,
+                    posTo: new THREE.Vector3(0, 0, 0),
+                    opFrom: base * config.lightOpacity,
+                    opTo: 0,
+                    scaleFrom: depthGradual(en.depth, 2.0, 0.35),
+                    scaleTo: 0.01,
+                    labelFrom: labelOn,
+                    labelTo: 0,
+                });
+            }
+
+            for (const c of allConnections) {
+                let cAfter;
+                if (c.to.item) {
+                    cAfter = isItemVisible(c.from.item) && isItemVisible(c.to.item);
+                } else {
+                    cAfter = c.toChildren ? c.toChildren.some(ch => isItemVisible(ch.item)) : false;
+                }
+                if (c.mesh.visible && !cAfter) {
+                    connTweens.push({ conn: c, from: config.connectionOpacity, to: 0 });
+                }
+            }
+
+            let camTo;
+            if (initialCameraPos) {
+                camTo = computeCameraForVisibleNodes(initialCameraPos.length()).position;
+            } else {
+                camTo = computeCameraForVisibleNodes().position;
+            }
+            startTween(nodeTweens, connTweens, camTo, new THREE.Vector3(0, 0, 0));
         });
 
         document.getElementById('switch-expand').addEventListener('change', function () {
