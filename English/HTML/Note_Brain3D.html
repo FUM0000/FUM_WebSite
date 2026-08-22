@@ -469,7 +469,6 @@
 
         let allNodes = [];
         let allConnections = [];
-        let allGroupRects = [];
         let allEntries = [];
         let allShells = [];
         let centerGroup = null;
@@ -1037,11 +1036,6 @@
                 }
                 c.mesh.visible = fromVis && toVis;
             }
-            for (const r of allGroupRects) {
-                const parentVis = r.parentEntry ? isItemVisible(r.parentEntry.item) : true;
-                const childVis = r.children.some(c => isItemVisible(c.item));
-                r.mesh.visible = parentVis && childVis;
-            }
             for (const e of allEntries) {
                 if (e.depth === 0) continue;
                 if (!e.label || !e.label.element) continue;
@@ -1110,18 +1104,12 @@
                 if (c.mesh.geometry) c.mesh.geometry.dispose();
                 if (c.mesh.material) c.mesh.material.dispose();
             }
-            for (const r of allGroupRects) {
-                group.remove(r.mesh);
-                if (r.mesh.geometry) r.mesh.geometry.dispose();
-                if (r.mesh.material) r.mesh.material.dispose();
-            }
             for (const s of allShells) {
                 group.remove(s);
             }
             if (centerGroup) group.remove(centerGroup);
             allNodes = [];
             allConnections = [];
-            allGroupRects = [];
             allEntries = [];
             allShells = [];
             centerGroup = null;
@@ -1267,39 +1255,6 @@
                     Math.random() - 0.5
                 ).normalize();
                 allConnections.push({ mesh, material: mat, from: conn.from, to: conn.to, toChildren: conn.toChildren || null, sagDir: randSag });
-            }
-
-            for (const [parentItem, children] of childrenByParent) {
-                if (children.length === 0) continue;
-                let minY = Infinity, maxY = -Infinity;
-                let cx = 0, cz = 0;
-                for (const child of children) {
-                    minY = Math.min(minY, child.position.y);
-                    maxY = Math.max(maxY, child.position.y);
-                    cx = child.position.x;
-                    cz = child.position.z;
-                }
-                const pw = 2.0, pp = 0.8;
-                minY -= pp; maxY += pp;
-                const verts = new Float32Array([
-                    cx - pw / 2, minY, cz,
-                    cx + pw / 2, minY, cz,
-                    cx + pw / 2, maxY, cz,
-                    cx - pw / 2, maxY, cz,
-                    cx - pw / 2, minY, cz,
-                ]);
-                const rectGeo = new THREE.BufferGeometry();
-                rectGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-                const parentEntry = allEntries.find(n => n.item === parentItem);
-                const rMat = new THREE.LineBasicMaterial({
-                    color: parentEntry ? parentEntry.color : new THREE.Color(0x6688aa),
-                    transparent: true,
-                    opacity: config.connectionOpacity * 0.4,
-                    fog: false,
-                });
-                const rect = new THREE.Line(rectGeo, rMat);
-                group.add(rect);
-                allGroupRects.push({ mesh: rect, material: rMat, parentEntry, children });
             }
 
             // Orbital shells (atomic electron shell rings)
@@ -1633,9 +1588,6 @@
             document.getElementById('val-opacity').textContent = this.value;
             for (const c of allConnections) {
                 if (c.material) c.material.opacity = this.value;
-            }
-            for (const r of allGroupRects) {
-                if (r.material) r.material.opacity = this.value * 0.4;
             }
         });
 
