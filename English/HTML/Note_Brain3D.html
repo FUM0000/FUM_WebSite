@@ -539,10 +539,18 @@
                 return new THREE.Color().setHSL(hue, 0.7, 0.55);
             }
             if (parentColor) {
-                // 根幹の色から白色へ、基準10階層かけて段階的に近づける
-                const c = parentColor.clone();
-                c.lerp(new THREE.Color(0xffffff), 0.28);
-                return c;
+                /*
+                 * 1階層目を基準に、彩度と明度を深さに対して直線的に変化させ
+                 * 基準10階層で白色に至るグラデーションにする。
+                 */
+                const hsl = {};
+                parentColor.getHSL(hsl);
+                const t = Math.min(1, (depth - 1) / (GRADUAL_MAX_DEPTH - 1));
+                return new THREE.Color().setHSL(
+                    hsl.h,
+                    0.7 * (1 - t),
+                    0.55 + (1 - 0.55) * t
+                );
             }
             return new THREE.Color(0x88bbdd);
         }
@@ -654,10 +662,6 @@
                 e._scaleAnimating = false;
                 if (e.mesh.material && e.mesh.material.userData && e.mesh.material.userData.baseOpacity !== undefined) {
                     e.mesh.material.opacity = e.mesh.material.userData.baseOpacity * config.lightOpacity;
-                }
-                if (e.depth !== 1 && e.mesh.isSprite) {
-                    const s = depthGradual(e.depth, 1.9, 0.35);
-                    e.mesh.scale.set(s, s, 1);
                 }
             }
             for (const c of allConnections) {
@@ -1199,7 +1203,7 @@
                     depthWrite: false,
                 });
                 spriteMat.userData.baseOpacity = depthFade;
-                const scale = depth === 1 ? 2.0 : depthGradual(depth, 1.9, 0.35);
+                const scale = depthGradual(depth, 2.0, 0.35);
                 const mesh = new THREE.Sprite(spriteMat);
                 mesh.position.copy(position);
                 mesh.scale.set(scale, scale, 1);
@@ -1497,7 +1501,7 @@
                             ? en.mesh.material.userData.baseOpacity
                             : 1;
                         const labelOn = (config.showLabels && en.depth > 0) ? 1 : 0;
-                        const targetScale = en.depth === 1 ? 2.0 : depthGradual(en.depth, 1.9, 0.35);
+                        const targetScale = depthGradual(en.depth, 2.0, 0.35);
                         if (expanding) {
                             nodeTweens.push({
                                 entry: en,
@@ -1610,7 +1614,7 @@
             const refDist = 55;
             for (const e of allEntries) {
                 if (e.depth >= 1 && e.mesh && e.mesh.isSprite && !e._scaleAnimating) {
-                    const base = e.depth === 1 ? 2.0 : depthGradual(e.depth, 1.9, 0.35);
+                    const base = depthGradual(e.depth, 2.0, 0.35);
                     const dist = camera.position.distanceTo(e.position);
                     const s = base * (dist / refDist);
                     e.mesh.scale.set(s, s, 1);
