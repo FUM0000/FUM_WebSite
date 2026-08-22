@@ -783,7 +783,7 @@
                 );
 
                 if (groups.length <= 1) {
-                    return direction;
+                    return { dir: direction.normalize(), angle: 0 };
                 }
 
                 const centerIndex = (groups.length - 1) / 2;
@@ -805,7 +805,29 @@
                     angle
                 );
 
-                return direction.normalize();
+                return { dir: direction.normalize(), angle: angle };
+            }
+
+            /*
+             * 親の祖母の位置を取得する。
+             * 祖母が存在しない(=2層目の親)場合は中心(原点)を返す。
+             */
+            function getGrandParentPos(currentParent) {
+                if (!currentParent) {
+                    return new THREE.Vector3(0, 0, 0);
+                }
+
+                const grandParent = nodeParentMap.get(currentParent);
+
+                if (!grandParent) {
+                    return new THREE.Vector3(0, 0, 0);
+                }
+
+                const grandParentPos = nodePositionMap.get(grandParent);
+
+                return grandParentPos
+                    ? grandParentPos.clone()
+                    : new THREE.Vector3(0, 0, 0);
             }
 
             items.forEach((item, i) => {
@@ -831,10 +853,6 @@
 
                 } else {
                     const targetRadius = computeBranchRadius(depth);
-                    const parentRadius = parentPos.length();
-                    const parentDir = parentRadius > 0.01
-                        ? parentPos.clone().normalize()
-                        : new THREE.Vector3(0, 1, 0);
 
                     /*
                      * ------------------------------------------------------
@@ -844,20 +862,75 @@
                      * 同じ parentItem を持つ兄弟は、必ず同一XZ座標。
                      * Yだけを変更する。
                      */
-                    const groupDirection = getGroupDirection(
+                    const group = getGroupDirection(
                         parentItem,
                         parentPos,
                         count
                     );
+                    const groupDirection = group.dir;
 
-                    const x = groupDirection.x * targetRadius;
-                    const z = groupDirection.z * targetRadius;
+                    /*
+                     * ------------------------------------------------------
+                     * 接続線基準の配置
+                     * ------------------------------------------------------
+                     *
+                     * 「祖母→親」の接続線を3Dのまま延長し、
+                     * XZ半径が targetRadius に達した点を子グループの基準位置とする。
+                     * (旧実装はYを中心からの仰角で決めていたため、線からずれていた)
+                     */
+                    const gpPos = getGrandParentPos(parentItem);
+                    const axis = parentPos.clone().sub(gpPos);
+                    const axisXzLenSq = axis.x * axis.x + axis.z * axis.z;
 
-                    const y =
-                        parentDir.y * targetRadius +
-                        (i - (count - 1) / 2) * siblingVerticalSpacing;
+                    // 甥姪グループ間の振り分け角度を接続線自体にも適用する
+                    if (group.angle !== 0) {
+                        axis.applyAxisAngle(
+                            new THREE.Vector3(0, 1, 0),
+                            group.angle
+                        );
+                    }
 
-                    pos = new THREE.Vector3(x, y, z);
+                    let base;
+                    const uxzLen = Math.sqrt(axisXzLenSq);
+
+                    if (uxzLen > 0.000001) {
+                        // 延長距離 s: |gpPos.xz + s * axis.xz| = targetRadius を解く
+                        const a = axisXzLenSq;
+                        const b = 2 * (
+                            gpPos.x * axis.x + gpPos.z * axis.z
+                        );
+                        const c =
+                            gpPos.x * gpPos.x +
+                            gpPos.z * gpPos.z -
+                            targetRadius * targetRadius;
+                        const disc = b * b - 4 * a * c;
+
+                        let s = disc >= 0
+                            ? (-b + Math.sqrt(disc)) / (2 * a)
+                            : -1;
+
+                        if (!(s > 1)) {
+                            // 解が親より手順しかない場合は、親から半径差だけ押し出す
+                            s = (targetRadius - parentPos.length()) / (uxzLen || 1);
+                            if (!(s > 0)) s = 1;
+                        }
+
+                        base = new THREE.Vector3(
+                            gpPos.x + axis.x * s,
+                            gpPos.y + axis.y * s,
+                            gpPos.z + axis.z * s
+                        );
+                    } else {
+                        // 真上方向の枝: 親の真上に殻の高さで置く
+                        base = new THREE.Vector3(
+                            groupDirection.x * targetRadius,
+                            parentPos.y,
+                            groupDirection.z * targetRadius
+                        );
+                    }
+
+                    pos = base.clone();
+                    pos.y += (i - (count - 1) / 2) * siblingVerticalSpacing;
                     siblingOccupied.push(pos.clone());
                 }
 
