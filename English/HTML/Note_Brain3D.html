@@ -510,6 +510,8 @@
         const dotTexture = makeDotTexture();
 
         let nodeParentMap = new Map();
+        let nodePositionMap = new Map();
+        let layoutRootItems = [];
         let childrenMap = new Map();
         let occupiedByDepth = new Map();
 
@@ -630,10 +632,11 @@
 
         function layoutItems(items, parentPos, depth, maxDepth, parentColor, parentItem) {
             if (depth > maxDepth) return [];
+
             const result = [];
             const count = items.length;
-            const goldenAngle = Math.PI * (3 - Math.sqrt(5));
             const sphereRadius = 18;
+            const siblingVerticalSpacing = 5;
             const siblingOccupied = [];
 
             function randomUnitVector() {
@@ -647,33 +650,15 @@
                 );
             }
 
-            function makeConeBasis(axis) {
-                const parentDir = axis.clone();
-                if (parentDir.lengthSq() < 0.000001) parentDir.set(0, 1, 0);
-                parentDir.normalize();
-                const ref = Math.abs(parentDir.y) < 0.9
-                    ? new THREE.Vector3(0, 1, 0)
-                    : new THREE.Vector3(1, 0, 0);
-                const right = new THREE.Vector3().crossVectors(parentDir, ref).normalize();
-                const localUp = new THREE.Vector3().crossVectors(right, parentDir).normalize();
-                return { parentDir, right, localUp };
-            }
-
-            function buildConeDirection(parentDir, right, localUp, azim, ang) {
-                return new THREE.Vector3()
-                    .addScaledVector(parentDir, Math.cos(ang))
-                    .addScaledVector(right, Math.sin(ang) * Math.cos(azim))
-                    .addScaledVector(localUp, Math.sin(ang) * Math.sin(azim))
-                    .normalize();
-            }
-
             function pickSphereDirection(occupied, minAngle, sampleCount) {
                 let bestDir = null;
                 let bestScore = -Infinity;
+
                 for (let attempt = 0; attempt < sampleCount; attempt++) {
                     const dir = randomUnitVector();
                     let score = Math.PI;
                     let conflict = false;
+
                     for (const occ of occupied) {
                         const angle = dir.angleTo(occ);
                         if (angle < minAngle) {
@@ -683,15 +668,18 @@
                         }
                         if (angle < score) score = angle;
                     }
+
                     if (!conflict && score > bestScore) {
                         bestDir = dir;
                         bestScore = score;
                     }
                 }
+
                 if (bestDir) return bestDir;
 
                 let fallbackDir = randomUnitVector();
                 let fallbackScore = -Infinity;
+
                 for (let attempt = 0; attempt < sampleCount; attempt++) {
                     const dir = randomUnitVector();
                     let score = Math.PI;
@@ -704,87 +692,229 @@
                         fallbackScore = score;
                     }
                 }
+
                 return fallbackDir;
+            }
+
+            /*
+             * 祖父母から見た「親」の方向をXZ平面上で取得する。
+             * これを、その親が持つ子グループの中心方向として使用する。
+             */
+            function getParentDirectionFromGrandParent(currentParent, currentParentPos) {
+                if (!currentParent) {
+                    const fallback = currentParentPos.clone();
+                    fallback.y = 0;
+                    if (fallback.lengthSq() < 0.000001) {
+                        fallback.set(1, 0, 0);
+                    }
+                    return fallback.normalize();
+                }
+
+                const grandParent = nodeParentMap.get(currentParent);
+
+                if (!grandParent) {
+                    const rootDirection = currentParentPos.clone();
+                    rootDirection.y = 0;
+                    if (rootDirection.lengthSq() < 0.000001) {
+                        rootDirection.set(1, 0, 0);
+                    }
+                    return rootDirection.normalize();
+                }
+
+                const grandParentEntry = nodePositionMap.get(grandParent);
+                const grandParentPos = grandParentEntry
+                    ? grandParentEntry.clone()
+                    : new THREE.Vector3(0, 0, 0);
+
+                const direction = currentParentPos.clone().sub(grandParentPos);
+                direction.y = 0;
+
+                if (direction.lengthSq() < 0.000001) {
+                    direction.set(1, 0, 0);
+                }
+
+                return direction.normalize();
+            }
+
+            /*
+             * 祖父母の子のうち「子を持つ親」だけを取り出す。
+             * ここでの各親が、それぞれ一つの甥姪グループになる。
+             */
+            function getParentGroups(currentParent) {
+                if (!currentParent) return [];
+
+                const grandParent = nodeParentMap.get(currentParent);
+
+                // 2層目では祖父母が実ノードとして存在しないため、
+                // ルート直下の親を甥姪グループとして扱う。
+                if (!grandParent) {
+                    const groups = layoutRootItems.filter(child =>
+                        child && child.children && child.children.length > 0
+                    );
+                    return groups.length > 0 ? groups : [currentParent];
+                }
+
+                if (!grandParent.children) {
+                    return [currentParent];
+                }
+
+                const groups = grandParent.children.filter(child =>
+                    child && child.children && child.children.length > 0
+                );
+
+                return groups.length > 0 ? groups : [currentParent];
+            }
+
+            /*
+             * 甥姪グループのXZ方向を決定する。
+             *
+             * 重要:
+             * - 同じ親を持つ兄弟は全員この同じ方向を使用するため、XZ一致。
+             * - 別の親を持つ甥姪グループだけがXZ方向に分かれる。
+             * - 各グループの中心からの距離は targetRadius で固定。
+             * - 親が1つしかない場合は角度0、つまり延長線上。
+             */
+            function getGroupDirection(currentParent, currentParentPos, groupCount) {
+                const groups = getParentGroups(currentParent);
+                const groupIndex = Math.max(0, groups.indexOf(currentParent));
+                const direction = getParentDirectionFromGrandParent(
+                    currentParent,
+                    currentParentPos
+                );
+
+                if (groups.length <= 1) {
+                    return direction;
+                }
+
+                const centerIndex = (groups.length - 1) / 2;
+
+                // 甥姪グループ間の角度。距離は変えず、XZ上の角度だけを変える。
+                const spreadAngle = Math.min(
+                    Math.PI * 0.45,
+                    0.22 + (groups.length - 1) * 0.10
+                );
+
+                const angle =
+                    centerIndex === 0
+                        ? 0
+                        : (groupIndex - centerIndex) *
+                          (spreadAngle / centerIndex);
+
+                direction.applyAxisAngle(
+                    new THREE.Vector3(0, 1, 0),
+                    angle
+                );
+
+                return direction.normalize();
             }
 
             items.forEach((item, i) => {
                 let pos;
+
                 if (depth === 0) {
+                    // 1層目は従来通り中心。
                     pos = new THREE.Vector3(0, 0, 0);
+
                 } else if (depth === 1) {
+                    // 2層目は従来の球面配置を維持。
                     const r = sphereRadius + 6;
                     const minAngle = computeMinAngle(depth);
                     const sampleCount = Math.max(240, count * 36);
-                    const dir = pickSphereDirection(siblingOccupied, minAngle, sampleCount);
+                    const dir = pickSphereDirection(
+                        siblingOccupied,
+                        minAngle,
+                        sampleCount
+                    );
+
                     pos = dir.clone().multiplyScalar(r);
                     siblingOccupied.push(dir.clone());
+
                 } else {
                     const targetRadius = computeBranchRadius(depth);
-                    const verticalSpacing = 5;
                     const parentRadius = parentPos.length();
-                    const parentDir = parentRadius > 0.01 ? parentPos.clone().normalize() : new THREE.Vector3(0, 1, 0);
+                    const parentDir = parentRadius > 0.01
+                        ? parentPos.clone().normalize()
+                        : new THREE.Vector3(0, 1, 0);
 
-                    // 最初の6つのdepth-1ノード（index 0-5）の子、および孫以降で「接続する塊が一つ」のものは
-                    // 中心から親を通る延長線上に配置する
-                    const isFirstSixParent = depth === 2 && parentItem && parentItem.children &&
-                        parentItem.children.indexOf(item) < 6 && parentItem.children.indexOf(item) >= 0;
-                    
-                    // 親が最初の6つのノードのいずれかであるかチェック（孫以降も延長線上に）
-                    let parentIsFirstSix = false;
-                    if (parentItem) {
-                        let cur = parentItem;
-                        while (cur && nodeParentMap.has(cur)) {
-                            const p = nodeParentMap.get(cur);
-                            if (p && p.children && p.children.indexOf(cur) < 6 && p.children.indexOf(cur) >= 0) {
-                                parentIsFirstSix = true;
-                                break;
-                            }
-                            cur = p;
-                        }
-                    }
+                    /*
+                     * ------------------------------------------------------
+                     * 兄弟配置
+                     * ------------------------------------------------------
+                     *
+                     * 同じ parentItem を持つ兄弟は、必ず同一XZ座標。
+                     * Yだけを変更する。
+                     */
+                    const groupDirection = getGroupDirection(
+                        parentItem,
+                        parentPos,
+                        count
+                    );
 
-                    const useExtensionLine = isFirstSixParent || parentIsFirstSix;
+                    const x = groupDirection.x * targetRadius;
+                    const z = groupDirection.z * targetRadius;
 
-                    let finalPos;
-                    if (useExtensionLine) {
-                        // 中心から親を通る延長線上に配置
-                        const dir = parentPos.clone().normalize();
-                        finalPos = dir.clone().multiplyScalar(targetRadius);
-                        // Y軸の調整：兄弟で少しずらす
-                        finalPos.y += (i - (count - 1) / 2) * verticalSpacing;
-                    } else {
-                        // 既存のロジック：親の球殻上の方向をベースに、Y軸回転オフセットを加えて配置
-                        const baseAngle = Math.atan2(parentDir.z, parentDir.x);
-                        const parentHash = Math.sin(parentPos.x * 12.9898 + parentPos.z * 78.233 + parentPos.y * 37.719);
-                        const angleOffset = (parentHash - 0.5) * 0.8;
-                        const finalAngle = baseAngle + angleOffset;
+                    const y =
+                        parentDir.y * targetRadius +
+                        (i - (count - 1) / 2) * siblingVerticalSpacing;
 
-                        const horizontalDist = Math.sqrt(parentDir.x * parentDir.x + parentDir.z * parentDir.z);
-                        const newX = Math.cos(finalAngle) * horizontalDist * targetRadius;
-                        const newZ = Math.sin(finalAngle) * horizontalDist * targetRadius;
-                        const newY = parentDir.y * targetRadius + (i - (count - 1) / 2) * verticalSpacing;
-                        finalPos = new THREE.Vector3(newX, newY, newZ);
-                    }
-                    pos = finalPos;
+                    pos = new THREE.Vector3(x, y, z);
                     siblingOccupied.push(pos.clone());
                 }
-                const color = getNodeColor(item.name, depth, parentColor, i, items.length);
-                const entry = { item, position: pos, depth, color, parentItem };
+
+                const color = getNodeColor(
+                    item.name,
+                    depth,
+                    parentColor,
+                    i,
+                    items.length
+                );
+
+                const entry = {
+                    item,
+                    position: pos,
+                    depth,
+                    color,
+                    parentItem
+                };
+
                 result.push(entry);
-                if (parentItem) nodeParentMap.set(item, parentItem);
+
+                if (parentItem) {
+                    nodeParentMap.set(item, parentItem);
+                }
+
+                // 後続の孫・甥姪配置から祖父母位置を参照できるよう保存する。
+                nodePositionMap.set(item, pos.clone());
+
                 if (item.children) {
-                    if (!childrenMap.has(item)) childrenMap.set(item, []);
+                    if (!childrenMap.has(item)) {
+                        childrenMap.set(item, []);
+                    }
+
                     for (const child of item.children) {
                         if (!childrenMap.get(item).includes(child)) {
                             childrenMap.get(item).push(child);
                         }
                     }
                 }
+
+                /*
+                 * 木の深さ自体は再帰で処理する。
+                 * ただし、配置判断は上で完結している。
+                 */
                 if (item.children && depth < maxDepth) {
-                    const children = layoutItems(item.children, pos, depth + 1, maxDepth, color, item);
+                    const children = layoutItems(
+                        item.children,
+                        pos,
+                        depth + 1,
+                        maxDepth,
+                        color,
+                        item
+                    );
                     result.push(...children);
                 }
             });
+
             return result;
         }
 
@@ -909,6 +1039,8 @@
             allShells = [];
             centerGroup = null;
             nodeParentMap = new Map();
+            nodePositionMap = new Map();
+            layoutRootItems = items;
             childrenMap = new Map();
 
             // Center visual node
