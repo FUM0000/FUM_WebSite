@@ -851,6 +851,25 @@
                     pos = dir.clone().multiplyScalar(r);
                     siblingOccupied.push(dir.clone());
 
+                } else if (depth === 2) {
+                    /*
+                     * ------------------------------------------------------
+                     * 3層目は「中心→親」の放射延長のみで配置する。
+                     * 祖母が中心のため接続線は必ず一直線となり、
+                     * 他階層のような甥姪グループ振り分けは不要。
+                     * ------------------------------------------------------
+                     */
+                    const r = computeBranchRadius(depth);
+
+                    pos = parentPos.lengthSq() > 0.000001
+                        ? parentPos.clone().setLength(r)
+                        : new THREE.Vector3(0, r, 0);
+
+                    pos.y += (i - (count - 1) / 2) * siblingVerticalSpacing;
+                    // 兄弟も必ず同じ球殻上に乗るよう再投影する
+                    pos.setLength(r);
+                    siblingOccupied.push(pos.clone());
+
                 } else {
                     const targetRadius = computeBranchRadius(depth);
 
@@ -867,7 +886,6 @@
                         parentPos,
                         count
                     );
-                    const groupDirection = group.dir;
 
                     /*
                      * ------------------------------------------------------
@@ -875,12 +893,12 @@
                      * ------------------------------------------------------
                      *
                      * 「祖母→親」の接続線を3Dのまま延長し、
-                     * XZ半径が targetRadius に達した点を子グループの基準位置とする。
-                     * (旧実装はYを中心からの仰角で決めていたため、線からずれていた)
+                     * 中心からの距離が targetRadius の球殻と交わる点を
+                     * 子グループの基準位置とする。
+                     * これにより同階層のノードは全て中心から等距離に乗る。
                      */
                     const gpPos = getGrandParentPos(parentItem);
                     const axis = parentPos.clone().sub(gpPos);
-                    const axisXzLenSq = axis.x * axis.x + axis.z * axis.z;
 
                     // 甥姪グループ間の振り分け角度を接続線自体にも適用する
                     if (group.angle !== 0) {
@@ -891,46 +909,42 @@
                     }
 
                     let base;
-                    const uxzLen = Math.sqrt(axisXzLenSq);
+                    const axisLenSq = axis.lengthSq();
 
-                    if (uxzLen > 0.000001) {
-                        // 延長距離 s: |gpPos.xz + s * axis.xz| = targetRadius を解く
-                        const a = axisXzLenSq;
-                        const b = 2 * (
-                            gpPos.x * axis.x + gpPos.z * axis.z
-                        );
+                    if (axisLenSq > 0.000001) {
+                        // 延長距離 s: |gpPos + s * axis| = targetRadius を解く
+                        const a = axisLenSq;
+                        const b = 2 * gpPos.dot(axis);
                         const c =
-                            gpPos.x * gpPos.x +
-                            gpPos.z * gpPos.z -
+                            gpPos.lengthSq() -
                             targetRadius * targetRadius;
                         const disc = b * b - 4 * a * c;
 
-                        let s = disc >= 0
+                        const s = disc >= 0
                             ? (-b + Math.sqrt(disc)) / (2 * a)
                             : -1;
 
-                        if (!(s > 1)) {
-                            // 解が親より手順しかない場合は、親から半径差だけ押し出す
-                            s = (targetRadius - parentPos.length()) / (uxzLen || 1);
-                            if (!(s > 0)) s = 1;
+                        if (s > 1) {
+                            base = new THREE.Vector3(
+                                gpPos.x + axis.x * s,
+                                gpPos.y + axis.y * s,
+                                gpPos.z + axis.z * s
+                            );
                         }
+                    }
 
-                        base = new THREE.Vector3(
-                            gpPos.x + axis.x * s,
-                            gpPos.y + axis.y * s,
-                            gpPos.z + axis.z * s
-                        );
-                    } else {
-                        // 真上方向の枝: 親の真上に殻の高さで置く
-                        base = new THREE.Vector3(
-                            groupDirection.x * targetRadius,
-                            parentPos.y,
-                            groupDirection.z * targetRadius
-                        );
+                    if (!base) {
+                        // 球殻と交わらない場合・真上方向の枝は、
+                        // 親方向に殻まで押し出す
+                        base = parentPos.lengthSq() > 0.000001
+                            ? parentPos.clone().setLength(targetRadius)
+                            : new THREE.Vector3(0, targetRadius, 0);
                     }
 
                     pos = base.clone();
                     pos.y += (i - (count - 1) / 2) * siblingVerticalSpacing;
+                    // 兄弟も必ず同じ球殻上に乗るよう再投影する
+                    pos.setLength(targetRadius);
                     siblingOccupied.push(pos.clone());
                 }
 
