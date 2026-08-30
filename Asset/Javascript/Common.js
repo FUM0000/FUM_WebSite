@@ -746,6 +746,21 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Season ▲ ------------------------------------------------------------------------------->
 
+                <!-- ▼ Tradition ▼ ---------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>Tradition</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-palette</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Japan_Art.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Art &amp; Patterns</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ Tradition ▲ ---------------------------------------------------------------------------->
+
                 <!-- ▼ Traffic ▼ ------------------------------------------------------------------------------>
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
