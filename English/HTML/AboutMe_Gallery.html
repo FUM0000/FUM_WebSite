@@ -142,13 +142,13 @@
                 this._pillarMaterial = new THREE.ShaderMaterial({
                     uniforms: {
                         uTime: { value: 0 },
-                        uOpacity: { value: 0.04 },
+                        uOpacity: { value: 0.025 },
                         uBaseColor: { value: new THREE.Color(0.4, 0.55, 0.8) },
                         uFresnelColor: { value: new THREE.Color(0.5, 0.7, 1.0) },
                         uSpecularColor: { value: new THREE.Color(0.8, 0.9, 1.0) },
                         uFresnelPower: { value: 3.5 },
                         uSpecularPower: { value: 96.0 },
-                        uEdgeGlowIntensity: { value: 0.8 },
+                        uEdgeGlowIntensity: { value: 0.6 },
                     },
                     vertexShader: `
                         varying vec3 vNormal;
@@ -198,8 +198,8 @@
                             color += uSpecularColor * (spec1 * 0.6 + spec2 * 0.3);
                             color += vec3(0.3, 0.5, 0.9) * edgeGlow;
                             color += vec3(0.2, 0.4, 0.7) * caustic;
-                            float alpha = uOpacity + fresnel * 0.45 + (spec1 + spec2) * 0.2 + edgeGlow * 0.2;
-                            alpha = clamp(alpha, 0.0, 0.7);
+                            float alpha = uOpacity + fresnel * 0.35 + (spec1 + spec2) * 0.15 + edgeGlow * 0.15;
+                            alpha = clamp(alpha, 0.0, 0.55);
                             gl_FragColor = vec4(color, alpha);
                         }
                     `,
@@ -222,13 +222,13 @@
                 this._glassMaterial = new THREE.ShaderMaterial({
                     uniforms: {
                         uTime: { value: 0 },
-                        uOpacity: { value: 0.08 },
+                        uOpacity: { value: 0.05 },
                         uBaseColor: { value: new THREE.Color(0.45, 0.6, 0.85) },
                         uFresnelColor: { value: new THREE.Color(0.55, 0.75, 1.0) },
                         uSpecularColor: { value: new THREE.Color(0.85, 0.92, 1.0) },
                         uFresnelPower: { value: 3.0 },
                         uSpecularPower: { value: 128.0 },
-                        uEdgeGlowIntensity: { value: 1.2 },
+                        uEdgeGlowIntensity: { value: 1.0 },
                         uRefractionStrength: { value: 0.04 },
                     },
                     vertexShader: `
@@ -281,14 +281,14 @@
                             float caustic = pow(caustic1 * caustic2, 3.0) * 0.2;
                             float edgeGlow = pow(1.0 - NdotV, 5.0) * uEdgeGlowIntensity;
                             float shimmer = sin(vWorldPosition.y * 10.0 + uTime * 2.0) * 0.03 + 0.97;
-                            vec3 color = uBaseColor * 0.12 * shimmer;
-                            color += uFresnelColor * fresnel * 0.55;
-                            color += uSpecularColor * (spec1 * 0.7 + spec2 * 0.4 + spec3 * 0.2) * shimmer;
+                            vec3 color = uBaseColor * 0.08 * shimmer;
+                            color += uFresnelColor * fresnel * 0.4;
+                            color += uSpecularColor * (spec1 * 0.5 + spec2 * 0.3 + spec3 * 0.15) * shimmer;
                             color += vec3(0.35, 0.55, 0.95) * edgeGlow;
                             color += vec3(0.3, 0.5, 0.85) * caustic;
                             color += vec3(0.15, 0.25, 0.4) * refractOffset.x;
-                            float alpha = uOpacity + fresnel * 0.6 + (spec1 + spec2 + spec3) * 0.25 + edgeGlow * 0.3;
-                            alpha = clamp(alpha, 0.0, 0.8);
+                            float alpha = uOpacity + fresnel * 0.45 + (spec1 + spec2 + spec3) * 0.18 + edgeGlow * 0.22;
+                            alpha = clamp(alpha, 0.0, 0.6);
                             gl_FragColor = vec4(color, alpha);
                         }
                     `,
@@ -448,7 +448,7 @@
                 context.font = `${fontSize}px Arial`;
                 context.textAlign = 'left';
                 context.textBaseline = 'middle';
-                context.fillStyle = '#CF0000';
+                context.fillStyle = '#8FBFFF';
                 context.clearRect(0, 0, canvas.width, canvas.height);
                 context.translate(canvas.width, 0);
                 context.scale(-1, 1);
@@ -702,7 +702,7 @@
                         valid = true;
                     } else {
                         const distToPlayer = new THREE.Vector3(playerPos.x, this.Position.y, playerPos.z).distanceTo(target);
-                        // ランダム散歩は1.5m〜4mの間（および1.5m以内）に入らないようにする
+                        // ランダム散歩は1.5m、Emの間（およ�E1.5m以冁E��に入らなぁE��ぁE��する
                         if (distToPlayer >= 4.0 || distToPlayer <= 1.5) {
                             valid = true;
                         }
@@ -891,8 +891,8 @@
             _Input_Look = new THREE.Vector2(0, 0);
             _Input_Move = new THREE.Vector2(0, 0);
 
-            _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#CF0000", new THREE.Vector2(4.8, 1.2).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
-            _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#CF0000", new THREE.Vector2(6.0, 1.2).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
+            _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#8FBFFF", new THREE.Vector2(4.8, 1.2).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
+            _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#8FBFFF", new THREE.Vector2(6.0, 1.2).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
 
             _Button_Home = null;
             _Button_Music = null;
@@ -964,13 +964,13 @@
                 const sphereGlassMat = new THREE.ShaderMaterial({
                     uniforms: {
                         uTime: { value: 0 },
-                        uOpacity: { value: 0.06 },
+                        uOpacity: { value: 0.04 },
                         uBaseColor: { value: new THREE.Color(0.4, 0.65, 1.0) },
                         uFresnelColor: { value: new THREE.Color(0.6, 0.8, 1.0) },
                         uSpecularColor: { value: new THREE.Color(0.9, 0.95, 1.0) },
                         uFresnelPower: { value: 2.8 },
                         uSpecularPower: { value: 96.0 },
-                        uEdgeGlowIntensity: { value: 1.0 },
+                        uEdgeGlowIntensity: { value: 0.8 },
                         uRefractionStrength: { value: 0.03 },
                     },
                     vertexShader: `
@@ -1022,17 +1022,15 @@
                             float caustic2 = sin(vWorldPosition.y * 4.0 - uTime * 0.9 + vWorldPosition.z * 2.5) * 0.5 + 0.5;
                             float caustic = pow(caustic1 * caustic2, 3.0) * 0.15;
                             float edgeGlow = pow(1.0 - NdotV, 5.0) * uEdgeGlowIntensity;
-                            float rimLight = pow(1.0 - NdotV, 2.5) * 0.25;
                             float shimmer = sin(vWorldPosition.y * 8.0 + uTime * 2.0) * 0.04 + 0.96;
-                            vec3 color = uBaseColor * 0.1 * shimmer;
-                            color += uFresnelColor * fresnel * 0.55;
-                            color += uSpecularColor * (spec1 * 0.7 + spec2 * 0.4 + spec3 * 0.2) * shimmer;
+                            vec3 color = uBaseColor * 0.07 * shimmer;
+                            color += uFresnelColor * fresnel * 0.42;
+                            color += uSpecularColor * (spec1 * 0.5 + spec2 * 0.3 + spec3 * 0.15) * shimmer;
                             color += vec3(0.35, 0.55, 0.95) * edgeGlow;
                             color += vec3(0.3, 0.5, 0.85) * caustic;
-                            color += vec3(0.5, 0.7, 1.0) * rimLight;
                             color += vec3(0.15, 0.25, 0.4) * refractOffset.x;
-                            float alpha = uOpacity + fresnel * 0.55 + (spec1 + spec2 + spec3) * 0.2 + edgeGlow * 0.25;
-                            alpha = clamp(alpha, 0.0, 0.75);
+                            float alpha = uOpacity + fresnel * 0.42 + (spec1 + spec2 + spec3) * 0.15 + edgeGlow * 0.2;
+                            alpha = clamp(alpha, 0.0, 0.6);
                             gl_FragColor = vec4(color, alpha);
                         }
                     `,
@@ -1088,7 +1086,7 @@
                         Scene,
                         Camera,
                         "Guide",
-                        "#CF0000",
+                        "#8FBFFF",
                         new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY * 2)
                     );
                     guideText.Initialize();
@@ -1105,7 +1103,7 @@
                         const category_z = Math.sin(angle_from_center) * this._Category_Distance_FromCenter;
                         const category_y = (main_index + 1) * 5;
 
-                        const main_category_text = new FC_TextPlane(Scene, Camera, main_category, "#CF0000", new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY * 2));
+                        const main_category_text = new FC_TextPlane(Scene, Camera, main_category, "#8FBFFF", new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY * 2));
                         main_category_text.Initialize();
                         main_category_text.Rotating(false);
                         main_category_text.Fog = false;
@@ -1201,6 +1199,9 @@
                 }
                 if (this._Button_Music && this._Button_Music.material.uniforms) {
                     this._Button_Music.material.uniforms.uTime.value = t;
+                }
+                if (this._floorRingMaterial) {
+                    this._floorRingMaterial.uniforms.uTime.value = t;
                 }
                 if (!this._Elevator || !this._Elevator.isMoving) {
                     this.updateHomeMusicAnchor();
@@ -1342,7 +1343,7 @@
                     const subcategory_x = Math.cos(angle_from_center) * this._Category_Distance_FromCenter;
                     const subcategory_z = Math.sin(angle_from_center) * this._Category_Distance_FromCenter;
 
-                    const subcategory_text = new FC_TextPlane(Scene, Camera, subcategory, "#CF0000", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
+                    const subcategory_text = new FC_TextPlane(Scene, Camera, subcategory, "#8FBFFF", new THREE.Vector2(8, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY));
                     subcategory_text.Initialize();
                     subcategory_text.Rotating(true);
                     subcategory_text.Fog = true;
@@ -1373,13 +1374,40 @@
                     });
                 });
 
-                const material = new THREE.LineBasicMaterial({
-                    color: 0xd3dae6,
+                this._floorRingMaterial = this._floorRingMaterial || new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uColor: { value: new THREE.Color(0.55, 0.75, 1.0) },
+                    },
+                    vertexShader: `
+                        varying vec3 vWorldPos;
+                        void main() {
+                            vec4 wp = modelMatrix * vec4(position, 1.0);
+                            vWorldPos = wp.xyz;
+                            gl_Position = projectionMatrix * viewMatrix * wp;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        uniform vec3 uColor;
+                        varying vec3 vWorldPos;
+                        void main() {
+                            float angle = atan(vWorldPos.x, vWorldPos.z);
+                            float angPulse = sin(angle * 6.0 + uTime * 2.0) * 0.25 + 0.75;
+                            float flow = sin(vWorldPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
+                            flow += sin(vWorldPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
+                            flow = flow * 0.5;
+                            float glow = 0.7 + 0.3 * sin(uTime * 1.5);
+                            vec3 c = uColor * (0.35 + angPulse * 0.45 + flow * 0.2) * glow;
+                            float a = (0.4 + angPulse * 0.5) * glow * 0.9;
+                            gl_FragColor = vec4(c, a);
+                        }
+                    `,
                     transparent: true,
-                    opacity: 0.38,
-                    linewidth: 0.1,
-                    fog: false
+                    depthWrite: false,
+                    fog: false,
                 });
+                const material = this._floorRingMaterial;
                 const geometry = new THREE.BufferGeometry();
                 const points = [];
                 const segments = 64;
@@ -1392,6 +1420,8 @@
                 geometry.setFromPoints(points);
                 const circle = new THREE.Line(geometry, material);
                 Scene.add(circle);
+                this._floorRings = this._floorRings || [];
+                this._floorRings.push(circle);
             }
             display3DCategory(subcategory_x, subcategory_z, category_y) {
                 this._Sakura = new THREE.Group();
@@ -1568,13 +1598,40 @@
                     this.applyAspectRatioToImageObject(image_obj, image_path);
                 });
 
-                const material = new THREE.LineBasicMaterial({
-                    color: 0xd3dae6,
+                this._floorRingMaterial = this._floorRingMaterial || new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uColor: { value: new THREE.Color(0.55, 0.75, 1.0) },
+                    },
+                    vertexShader: `
+                        varying vec3 vWorldPos;
+                        void main() {
+                            vec4 wp = modelMatrix * vec4(position, 1.0);
+                            vWorldPos = wp.xyz;
+                            gl_Position = projectionMatrix * viewMatrix * wp;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        uniform vec3 uColor;
+                        varying vec3 vWorldPos;
+                        void main() {
+                            float angle = atan(vWorldPos.x, vWorldPos.z);
+                            float angPulse = sin(angle * 6.0 + uTime * 2.0) * 0.25 + 0.75;
+                            float flow = sin(vWorldPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
+                            flow += sin(vWorldPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
+                            flow = flow * 0.5;
+                            float glow = 0.7 + 0.3 * sin(uTime * 1.5);
+                            vec3 c = uColor * (0.35 + angPulse * 0.45 + flow * 0.2) * glow;
+                            float a = (0.4 + angPulse * 0.5) * glow * 0.9;
+                            gl_FragColor = vec4(c, a);
+                        }
+                    `,
                     transparent: true,
-                    opacity: 0.38,
-                    linewidth: 0.1,
-                    fog: false
+                    depthWrite: false,
+                    fog: false,
                 });
+                const material = this._floorRingMaterial;
                 const geometry = new THREE.BufferGeometry();
                 const points = [];
                 const segments = 64;
@@ -1587,6 +1644,8 @@
                 geometry.setFromPoints(points);
                 const circle = new THREE.Line(geometry, material);
                 Scene.add(circle);
+                this._floorRings = this._floorRings || [];
+                this._floorRings.push(circle);
             }
             placeMainFloorTextOnElevatorCylinder(text_plane, y) {
                 const radius = 0.92;
