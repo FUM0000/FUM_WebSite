@@ -65,6 +65,13 @@
       justify-content: center;
     }
     .preview-wrap.dragging { cursor: grabbing; }
+    .crop-border {
+      position: absolute;
+      border: 2px dashed rgba(255,200,0,0.9);
+      pointer-events: none;
+      z-index: 2;
+      box-sizing: border-box;
+    }
     .preview-img {
       display: block;
       width: 100%;
@@ -190,6 +197,7 @@
 
                         <div v-if="imagePreview"
                           class="preview-wrap"
+                          ref="previewWrap"
                           :class="{ dragging: dragging }"
                           @wheel.prevent="onZoom"
                           @mousedown="onDragStart"
@@ -204,6 +212,7 @@
                               :style="stdFilterStyle" class="preview-img" draggable="false">
                             <canvas ref="shaderCanvas" class="shader-canvas" style="display:none"></canvas>
                           </div>
+                          <div class="crop-border" v-if="showCropBorder" :style="cropBorderStyle"></div>
                           <div class="zoom-badge" v-if="zoom !== 1">{{ Math.round(zoom * 100) }}%</div>
                         </div>
 
@@ -328,6 +337,19 @@
                           <v-slider v-model="mosaicIntensity" min="0" max="1" step="0.01" label="Mosaic Intensity" thumb-label></v-slider>
                           <v-slider v-model="mosaicSize" min="2" max="64" step="1" label="Block Size" thumb-label></v-slider>
                         </template>
+
+                        <template v-if="selectedEffect === 'zoomCrop'">
+                          <div class="mb-2">
+                            <div class="d-flex align-center mb-2">
+                              <span class="slider-label-text">Zoom</span>
+                              <v-slider v-model="zoom" min="1" max="10" step="0.1" hide-details thumb-label class="flex-grow-1"></v-slider>
+                            </div>
+                            <div class="caption grey--text mb-2">Scroll or pinch to zoom. Drag to pan. Then crop to visible area.</div>
+                            <v-btn small color="primary" block @click="applyCrop" :disabled="zoom <= 1">
+                              <v-icon small left>mdi-crop</v-icon>Crop to Visible Area
+                            </v-btn>
+                          </div>
+                        </template>
                       </v-card-text>
                     </v-card>
 
@@ -429,6 +451,7 @@
             { text: 'Edge', value: 'edge' },
             { text: 'Blur', value: 'blur' },
             { text: 'Mosaic', value: 'mosaic' },
+            { text: 'Crop', value: 'zoomCrop' },
           ],
 
           // ---- zoom / drag ----
@@ -442,6 +465,13 @@
           panStartY: 0,
           pinchDist: 0,
           pinchZoomStart: 1,
+          containerW: 0,
+          containerH: 0,
+
+          // ---- zoom & crop ----
+          cropMode: false,
+          cropRect: { x: 0, y: 0, width: 0, height: 0 },
+          cropOverlay: false,
 
           // ---- three.js ----
           threeReady: false,
@@ -459,7 +489,7 @@
 
       computed: {
         enableShader: function () {
-          return this.selectedEffect !== 'none';
+          return this.selectedEffect !== 'none' && this.selectedEffect !== 'zoomCrop';
         },
         useThreePreview: function () {
           return this.enableShader && this.threeReady;
@@ -477,6 +507,38 @@
           if (this.showOriginal) return {};
           return {
             transform: 'translate(' + this.panX + 'px,' + this.panY + 'px) scale(' + this.zoom + ')'
+          };
+        },
+        showCropBorder: function () {
+          return this.cropMode && this.zoom > 1;
+        },
+        cropFrameRect: function () {
+          if (!this.originalAspectRatio || !this.containerW || !this.containerH) return null;
+          var imgAspect = this.originalAspectRatio; // w/h
+          var containerAspect = this.containerW / this.containerH;
+          var displayW, displayH;
+          if (imgAspect > containerAspect) {
+            displayW = this.containerW;
+            displayH = this.containerW / imgAspect;
+          } else {
+            displayH = this.containerH;
+            displayW = this.containerH * imgAspect;
+          }
+          return {
+            x: (this.containerW - displayW) / 2,
+            y: (this.containerH - displayH) / 2,
+            w: displayW,
+            h: displayH
+          };
+        },
+        cropBorderStyle: function () {
+          var rect = this.cropFrameRect;
+          if (!rect) return {};
+          return {
+            left: rect.x + 'px',
+            top: rect.y + 'px',
+            width: rect.w + 'px',
+            height: rect.h + 'px'
           };
         },
       },
@@ -511,7 +573,8 @@
           this.edgeIntensity = 0;
           this.blurIntensity = 0;
           this.mosaicIntensity = 0;
-          if (v !== 'none' && !this.threeInitialized) {
+          this.cropMode = (v === 'zoomCrop');
+          if (v !== 'none' && v !== 'zoomCrop' && !this.threeInitialized) {
             var self = this;
             this.$nextTick(function () {
               self.initThreeJS();
@@ -537,13 +600,15 @@
 
       mounted: function () {
         var self = this;
+        window.addEventListener('resize', self.onResize);
         this.$nextTick(function () {
-          // ready
+          self.measureContainer();
         });
       },
 
       beforeDestroy: function () {
         if (this._animId) cancelAnimationFrame(this._animId);
+        window.removeEventListener('resize', this.onResize);
         if (this._renderer) this._renderer.dispose();
       },
 
@@ -959,7 +1024,21 @@
           this._renderPending = true;
         },
 
+        measureContainer: function () {
+          var wrap = this.$refs.previewWrap;
+          if (!wrap) return;
+          var cw = wrap.clientWidth;
+          var ch = wrap.clientHeight;
+          if (cw > 0) this.containerW = cw;
+          if (ch > 0) this.containerH = ch;
+        },
+
+        onResize: function () {
+          this.measureContainer();
+        },
+
         _refreshPreview: function () {
+          this.measureContainer();
           if (this.useThreePreview) {
             this._renderShaderPreview();
           } else {
@@ -979,6 +1058,7 @@
             ctx.drawImage(img, 0, 0, self.width, self.height);
             self._applyCssFilters(ctx);
             self.previewImage = c.toDataURL(self.format, self.quality / 100);
+            self.measureContainer();
           };
           img.src = self.originalImage;
         },
@@ -1089,6 +1169,69 @@
           link.download = this.outputFileName + '.' + this.format.split('/')[1];
           link.href = dataUrl;
           link.click();
+        },
+
+        // ========================
+        //  ZOOM & CROP
+        // ========================
+
+        applyCrop: function () {
+          if (this.zoom <= 1 || !this.originalImage) return;
+          var self = this;
+          var img = new Image();
+          img.onload = function () {
+            var container = self.$refs.previewInner.parentElement;
+            var containerW = container.clientWidth;
+            var containerH = container.clientHeight;
+
+            var imgAspect = img.width / img.height;
+            var containerAspect = containerW / containerH;
+
+            var displayW, displayH;
+            if (imgAspect > containerAspect) {
+              displayW = containerW;
+              displayH = containerW / imgAspect;
+            } else {
+              displayH = containerH;
+              displayW = containerH * imgAspect;
+            }
+
+            var visibleW = displayW / self.zoom;
+            var visibleH = displayH / self.zoom;
+
+            var offsetX = (displayW - visibleW) / 2 - self.panX / self.zoom;
+            var offsetY = (displayH - visibleH) / 2 - self.panY / self.zoom;
+
+            var srcX = (offsetX / displayW) * img.width;
+            var srcY = (offsetY / displayH) * img.height;
+            var srcW = (visibleW / displayW) * img.width;
+            var srcH = (visibleH / displayH) * img.height;
+
+            srcX = Math.max(0, Math.min(img.width, srcX));
+            srcY = Math.max(0, Math.min(img.height, srcY));
+            srcW = Math.max(1, Math.min(img.width - srcX, srcW));
+            srcH = Math.max(1, Math.min(img.height - srcY, srcH));
+
+            var c = document.createElement('canvas');
+            c.width = Math.round(srcW);
+            c.height = Math.round(srcH);
+            var ctx = c.getContext('2d');
+            ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, c.width, c.height);
+
+            var dataUrl = c.toDataURL(self.format, self.quality / 100);
+            self.originalImage = dataUrl;
+            self.previewImage = dataUrl;
+            self.imagePreview = dataUrl;
+            self.width = c.width;
+            self.height = c.height;
+            self.originalAspectRatio = c.width / c.height;
+            self.zoom = 1;
+            self.panX = 0;
+            self.panY = 0;
+            self._refreshPreview();
+            if (self.threeReady) self._loadTexture(dataUrl);
+          };
+          img.src = this.originalImage;
         }
 
       }
