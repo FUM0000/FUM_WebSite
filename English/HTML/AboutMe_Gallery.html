@@ -75,9 +75,7 @@
         // Setup Threejs
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
         import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
-        import { EffectComposer } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/EffectComposer.js';
-        import { RenderPass } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/RenderPass.js';
-        import { UnrealBloomPass } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/UnrealBloomPass.js';
+
         import {
             Mobile_or_Desktop,
             RandomNumber_Between,
@@ -112,37 +110,6 @@
         const BLOOM_LAYER = 1;
         const _bloomLayer = new THREE.Layers();
         _bloomLayer.set(BLOOM_LAYER);
-
-        let _NormalTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
-
-        const _BloomComposer = new EffectComposer(Renderer);
-        _BloomComposer.addPass(new RenderPass(Scene, null));
-        const _BloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.6, 0.3);
-        _BloomPass.renderToScreen = false;
-        _BloomComposer.addPass(_BloomPass);
-
-        const _CompositeMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                tNormal: { value: _NormalTarget.texture },
-                tBloom: { value: null },
-            },
-            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
-            fragmentShader: `
-                uniform sampler2D tNormal;
-                uniform sampler2D tBloom;
-                varying vec2 vUv;
-                void main() {
-                    vec4 normal = texture2D(tNormal, vUv);
-                    vec4 bloom = texture2D(tBloom, vUv);
-                    gl_FragColor = normal + bloom;
-                }
-            `,
-            depthTest: false, depthWrite: false,
-        });
-        const _CompositeQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), _CompositeMaterial);
-        _CompositeQuad.frustumCulled = false;
-        const _CompositeScene = new THREE.Scene();
-        _CompositeScene.add(_CompositeQuad);
 
         const Loader_FBX = new FBXLoader();
         document.addEventListener('pointerdown', function (event) { PointerDown(event); });
@@ -1706,7 +1673,6 @@
                     delay: 1.0,
                 });
 
-                _BloomComposer.passes[0].camera = Camera.Object;
 
                 const main_categories = Object.keys(this._FolderStructure);
                 const angle_each_main_category = (2 * Math.PI) / main_categories.length;
@@ -1836,18 +1802,7 @@
                         Manager.Update_System();
                     }
                 }
-                Renderer.setRenderTarget(_NormalTarget);
                 Renderer.render(Scene, Camera.Object);
-                Camera.Object.layers.set(BLOOM_LAYER);
-                _BloomComposer.render();
-                Camera.Object.layers.set(0);
-                Camera.Object.layers.enable(BLOOM_LAYER);
-                _CompositeMaterial.uniforms.tBloom.value = _BloomComposer.readBuffer.texture;
-                Renderer.setRenderTarget(null);
-                Renderer.autoClear = false;
-                Renderer.clear();
-                Renderer.render(_CompositeScene, Camera.Object);
-                Renderer.autoClear = true;
                 requestAnimationFrame(this.Update.bind(this));
             }
             Update_System() {
@@ -2554,9 +2509,6 @@
         const Light_Directional = new FC_Light_Directional(Scene);
         window.addEventListener('resize', () => {
             Camera.Resize_Screen();
-            const w = window.innerWidth, h = window.innerHeight;
-            _NormalTarget.setSize(w, h);
-            _BloomComposer.setSize(w, h);
         }, false);
 
         const Manager = new C_Manager();
