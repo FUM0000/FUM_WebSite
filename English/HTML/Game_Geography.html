@@ -75,15 +75,6 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
         }
 
-        .flash-correct {
-            animation: GFlashCorrect 0.6s ease;
-        }
-        @keyframes GFlashCorrect {
-            0% { background-color: transparent; }
-            30% { background-color: rgba(76, 175, 80, 0.35); }
-            100% { background-color: transparent; }
-        }
-
         .shake-wrong {
             animation: GShakeWrong 0.5s ease;
         }
@@ -214,8 +205,8 @@
                                                     <v-chip small :color="CurrentQuestion ? RegionColor(CurrentQuestion.region) : 'grey'" dark>
                                                         {{ CurrentQuestion ? CurrentQuestion.region + ' Region' : '' }}
                                                     </v-chip>
-                                                    <v-chip v-if="Answered" outlined :color="LastCorrect ? 'green' : 'red'" class="ml-2">
-                                                        {{ LastCorrect ? 'Correct!' : 'Wrong' }}
+                                                    <v-chip outlined :color="Answered ? (LastCorrect ? 'green' : 'red') : 'grey'" class="ml-2">
+                                                        {{ Answered ? (LastCorrect ? 'Correct!' : 'Wrong') : 'Choose...' }}
                                                     </v-chip>
                                                 </div>
 
@@ -252,12 +243,9 @@
 
                                     <v-card-actions>
                                         <v-spacer></v-spacer>
-                                        <template v-if="Answered && QuestionIndex < WorkingQuestions.length">
-                                            <v-btn color="primary" @click="NextQuestion">Next <v-icon right>mdi-arrow-right</v-icon></v-btn>
-                                        </template>
-                                        <template v-else-if="Answered">
-                                            <v-btn color="success" @click="FinishGame">See Results</v-btn>
-                                        </template>
+                                        <v-btn v-if="Answered && QuestionIndex < WorkingQuestions.length" color="primary" @click="NextQuestion">Next <v-icon right>mdi-arrow-right</v-icon></v-btn>
+                                        <v-btn v-else-if="Answered" color="success" @click="FinishGame">See Results</v-btn>
+                                        <v-btn v-else style="visibility: hidden" disabled>Next</v-btn>
                                     </v-card-actions>
                                 </v-card>
 
@@ -521,7 +509,8 @@
                     this.panzoomInstance = Panzoom(svg, {
                         maxScale: 5,
                         minScale: 0.35,
-                        contain: 'outside'
+                        contain: 'outside',
+                        panOnlyWhenZoomed: true
                     });
                     container.addEventListener('wheel', this.panzoomInstance.zoomWithWheel);
                 },
@@ -649,7 +638,7 @@
                         let timeBonus = 0;
                         if (this.HasTimer) timeBonus = Math.ceil(this.TimeLeft);
                         this.Score += (10 * this.Combo) + timeBonus + (this.Difficulty === 'hard' ? 5 : 0);
-                        this.CardFx = 'flash-correct';
+                        this.CardFx = '';
                     } else {
                         this.Combo = 0;
                         this.CardFx = 'shake-wrong';

@@ -105,25 +105,14 @@
             100% { transform: scale(1); }
         }
 
-        .flash-correct {
+        .kanji-svg.flash-correct {
+            background-color: rgba(76, 175, 80, 0.35);
             animation: FlashCorrect 0.4s ease;
         }
 
         @keyframes FlashCorrect {
             0% { background-color: transparent; }
             100% { background-color: rgba(76, 175, 80, 0.35); }
-        }
-
-        .shake-wrong {
-            animation: ShakeWrong 0.5s ease;
-        }
-
-        @keyframes ShakeWrong {
-            0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-12px); }
-            40% { transform: translateX(12px); }
-            60% { transform: translateX(-8px); }
-            80% { transform: translateX(8px); }
         }
 
         .kanji-svg {
@@ -259,18 +248,21 @@
                                             <div class="timer-fill" :style="{ width: TimerPercent + '%', backgroundColor: TimerColor }"></div>
                                         </div>
 
+                                        <div class="text-center mb-3">
+                                            <v-chip small :color="CategoryColor(CurrentQuestion.category)" dark>{{ CurrentQuestion.category }}</v-chip>
+                                        </div>
+
                                         <v-row justify="center">
                                             <v-col cols="auto">
-                                                <div class="kanji-svg" :class="[Answered ? (LastCorrect ? 'flash-correct' : 'shake-wrong') : '']">
+                                                <div class="kanji-svg" :class="[Answered && LastCorrect ? 'flash-correct' : '']">
                                                     <span class="kanji-display">{{ CurrentQuestion.kanji }}</span>
                                                 </div>
                                             </v-col>
                                         </v-row>
 
                                         <div class="text-center mt-3 mb-4">
-                                            <v-chip small :color="CategoryColor(CurrentQuestion.category)" dark class="mr-2">{{ CurrentQuestion.category }}</v-chip>
-                                            <v-chip v-if="Answered" outlined :color="LastCorrect ? 'green' : 'red'">
-                                                {{ LastCorrect ? 'Correct!' : 'Wrong' }}
+                                            <v-chip outlined :color="Answered ? (LastCorrect ? 'green' : 'red') : 'grey'">
+                                                {{ Answered ? (LastCorrect ? 'Correct!' : 'Wrong') : 'Choose' }}
                                             </v-chip>
                                         </div>
 
@@ -860,7 +852,7 @@
                     this.Answered = true;
                     this.LastCorrect = false;
                     this.Combo = 0;
-                    this.CardFx = 'shake-wrong';
+                    this.CardFx = '';
                     this.stopTimer();
                 },
                 Answer(opt) {
@@ -880,7 +872,7 @@
                         this.CardFx = 'flash-correct';
                     } else {
                         this.Combo = 0;
-                        this.CardFx = 'shake-wrong';
+                        this.CardFx = '';
                     }
                 },
                 NextQuestion() {

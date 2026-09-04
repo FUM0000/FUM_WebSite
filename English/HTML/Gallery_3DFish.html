@@ -187,35 +187,42 @@
                 return geometry;
             }
 
+            static _subdivideTriangle(v0, v1, v2, steps) {
+                const pts = [];
+                for (let i = 0; i <= steps; i++) {
+                    for (let j = 0; j <= steps - i; j++) {
+                        const u = i / steps;
+                        const v = j / steps;
+                        const w = 1 - u - v;
+                        pts.push(
+                            v0[0] * w + v1[0] * u + v2[0] * v,
+                            v0[1] * w + v1[1] * u + v2[1] * v,
+                            v0[2] * w + v1[2] * u + v2[2] * v,
+                        );
+                    }
+                }
+                return pts;
+            }
+
             static createTailGeometry() {
-                const positions = new Float32Array([
-                    0, 0, 0,
-                    -0.6, 0.45, 0,
-                    -0.6, -0.45, 0,
-                    0, 0, 0,
-                    -0.35, 0.0, 0.25,
-                    -0.6, 0.45, 0,
-                    0, 0, 0,
-                    -0.35, 0.0, -0.25,
-                    -0.6, -0.45, 0,
-                ]);
+                const s = 5;
+                const positions = [];
+                positions.push(...this._subdivideTriangle([0,0,0], [-0.6,0.45,0], [-0.6,-0.45,0], s));
+                positions.push(...this._subdivideTriangle([0,0,0], [-0.35,0,0.25], [-0.6,0.45,0], s));
+                positions.push(...this._subdivideTriangle([0,0,0], [-0.35,0,-0.25], [-0.6,-0.45,0], s));
                 const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
                 geometry.computeVertexNormals();
                 return geometry;
             }
 
             static createDorsalFinGeometry() {
-                const positions = new Float32Array([
-                    -0.15, 0.3, 0,
-                    0.2, 0.55, 0,
-                    0.15, 0.3, 0,
-                    0.2, 0.55, 0,
-                    -0.05, 0.35, 0,
-                    0.0, 0.32, 0,
-                ]);
+                const s = 3;
+                const positions = [];
+                positions.push(...this._subdivideTriangle([-0.15,0.3,0], [0.2,0.55,0], [0.15,0.3,0], s));
+                positions.push(...this._subdivideTriangle([0.2,0.55,0], [-0.05,0.35,0], [0.0,0.32,0], s));
                 const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
                 geometry.computeVertexNormals();
                 return geometry;
             }
