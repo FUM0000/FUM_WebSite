@@ -189,28 +189,18 @@
                                         <v-divider class="my-4"></v-divider>
 
                                         <v-row dense>
-                                            <v-col cols="6" md="6">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Questions</div>
-                                                    <div class="text-h6">{{ QuestionsPerRound }}</div>
-                                                </v-sheet>
-                                            </v-col>
-                                            <v-col cols="12" md="6" class="d-flex align-center">
-                                                <v-select label="Questions" v-model="QuestionsPerRound" outlined hide-details
-                                                    :items="[5, 10, 15, 20]"></v-select>
+                                            <v-col cols="12">
+                                                <v-select label="Questions (Auto = all in selected categories)" v-model="QuestionsPerRound" outlined hide-details
+                                                    :items="QuestionItems"></v-select>
                                             </v-col>
                                         </v-row>
-
-                                        <v-alert type="info" outlined dense class="mt-4" v-if="SelectedCategories.length === 0">
-                                            Select at least one category to start.
-                                        </v-alert>
                                     </v-card-text>
                                     <v-card-actions>
                                         <v-btn text color="secondary" @click="ShowRewards = true">
                                             <v-icon left>mdi-trophy-outline</v-icon> Rewards
                                         </v-btn>
                                         <v-spacer></v-spacer>
-                                        <v-btn color="primary" large @click="StartGame" :disabled="SelectedCategories.length === 0">
+                                        <v-btn color="primary" large @click="StartGame">
                                             <v-icon left>mdi-play</v-icon> Start Training
                                         </v-btn>
                                     </v-card-actions>
@@ -632,7 +622,14 @@
                 ],
                 AllKanji: KANJI_DATA,
                 SelectedCategories: [],
-                QuestionsPerRound: 10,
+                QuestionsPerRound: 'auto',
+                QuestionItems: [
+                    { text: 'Auto (all)', value: 'auto' },
+                    { text: '5', value: 5 },
+                    { text: '10', value: 10 },
+                    { text: '15', value: 15 },
+                    { text: '20', value: 20 },
+                ],
                 Playing: false,
                 Finished: false,
                 WorkingQuestions: [],
@@ -795,7 +792,8 @@
                 },
                 StartGame() {
                     const candidates = this.AllKanji.filter(k => this.SelectedCategories.includes(k.category));
-                    this.WorkingQuestions = this.shuffle(candidates).slice(0, this.QuestionsPerRound);
+                    const count = this.QuestionsPerRound === 'auto' ? candidates.length : this.QuestionsPerRound;
+                    this.WorkingQuestions = this.shuffle(candidates).slice(0, count);
                     this.CurrentIndex = 0;
                     this.Score = 0;
                     this.Combo = 0;

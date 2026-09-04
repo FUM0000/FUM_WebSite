@@ -132,60 +132,42 @@
         ];
 
         class C_FishGeometry {
-            static createBodyBuffer(segmentsX, segmentsY) {
-                const positions = [];
-                const normals = [];
-                const indices = [];
+            static _catmullRom(p0, p1, p2, p3, t) {
+                const t2 = t * t, t3 = t2 * t;
+                return 0.5 * ((2*p1) + (-p0+p2)*t + (2*p0-5*p1+4*p2-p3)*t2 + (-p0+3*p1-3*p2+p3)*t3);
+            }
 
+            static _sampleProfile(t) {
+                const pts = [0.14, 0.24, 0.32, 0.38, 0.40, 0.41, 0.39, 0.34, 0.25, 0.16, 0.09, 0.03, 0.00];
+                const n = pts.length - 1;
+                const seg = Math.min(Math.floor(t * n), n - 1);
+                const lt = t * n - seg;
+                return this._catmullRom(pts[Math.max(0,seg-1)], pts[seg], pts[Math.min(n,seg+1)], pts[Math.min(n,seg+2)], lt);
+            }
+
+            static createBodyBuffer(segmentsX, segmentsY) {
+                const positions = [], normals = [], indices = [];
                 for (let ix = 0; ix <= segmentsX; ix++) {
                     const t = ix / segmentsX;
                     const x = (t - 0.5) * 2.0;
-
-                    let radius;
-                    if (t < 0.15) {
-                        radius = 0.12 + 0.35 * Math.pow(t / 0.15, 0.6);
-                    } else if (t < 0.35) {
-                        radius = 0.47 + 0.03 * Math.pow((t - 0.15) / 0.20, 0.8);
-                    } else if (t < 0.7) {
-                        const nt = (t - 0.35) / 0.35;
-                        radius = 0.50 * (1.0 - 0.76 * Math.pow(nt, 1.8));
-                    } else {
-                        const nt = (t - 0.7) / 0.3;
-                        radius = 0.12 * (1.0 - Math.pow(nt, 1.5));
-                    }
-
+                    const radius = this._sampleProfile(t);
                     for (let iy = 0; iy <= segmentsY; iy++) {
                         const angle = (iy / segmentsY) * Math.PI * 2;
-                        const py = Math.sin(angle) * radius;
-                        const pz = Math.cos(angle) * radius * 0.7;
-
-                        const flankBulge = Math.sin(angle) * 0.08 * (1.0 - Math.abs(t - 0.45) * 2.0);
-
-                        positions.push(x, py + flankBulge, pz);
-                        const nx = 0;
-                        const ny = Math.sin(angle);
-                        const nz = Math.cos(angle);
-                        normals.push(nx, ny, nz);
+                        positions.push(x, Math.sin(angle) * radius, Math.cos(angle) * radius * 0.6);
+                        normals.push(0, Math.sin(angle), Math.cos(angle));
                     }
                 }
-
                 for (let ix = 0; ix < segmentsX; ix++) {
                     for (let iy = 0; iy < segmentsY; iy++) {
-                        const a = ix * (segmentsY + 1) + iy;
-                        const b = a + 1;
-                        const c = (ix + 1) * (segmentsY + 1) + iy;
-                        const d = c + 1;
-                        indices.push(a, c, b);
-                        indices.push(b, c, d);
+                        const a = ix*(segmentsY+1)+iy, b = a+1, c = (ix+1)*(segmentsY+1)+iy, d = c+1;
+                        indices.push(a,c,b, b,c,d);
                     }
                 }
-
                 const geometry = new THREE.BufferGeometry();
                 geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
                 geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
                 geometry.setIndex(indices);
                 geometry.computeVertexNormals();
-
                 return geometry;
             }
 
@@ -193,42 +175,46 @@
                 const pts = [];
                 for (let i = 0; i <= steps; i++) {
                     for (let j = 0; j <= steps - i; j++) {
-                        const u = i / steps;
-                        const v = j / steps;
-                        const w = 1 - u - v;
-                        pts.push(
-                            v0[0] * w + v1[0] * u + v2[0] * v,
-                            v0[1] * w + v1[1] * u + v2[1] * v,
-                            v0[2] * w + v1[2] * u + v2[2] * v,
-                        );
+                        const u = i/steps, v = j/steps, w = 1-u-v;
+                        pts.push(v0[0]*w+v1[0]*u+v2[0]*v, v0[1]*w+v1[1]*u+v2[1]*v, v0[2]*w+v1[2]*u+v2[2]*v);
                     }
                 }
                 return pts;
             }
 
+            static _makeGeom(positions) {
+                const g = new THREE.BufferGeometry();
+                g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                g.computeVertexNormals();
+                return g;
+            }
+
             static createTailGeometry() {
-                const s = 5;
-                const positions = [];
-                positions.push(...this._subdivideTriangle([0,0,0], [-0.6,0.45,0], [-0.6,-0.45,0], s));
-                positions.push(...this._subdivideTriangle([0,0,0], [-0.35,0,0.25], [-0.6,0.45,0], s));
-                positions.push(...this._subdivideTriangle([0,0,0], [-0.35,0,-0.25], [-0.6,-0.45,0], s));
-                const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-                geometry.computeVertexNormals();
-                return geometry;
+                const s = 5, p = [];
+                p.push(...this._subdivideTriangle([0,0,0], [0.55,0.5,0], [0.1,0.1,0], s));
+                p.push(...this._subdivideTriangle([0,0,0], [0.55,-0.5,0], [0.1,-0.1,0], s));
+                p.push(...this._subdivideTriangle([0.1,0.1,0], [0,0,0], [0.1,-0.1,0], s));
+                return this._makeGeom(p);
             }
 
             static createDorsalFinGeometry() {
-                const s = 3;
-                const positions = [];
-                positions.push(...this._subdivideTriangle([-0.15,0.3,0], [0.2,0.55,0], [0.15,0.3,0], s));
-                positions.push(...this._subdivideTriangle([0.2,0.55,0], [-0.05,0.35,0], [0.0,0.32,0], s));
-                const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-                geometry.computeVertexNormals();
-                return geometry;
+                const s = 3, p = [];
+                p.push(...this._subdivideTriangle([-0.12,0,0], [0.12,0.12,0], [0.12,0,0], s));
+                p.push(...this._subdivideTriangle([0.12,0.12,0], [-0.05,0.06,0], [0.12,0,0], s));
+                return this._makeGeom(p);
             }
 
+            static createPectoralFinGeometry() {
+                return this._makeGeom(this._subdivideTriangle([0,0,0], [-0.18,-0.06,0.14], [0.06,-0.08,0.05], 4));
+            }
+
+            static createPelvicFinGeometry() {
+                return this._makeGeom(this._subdivideTriangle([0,0,0], [-0.06,-0.1,0.08], [0.06,-0.1,0.08], 3));
+            }
+
+            static createAnalFinGeometry() {
+                return this._makeGeom(this._subdivideTriangle([0,0,0], [-0.08,-0.1,0], [0.12,-0.12,0], 3));
+            }
         }
 
         class C_Fish {
@@ -260,8 +246,13 @@
             _bodyPoints = null;
             _tailPoints = null;
             _dorsalPoints = null;
+            _pectoralLeftPoints = null;
+            _pectoralRightPoints = null;
+            _pelvicLeftPoints = null;
+            _pelvicRightPoints = null;
+            _analPoints = null;
 
-            constructor(bodyGeometry, tailGeometry, dorsalGeometry, colorRGB, scale) {
+            constructor(bodyGeometry, tailGeometry, dorsalGeometry, pectoralGeometry, pelvicGeometry, analGeometry, colorRGB, scale) {
                 this._colorIndex = Math.floor(Math.random() * FISH_COLORS.length);
                 this._scaleValue = scale || (0.6 + Math.random() * 0.8);
                 this._speed = 0.8 + Math.random() * 0.6;
@@ -283,31 +274,45 @@
                 this._tailMesh = new THREE.Mesh(tailGeometry.clone(), tailMat);
                 this._tailOriginalPositions = this._tailMesh.geometry.attributes.position.array.slice();
 
-                const dorsalColor = new THREE.Color(
-                    Math.min(1, color[0] * 1.1),
-                    Math.min(1, color[1] * 1.1),
-                    Math.min(1, color[2] * 1.1)
-                );
-                const dorsalMat = new THREE.MeshBasicMaterial({ color: dorsalColor, transparent: true, opacity: 0, depthWrite: false });
-                this._dorsalMesh = new THREE.Mesh(dorsalGeometry.clone(), dorsalMat);
+                const dorsalColor = new THREE.Color(Math.min(1, color[0]*1.1), Math.min(1, color[1]*1.1), Math.min(1, color[2]*1.1));
+                const finColor = new THREE.Color(color[0]*0.9, color[1]*0.9, color[2]*0.9);
 
                 const ptsMat = (c) => new THREE.PointsMaterial({
-                    color: c,
-                    size: 0.025,
-                    transparent: true,
-                    opacity: 0.95,
-                    sizeAttenuation: true,
-                    depthWrite: false,
+                    color: c, size: 0.025, transparent: true, opacity: 0.95, sizeAttenuation: true, depthWrite: false,
                 });
 
                 this._bodyPoints = new THREE.Points(this._bodyMesh.geometry, ptsMat(bodyColor));
                 this._tailPoints = new THREE.Points(this._tailMesh.geometry, ptsMat(tailColor));
-                this._dorsalPoints = new THREE.Points(this._dorsalMesh.geometry, ptsMat(dorsalColor));
+                this._tailPoints.position.set(0.85, 0, 0);
+
+                this._dorsalPoints = new THREE.Points(dorsalGeometry, ptsMat(dorsalColor));
+                this._dorsalPoints.position.set(0.2, 0.35, 0);
+
+                this._pectoralLeftPoints = new THREE.Points(pectoralGeometry, ptsMat(finColor));
+                this._pectoralLeftPoints.position.set(-0.6, -0.05, 0.22);
+
+                this._pectoralRightPoints = new THREE.Points(pectoralGeometry, ptsMat(finColor));
+                this._pectoralRightPoints.position.set(-0.6, -0.05, -0.22);
+                this._pectoralRightPoints.scale.z = -1;
+
+                this._pelvicLeftPoints = new THREE.Points(pelvicGeometry, ptsMat(finColor));
+                this._pelvicLeftPoints.position.set(-0.3, -0.35, 0.10);
+
+                this._pelvicRightPoints = new THREE.Points(pelvicGeometry, ptsMat(finColor));
+                this._pelvicRightPoints.position.set(-0.3, -0.35, -0.10);
+                this._pelvicRightPoints.scale.z = -1;
+
+                this._analPoints = new THREE.Points(analGeometry, ptsMat(finColor));
+                this._analPoints.position.set(0.44, -0.18, 0);
 
                 this._group.add(this._bodyPoints);
-                this._tailPoints.position.set(-0.85, 0, 0);
                 this._group.add(this._tailPoints);
                 this._group.add(this._dorsalPoints);
+                this._group.add(this._pectoralLeftPoints);
+                this._group.add(this._pectoralRightPoints);
+                this._group.add(this._pelvicLeftPoints);
+                this._group.add(this._pelvicRightPoints);
+                this._group.add(this._analPoints);
 
                 this._group.scale.setScalar(this._scaleValue);
             }
@@ -441,6 +446,7 @@
                 this._AnimateTail(time);
                 this._AnimateBody(time);
                 this._AnimateDorsalFin(time);
+                this._AnimateFins(time);
             }
 
             _AnimateTail(time) {
@@ -453,7 +459,7 @@
                     const oy = orig[i * 3 + 1];
                     const oz = orig[i * 3 + 2];
 
-                    const tailFactor = Math.max(0, -ox) / 0.6;
+                    const tailFactor = Math.min(ox / 0.55, 1.0);
                     const wagAmount = tailFactor * 0.4 * Math.sin(this._tailPhase + tailFactor * 2.0);
 
                     posAttr.setX(i, ox);
@@ -488,6 +494,15 @@
             _AnimateDorsalFin(time) {
                 const finWave = Math.sin(this._bodyWavePhase * 1.5) * 0.05;
                 this._dorsalPoints.rotation.z = finWave;
+            }
+
+            _AnimateFins(time) {
+                const flap = Math.sin(this._bodyWavePhase * 2.0) * 0.15;
+                this._pectoralLeftPoints.rotation.x = flap;
+                this._pectoralRightPoints.rotation.x = -flap;
+                this._pelvicLeftPoints.rotation.x = flap * 0.5;
+                this._pelvicRightPoints.rotation.x = -flap * 0.5;
+                this._analPoints.rotation.z = Math.sin(this._bodyWavePhase * 1.5) * 0.03;
             }
         }
 
@@ -744,9 +759,12 @@
                 const bodyGeom = C_FishGeometry.createBodyBuffer(20, 12);
                 const tailGeom = C_FishGeometry.createTailGeometry();
                 const dorsalGeom = C_FishGeometry.createDorsalFinGeometry();
+                const pectoralGeom = C_FishGeometry.createPectoralFinGeometry();
+                const pelvicGeom = C_FishGeometry.createPelvicFinGeometry();
+                const analGeom = C_FishGeometry.createAnalFinGeometry();
 
                 for (let i = 0; i < FISH_COUNT; i++) {
-                    const fish = new C_Fish(bodyGeom, tailGeom, dorsalGeom);
+                    const fish = new C_Fish(bodyGeom, tailGeom, dorsalGeom, pectoralGeom, pelvicGeom, analGeom);
                     const pos = new THREE.Vector3(
                         (Math.random() - 0.5) * 20,
                         (Math.random() - 0.5) * 8,
