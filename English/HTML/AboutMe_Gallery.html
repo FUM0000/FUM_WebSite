@@ -119,12 +119,25 @@
         _BloomComposer.addPass(_BloomPass);
 
         const _BloomCompositeMaterial = new THREE.ShaderMaterial({
-            uniforms: { tDiffuse: { value: null } },
+            uniforms: { tDiffuse: { value: null }, tSceneDepth: { value: null }, tGlowDepth: { value: null } },
             vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
             fragmentShader: `
                 uniform sampler2D tDiffuse;
+                uniform sampler2D tSceneDepth;
+                uniform sampler2D tGlowDepth;
                 varying vec2 vUv;
                 void main() {
+                    float glowDepth = texture2D(tGlowDepth, vUv).r;
+                    float sceneDepth = texture2D(tSceneDepth, vUv).r;
+                    if (glowDepth >= 0.9999) {
+                        if (sceneDepth >= 0.9999) {
+                            gl_FragColor = texture2D(tDiffuse, vUv);
+                        } else {
+                            discard;
+                        }
+                        return;
+                    }
+                    if (sceneDepth + 0.002 < glowDepth) discard;
                     gl_FragColor = texture2D(tDiffuse, vUv);
                 }
             `,
@@ -135,6 +148,11 @@
         _BloomCompositeQuad.frustumCulled = false;
         const _BloomCompositeScene = new THREE.Scene();
         _BloomCompositeScene.add(_BloomCompositeQuad);
+
+        const _SceneTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+        _SceneTarget.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight);
+        const _BloomDepthTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+        _BloomDepthTarget.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight);
 
         const Loader_FBX = new FBXLoader();
         document.addEventListener('pointerdown', function (event) { PointerDown(event); });
@@ -1835,8 +1853,15 @@
                 _BloomCamera.position.copy(Camera.Object.position);
                 _BloomCamera.quaternion.copy(Camera.Object.quaternion);
                 _BloomCamera.projectionMatrix.copy(Camera.Object.projectionMatrix);
+                Renderer.setRenderTarget(_SceneTarget);
+                Renderer.render(Scene, Camera.Object);
+                Renderer.setRenderTarget(_BloomDepthTarget);
+                Renderer.render(Scene, _BloomCamera);
+                Renderer.setRenderTarget(null);
                 _BloomComposer.render();
                 _BloomCompositeMaterial.uniforms.tDiffuse.value = _BloomComposer.readBuffer.texture;
+                _BloomCompositeMaterial.uniforms.tSceneDepth.value = _SceneTarget.depthTexture;
+                _BloomCompositeMaterial.uniforms.tGlowDepth.value = _BloomDepthTarget.depthTexture;
                 Renderer.autoClear = false;
                 Renderer.clearDepth();
                 Renderer.render(_BloomCompositeScene, Camera.Object);
@@ -2551,6 +2576,15 @@
         window.addEventListener('resize', () => {
             Camera.Resize_Screen();
             _BloomComposer.setSize(window.innerWidth, window.innerHeight);
+            const _w = window.innerWidth, _h = window.innerHeight;
+            _SceneTarget.setSize(_w, _h);
+            _SceneTarget.depthTexture.image.width = _w;
+            _SceneTarget.depthTexture.image.height = _h;
+            _SceneTarget.depthTexture.needsUpdate = true;
+            _BloomDepthTarget.setSize(_w, _h);
+            _BloomDepthTarget.depthTexture.image.width = _w;
+            _BloomDepthTarget.depthTexture.image.height = _h;
+            _BloomDepthTarget.depthTexture.needsUpdate = true;
         }, false);
 
         const Manager = new C_Manager();
