@@ -1072,6 +1072,7 @@
             _Image_Radius_FromCategory = 2;
             _Floor_Height = 5;
             _Frame_BaseY = 1.74 - 0.08;
+            _RingWidth = 0.02;
             _CurrentVisibleFrameFloor = -1;
             _Category_Texts = [];
             _Images = [];
@@ -1349,8 +1350,12 @@
                 if (this._Button_Music && this._Button_Music.material.uniforms) {
                     this._Button_Music.material.uniforms.uTime.value = t;
                 }
-                if (this._floorRingMaterial) {
-                    this._floorRingMaterial.uniforms.uTime.value = t;
+                if (this._floorRings) {
+                    for (const ring of this._floorRings) {
+                        if (ring && ring.material && ring.material.uniforms) {
+                            ring.material.uniforms.uTime.value = t;
+                        }
+                    }
                 }
                 if (!this._Elevator || !this._Elevator.isMoving) {
                     this.updateHomeMusicAnchor();
@@ -1526,51 +1531,56 @@
                     });
                 });
 
-                this._floorRingMaterial = this._floorRingMaterial || new THREE.ShaderMaterial({
+                this._floorRingTemplate = this._floorRingTemplate || new THREE.ShaderMaterial({
                     uniforms: {
                         uTime: { value: 0 },
                         uColor: { value: new THREE.Color(0.55, 0.75, 1.0) },
+                        uRingRadius: { value: 1 },
+                        uRingWidth: { value: 0.045 },
                     },
                     vertexShader: `
-                        varying vec3 vWorldPos;
+                        varying vec3 vLocalPos;
                         void main() {
-                            vec4 wp = modelMatrix * vec4(position, 1.0);
-                            vWorldPos = wp.xyz;
-                            gl_Position = projectionMatrix * viewMatrix * wp;
+                            vLocalPos = position;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                         }
                     `,
                     fragmentShader: `
                         uniform float uTime;
                         uniform vec3 uColor;
-                        varying vec3 vWorldPos;
+                        uniform float uRingRadius;
+                        uniform float uRingWidth;
+                        varying vec3 vLocalPos;
                         void main() {
-                            float angle = atan(vWorldPos.x, vWorldPos.z);
+                            float r = length(vLocalPos.xz);
+                            float edge = abs(r - uRingRadius) / uRingWidth;
+                            float band = 1.0 - smoothstep(0.0, 1.0, edge);
+                            if (band <= 0.0) discard;
+                            float angle = atan(vLocalPos.x, vLocalPos.z);
                             float angPulse = sin(angle * 6.0 + uTime * 2.0) * 0.25 + 0.75;
-                            float flow = sin(vWorldPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
-                            flow += sin(vWorldPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
+                            float flow = sin(vLocalPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
+                            flow += sin(vLocalPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
                             flow = flow * 0.5;
                             float glow = 0.7 + 0.3 * sin(uTime * 1.5);
-                            vec3 c = uColor * (0.35 + angPulse * 0.45 + flow * 0.2) * glow;
-                            float a = (0.4 + angPulse * 0.5) * glow * 0.9;
+                            vec3 c = uColor * (1.0 + angPulse * 0.45 + flow * 0.2) * glow;
+                            float a = (0.7 + angPulse * 0.5) * glow * band;
                             gl_FragColor = vec4(c, a);
                         }
                     `,
                     transparent: true,
                     depthWrite: false,
                     fog: false,
+                    side: THREE.DoubleSide,
                 });
-                const material = this._floorRingMaterial;
-                const geometry = new THREE.BufferGeometry();
-                const points = [];
-                const segments = 64;
-                for (let i = 0; i <= segments; i++) {
-                    const theta = (i / segments) * Math.PI * 2;
-                    const x = Math.cos(theta) * 1;
-                    const z = Math.sin(theta) * 1;
-                    points.push(new THREE.Vector3(x, category_y, z));
-                }
-                geometry.setFromPoints(points);
-                const circle = new THREE.Line(geometry, material);
+                const ringRadius = 1;
+                const ringWidth = this._RingWidth;
+                const material = this._floorRingTemplate.clone();
+                material.uniforms.uRingRadius.value = ringRadius;
+                material.uniforms.uRingWidth.value = ringWidth;
+                const geometry = new THREE.CircleGeometry(ringRadius + ringWidth, 64);
+                geometry.rotateX(-Math.PI / 2);
+                const circle = new THREE.Mesh(geometry, material);
+                circle.position.set(0, category_y, 0);
                 Scene.add(circle);
                 this._floorRings = this._floorRings || [];
                 this._floorRings.push(circle);
@@ -1776,51 +1786,56 @@
                     this.applyAspectRatioToImageObject(image_obj, image_path);
                 });
 
-                this._floorRingMaterial = this._floorRingMaterial || new THREE.ShaderMaterial({
+                this._floorRingTemplate = this._floorRingTemplate || new THREE.ShaderMaterial({
                     uniforms: {
                         uTime: { value: 0 },
                         uColor: { value: new THREE.Color(0.55, 0.75, 1.0) },
+                        uRingRadius: { value: 1 },
+                        uRingWidth: { value: 0.045 },
                     },
                     vertexShader: `
-                        varying vec3 vWorldPos;
+                        varying vec3 vLocalPos;
                         void main() {
-                            vec4 wp = modelMatrix * vec4(position, 1.0);
-                            vWorldPos = wp.xyz;
-                            gl_Position = projectionMatrix * viewMatrix * wp;
+                            vLocalPos = position;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                         }
                     `,
                     fragmentShader: `
                         uniform float uTime;
                         uniform vec3 uColor;
-                        varying vec3 vWorldPos;
+                        uniform float uRingRadius;
+                        uniform float uRingWidth;
+                        varying vec3 vLocalPos;
                         void main() {
-                            float angle = atan(vWorldPos.x, vWorldPos.z);
+                            float r = length(vLocalPos.xz);
+                            float edge = abs(r - uRingRadius) / uRingWidth;
+                            float band = 1.0 - smoothstep(0.0, 1.0, edge);
+                            if (band <= 0.0) discard;
+                            float angle = atan(vLocalPos.x, vLocalPos.z);
                             float angPulse = sin(angle * 6.0 + uTime * 2.0) * 0.25 + 0.75;
-                            float flow = sin(vWorldPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
-                            flow += sin(vWorldPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
+                            float flow = sin(vLocalPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
+                            flow += sin(vLocalPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
                             flow = flow * 0.5;
                             float glow = 0.7 + 0.3 * sin(uTime * 1.5);
-                            vec3 c = uColor * (0.35 + angPulse * 0.45 + flow * 0.2) * glow;
-                            float a = (0.4 + angPulse * 0.5) * glow * 0.9;
+                            vec3 c = uColor * (1.0 + angPulse * 0.45 + flow * 0.2) * glow;
+                            float a = (0.7 + angPulse * 0.5) * glow * band;
                             gl_FragColor = vec4(c, a);
                         }
                     `,
                     transparent: true,
                     depthWrite: false,
                     fog: false,
+                    side: THREE.DoubleSide,
                 });
-                const material = this._floorRingMaterial;
-                const geometry = new THREE.BufferGeometry();
-                const points = [];
-                const segments = 64;
-                for (let i = 0; i <= segments; i++) {
-                    const theta = (i / segments) * Math.PI * 2;
-                    const x = Math.cos(theta) * _range;
-                    const z = Math.sin(theta) * _range;
-                    points.push(new THREE.Vector3(x, category_y, z));
-                }
-                geometry.setFromPoints(points);
-                const circle = new THREE.Line(geometry, material);
+                const ringRadius = _range;
+                const ringWidth = this._RingWidth;
+                const material = this._floorRingTemplate.clone();
+                material.uniforms.uRingRadius.value = ringRadius;
+                material.uniforms.uRingWidth.value = ringWidth;
+                const geometry = new THREE.CircleGeometry(ringRadius + ringWidth, 64);
+                geometry.rotateX(-Math.PI / 2);
+                const circle = new THREE.Mesh(geometry, material);
+                circle.position.set(0, category_y, 0);
                 Scene.add(circle);
                 this._floorRings = this._floorRings || [];
                 this._floorRings.push(circle);
