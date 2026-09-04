@@ -105,6 +105,64 @@
             font-size: 0.85rem;
         }
 
+        .results-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .results-grid .result-item {
+            flex: 1 1 calc(20% - 12px);
+            min-width: 100px;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .geo-card-actions {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px !important;
+            flex-wrap: wrap;
+        }
+
+        @media (min-width: 600px) {
+            .geo-card-actions {
+                justify-content: flex-end;
+            }
+
+            .geo-content .v-card__text {
+                padding: 28px !important;
+            }
+        }
+
+        .geo-content .v-system-bar {
+            overflow: visible;
+            height: auto;
+            min-height: 32px;
+        }
+
+        .back-btn {
+            min-width: 28px !important;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px !important;
+            padding: 0 !important;
+            margin: 0 8px 0 0;
+        }
+
+        .geo-card-actions .v-btn {
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 600px) {
+            .results-grid .result-item {
+                flex: 1 1 calc(50% - 12px);
+            }
+        }
+
         @media (max-width: 600px) {
             .geo-display-name { font-size: 1.8rem; }
         }
@@ -156,14 +214,15 @@
 
                                         <v-row dense>
                                             <v-col cols="12" md="6">
-                                                <v-text-field label="Questions" v-model.number="CustomQuestionCount" type="number"
-                                                    outlined hide-details :max="MaxQuestions" min="1"
-                                                    :hint="'1 - ' + MaxQuestions + ' prefectures'" persistent-hint></v-text-field>
+                                                <v-text-field v-model.number="CustomQuestionCount" type="number" label="Number of questions"
+                                                    :min="1" :max="MaxQuestions" outlined
+                                                    :hint="`Max is ${MaxQuestions}`" persistent-hint
+                                                    :error="!ValidQuestionCount && CustomQuestionCount !== ''"
+                                                    :error-messages="!ValidQuestionCount && CustomQuestionCount !== '' ? (CustomQuestionCount > MaxQuestions ? `Please enter ${MaxQuestions} or less.` : 'Please enter a value of 1 or more.') : ''"></v-text-field>
                                             </v-col>
                                         </v-row>
                                     </v-card-text>
-                                    <v-card-actions>
-                                        <v-spacer></v-spacer>
+                                    <v-card-actions class="geo-card-actions">
                                         <v-btn color="primary" large @click="StartGame" :disabled="!ValidQuestionCount">
                                             <v-icon left>mdi-play</v-icon> Start Quiz
                                         </v-btn>
@@ -173,6 +232,7 @@
                                 <!-- Gameplay -->
                                 <v-card v-else :class="[CardFx]">
                                     <v-system-bar>
+                                        <v-btn small outlined class="back-btn" @click="ResetGame"><v-icon small>mdi-arrow-u-left-top</v-icon></v-btn>
                                         <span>Score: {{ Score }}</span>
                                         <v-spacer></v-spacer>
                                         <v-chip small :color="DifficultyColor" dark>
@@ -201,6 +261,11 @@
                                             <v-col cols="12" md="5" class="text-center">
 <div id="geo-map-container" v-html="SvgContent"
                                                      :style="{overflow:'hidden',border:'1px solid #ddd',borderRadius:'4px',cursor:'grab',opacity:MapReady?1:0,transition:'opacity 0.15s'}"></div>
+                                                <div class="text-center mt-3">
+                                                    <v-chip small :color="CurrentQuestion ? RegionColor(CurrentQuestion.region) : 'grey'" dark>
+                                                        {{ CurrentQuestion ? CurrentQuestion.region + ' Region' : '' }}
+                                                    </v-chip>
+                                                </div>
                                             </v-col>
 
                                             <v-col cols="12" md="7">
@@ -212,10 +277,7 @@
                                                 </div>
 
                                                 <div class="text-center mb-3">
-                                                    <v-chip small :color="CurrentQuestion ? RegionColor(CurrentQuestion.region) : 'grey'" dark>
-                                                        {{ CurrentQuestion ? CurrentQuestion.region + ' Region' : '' }}
-                                                    </v-chip>
-                                                    <v-chip outlined :color="Answered ? (LastCorrect ? 'green' : 'red') : 'grey'" class="ml-2">
+                                                    <v-chip outlined :color="Answered ? (LastCorrect ? 'green' : 'red') : 'grey'">
                                                         {{ Answered ? (LastCorrect ? 'Correct!' : 'Wrong') : 'Choose...' }}
                                                     </v-chip>
                                                 </div>
@@ -252,8 +314,7 @@
                                         </v-row>
                                     </v-card-text>
 
-                                    <v-card-actions>
-                                        <v-spacer></v-spacer>
+                                    <v-card-actions class="geo-card-actions">
                                         <v-btn v-if="Answered && QuestionIndex < WorkingQuestions.length" color="primary" @click="NextQuestion">Next <v-icon right>mdi-arrow-right</v-icon></v-btn>
                                         <v-btn v-else-if="Answered" color="success" @click="FinishGame">See Results</v-btn>
                                         <v-btn v-else style="visibility: hidden" disabled>Next</v-btn>
@@ -262,35 +323,39 @@
 
                                 <!-- Results -->
                                 <v-card v-if="Finished" class="mt-4">
-                                    <v-system-bar>Results</v-system-bar>
+                                    <v-system-bar>
+                                        <v-btn small outlined class="back-btn" @click="ResetGame"><v-icon small>mdi-arrow-u-left-top</v-icon></v-btn>
+                                        Results
+                                    </v-system-bar>
                                     <v-card-text>
-                                        <v-row>
-                                            <v-col cols="6" md="3">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Score</div>
-                                                    <div class="text-h6">{{ Score }}</div>
-                                                </v-sheet>
-                                            </v-col>
-                                            <v-col cols="6" md="3">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Correct</div>
-                                                    <div class="text-h6">{{ CorrectCount }} / {{ WorkingQuestions.length }}</div>
-                                                </v-sheet>
-                                            </v-col>
-                                            <v-col cols="6" md="3">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Accuracy</div>
-                                                    <div class="text-h6">{{ Accuracy }}%</div>
-                                                </v-sheet>
-                                            </v-col>
-                                            <v-col cols="6" md="3">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Max Combo</div>
-                                                    <div class="text-h6">{{ MaxCombo }}</div>
-                                                </v-sheet>
-                                            </v-col>
-                                        </v-row>
+                                        <div class="results-grid">
+                                            <div class="result-item">
+                                                <div class="text-caption">Score</div>
+                                                <div class="text-h6">{{ Score }}</div>
+                                            </div>
+                                            <div class="result-item">
+                                                <div class="text-caption">Time</div>
+                                                <div class="text-h6">{{ ElapsedSeconds }}s</div>
+                                            </div>
+                                            <div class="result-item">
+                                                <div class="text-caption">Correct</div>
+                                                <div class="text-h6">{{ CorrectCount }} / {{ WorkingQuestions.length }}</div>
+                                            </div>
+                                            <div class="result-item">
+                                                <div class="text-caption">Accuracy</div>
+                                                <div class="text-h6">{{ Accuracy }}%</div>
+                                            </div>
+                                            <div class="result-item">
+                                                <div class="text-caption">Max Combo</div>
+                                                <div class="text-h6">{{ MaxCombo }}</div>
+                                            </div>
+                                        </div>
                                     </v-card-text>
+                                    <v-card-actions class="geo-card-actions">
+                                        <v-btn color="primary" @click="StartGame">
+                                            <v-icon left>mdi-replay</v-icon> Play Again
+                                        </v-btn>
+                                    </v-card-actions>
                                 </v-card>
 
                             </v-col>
@@ -329,7 +394,7 @@
             { id: 'shizuoka', name: 'Shizuoka', capital: 'Shizuoka', region: 'Chubu', famous: 'Green tea, Fuji, eel' },
             { id: 'aichi', name: 'Aichi', capital: 'Nagoya', region: 'Chubu', famous: 'Toyota, miso katsu' },
             { id: 'mie', name: 'Mie', capital: 'Tsu', region: 'Kinki', famous: 'Ise shrimp, pearl' },
-            { id: 'shiga', name: 'Shiga', capital: 'Otsu', region: 'Kinki', famous: 'Shiga most famous: Biwa Lake' },
+            { id: 'shiga', name: 'Shiga', capital: 'Otsu', region: 'Kinki', famous: 'Biwa Lake' },
             { id: 'kyoto', name: 'Kyoto', capital: 'Kyoto', region: 'Kinki', famous: 'Temples, matcha' },
             { id: 'osaka', name: 'Osaka', capital: 'Osaka', region: 'Kinki', famous: 'Takoyaki, okonomiyaki' },
             { id: 'nara', name: 'Nara', capital: 'Nara', region: 'Kinki', famous: 'Deer, Great Buddha' },
@@ -398,6 +463,8 @@
                 TimeLeft: 15,
                 Timer: null,
                 CardFx: '',
+                GameStartTime: 0,
+                ElapsedSeconds: 0,
                 SvgContent: '',
                 MapReady: false,
                 panzoomInstance: null,
@@ -461,7 +528,7 @@
                     return out;
                 },
                 RegionColor(region) {
-                    return { backgroundColor: REGION_COLORS[region] || '#90A4AE', color: '#1a1a1a' };
+                    return REGION_COLORS[region] || '#90A4AE';
                 },
                 loadSVG() {
                     return fetch('../../Asset/Image/Japan_Life/Japan_1.svg')
@@ -555,6 +622,7 @@
                     this.SelectedOption = null;
                     this.Finished = false;
                     this.Playing = true;
+                    this.GameStartTime = Date.now();
                     this.prepareOptions();
                     if (!this.SvgContent) {
                         this.loadSVG();
@@ -645,8 +713,15 @@
                 },
                 FinishGame() {
                     this.stopTimer();
+                    this.ElapsedSeconds = ((Date.now() - this.GameStartTime) / 1000).toFixed(1);
                     this.Playing = false;
                     this.Finished = true;
+                },
+                ResetGame() {
+                    this.stopTimer();
+                    this.Playing = false;
+                    this.Finished = false;
+                    this.CardFx = '';
                 },
                 OptionColor(opt) {
                     if (!this.Answered) return '';

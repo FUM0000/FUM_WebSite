@@ -163,6 +163,64 @@
             }
         }
 
+        .kanji-card-actions {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px !important;
+            flex-wrap: wrap;
+        }
+
+        @media (min-width: 600px) {
+            .kanji-card-actions {
+                justify-content: space-between;
+            }
+
+            .kanji-content .v-card__text {
+                padding: 28px !important;
+            }
+        }
+
+        .kanji-content .v-system-bar {
+            overflow: visible;
+            height: auto;
+            min-height: 32px;
+        }
+
+        .back-btn {
+            min-width: 28px !important;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px !important;
+            padding: 0 !important;
+            margin: 0 8px 0 0;
+        }
+
+        .kanji-card-actions .v-btn {
+            flex-shrink: 0;
+        }
+
+        .results-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .results-grid .result-item {
+            flex: 1 1 calc(20% - 12px);
+            min-width: 100px;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .results-grid .result-item {
+                flex: 1 1 calc(50% - 12px);
+            }
+        }
+
         .reward-celebrate-icon {
             width: 104px;
             height: 104px;
@@ -173,6 +231,13 @@
             justify-content: center;
             border: 2px solid #ffc107;
             box-shadow: 0 8px 24px rgba(255, 193, 7, 0.4);
+        }
+        .rainbow-icon {
+            background: linear-gradient(90deg, #ff0000, #ff8800, #fff200, #00d100, #0099ff, #6600ff, #ff00ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
         }
     </style>
 </head>
@@ -224,17 +289,16 @@
                                             <v-col cols="12">
                                                 <v-text-field v-model.number="ManualCount" type="number" label="Number of questions"
                                                     :min="1" :max="MaxQuestions" outlined
-                                                    :hint="`Max is ${MaxQuestions}`" persistent-hint
+                                                    :hint="SelectedCategories.length === 0 ? 'Select a category to see the max.' : `Max is ${MaxQuestions}`" persistent-hint
                                                     :error="ManualInputError"
-                                                    :error-messages="ManualInputError ? (ManualCount > MaxQuestions ? `Please enter ${MaxQuestions} or less.` : 'Please enter a value of 1 or more.') : ''"></v-text-field>
+                                                    :error-messages="ManualErrorMsg"></v-text-field>
                                             </v-col>
                                         </v-row>
                                     </v-card-text>
-                                    <v-card-actions>
+                                    <v-card-actions class="kanji-card-actions">
                                         <v-btn text color="secondary" @click="ShowRewards = true">
-                                            <v-icon left>mdi-trophy-outline</v-icon> Rewards
+                                            <v-icon left class="rainbow-icon">mdi-trophy-outline</v-icon> Rewards
                                         </v-btn>
-                                        <v-spacer></v-spacer>
                                         <v-btn color="primary" large @click="StartGame" :disabled="SelectedCategories.length === 0 || (QuestionsPerRound === 'manual' && ManualInputError)">
                                             <v-icon left>mdi-play</v-icon> Start Training
                                         </v-btn>
@@ -244,6 +308,7 @@
                                 <!-- Gameplay -->
                                 <v-card v-else :class="[CardFx]">
                                     <v-system-bar>
+                                        <v-btn small outlined class="back-btn" @click="ResetGame"><v-icon small>mdi-arrow-u-left-top</v-icon></v-btn>
                                         <span>Score: {{ Score }}</span>
                                         <v-spacer></v-spacer>
                                         <v-chip small color="amber darken-2" dark class="combo-chip" :key="Combo">
@@ -308,57 +373,53 @@
                                         </v-expand-transition>
                                     </v-card-text>
 
-                                    <v-card-actions>
-                                        <v-spacer></v-spacer>
-                                        <template v-if="Answered && QuestionIndex < WorkingQuestions.length">
-                                            <v-btn color="primary" @click="NextQuestion">Next <v-icon right>mdi-arrow-right</v-icon></v-btn>
-                                        </template>
-                                        <template v-else-if="Answered">
-                                            <v-btn color="success" @click="FinishGame">See Results</v-btn>
-                                        </template>
+                                    <v-card-actions class="kanji-card-actions">
+                                        <v-btn v-if="Answered && QuestionIndex < WorkingQuestions.length" color="primary" @click="NextQuestion">Next <v-icon right>mdi-arrow-right</v-icon></v-btn>
+                                        <v-btn v-else-if="Answered" color="success" @click="FinishGame">See Results</v-btn>
                                     </v-card-actions>
                                 </v-card>
 
                                 <!-- Results -->
                                 <v-card v-if="Finished" class="mt-4">
-                                    <v-system-bar>Results</v-system-bar>
+                                    <v-system-bar>
+                                        <v-btn small outlined class="back-btn" @click="ResetGame"><v-icon small>mdi-arrow-u-left-top</v-icon></v-btn>
+                                        Results
+                                    </v-system-bar>
                                     <v-card-text>
-                                        <v-row>
-                                            <v-col cols="6" md="3">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Score</div>
-                                                    <div class="text-h6">{{ Score }}</div>
-                                                </v-sheet>
-                                            </v-col>
-                                            <v-col cols="6" md="3">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Correct</div>
-                                                    <div class="text-h6">{{ CorrectCount }} / {{ WorkingQuestions.length }}</div>
-                                                </v-sheet>
-                                            </v-col>
-                                            <v-col cols="6" md="3">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Accuracy</div>
-                                                    <div class="text-h6">{{ Accuracy }}%</div>
-                                                </v-sheet>
-                                            </v-col>
-                                            <v-col cols="6" md="3">
-                                                <v-sheet outlined rounded class="pa-3 text-center">
-                                                    <div class="text-caption">Max Combo</div>
-                                                    <div class="text-h6">{{ MaxCombo }}</div>
-                                                </v-sheet>
-                                            </v-col>
-                                        </v-row>
+                                        <div class="results-grid">
+                                            <div class="result-item">
+                                                <div class="text-caption">Score</div>
+                                                <div class="text-h6">{{ Score }}</div>
+                                            </div>
+                                            <div class="result-item">
+                                                <div class="text-caption">Time</div>
+                                                <div class="text-h6">{{ ElapsedSeconds }}s</div>
+                                            </div>
+                                            <div class="result-item">
+                                                <div class="text-caption">Correct</div>
+                                                <div class="text-h6">{{ CorrectCount }} / {{ WorkingQuestions.length }}</div>
+                                            </div>
+                                            <div class="result-item">
+                                                <div class="text-caption">Accuracy</div>
+                                                <div class="text-h6">{{ Accuracy }}%</div>
+                                            </div>
+                                            <div class="result-item">
+                                                <div class="text-caption">Max Combo</div>
+                                                <div class="text-h6">{{ MaxCombo }}</div>
+                                            </div>
+                                        </div>
 
                                         <v-alert v-if="NewlyEarnedRewards.length" type="success" dense class="mt-4">
                                             <v-icon left>mdi-gift</v-icon>
                                             New reward unlocked: {{ NewlyEarnedRewards.map(r => r.name).join(', ') }}!
                                         </v-alert>
 
-                                        <v-alert v-if="Score === HighScore && Score > 0" type="info" dense class="mt-4">
-                                            <v-icon left>mdi-trophy</v-icon> New high score!
-                                        </v-alert>
                                     </v-card-text>
+                                    <v-card-actions class="kanji-card-actions">
+                                        <v-btn color="primary" @click="StartGame">
+                                            <v-icon left>mdi-replay</v-icon> Play Again
+                                        </v-btn>
+                                    </v-card-actions>
                                 </v-card>
 
                                 <!-- Rewards dialog -->
@@ -627,8 +688,6 @@
             { kanji: '問', reading: 'toi', meaning: 'question', category: 'School' },
         ];
 
-        const FLOAT_CHARS = '山川海雨火水木花森日月星人天地春夏秋冬風林火山道場神寺桜富士'.split('');
-
         new Vue({
             el: '#App',
             vuetify: new Vuetify(),
@@ -654,11 +713,7 @@
                 ManualCount: 10,
                 QuestionItems: [
                     { text: 'Auto', value: 'auto' },
-                    { text: 'Manual', value: 'manual' },
-                    { text: '5', value: 5 },
-                    { text: '10', value: 10 },
-                    { text: '15', value: 15 },
-                    { text: '20', value: 20 },
+                    { text: 'Manual', value: 'manual' }
                 ],
                 Playing: false,
                 Finished: false,
@@ -677,6 +732,8 @@
                 FloatChars: [],
                 HighScore: 0,
                 CardFx: '',
+                GameStartTime: 0,
+                ElapsedSeconds: 0,
                 SolvedKanji: [],
                 TotalSolved: 0,
                 SolvedAtStart: 0,
@@ -684,7 +741,7 @@
                 ShowNewReward: false,
                 Rewards: [
                     { id: 'first', name: 'First Character', icon: 'mdi-alpha-f-box-outline', desc: 'Solved 5 kanji', needed: 5 },
-                    { id: 'apprentice', name: 'Apprentice', icon: 'mdi-graduation-cap', desc: 'Solved 15 kanji', needed: 15 },
+                    { id: 'apprentice', name: 'Apprentice', icon: 'mdi-school', desc: 'Solved 15 kanji', needed: 15 },
                     { id: 'hunter', name: 'Kanji Hunter', icon: 'mdi-crosshairs', desc: 'Solved 30 kanji', needed: 30 },
                     { id: 'century', name: 'Century Club', icon: 'mdi-medal', desc: 'Solved 50 kanji', needed: 50 },
                     { id: 'stroke', name: 'Stroke Master', icon: 'mdi-pencil', desc: 'Solved 80 kanji', needed: 80 },
@@ -730,6 +787,12 @@
                     if (v > this.MaxQuestions) return true;
                     return false;
                 },
+                ManualErrorMsg() {
+                    if (this.SelectedCategories.length === 0) return 'Select a category first.';
+                    if (!Number.isInteger(this.ManualCount) || this.ManualCount < 1) return 'Please enter a value of 1 or more.';
+                    if (this.ManualCount > this.MaxQuestions) return `Max is ${this.MaxQuestions}.`;
+                    return '';
+                },
             },
             watch: {
                 SelectedCategories() {
@@ -751,11 +814,12 @@
             },
             methods: {
                 buildFloatChars() {
+                    const pool = this.shuffle(this.SolvedKanji).slice(0, 50);
                     this.FloatChars = [];
-                    for (let i = 0; i < 16; i++) {
+                    for (let i = 0; i < pool.length; i++) {
                         this.FloatChars.push({
                             id: i,
-                            char: FLOAT_CHARS[Math.floor(Math.random() * FLOAT_CHARS.length)],
+                            char: pool[i],
                             x: Math.random() * 95,
                             y: Math.random() * 90,
                             size: 40 + Math.random() * 90,
@@ -848,6 +912,7 @@
                     this.Finished = false;
                     this.Playing = true;
                     this.SolvedAtStart = this.TotalSolved;
+                    this.GameStartTime = Date.now();
                     this.prepareOptions();
                     this.startTimer();
                 },
@@ -921,9 +986,11 @@
                 },
                 FinishGame() {
                     this.stopTimer();
+                    this.ElapsedSeconds = ((Date.now() - this.GameStartTime) / 1000).toFixed(1);
                     this.saveHighScore();
                     this.Playing = false;
                     this.Finished = true;
+                    this.buildFloatChars();
                     if (this.NewlyEarnedRewards.length) {
                         this.$nextTick(() => {
                             this.ShowNewReward = true;
