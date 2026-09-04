@@ -85,6 +85,9 @@
     <script type="module">
 
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+        import { EffectComposer } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/UnrealBloomPass.js';
         import {
             Mobile_or_Desktop,
             RandomNumber_Between,
@@ -106,6 +109,11 @@
         Renderer.setClearColor(new THREE.Color(0x000a1a));
         Renderer.toneMapping = THREE.ACESFilmicToneMapping;
         Renderer.toneMappingExposure = 1.0;
+
+        const Composer = new EffectComposer(Renderer);
+        Composer.addPass(new RenderPass(Scene, null));
+        const BloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.6, 0.3);
+        Composer.addPass(BloomPass);
 
         Scene.fog = new THREE.FogExp2(0x001833, 0.018);
 
@@ -270,6 +278,7 @@
                 const tailPinkColor = new THREE.Color(1.0, 0.62, 0.72);
 
                 const FISH_POINT_SIZE = 0.018;
+                const FISH_FIN_POINT_SIZE = FISH_POINT_SIZE * 2.5;
 
                 const glowCanvas = document.createElement('canvas');
                 glowCanvas.width = 64; glowCanvas.height = 64;
@@ -290,11 +299,11 @@
                     blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false,
                 });
                 const ptsFinMat = (c) => new THREE.PointsMaterial({
-                    color: c, size: FISH_POINT_SIZE, map: glowTexture, transparent: true, opacity: 0.8,
+                    color: c, size: FISH_FIN_POINT_SIZE, map: glowTexture, transparent: true, opacity: 0.8,
                     blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false,
                 });
                 const ptsTailMat = (c) => new THREE.PointsMaterial({
-                    color: c, size: FISH_POINT_SIZE, map: glowTexture, transparent: true, opacity: 1.0,
+                    color: c, size: FISH_FIN_POINT_SIZE, map: glowTexture, transparent: true, opacity: 1.0,
                     blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false,
                 });
 
@@ -699,6 +708,8 @@
                 Camera._Pitch = 0;
                 Camera._Forward = new THREE.Vector3(0, 0, -1);
 
+                Composer.passes[0].camera = Camera.Object;
+
                 this._UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#8FBFFF", new THREE.Vector2(4.8, 1.2).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
                 this._UI_Home.Initialize();
                 this._UI_Home.Fog = false;
@@ -807,7 +818,7 @@
                     }
                     this.Update_System();
                 }
-                Renderer.render(Scene, Camera.Object);
+                Composer.render();
                 requestAnimationFrame(this.Update.bind(this));
             }
 
@@ -911,7 +922,10 @@
         const Light_Ambient = new FC_Light_Ambient(Scene);
         const Light_Directional = new FC_Light_Directional(Scene);
         const UnderwaterLight = new C_UnderwaterLight(Scene);
-        window.addEventListener('resize', Camera.Resize_Screen, false);
+        window.addEventListener('resize', () => {
+            Camera.Resize_Screen();
+            Composer.setSize(window.innerWidth, window.innerHeight);
+        }, false);
 
         const Manager = new C_Manager();
         Manager.Initialize();
