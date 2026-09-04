@@ -1217,7 +1217,7 @@
                     timer: 0, interval: 1 + Math.random() * 2
                 };
                 this._BalloonMusic = {
-                    pos: Player.Position.clone().add(new THREE.Vector3(0, 0.75, 0)),
+                    pos: Player.Position.clone().add(new THREE.Vector3(0, 0.5, 0)),
                     vel: new THREE.Vector3(),
                     driftDir: new THREE.Vector3(-0.1, 0, 0),
                     timer: 0, interval: 1.5 + Math.random() * 2
@@ -1389,7 +1389,34 @@
                 const pz = Player.Position.z;
 
                 this._updateBalloon(this._BalloonHome, dt, px, py + 0.5, pz);
-                this._updateBalloon(this._BalloonMusic, dt, px, py + 0.75, pz);
+                this._updateBalloon(this._BalloonMusic, dt, px, py + 0.5, pz);
+
+                const bx = this._BalloonHome.pos.x - this._BalloonMusic.pos.x;
+                const by = this._BalloonHome.pos.y - this._BalloonMusic.pos.y;
+                const bz = this._BalloonHome.pos.z - this._BalloonMusic.pos.z;
+                const bDist = Math.sqrt(bx * bx + by * by + bz * bz);
+                const minDist = 0.225;
+                if (bDist < minDist && bDist > 0.001) {
+                    const nx = bx / bDist, ny = by / bDist, nz = bz / bDist;
+                    const overlap = (minDist - bDist) * 0.5;
+                    this._BalloonHome.pos.x += nx * overlap;
+                    this._BalloonHome.pos.y += ny * overlap;
+                    this._BalloonHome.pos.z += nz * overlap;
+                    this._BalloonMusic.pos.x -= nx * overlap;
+                    this._BalloonMusic.pos.y -= ny * overlap;
+                    this._BalloonMusic.pos.z -= nz * overlap;
+                    const relV = (this._BalloonHome.vel.x - this._BalloonMusic.vel.x) * nx
+                        + (this._BalloonHome.vel.y - this._BalloonMusic.vel.y) * ny
+                        + (this._BalloonHome.vel.z - this._BalloonMusic.vel.z) * nz;
+                    if (relV > 0) {
+                        this._BalloonHome.vel.x -= nx * relV;
+                        this._BalloonHome.vel.y -= ny * relV;
+                        this._BalloonHome.vel.z -= nz * relV;
+                        this._BalloonMusic.vel.x += nx * relV;
+                        this._BalloonMusic.vel.y += ny * relV;
+                        this._BalloonMusic.vel.z += nz * relV;
+                    }
+                }
 
                 this._UI_Home.Position.copy(this._BalloonHome.pos);
                 this._UI_Music.Position.copy(this._BalloonMusic.pos);
@@ -1407,7 +1434,7 @@
                     b.timer = 0;
                     b.interval = 3.0 + Math.random() * 5.0;
                     const angle = Math.random() * Math.PI * 2;
-                    const strength = 0.15 + Math.random() * 0.25;
+                    const strength = 0.06 + Math.random() * 0.1;
                     b.driftDir.set(
                         Math.cos(angle) * strength,
                         (Math.random() - 0.5) * 0.08,
@@ -1415,14 +1442,14 @@
                     );
                 }
 
-                b.driftDir.x += Math.sin(performance.now() * 0.0008 + b.timer) * 0.003;
-                b.driftDir.z += Math.cos(performance.now() * 0.0011 + b.timer) * 0.003;
+                b.driftDir.x += Math.sin(performance.now() * 0.0008 + b.timer) * 0.001;
+                b.driftDir.z += Math.cos(performance.now() * 0.0011 + b.timer) * 0.001;
 
                 b.vel.x += b.driftDir.x * dt;
                 b.vel.y += b.driftDir.y * dt;
                 b.vel.z += b.driftDir.z * dt;
 
-                const damp = Math.pow(0.97, dt * 60);
+                const damp = Math.pow(0.95, dt * 60);
                 b.vel.multiplyScalar(damp);
 
                 b.pos.addScaledVector(b.vel, dt);
@@ -1438,7 +1465,11 @@
                     b.vel.z *= 0.6;
                 }
 
-                b.pos.y += (anchorY - b.pos.y) * Math.min(1.5 * dt, 1);
+                const dy = b.pos.y - anchorY;
+                if (dy > 0.5) {
+                    b.pos.y = anchorY + 0.5;
+                    b.vel.y *= 0.3;
+                }
             }
             Update_Playing() {
                 this._Input_Keyboard.Update();
