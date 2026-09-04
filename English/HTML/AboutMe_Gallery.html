@@ -534,6 +534,8 @@
                         Manager._UI_Music.Position.y += deltaY;
                         if (Manager._Button_Home) Manager._Button_Home.position.y += deltaY;
                         if (Manager._Button_Music) Manager._Button_Music.position.y += deltaY;
+                        if (Manager._BalloonHome) Manager._BalloonHome.pos.y += deltaY;
+                        if (Manager._BalloonMusic) Manager._BalloonMusic.pos.y += deltaY;
                         const lookTarget = new THREE.Vector3(player.Position.x, player.Position.y, player.Position.z);
                         Manager._UI_Home.LookAt(lookTarget);
                         Manager._UI_Music.LookAt(lookTarget);
@@ -1034,8 +1036,8 @@
             _Input_Look = new THREE.Vector2(0, 0);
             _Input_Move = new THREE.Vector2(0, 0);
 
-            _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#8FBFFF", new THREE.Vector2(4.8, 1.2).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
-            _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#8FBFFF", new THREE.Vector2(6.0, 1.2).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
+            _UI_Home = new FC_TextPlane(Scene, Camera, "HOME", "#8FBFFF", new THREE.Vector2(0.75, 0.25).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
+            _UI_Music = new FC_TextPlane(Scene, Camera, "MUSIC", "#8FBFFF", new THREE.Vector2(1.0, 0.3).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY), false, false);
 
             _Button_Home = null;
             _Button_Music = null;
@@ -1186,11 +1188,11 @@
                 });
 
                 this._Button_Home = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.5, 32, 32),
+                    new THREE.SphereGeometry(0.1, 32, 32),
                     sphereGlassMat.clone()
                 );
                 this._Button_Music = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.5, 32, 32),
+                    new THREE.SphereGeometry(0.125, 32, 32),
                     sphereGlassMat.clone()
                 );
                 this._Button_Home.material.uniforms.uBaseColor.value.set(0.3, 0.6, 1.0);
@@ -1207,6 +1209,19 @@
                 this._UI_Music.Mesh_Back.userData.buttonType = 'music';
                 Scene.add(this._Button_Home);
                 Scene.add(this._Button_Music);
+
+                this._BalloonHome = {
+                    pos: Player.Position.clone().add(new THREE.Vector3(0, 0.5, 0)),
+                    vel: new THREE.Vector3(),
+                    driftDir: new THREE.Vector3(0.1, 0, 0),
+                    timer: 0, interval: 1 + Math.random() * 2
+                };
+                this._BalloonMusic = {
+                    pos: Player.Position.clone().add(new THREE.Vector3(0, 0.75, 0)),
+                    vel: new THREE.Vector3(),
+                    driftDir: new THREE.Vector3(-0.1, 0, 0),
+                    timer: 0, interval: 1.5 + Math.random() * 2
+                };
 
                 this.buildCollisionBoxes();
 
@@ -1367,31 +1382,63 @@
                 }
             }
             updateHomeMusicAnchor() {
-                const t = performance.now() / 1000;
+                if (!this._BalloonHome || !this._BalloonMusic) return;
+                const dt = FC_Environment.TIME_DELTA;
                 const px = Player.Position.x;
                 const py = Player.Position.y;
                 const pz = Player.Position.z;
 
-                const homePos = new THREE.Vector3(
-                    px + Math.sin(t * 0.7 + 1.3) * 0.35,
-                    py + 2.2 + Math.sin(t * 1.1) * 0.18,
-                    pz + Math.cos(t * 0.9 + 0.5) * 0.35
-                );
-                this._UI_Home.Position = homePos;
+                this._updateBalloon(this._BalloonHome, dt, px, py + 0.5, pz);
+                this._updateBalloon(this._BalloonMusic, dt, px, py + 0.75, pz);
 
-                const musicPos = new THREE.Vector3(
-                    px + Math.cos(t * 0.8 + 2.1) * 0.35,
-                    py - 2.0 + Math.sin(t * 1.3 + 1.0) * 0.18,
-                    pz + Math.sin(t * 0.6 + 3.0) * 0.35
-                );
-                this._UI_Music.Position = musicPos;
+                this._UI_Home.Position.copy(this._BalloonHome.pos);
+                this._UI_Music.Position.copy(this._BalloonMusic.pos);
 
-                if (this._Button_Home) this._Button_Home.position.copy(this._UI_Home.Position);
-                if (this._Button_Music) this._Button_Music.position.copy(this._UI_Music.Position);
+                if (this._Button_Home) this._Button_Home.position.copy(this._BalloonHome.pos);
+                if (this._Button_Music) this._Button_Music.position.copy(this._BalloonMusic.pos);
 
                 const lookTarget = new THREE.Vector3(px, py, pz);
                 this._UI_Home.LookAt(lookTarget);
                 this._UI_Music.LookAt(lookTarget);
+            }
+            _updateBalloon(b, dt, playerX, anchorY, playerZ) {
+                b.timer += dt;
+                if (b.timer >= b.interval) {
+                    b.timer = 0;
+                    b.interval = 3.0 + Math.random() * 5.0;
+                    const angle = Math.random() * Math.PI * 2;
+                    const strength = 0.15 + Math.random() * 0.25;
+                    b.driftDir.set(
+                        Math.cos(angle) * strength,
+                        (Math.random() - 0.5) * 0.08,
+                        Math.sin(angle) * strength
+                    );
+                }
+
+                b.driftDir.x += Math.sin(performance.now() * 0.0008 + b.timer) * 0.003;
+                b.driftDir.z += Math.cos(performance.now() * 0.0011 + b.timer) * 0.003;
+
+                b.vel.x += b.driftDir.x * dt;
+                b.vel.y += b.driftDir.y * dt;
+                b.vel.z += b.driftDir.z * dt;
+
+                const damp = Math.pow(0.97, dt * 60);
+                b.vel.multiplyScalar(damp);
+
+                b.pos.addScaledVector(b.vel, dt);
+
+                const dx = b.pos.x - playerX;
+                const dz = b.pos.z - playerZ;
+                const hDist = Math.sqrt(dx * dx + dz * dz);
+                if (hDist > 2.0 && hDist > 0.001) {
+                    const pull = (2.0 - hDist) / hDist;
+                    b.pos.x += dx * pull * 0.5;
+                    b.pos.z += dz * pull * 0.5;
+                    b.vel.x *= 0.6;
+                    b.vel.z *= 0.6;
+                }
+
+                b.pos.y += (anchorY - b.pos.y) * Math.min(1.5 * dt, 1);
             }
             Update_Playing() {
                 this._Input_Keyboard.Update();

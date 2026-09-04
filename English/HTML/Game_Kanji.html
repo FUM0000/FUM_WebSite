@@ -203,7 +203,7 @@
                                     <v-system-bar>Kanji Training Setup</v-system-bar>
                                     <v-card-text>
                                         <div class="text-h6 mb-1">Choose a category</div>
-                                        <p class="text-body-2 mb-4">Select one or more categories of kanji. The correct reading will be asked in multiple choice.</p>
+                                        <p class="text-body-2 mb-4">Select one or more categories of kanji.</p>
 
                                         <v-row dense>
                                             <v-col cols="6" md="4" v-for="cat in Categories" :key="cat.name">
@@ -216,8 +216,17 @@
 
                                         <v-row dense>
                                             <v-col cols="12">
-                                                <v-select label="Questions (Auto = all in selected categories)" v-model="QuestionsPerRound" outlined hide-details
+                                                <v-select label="Questions" v-model="QuestionsPerRound" outlined hide-details
                                                     :items="QuestionItems"></v-select>
+                                            </v-col>
+                                        </v-row>
+                                        <v-row dense v-if="QuestionsPerRound === 'manual'">
+                                            <v-col cols="12">
+                                                <v-text-field v-model.number="ManualCount" type="number" label="Number of questions"
+                                                    :min="1" :max="MaxQuestions" outlined
+                                                    :hint="`Max is ${MaxQuestions}`" persistent-hint
+                                                    :error="ManualInputError"
+                                                    :error-messages="ManualInputError ? (ManualCount > MaxQuestions ? `Please enter ${MaxQuestions} or less.` : 'Please enter a value of 1 or more.') : ''"></v-text-field>
                                             </v-col>
                                         </v-row>
                                     </v-card-text>
@@ -226,7 +235,7 @@
                                             <v-icon left>mdi-trophy-outline</v-icon> Rewards
                                         </v-btn>
                                         <v-spacer></v-spacer>
-                                        <v-btn color="primary" large @click="StartGame">
+                                        <v-btn color="primary" large @click="StartGame" :disabled="SelectedCategories.length === 0 || (QuestionsPerRound === 'manual' && ManualInputError)">
                                             <v-icon left>mdi-play</v-icon> Start Training
                                         </v-btn>
                                     </v-card-actions>
@@ -642,8 +651,10 @@
                 AllKanji: KANJI_DATA,
                 SelectedCategories: [],
                 QuestionsPerRound: 'auto',
+                ManualCount: 10,
                 QuestionItems: [
-                    { text: 'Auto (all)', value: 'auto' },
+                    { text: 'Auto', value: 'auto' },
+                    { text: 'Manual', value: 'manual' },
                     { text: '5', value: 5 },
                     { text: '10', value: 10 },
                     { text: '15', value: 15 },
@@ -708,6 +719,16 @@
                         return this.Rewards.filter(r => r.needed > this.SolvedAtStart && this.isRewardEarned(r));
                     }
                     return [];
+                },
+                MaxQuestions() {
+                    return this.AllKanji.filter(k => this.SelectedCategories.includes(k.category)).length;
+                },
+                ManualInputError() {
+                    const v = this.ManualCount;
+                    if (!Number.isInteger(v)) return true;
+                    if (v < 1) return true;
+                    if (v > this.MaxQuestions) return true;
+                    return false;
                 },
             },
             watch: {
@@ -811,7 +832,11 @@
                 },
                 StartGame() {
                     const candidates = this.AllKanji.filter(k => this.SelectedCategories.includes(k.category));
-                    const count = this.QuestionsPerRound === 'auto' ? candidates.length : this.QuestionsPerRound;
+                    let count;
+                    if (this.QuestionsPerRound === 'auto') count = candidates.length;
+                    else if (this.QuestionsPerRound === 'manual') count = this.ManualCount;
+                    else count = this.QuestionsPerRound;
+                    count = Math.max(1, Math.min(candidates.length, count));
                     this.WorkingQuestions = this.shuffle(candidates).slice(0, count);
                     this.CurrentIndex = 0;
                     this.Score = 0;

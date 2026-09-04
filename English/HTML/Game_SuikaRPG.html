@@ -372,16 +372,16 @@
         /* ─── Constants ────────────────────────────────────────── */
 
         const FRUITS = [
-            { name: 'Cherry',      emoji: '🍒', color: '#e74c3c', radius: 14, damage: 5  },
-            { name: 'Strawberry',  emoji: '🍓', color: '#ff6b81', radius: 18, damage: 10 },
-            { name: 'Grape',       emoji: '🍇', color: '#9b59b6', radius: 22, damage: 18 },
-            { name: 'Orange',      emoji: '🍊', color: '#f39c12', radius: 26, damage: 28 },
-            { name: 'Apple',       emoji: '🍎', color: '#e8432a', radius: 30, damage: 40 },
-            { name: 'Pear',        emoji: '🍐', color: '#7dcea0', radius: 34, damage: 55 },
-            { name: 'Peach',       emoji: '🍑', color: '#f5b7b1', radius: 38, damage: 72 },
-            { name: 'Pineapple',   emoji: '🍍', color: '#f1c40f', radius: 42, damage: 92 },
-            { name: 'Melon',       emoji: '🍈', color: '#58d68d', radius: 46, damage: 115 },
-            { name: 'Watermelon',  emoji: '🍉', color: '#27ae60', radius: 50, damage: 140 }
+            { name: 'Cherry',      emoji: '🍒', color: '#e74c3c', radius: 28, damage: 5  },
+            { name: 'Strawberry',  emoji: '🍓', color: '#ff6b81', radius: 36, damage: 10 },
+            { name: 'Grape',       emoji: '🍇', color: '#9b59b6', radius: 44, damage: 18 },
+            { name: 'Orange',      emoji: '🍊', color: '#f39c12', radius: 52, damage: 28 },
+            { name: 'Apple',       emoji: '🍎', color: '#e8432a', radius: 60, damage: 40 },
+            { name: 'Pear',        emoji: '🍐', color: '#7dcea0', radius: 68, damage: 55 },
+            { name: 'Peach',       emoji: '🍑', color: '#f5b7b1', radius: 76, damage: 72 },
+            { name: 'Pineapple',   emoji: '🍍', color: '#f1c40f', radius: 84, damage: 92 },
+            { name: 'Melon',       emoji: '🍈', color: '#58d68d', radius: 92, damage: 115 },
+            { name: 'Watermelon',  emoji: '🍉', color: '#27ae60', radius: 100, damage: 140 }
         ];
 
         const ENEMIES = [
@@ -567,6 +567,7 @@
                 this.type = type;
                 this.radius = FRUITS[type].radius;
                 this.settled = false;
+                this.markedForMerge = false;
                 this.age = 0;
             }
 
@@ -660,6 +661,7 @@
         /* ─── Physics ──────────────────────────────────────────── */
 
         function ResolveCollisions() {
+            let detectedMerge = false;
             for (let i = 0; i < Fruits.length; i++) {
                 for (let j = i + 1; j < Fruits.length; j++) {
                     const a = Fruits[i];
@@ -670,6 +672,12 @@
                     const minDist = a.radius + b.radius;
 
                     if (dist < minDist && dist > 0.001) {
+                        if (a.type === b.type && a.type < FRUITS.length - 1) {
+                            a.markedForMerge = true;
+                            b.markedForMerge = true;
+                            detectedMerge = true;
+                        }
+
                         const nx = dx / dist;
                         const ny = dy / dist;
                         const overlap = minDist - dist;
@@ -696,6 +704,10 @@
                     }
                 }
             }
+
+            if (detectedMerge) {
+                ProcessMerges();
+            }
         }
 
         function ProcessMerges() {
@@ -707,67 +719,71 @@
 
             for (let i = 0; i < Fruits.length; i++) {
                 if (visited.has(i)) continue;
+                if (!Fruits[i].markedForMerge) continue;
 
-                const group = [i];
+                const group = [];
+                const queue = [i];
                 visited.add(i);
-
-                for (let j = i + 1; j < Fruits.length; j++) {
-                    if (visited.has(j)) continue;
-                    if (Fruits[i].type === Fruits[j].type && Fruits[i].type < FRUITS.length - 1) {
-                        const dx = Fruits[j].x - Fruits[i].x;
-                        const dy = Fruits[j].y - Fruits[i].y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        const minDist = Fruits[i].radius + Fruits[j].radius;
-                        if (dist < minDist * MERGE_DIST_FACTOR) {
-                            group.push(j);
+                while (queue.length > 0) {
+                    const cur = queue.shift();
+                    group.push(cur);
+                    for (let j = 0; j < Fruits.length; j++) {
+                        if (visited.has(j)) continue;
+                        if (Fruits[cur].type === Fruits[j].type && Fruits[j].markedForMerge) {
                             visited.add(j);
+                            queue.push(j);
                         }
                     }
                 }
 
-                if (group.length >= 2) {
+                if (group.length < 2) {
                     for (const idx of group) {
-                        toRemove.add(idx);
+                        Fruits[idx].markedForMerge = false;
                     }
-                    let cx = 0;
-                    let cy = 0;
-                    for (const idx of group) {
-                        cx += Fruits[idx].x;
-                        cy += Fruits[idx].y;
-                    }
-                    cx /= group.length;
-                    cy /= group.length;
-
-                    const newType = Math.min(Fruits[group[0]].type + 1, FRUITS.length - 1);
-                    const baseDmg = FRUITS[newType].damage;
-                    let multiplier = 1;
-                    if (group.length >= CRIT_THRESHOLD) {
-                        multiplier = 1 + (group.length - CRIT_THRESHOLD + 1) * 0.5;
-                    }
-                    const dmg = Math.floor(baseDmg * multiplier);
-                    totalDamage += dmg;
-                    mergeCount += group.length;
-
-                    const isCrit = group.length >= CRIT_THRESHOLD;
-                    DamageNumbers.push({
-                        x: cx, y: cy,
-                        text: (isCrit ? 'CRIT! ' : '') + '+' + dmg,
-                        color: isCrit ? '#ffdd57' : '#fff',
-                        alpha: 1,
-                        vy: -2.5,
-                        life: 1.5
-                    });
-
-                    MergeEffects.push({
-                        x: cx, y: cy,
-                        radius: 5,
-                        maxRadius: FRUITS[newType].radius * 2.5,
-                        alpha: 0.8,
-                        color: FRUITS[newType].color
-                    });
-
-                    spawnQueue.push({ x: cx, y: cy, type: newType });
+                    continue;
                 }
+
+                for (const idx of group) {
+                    toRemove.add(idx);
+                }
+                let cx = 0;
+                let cy = 0;
+                for (const idx of group) {
+                    cx += Fruits[idx].x;
+                    cy += Fruits[idx].y;
+                }
+                cx /= group.length;
+                cy /= group.length;
+
+                const newType = Math.min(Fruits[group[0]].type + 1, FRUITS.length - 1);
+                const baseDmg = FRUITS[newType].damage;
+                let multiplier = 1;
+                if (group.length >= CRIT_THRESHOLD) {
+                    multiplier = 1 + (group.length - CRIT_THRESHOLD + 1) * 0.5;
+                }
+                const dmg = Math.floor(baseDmg * multiplier);
+                totalDamage += dmg;
+                mergeCount += group.length;
+
+                const isCrit = group.length >= CRIT_THRESHOLD;
+                DamageNumbers.push({
+                    x: cx, y: cy,
+                    text: (isCrit ? 'CRIT! ' : '') + '+' + dmg,
+                    color: isCrit ? '#ffdd57' : '#fff',
+                    alpha: 1,
+                    vy: -2.5,
+                    life: 1.5
+                });
+
+                MergeEffects.push({
+                    x: cx, y: cy,
+                    radius: 5,
+                    maxRadius: FRUITS[newType].radius * 2.5,
+                    alpha: 0.8,
+                    color: FRUITS[newType].color
+                });
+
+                spawnQueue.push({ x: cx, y: cy, type: newType });
             }
 
             if (toRemove.size > 0) {
@@ -866,7 +882,6 @@
 
                 for (const f of Fruits) f.update(dt);
                 ResolveCollisions();
-                const merges = ProcessMerges();
 
                 if (turnActive) {
                     settleWaitTimer += dt;

@@ -265,35 +265,61 @@
                 this._tailMesh = new THREE.Mesh(tailGeometry.clone(), tailMat);
                 this._tailOriginalPositions = this._tailMesh.geometry.attributes.position.array.slice();
 
-                const dorsalColor = new THREE.Color(1.0, 0.85, 0.88);
-                const finColor = new THREE.Color(1.0, 0.82, 0.85);
+                const dorsalColor = new THREE.Color(1.0, 0.74, 0.80);
+                const finColor = new THREE.Color(1.0, 0.70, 0.77);
+                const tailPinkColor = new THREE.Color(1.0, 0.62, 0.72);
 
-                const ptsMat = (c) => new THREE.PointsMaterial({
-                    color: c, size: 0.025, transparent: true, opacity: 0.95, sizeAttenuation: true, depthWrite: false,
+                const FISH_POINT_SIZE = 0.018;
+
+                const glowCanvas = document.createElement('canvas');
+                glowCanvas.width = 64; glowCanvas.height = 64;
+                const gCtx = glowCanvas.getContext('2d');
+                const grad = gCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+                grad.addColorStop(0, 'rgba(255,255,255,1)');
+                grad.addColorStop(0.08, 'rgba(255,255,255,0.8)');
+                grad.addColorStop(0.2, 'rgba(255,255,255,0.45)');
+                grad.addColorStop(0.4, 'rgba(255,255,255,0.12)');
+                grad.addColorStop(0.65, 'rgba(255,255,255,0.03)');
+                grad.addColorStop(1, 'rgba(255,255,255,0)');
+                gCtx.fillStyle = grad;
+                gCtx.fillRect(0, 0, 64, 64);
+                const glowTexture = new THREE.CanvasTexture(glowCanvas);
+
+                const ptsBodyMat = (c) => new THREE.PointsMaterial({
+                    color: c, size: FISH_POINT_SIZE, map: glowTexture, transparent: true, opacity: 0.4,
+                    blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false,
+                });
+                const ptsFinMat = (c) => new THREE.PointsMaterial({
+                    color: c, size: FISH_POINT_SIZE, map: glowTexture, transparent: true, opacity: 0.8,
+                    blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false,
+                });
+                const ptsTailMat = (c) => new THREE.PointsMaterial({
+                    color: c, size: FISH_POINT_SIZE, map: glowTexture, transparent: true, opacity: 1.0,
+                    blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false,
                 });
 
-                this._bodyPoints = new THREE.Points(this._bodyMesh.geometry, ptsMat(bodyColor));
-                this._tailPoints = new THREE.Points(this._tailMesh.geometry, ptsMat(tailColor));
+                this._bodyPoints = new THREE.Points(this._bodyMesh.geometry, ptsBodyMat(bodyColor));
+                this._tailPoints = new THREE.Points(this._tailMesh.geometry, ptsTailMat(tailPinkColor));
                 this._tailPoints.position.set(0.85, 0, 0);
 
-                this._dorsalPoints = new THREE.Points(dorsalGeometry, ptsMat(dorsalColor));
+                this._dorsalPoints = new THREE.Points(dorsalGeometry, ptsFinMat(dorsalColor));
                 this._dorsalPoints.position.set(0.2, 0.35, 0);
 
-                this._pectoralLeftPoints = new THREE.Points(pectoralGeometry, ptsMat(finColor));
+                this._pectoralLeftPoints = new THREE.Points(pectoralGeometry, ptsFinMat(finColor));
                 this._pectoralLeftPoints.position.set(-0.6, -0.05, 0.22);
 
-                this._pectoralRightPoints = new THREE.Points(pectoralGeometry, ptsMat(finColor));
+                this._pectoralRightPoints = new THREE.Points(pectoralGeometry, ptsFinMat(finColor));
                 this._pectoralRightPoints.position.set(-0.6, -0.05, -0.22);
                 this._pectoralRightPoints.scale.z = -1;
 
-                this._pelvicLeftPoints = new THREE.Points(pelvicGeometry, ptsMat(finColor));
+                this._pelvicLeftPoints = new THREE.Points(pelvicGeometry, ptsFinMat(finColor));
                 this._pelvicLeftPoints.position.set(-0.3, -0.35, 0.10);
 
-                this._pelvicRightPoints = new THREE.Points(pelvicGeometry, ptsMat(finColor));
+                this._pelvicRightPoints = new THREE.Points(pelvicGeometry, ptsFinMat(finColor));
                 this._pelvicRightPoints.position.set(-0.3, -0.35, -0.10);
                 this._pelvicRightPoints.scale.z = -1;
 
-                this._analPoints = new THREE.Points(analGeometry, ptsMat(finColor));
+                this._analPoints = new THREE.Points(analGeometry, ptsFinMat(finColor));
                 this._analPoints.position.set(0.44, -0.18, 0);
 
                 this._group.add(this._bodyPoints);

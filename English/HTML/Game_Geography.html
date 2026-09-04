@@ -156,14 +156,15 @@
 
                                         <v-row dense>
                                             <v-col cols="12" md="6">
-                                                <v-select label="Questions" v-model="QuestionsPerRound" outlined hide-details
-                                                    :items="[5, 10, 15, 20]"></v-select>
+                                                <v-text-field label="Questions" v-model.number="CustomQuestionCount" type="number"
+                                                    outlined hide-details :max="MaxQuestions" min="1"
+                                                    :hint="'1 - ' + MaxQuestions + ' prefectures'" persistent-hint></v-text-field>
                                             </v-col>
                                         </v-row>
                                     </v-card-text>
                                     <v-card-actions>
                                         <v-spacer></v-spacer>
-                                        <v-btn color="primary" large @click="StartGame">
+                                        <v-btn color="primary" large @click="StartGame" :disabled="!ValidQuestionCount">
                                             <v-icon left>mdi-play</v-icon> Start Quiz
                                         </v-btn>
                                     </v-card-actions>
@@ -198,8 +199,8 @@
 
                                         <v-row>
                                             <v-col cols="12" md="5" class="text-center">
-                                                <div id="geo-map-container" v-html="SvgContent"
-                                                    style="overflow: hidden; border: 1px solid #ddd; border-radius: 4px; cursor: grab;"></div>
+<div id="geo-map-container" v-html="SvgContent"
+                                                     :style="{overflow:'hidden',border:'1px solid #ddd',borderRadius:'4px',cursor:'grab',opacity:MapReady?1:0,transition:'opacity 0.15s'}"></div>
                                             </v-col>
 
                                             <v-col cols="12" md="7">
@@ -290,11 +291,6 @@
                                             </v-col>
                                         </v-row>
                                     </v-card-text>
-                                    <v-card-actions>
-                                        <v-spacer></v-spacer>
-                                        <v-btn text color="primary" @click="ResetGame">Change Settings</v-btn>
-                                        <v-btn color="primary" @click="StartGame">Play Again</v-btn>
-                                    </v-card-actions>
                                 </v-card>
 
                             </v-col>
@@ -385,7 +381,8 @@
                 Prefectures: PREFECTURES,
                 Mode: 'prefecture',
                 Difficulty: 'normal',
-                QuestionsPerRound: 10,
+                CustomQuestionCount: 10,
+                MaxQuestions: 47,
                 Playing: false,
                 Finished: false,
                 WorkingQuestions: [],
@@ -402,6 +399,7 @@
                 Timer: null,
                 CardFx: '',
                 SvgContent: '',
+                MapReady: false,
                 panzoomInstance: null,
             },
             computed: {
@@ -444,6 +442,10 @@
                 TimeLeftDisplay() {
                     return this.TimeLeft.toFixed(1);
                 },
+                ValidQuestionCount() {
+                    const n = Number(this.CustomQuestionCount);
+                    return Number.isInteger(n) && n >= 1 && n <= this.MaxQuestions;
+                },
             },
             beforeDestroy() {
                 this.stopTimer();
@@ -469,10 +471,12 @@
                         })
                         .then(text => {
                             this.SvgContent = text;
+                            this.MapReady = false;
                             this.$nextTick(() => {
                                 this.bindMapEvents();
                                 this.setupPanzoom();
                                 this.updateMapState();
+                                this.MapReady = true;
                             });
                         })
                         .catch(error => {
@@ -539,8 +543,9 @@
                     });
                 },
                 StartGame() {
+                    const count = Math.min(Math.max(Math.floor(Number(this.CustomQuestionCount) || 10), 1), this.MaxQuestions);
                     const candidates = this.shuffle(this.Prefectures);
-                    this.WorkingQuestions = candidates.slice(0, this.QuestionsPerRound);
+                    this.WorkingQuestions = candidates.slice(0, count);
                     this.CurrentIndex = 0;
                     this.Score = 0;
                     this.Combo = 0;
@@ -554,10 +559,12 @@
                     if (!this.SvgContent) {
                         this.loadSVG();
                     } else {
+                        this.MapReady = false;
                         this.$nextTick(() => {
                             this.bindMapEvents();
                             this.setupPanzoom();
                             this.updateMapState();
+                            this.MapReady = true;
                         });
                     }
                     this.startTimer();
@@ -640,12 +647,6 @@
                     this.stopTimer();
                     this.Playing = false;
                     this.Finished = true;
-                },
-                ResetGame() {
-                    this.stopTimer();
-                    this.Playing = false;
-                    this.Finished = false;
-                    this.CardFx = '';
                 },
                 OptionColor(opt) {
                     if (!this.Answered) return '';
