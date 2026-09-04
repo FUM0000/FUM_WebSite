@@ -115,6 +115,32 @@
             100% { background-color: rgba(76, 175, 80, 0.35); }
         }
 
+        .answer-btn.opt-correct:disabled,
+        .answer-btn.opt-correct {
+            background-color: #4CAF50 !important;
+            color: #ffffff !important;
+            border-color: #4CAF50 !important;
+            opacity: 1 !important;
+        }
+        .answer-btn.opt-wrong:disabled,
+        .answer-btn.opt-wrong {
+            background-color: #E53935 !important;
+            color: #ffffff !important;
+            border-color: #E53935 !important;
+            opacity: 1 !important;
+        }
+
+        .shake-wrong {
+            animation: KShakeWrong 0.5s ease;
+        }
+        @keyframes KShakeWrong {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-12px); }
+            40% { transform: translateX(12px); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+
         .kanji-svg {
             width: 240px;
             height: 240px;
@@ -253,6 +279,7 @@
                                         <v-row dense>
                                             <v-col cols="12" md="6" v-for="(opt, i) in CurrentOptions" :key="i">
                                                 <v-btn block outlined class="answer-btn"
+                                                    :class="OptionClass(opt)"
                                                     :color="OptionColor(opt)"
                                                     :disabled="Answered"
                                                     @click="Answer(opt)">
@@ -844,7 +871,7 @@
                     this.Answered = true;
                     this.LastCorrect = false;
                     this.Combo = 0;
-                    this.CardFx = '';
+                    this.CardFx = 'shake-wrong';
                     this.stopTimer();
                 },
                 Answer(opt) {
@@ -864,7 +891,7 @@
                         this.CardFx = 'flash-correct';
                     } else {
                         this.Combo = 0;
-                        this.CardFx = '';
+                        this.CardFx = 'shake-wrong';
                     }
                 },
                 NextQuestion() {
@@ -896,10 +923,18 @@
                     if (!this.Answered) return '';
                     const correctReading = this.CurrentQuestion.reading;
                     const isCorrectOpt = opt.reading === correctReading;
-                    const isPickedWrong = (this.CurrentOptions.find(o => o.reading === correctReading) !== opt);
                     const wasPicked = this.SelectedOption && this.SelectedOption.reading === opt.reading;
                     if (isCorrectOpt) return 'green';
                     if (this.LastCorrect === false && wasPicked) return 'red';
+                    return '';
+                },
+                OptionClass(opt) {
+                    if (!this.Answered) return '';
+                    const correctReading = this.CurrentQuestion.reading;
+                    const isCorrectOpt = opt.reading === correctReading;
+                    const wasPicked = this.SelectedOption && this.SelectedOption.reading === opt.reading;
+                    if (isCorrectOpt) return 'opt-correct';
+                    if (this.LastCorrect === false && wasPicked) return 'opt-wrong';
                     return '';
                 },
                 CategoryColor(name) {
