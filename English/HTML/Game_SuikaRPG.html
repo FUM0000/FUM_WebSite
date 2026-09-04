@@ -510,6 +510,10 @@
         let shakeTimer = 0;
         let shakeIntensity = 0;
         let messageTimer = 0;
+        let TurnCount = 0;
+        let turnActive = false;
+        let settleWaitTimer = 0;
+        const SETTLE_WAIT_TIME = 1.0;
 
         function GetEnemy() {
             const idx = Math.min(EnemyIndex, ENEMIES.length - 1);
@@ -523,7 +527,7 @@
         }
 
         function UpdateUI() {
-            UI_Level.innerHTML = 'Level ' + Level;
+            UI_Level.innerHTML = 'Level ' + Level + ' &middot; Turn ' + TurnCount;
             UI_Score.innerHTML = 'Score: ' + Score;
 
             const enemy = GetEnemy();
@@ -562,7 +566,6 @@
                 this.vy = 0;
                 this.type = type;
                 this.radius = FRUITS[type].radius;
-                this.merged = false;
                 this.settled = false;
                 this.age = 0;
             }
@@ -667,12 +670,6 @@
                     const minDist = a.radius + b.radius;
 
                     if (dist < minDist && dist > 0.001) {
-                        if (a.type === b.type && a.type < FRUITS.length - 1) {
-                            a.merged = true;
-                            b.merged = true;
-                            continue;
-                        }
-
                         const nx = dx / dist;
                         const ny = dy / dist;
                         const overlap = minDist - dist;
@@ -706,26 +703,35 @@
             let mergeCount = 0;
             const toRemove = new Set();
             const spawnQueue = [];
+            const visited = new Set();
 
             for (let i = 0; i < Fruits.length; i++) {
-                if (Fruits[i].merged || toRemove.has(i)) continue;
+                if (visited.has(i)) continue;
 
                 const group = [i];
-                Fruits[i].merged = true;
-                let cx = Fruits[i].x;
-                let cy = Fruits[i].y;
+                visited.add(i);
 
                 for (let j = i + 1; j < Fruits.length; j++) {
-                    if (Fruits[j].merged || toRemove.has(j)) continue;
-                    if (Fruits[i].type === Fruits[j].type) {
-                        group.push(j);
-                        Fruits[j].merged = true;
+                    if (visited.has(j)) continue;
+                    if (Fruits[i].type === Fruits[j].type && Fruits[i].type < FRUITS.length - 1) {
+                        const dx = Fruits[j].x - Fruits[i].x;
+                        const dy = Fruits[j].y - Fruits[i].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const minDist = Fruits[i].radius + Fruits[j].radius;
+                        if (dist < minDist * MERGE_DIST_FACTOR) {
+                            group.push(j);
+                            visited.add(j);
+                        }
                     }
                 }
 
                 if (group.length >= 2) {
                     for (const idx of group) {
                         toRemove.add(idx);
+                    }
+                    let cx = 0;
+                    let cy = 0;
+                    for (const idx of group) {
                         cx += Fruits[idx].x;
                         cy += Fruits[idx].y;
                     }
@@ -838,13 +844,15 @@
 
             CanDrop = false;
             DropCooldown = 0.4;
+
+            TurnCount++;
+            turnActive = true;
+            settleWaitTimer = 0;
         }
 
         /* ─── Game Loop ────────────────────────────────────────── */
 
         let lastTime = performance.now();
-        let settleTimer = 0;
-        let enemyAttackTimer = 0;
 
         function GameLoop(now) {
             const dt = Math.min((now - lastTime) / 1000, 0.05);
@@ -860,21 +868,18 @@
                 ResolveCollisions();
                 const merges = ProcessMerges();
 
-                settleTimer += dt;
-                if (settleTimer > 1.5) {
-                    const allSettled = Fruits.every(f =>
-                        Math.abs(f.vx) < 0.3 && Math.abs(f.vy) < 0.5
-                    );
-                    if (allSettled && Fruits.length > 0 && CanDrop) {
-                        enemyAttackTimer += dt;
-                        if (enemyAttackTimer > 2) {
+                if (turnActive) {
+                    settleWaitTimer += dt;
+                    if (settleWaitTimer > SETTLE_WAIT_TIME) {
+                        const allSettled = Fruits.length === 0 || Fruits.every(f =>
+                            Math.abs(f.vx) < 0.3 && Math.abs(f.vy) < 0.5
+                        );
+                        if (allSettled) {
                             EnemyAttack();
-                            enemyAttackTimer = 0;
-                            settleTimer = 0;
+                            turnActive = false;
+                            settleWaitTimer = 0;
                         }
                     }
-                } else {
-                    enemyAttackTimer = 0;
                 }
 
                 const heightLimit = CH * 0.28;
@@ -891,8 +896,8 @@
                     shakeTimer = 0.2;
                     shakeIntensity = 4;
                     Fruits = Fruits.filter(f => f.age < 0.5);
-                    settleTimer = 0;
-                    enemyAttackTimer = 0;
+                    turnActive = false;
+                    settleWaitTimer = 0;
                     if (PlayerHp <= 0) {
                         PlayerHp = 0;
                         State = 'GameOver';
@@ -1106,8 +1111,9 @@
             Fruits = [];
             DamageNumbers = [];
             MergeEffects = [];
-            settleTimer = 0;
-            enemyAttackTimer = 0;
+            TurnCount = 0;
+            turnActive = false;
+            settleWaitTimer = 0;
             DropCooldown = 0;
             CanDrop = true;
             CurrentFruitType = 0;
@@ -1121,8 +1127,8 @@
             Fruits = [];
             DamageNumbers = [];
             MergeEffects = [];
-            settleTimer = 0;
-            enemyAttackTimer = 0;
+            turnActive = false;
+            settleWaitTimer = 0;
             DropCooldown = 0;
             CanDrop = true;
             CurrentFruitType = Math.floor(Math.random() * Math.min(3 + Math.floor(Level / 2), FRUITS.length));
