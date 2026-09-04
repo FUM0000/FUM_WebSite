@@ -740,12 +740,15 @@ class FC_TextPlane extends FC_Animation {
         context.font = `${font_size}px Arial`;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
+        const blur = font_size * 0.02;
+        context.filter = `blur(${blur}px)`;
         if (_flip) {
             context.scale(-1, 1);
             context.fillText(_text, -canvas.width / 2, canvas.height / 2);
         } else {
             context.fillText(_text, canvas.width / 2, canvas.height / 2);
         }
+        context.filter = 'none';
 
         return new THREE.CanvasTexture(canvas);
     }
