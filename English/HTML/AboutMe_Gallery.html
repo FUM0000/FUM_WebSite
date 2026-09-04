@@ -75,6 +75,9 @@
         // Setup Threejs
         import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
         import { FBXLoader } from "https://unpkg.com/three@0.126.1/examples/jsm/loaders/FBXLoader.js";
+        import { EffectComposer } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/UnrealBloomPass.js';
         import {
             Mobile_or_Desktop,
             RandomNumber_Between,
@@ -103,6 +106,44 @@
         Renderer.setPixelRatio(window.devicePixelRatio);
         Renderer.setSize(window.innerWidth, window.innerHeight);
         Renderer.setClearColor(new THREE.Color(0x070B14));
+        Renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        Renderer.toneMappingExposure = 1.0;
+
+        const BLOOM_LAYER = 1;
+        const _bloomLayer = new THREE.Layers();
+        _bloomLayer.set(BLOOM_LAYER);
+
+        let _NormalTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+
+        const _BloomComposer = new EffectComposer(Renderer);
+        _BloomComposer.addPass(new RenderPass(Scene, null));
+        const _BloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.6, 0.3);
+        _BloomPass.renderToScreen = false;
+        _BloomComposer.addPass(_BloomPass);
+
+        const _CompositeMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                tNormal: { value: _NormalTarget.texture },
+                tBloom: { value: null },
+            },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+            fragmentShader: `
+                uniform sampler2D tNormal;
+                uniform sampler2D tBloom;
+                varying vec2 vUv;
+                void main() {
+                    vec4 normal = texture2D(tNormal, vUv);
+                    vec4 bloom = texture2D(tBloom, vUv);
+                    gl_FragColor = normal + bloom;
+                }
+            `,
+            depthTest: false, depthWrite: false,
+        });
+        const _CompositeQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), _CompositeMaterial);
+        _CompositeQuad.frustumCulled = false;
+        const _CompositeScene = new THREE.Scene();
+        _CompositeScene.add(_CompositeQuad);
+
         const Loader_FBX = new FBXLoader();
         document.addEventListener('pointerdown', function (event) { PointerDown(event); });
         document.addEventListener('touchstart', function (event) { PointerDown(event); });
@@ -781,6 +822,371 @@
             }
         }
 
+        const FISH_COUNT = 25;
+        const FISH_WORLD_BOUNDS = 30;
+        const FISH_COLORS = [[1.0, 1.0, 1.0]];
+
+        class C_FishGeometry {
+            static _catmullRom(p0, p1, p2, p3, t) {
+                const t2 = t * t, t3 = t2 * t;
+                return 0.5 * ((2*p1) + (-p0+p2)*t + (2*p0-5*p1+4*p2-p3)*t2 + (-p0+3*p1-3*p2+p3)*t3);
+            }
+            static _sampleProfile(t) {
+                const pts = [0.14, 0.24, 0.32, 0.38, 0.40, 0.41, 0.39, 0.34, 0.25, 0.16, 0.09, 0.03, 0.00];
+                const n = pts.length - 1;
+                const seg = Math.min(Math.floor(t * n), n - 1);
+                const lt = t * n - seg;
+                return this._catmullRom(pts[Math.max(0,seg-1)], pts[seg], pts[Math.min(n,seg+1)], pts[Math.min(n,seg+2)], lt);
+            }
+            static createBodyBuffer(segmentsX, segmentsY) {
+                const positions = [], normals = [], indices = [];
+                for (let ix = 0; ix <= segmentsX; ix++) {
+                    const t = ix / segmentsX;
+                    const x = (t - 0.5) * 2.0;
+                    const radius = this._sampleProfile(t);
+                    for (let iy = 0; iy <= segmentsY; iy++) {
+                        const angle = (iy / segmentsY) * Math.PI * 2;
+                        positions.push(x, Math.sin(angle) * radius, Math.cos(angle) * radius * 0.6);
+                        normals.push(0, Math.sin(angle), Math.cos(angle));
+                    }
+                }
+                for (let ix = 0; ix < segmentsX; ix++) {
+                    for (let iy = 0; iy < segmentsY; iy++) {
+                        const a = ix*(segmentsY+1)+iy, b = a+1, c = (ix+1)*(segmentsY+1)+iy, d = c+1;
+                        indices.push(a,c,b, b,c,d);
+                    }
+                }
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                geometry.setIndex(indices);
+                geometry.computeVertexNormals();
+                return geometry;
+            }
+            static _subdivideTriangle(v0, v1, v2, steps) {
+                const pts = [];
+                for (let i = 0; i <= steps; i++) {
+                    for (let j = 0; j <= steps - i; j++) {
+                        const u = i/steps, v = j/steps, w = 1-u-v;
+                        pts.push(v0[0]*w+v1[0]*u+v2[0]*v, v0[1]*w+v1[1]*u+v2[1]*v, v0[2]*w+v1[2]*u+v2[2]*v);
+                    }
+                }
+                return pts;
+            }
+            static _makeGeom(positions) {
+                const g = new THREE.BufferGeometry();
+                g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                g.computeVertexNormals();
+                return g;
+            }
+            static createTailGeometry() {
+                const s = 5, p = [];
+                p.push(...this._subdivideTriangle([0,0,0], [0.55,0.5,0], [0.1,0.1,0], s));
+                p.push(...this._subdivideTriangle([0,0,0], [0.55,-0.5,0], [0.1,-0.1,0], s));
+                p.push(...this._subdivideTriangle([0.1,0.1,0], [0,0,0], [0.1,-0.1,0], s));
+                return this._makeGeom(p);
+            }
+            static createDorsalFinGeometry() {
+                const s = 2, p = [];
+                p.push(...this._subdivideTriangle([-0.12,0,0], [0.12,0.12,0], [0.12,0,0], s));
+                p.push(...this._subdivideTriangle([0.12,0.12,0], [-0.05,0.06,0], [0.12,0,0], s));
+                return this._makeGeom(p);
+            }
+            static createPectoralFinGeometry() {
+                return this._makeGeom(this._subdivideTriangle([0,0,0], [0.18,-0.06,0.14], [-0.06,-0.08,0.05], 3));
+            }
+            static createPelvicFinGeometry() {
+                return this._makeGeom(this._subdivideTriangle([0,0,0], [-0.06,-0.1,0.08], [0.06,-0.1,0.08], 2));
+            }
+            static createAnalFinGeometry() {
+                return this._makeGeom(this._subdivideTriangle([0,0,0], [-0.08,-0.1,0], [0.12,-0.12,0], 3));
+            }
+        }
+
+        class C_Fish {
+            _mesh = null; _bodyMesh = null; _tailMesh = null; _dorsalMesh = null; _group = null;
+            _position = new THREE.Vector3(); _velocity = new THREE.Vector3(); _acceleration = new THREE.Vector3();
+            _phase = 0; _tailPhase = 0; _bodyWavePhase = 0;
+            _colorIndex = 0; _scaleValue = 1.0; _speed = 0;
+            _bodyOriginalPositions = null; _tailOriginalPositions = null;
+            _bodyPoints = null; _tailPoints = null; _dorsalPoints = null;
+            _pectoralLeftPoints = null; _pectoralRightPoints = null;
+            _pelvicLeftPoints = null; _pelvicRightPoints = null; _analPoints = null;
+            get Group() { return this._group; }
+            get Position() { return this._position; }
+            get Velocity() { return this._velocity; }
+
+            constructor(bodyGeometry, tailGeometry, dorsalGeometry, pectoralGeometry, pelvicGeometry, analGeometry, colorRGB, scale) {
+                this._colorIndex = Math.floor(Math.random() * FISH_COLORS.length);
+                this._scaleValue = scale || (0.6 + Math.random() * 0.8);
+                this._speed = 0.8 + Math.random() * 0.6;
+                this._phase = Math.random() * Math.PI * 2;
+                this._tailPhase = Math.random() * Math.PI * 2;
+                this._bodyWavePhase = Math.random() * Math.PI * 2;
+                const color = colorRGB || FISH_COLORS[this._colorIndex];
+                this._group = new THREE.Group();
+                const bodyColor = new THREE.Color(color[0], color[1], color[2]);
+                const bodyMat = new THREE.MeshBasicMaterial({ color: bodyColor, transparent: true, opacity: 0, depthWrite: false, fog: false });
+                this._bodyMesh = new THREE.Mesh(bodyGeometry.clone(), bodyMat);
+                this._bodyOriginalPositions = this._bodyMesh.geometry.attributes.position.array.slice();
+                const tailColor = new THREE.Color(0.95, 0.95, 0.97);
+                const tailMat = new THREE.MeshBasicMaterial({ color: tailColor, transparent: true, opacity: 0, depthWrite: false, fog: false });
+                this._tailMesh = new THREE.Mesh(tailGeometry.clone(), tailMat);
+                this._tailOriginalPositions = this._tailMesh.geometry.attributes.position.array.slice();
+                const dorsalColor = new THREE.Color(1.0, 0.74, 0.80);
+                const finColor = new THREE.Color(1.0, 0.70, 0.77);
+                const tailPinkColor = new THREE.Color(1.0, 0.62, 0.72);
+                const FISH_POINT_SIZE = 0.018;
+                const FISH_FIN_POINT_SIZE = FISH_POINT_SIZE * 2.5;
+                const glowCanvas = document.createElement('canvas');
+                glowCanvas.width = 64; glowCanvas.height = 64;
+                const gCtx = glowCanvas.getContext('2d');
+                const grad = gCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+                grad.addColorStop(0, 'rgba(255,255,255,1)');
+                grad.addColorStop(0.08, 'rgba(255,255,255,0.8)');
+                grad.addColorStop(0.2, 'rgba(255,255,255,0.45)');
+                grad.addColorStop(0.4, 'rgba(255,255,255,0.12)');
+                grad.addColorStop(0.65, 'rgba(255,255,255,0.03)');
+                grad.addColorStop(1, 'rgba(255,255,255,0)');
+                gCtx.fillStyle = grad;
+                gCtx.fillRect(0, 0, 64, 64);
+                const glowTexture = new THREE.CanvasTexture(glowCanvas);
+                const ptsBodyMat = (c) => new THREE.PointsMaterial({
+                    color: c, size: FISH_POINT_SIZE, map: glowTexture, transparent: true, opacity: 0.4,
+                    blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false, fog: false,
+                });
+                const ptsFinMat = (c) => new THREE.PointsMaterial({
+                    color: c, size: FISH_FIN_POINT_SIZE, map: glowTexture, transparent: true, opacity: 0.8,
+                    blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false, fog: false,
+                });
+                const ptsTailMat = (c) => new THREE.PointsMaterial({
+                    color: c, size: FISH_FIN_POINT_SIZE, map: glowTexture, transparent: true, opacity: 1.0,
+                    blending: THREE.AdditiveBlending, sizeAttenuation: true, depthWrite: false, fog: false,
+                });
+                this._bodyPoints = new THREE.Points(this._bodyMesh.geometry, ptsBodyMat(bodyColor));
+                this._tailPoints = new THREE.Points(this._tailMesh.geometry, ptsTailMat(tailPinkColor));
+                this._tailPoints.position.set(0.85, 0, 0);
+                this._dorsalPoints = new THREE.Points(dorsalGeometry, ptsFinMat(dorsalColor));
+                this._dorsalPoints.position.set(0.2, 0.35, 0);
+                this._pectoralLeftPoints = new THREE.Points(pectoralGeometry, ptsFinMat(finColor));
+                this._pectoralLeftPoints.position.set(-0.6, -0.05, 0.22);
+                this._pectoralRightPoints = new THREE.Points(pectoralGeometry, ptsFinMat(finColor));
+                this._pectoralRightPoints.position.set(-0.6, -0.05, -0.22);
+                this._pectoralRightPoints.scale.z = -1;
+                this._pelvicLeftPoints = new THREE.Points(pelvicGeometry, ptsFinMat(finColor));
+                this._pelvicLeftPoints.position.set(-0.3, -0.35, 0.10);
+                this._pelvicRightPoints = new THREE.Points(pelvicGeometry, ptsFinMat(finColor));
+                this._pelvicRightPoints.position.set(-0.3, -0.35, -0.10);
+                this._pelvicRightPoints.scale.z = -1;
+                this._analPoints = new THREE.Points(analGeometry, ptsFinMat(finColor));
+                this._analPoints.position.set(0.44, -0.18, 0);
+                this._group.add(this._bodyPoints);
+                this._group.add(this._tailPoints);
+                this._group.add(this._dorsalPoints);
+                this._group.add(this._pectoralLeftPoints);
+                this._group.add(this._pectoralRightPoints);
+                this._group.add(this._pelvicLeftPoints);
+                this._group.add(this._pelvicRightPoints);
+                this._group.add(this._analPoints);
+                this._group.scale.setScalar(this._scaleValue);
+            }
+            Initialize(position) {
+                this._position.copy(position);
+                const angle = Math.random() * Math.PI * 2;
+                this._velocity.set(Math.cos(angle) * this._speed, (Math.random() - 0.5) * 0.1, Math.sin(angle) * this._speed);
+                this._group.position.copy(this._position);
+                this._UpdateRotation();
+            }
+            _UpdateRotation() {
+                if (this._velocity.lengthSq() > 0.001) {
+                    const targetAngle = Math.atan2(this._velocity.x, this._velocity.z);
+                    let current = this._group.rotation.y;
+                    let diff = targetAngle - current;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    this._group.rotation.y += diff * 0.1;
+                    const tilt = -this._velocity.y * 0.3;
+                    this._group.rotation.z = THREE.MathUtils.lerp(this._group.rotation.z, tilt, 0.05);
+                }
+            }
+            ApplyBoidRules(neighbors, time) {
+                const separation = new THREE.Vector3();
+                const alignment = new THREE.Vector3();
+                const cohesion = new THREE.Vector3();
+                let separationCount = 0, alignCount = 0, cohesionCount = 0;
+                const separationRadius = 2.0, alignmentRadius = 5.0, cohesionRadius = 6.0;
+                for (const other of neighbors) {
+                    if (other === this) continue;
+                    const dist = this._position.distanceTo(other._position);
+                    if (dist < separationRadius && dist > 0.001) {
+                        const diff = new THREE.Vector3().subVectors(this._position, other._position);
+                        diff.divideScalar(dist * dist);
+                        separation.add(diff);
+                        separationCount++;
+                    }
+                    if (dist < alignmentRadius) { alignment.add(other._velocity); alignCount++; }
+                    if (dist < cohesionRadius) { cohesion.add(other._position); cohesionCount++; }
+                }
+                if (separationCount > 0) { separation.divideScalar(separationCount).normalize().multiplyScalar(0.15); }
+                if (alignCount > 0) { alignment.divideScalar(alignCount).normalize().multiplyScalar(0.08); }
+                if (cohesionCount > 0) { cohesion.divideScalar(cohesionCount).sub(this._position).normalize().multiplyScalar(0.04); }
+                this._acceleration.add(separation);
+                this._acceleration.add(alignment);
+                this._acceleration.add(cohesion);
+            }
+            ApplyBounds(time, floorY) {
+                const steer = new THREE.Vector3();
+                const margin = 5.0;
+                const turnForce = 0.08;
+                if (this._position.x > FISH_WORLD_BOUNDS - margin) steer.x -= turnForce;
+                else if (this._position.x < -FISH_WORLD_BOUNDS + margin) steer.x += turnForce;
+                if (this._position.y > floorY + 8) steer.y -= turnForce;
+                else if (this._position.y < floorY - 6) steer.y += turnForce;
+                if (this._position.z > FISH_WORLD_BOUNDS - margin) steer.z -= turnForce;
+                else if (this._position.z < -FISH_WORLD_BOUNDS + margin) steer.z += turnForce;
+                this._acceleration.add(steer);
+            }
+            Update(time, deltaTime) {
+                this._phase += deltaTime;
+                this._tailPhase += deltaTime * 8.0;
+                this._bodyWavePhase += deltaTime * 3.0;
+                this._velocity.add(this._acceleration);
+                this._acceleration.set(0, 0, 0);
+                const maxSpeed = this._speed * 1.5;
+                const currentSpeed = this._velocity.length();
+                if (currentSpeed > maxSpeed) this._velocity.normalize().multiplyScalar(maxSpeed);
+                if (currentSpeed < this._speed * 0.3) this._velocity.normalize().multiplyScalar(this._speed * 0.3);
+                this._position.addScaledVector(this._velocity, deltaTime);
+                this._group.position.copy(this._position);
+                this._UpdateRotation();
+                this._AnimateTail(time);
+                this._AnimateBody(time);
+                this._AnimateDorsalFin(time);
+                this._AnimateFins(time);
+            }
+            _AnimateTail(time) {
+                const posAttr = this._tailMesh.geometry.attributes.position;
+                const orig = this._tailOriginalPositions;
+                const count = posAttr.count;
+                for (let i = 0; i < count; i++) {
+                    const ox = orig[i * 3], oy = orig[i * 3 + 1], oz = orig[i * 3 + 2];
+                    const tailFactor = Math.min(ox / 0.55, 1.0);
+                    const wagAmount = tailFactor * 0.4 * Math.sin(this._tailPhase + tailFactor * 2.0);
+                    posAttr.setX(i, ox); posAttr.setY(i, oy); posAttr.setZ(i, oz + wagAmount);
+                }
+                posAttr.needsUpdate = true;
+                this._tailMesh.geometry.computeVertexNormals();
+            }
+            _AnimateBody(time) {
+                const posAttr = this._bodyMesh.geometry.attributes.position;
+                const orig = this._bodyOriginalPositions;
+                const count = posAttr.count;
+                for (let i = 0; i < count; i++) {
+                    const ox = orig[i * 3], oy = orig[i * 3 + 1], oz = orig[i * 3 + 2];
+                    const t = (ox + 1.0) / 2.0;
+                    const wave = Math.sin(this._bodyWavePhase + t * 4.0) * 0.02 * t;
+                    posAttr.setX(i, ox); posAttr.setY(i, oy + wave); posAttr.setZ(i, oz);
+                }
+                posAttr.needsUpdate = true;
+                this._bodyMesh.geometry.computeVertexNormals();
+            }
+            _AnimateDorsalFin(time) {
+                this._dorsalPoints.rotation.z = Math.sin(this._bodyWavePhase * 1.5) * 0.05;
+            }
+            _AnimateFins(time) {
+                const flap = Math.sin(this._bodyWavePhase * 2.0) * 0.15;
+                this._pectoralLeftPoints.rotation.x = flap;
+                this._pectoralRightPoints.rotation.x = -flap;
+                this._pelvicLeftPoints.rotation.x = flap * 0.5;
+                this._pelvicRightPoints.rotation.x = -flap * 0.5;
+                this._analPoints.rotation.z = Math.sin(this._bodyWavePhase * 1.5) * 0.03;
+            }
+        }
+
+        class C_BubbleSystem {
+            constructor(scene, count, floorY) {
+                this._scene = scene;
+                this._count = count;
+                this._floorY = floorY;
+                const canvas = document.createElement('canvas');
+                canvas.width = 64; canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
+                grad.addColorStop(0, 'rgba(200, 240, 255, 0.9)');
+                grad.addColorStop(0.3, 'rgba(150, 220, 255, 0.4)');
+                grad.addColorStop(0.7, 'rgba(100, 180, 255, 0.1)');
+                grad.addColorStop(1, 'rgba(80, 160, 255, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(32, 32, 30, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(200, 240, 255, 0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(28, 26, 8, 0, Math.PI * 2); ctx.stroke();
+                this._texture = new THREE.CanvasTexture(canvas);
+                this._positions = new Float32Array(count * 3);
+                this._velocities = new Float32Array(count);
+                this._sizes = new Float32Array(count);
+                this._lifetimes = new Float32Array(count);
+                this._maxLifetimes = new Float32Array(count);
+                for (let i = 0; i < count; i++) this._ResetBubble(i, true);
+                this._geometry = new THREE.BufferGeometry();
+                this._geometry.setAttribute('position', new THREE.BufferAttribute(this._positions, 3));
+                this._geometry.setAttribute('size', new THREE.BufferAttribute(this._sizes, 1));
+                this._material = new THREE.ShaderMaterial({
+                    uniforms: { uTexture: { value: this._texture }, uTime: { value: 0 } },
+                    vertexShader: `
+                        attribute float size;
+                        uniform float uTime;
+                        varying float vAlpha;
+                        void main() {
+                            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                            gl_PointSize = clamp(size * (200.0 / -mvPosition.z), 1.0, 16.0);
+                            gl_Position = projectionMatrix * mvPosition;
+                            vAlpha = 0.6 + 0.4 * sin(uTime * 2.0 + position.y);
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform sampler2D uTexture;
+                        varying float vAlpha;
+                        void main() {
+                            vec4 tex = texture2D(uTexture, gl_PointCoord);
+                            gl_FragColor = vec4(tex.rgb, tex.a * vAlpha);
+                        }
+                    `,
+                    transparent: true, depthWrite: false, fog: false,
+                });
+                this._points = new THREE.Points(this._geometry, this._material);
+                this._points.frustumCulled = false;
+                this._scene.add(this._points);
+            }
+            _ResetBubble(i, initial) {
+                this._positions[i * 3] = (Math.random() - 0.5) * FISH_WORLD_BOUNDS * 2;
+                this._positions[i * 3 + 1] = initial ? this._floorY + Math.random() * 15 - 6 : this._floorY - 6 + Math.random() * 2;
+                this._positions[i * 3 + 2] = (Math.random() - 0.5) * FISH_WORLD_BOUNDS * 2;
+                this._velocities[i] = 0.3 + Math.random() * 0.6;
+                this._sizes[i] = 0.08 + Math.random() * 0.15;
+                this._maxLifetimes[i] = 8 + Math.random() * 12;
+                this._lifetimes[i] = 0;
+            }
+            Update(time, deltaTime) {
+                this._material.uniforms.uTime.value = time;
+                for (let i = 0; i < this._count; i++) {
+                    this._lifetimes[i] += deltaTime;
+                    if (this._lifetimes[i] >= this._maxLifetimes[i]) { this._ResetBubble(i, false); continue; }
+                    this._positions[i * 3] += Math.sin(time * 0.8 + i * 1.3) * deltaTime * 0.15;
+                    this._positions[i * 3 + 1] += this._velocities[i] * deltaTime;
+                    this._positions[i * 3 + 2] += Math.cos(time * 0.6 + i * 0.9) * deltaTime * 0.1;
+                    if (this._positions[i * 3 + 1] > this._floorY + 10) this._ResetBubble(i, false);
+                }
+                this._geometry.attributes.position.needsUpdate = true;
+                this._geometry.attributes.size.needsUpdate = true;
+            }
+            destructor() {
+                this._scene.remove(this._points);
+                this._geometry.dispose();
+                this._material.dispose();
+            }
+        }
+
         class C_Cat extends FC_GameObject {
 
             _Flag_Loaded = false;
@@ -1104,11 +1510,36 @@
             _Images = [];
             _Particles = null;
             _ParticlesCenter = null;
+            _Fishes = [];
+            _FishBubbleSystem = null;
+            _FishFloorY = 0;
 
             get UI_Home() { return this._UI_Home; }
             get UI_Music() { return this._UI_Music; }
 
             constructor() { super(Scene, Renderer); }
+
+            _CreateFishes() {
+                const bodyGeom = C_FishGeometry.createBodyBuffer(20, 12);
+                const tailGeom = C_FishGeometry.createTailGeometry();
+                const dorsalGeom = C_FishGeometry.createDorsalFinGeometry();
+                const pectoralGeom = C_FishGeometry.createPectoralFinGeometry();
+                const pelvicGeom = C_FishGeometry.createPelvicFinGeometry();
+                const analGeom = C_FishGeometry.createAnalFinGeometry();
+                for (let i = 0; i < FISH_COUNT; i++) {
+                    const fish = new C_Fish(bodyGeom, tailGeom, dorsalGeom, pectoralGeom, pelvicGeom, analGeom);
+                    const pos = new THREE.Vector3(
+                        (Math.random() - 0.5) * 20,
+                        this._FishFloorY + (Math.random() - 0.5) * 8,
+                        (Math.random() - 0.5) * 20
+                    );
+                    fish.Initialize(pos);
+                    this._Fishes.push(fish);
+                    fish.Group.layers.enable(BLOOM_LAYER);
+                    Scene.add(fish.Group);
+                }
+                this._FishBubbleSystem = new C_BubbleSystem(Scene, 80, this._FishFloorY);
+            }
 
             Initialize() {
                 this.BGM = '../../Asset/Audio/BGM/Clair_de_Lune.wav';
@@ -1125,10 +1556,14 @@
                 this._UI_Home.Fog = false;
                 this._UI_Home.Depth_Test = true;
                 this._UI_Home.Position = new THREE.Vector3(0.0, Player.Position.y + 2.26, 0.0);
+                if (this._UI_Home.Mesh_Front) this._UI_Home.Mesh_Front.layers.enable(BLOOM_LAYER);
+                if (this._UI_Home.Mesh_Back) this._UI_Home.Mesh_Back.layers.enable(BLOOM_LAYER);
                 this._UI_Music.Initialize();
                 this._UI_Music.Fog = false;
                 this._UI_Music.Depth_Test = true;
                 this._UI_Music.Position = new THREE.Vector3(0.0, Player.Position.y - 2.74, 0.0);
+                if (this._UI_Music.Mesh_Front) this._UI_Music.Mesh_Front.layers.enable(BLOOM_LAYER);
+                if (this._UI_Music.Mesh_Back) this._UI_Music.Mesh_Back.layers.enable(BLOOM_LAYER);
                 this.updateHomeMusicAnchor();
                 if (this._Button_Home) Scene.remove(this._Button_Home);
                 if (this._Button_Music) Scene.remove(this._Button_Music);
@@ -1224,6 +1659,8 @@
                 this._Button_Home.material.uniforms.uFresnelColor.value.set(0.5, 0.75, 1.0);
                 this._Button_Music.material.uniforms.uBaseColor.value.set(0.5, 0.4, 1.0);
                 this._Button_Music.material.uniforms.uFresnelColor.value.set(0.7, 0.55, 1.0);
+                this._Button_Home.layers.enable(BLOOM_LAYER);
+                this._Button_Music.layers.enable(BLOOM_LAYER);
                 this._Button_Home.position.copy(this._UI_Home.Position);
                 this._Button_Music.position.copy(this._UI_Music.Position);
                 this._Button_Home.userData.buttonType = 'home';
@@ -1269,6 +1706,8 @@
                     delay: 1.0,
                 });
 
+                _BloomComposer.passes[0].camera = Camera.Object;
+
                 const main_categories = Object.keys(this._FolderStructure);
                 const angle_each_main_category = (2 * Math.PI) / main_categories.length;
 
@@ -1299,6 +1738,8 @@
                     guideText.Depth_Test = true;
                     guideText.Depth_Write = true;
                     this.placeMainFloorTextOnElevatorCylinder(guideText, 2.5);
+                    if (guideText.Mesh_Front) guideText.Mesh_Front.layers.enable(BLOOM_LAYER);
+                    if (guideText.Mesh_Back) guideText.Mesh_Back.layers.enable(BLOOM_LAYER);
                     this._Category_Texts.push(guideText);
 
                     main_categories.forEach((main_category, main_index) => {
@@ -1314,6 +1755,8 @@
                         main_category_text.Depth_Test = true;
                         main_category_text.Depth_Write = true;
                         this.placeMainFloorTextOnElevatorCylinder(main_category_text, category_y + 2.5);
+                        if (main_category_text.Mesh_Front) main_category_text.Mesh_Front.layers.enable(BLOOM_LAYER);
+                        if (main_category_text.Mesh_Back) main_category_text.Mesh_Back.layers.enable(BLOOM_LAYER);
                         this._Category_Texts.push(main_category_text);
 
                         switch (main_category) {
@@ -1365,8 +1808,12 @@
                             ["F1", "F2", "F3", "F4", "F5"],
                             ["Guide", "Art", "Cat", "Nature", "Scenery"]
                         );
+                        if (this._Elevator.mesh) this._Elevator.mesh.layers.enable(BLOOM_LAYER);
                         this._raycaster = new THREE.Raycaster();
                         this.updateFrameVisibilityByPlayerFloor();
+
+                        this._FishFloorY = this._Elevator.floors * this._Floor_Height;
+                        this._CreateFishes();
 
                         this.Loaded = true;
                     });
@@ -1389,7 +1836,18 @@
                         Manager.Update_System();
                     }
                 }
+                Renderer.setRenderTarget(_NormalTarget);
                 Renderer.render(Scene, Camera.Object);
+                Camera.Object.layers.set(BLOOM_LAYER);
+                _BloomComposer.render();
+                Camera.Object.layers.set(0);
+                Camera.Object.layers.enable(BLOOM_LAYER);
+                _CompositeMaterial.uniforms.tBloom.value = _BloomComposer.readBuffer.texture;
+                Renderer.setRenderTarget(null);
+                Renderer.autoClear = false;
+                Renderer.clear();
+                Renderer.render(_CompositeScene, Camera.Object);
+                Renderer.autoClear = true;
                 requestAnimationFrame(this.Update.bind(this));
             }
             Update_System() {
@@ -1536,6 +1994,20 @@
                 if (this._ParticlesCenter) {
                     this._ParticlesCenter.Update(Player.Position, FC_Environment.TIME_DELTA);
                 }
+                if (this._Fishes.length > 0) {
+                    const time = performance.now() / 1000;
+                    const dt = FC_Environment.TIME_DELTA;
+                    for (const fish of this._Fishes) {
+                        fish.ApplyBoidRules(this._Fishes, time);
+                        fish.ApplyBounds(time, this._FishFloorY);
+                    }
+                    for (const fish of this._Fishes) {
+                        fish.Update(time, dt);
+                    }
+                }
+                if (this._FishBubbleSystem) {
+                    this._FishBubbleSystem.Update(performance.now() / 1000, FC_Environment.TIME_DELTA);
+                }
                 Camera.Update(this._Input_Look, this._SENSIVILITY);
 
                 this._Images.forEach(_image => {
@@ -1637,6 +2109,8 @@
                     subcategory_text.Fog = true;
                     subcategory_text.Depth_Test = true;
                     subcategory_text.Position = new THREE.Vector3(subcategory_x, category_y + 3, subcategory_z);
+                    if (subcategory_text.Mesh_Front) subcategory_text.Mesh_Front.layers.enable(BLOOM_LAYER);
+                    if (subcategory_text.Mesh_Back) subcategory_text.Mesh_Back.layers.enable(BLOOM_LAYER);
                     this._Category_Texts.push(subcategory_text);
 
                     if (subcategory === "3D") {
@@ -2078,7 +2552,12 @@
         const Camera = new FC_Camera_Controller(Renderer);
         const Light_Ambient = new FC_Light_Ambient(Scene);
         const Light_Directional = new FC_Light_Directional(Scene);
-        window.addEventListener('resize', Camera.Resize_Screen, false);
+        window.addEventListener('resize', () => {
+            Camera.Resize_Screen();
+            const w = window.innerWidth, h = window.innerHeight;
+            _NormalTarget.setSize(w, h);
+            _BloomComposer.setSize(w, h);
+        }, false);
 
         const Manager = new C_Manager();
         const Cat = new C_Cat();
