@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Game.css" rel="stylesheet" />
+    <title>Interactive Particles</title>
+    <meta name="robots" content="index, follow">
+</head>
+<body>
+    <div id="Joystick_Left" class="Joystick_Area"></div>
+    <div id="Joystick_Right" class="Joystick_Area"></div>
+    <div id="Fade_Game"></div>
+    <canvas id="Canvas"></canvas>
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            background: #04060d !important;
+            overflow: hidden !important;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            touch-action: none;
+        }
+
+        #Canvas {
+            position: fixed;
+            inset: 0;
+            display: block;
+            background: transparent;
+            z-index: 0;
+            touch-action: none;
+        }
+
+        .Joystick_Area {
+            position: fixed;
+            top: 0;
+            height: 100%;
+            z-index: 10;
+            touch-action: none;
+            pointer-events: none;
+        }
+
+        #Joystick_Left {
+            left: 0;
+            width: 100%;
+        }
+
+        #Joystick_Right {
+            right: 0;
+            width: 100%;
+        }
+
+        #Fade_Game {
+            background-color: #0a1022;
+        }
+
+        #HUD {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+
+        .hud-button {
+            pointer-events: auto;
+            min-width: 118px;
+            padding: 10px 16px;
+            border: 1px solid rgba(215, 215, 215, 0.55);
+            border-radius: 8px;
+            background: rgba(10, 14, 26, 0.72);
+            color: #eeeeee;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-align: center;
+            text-decoration: none;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .hud-button:hover {
+            background: rgba(30, 40, 70, 0.85);
+            color: #ffffff;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .hud-button:active {
+            transform: translateY(1px);
+        }
+
+        #Gravity_Toggle.is-on {
+            border-color: rgba(120, 220, 160, 0.8);
+            color: #9dffc2;
+        }
+
+        #Hint {
+            position: fixed;
+            bottom: 16px;
+            left: 0;
+            width: 100%;
+            z-index: 15;
+            text-align: center;
+            color: rgba(200, 215, 255, 0.55);
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            pointer-events: none;
+            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+
+    <div id="HUD">
+        <a class="hud-button" href="index.html">HOME</a>
+        <button id="Gravity_Toggle" class="hud-button" type="button">Gravity : OFF</button>
+    </div>
+    <div id="Hint">MOVE cursor / HOLD to push particles with wind</div>
+
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+
+        const canvas = document.getElementById('Canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 30;
+
+        const COUNT = 5000;
+
+        const positions = new Float32Array(COUNT * 3);
+        const velocity = new Float32Array(COUNT * 2);
+        const targets = new Float32Array(COUNT * 3);
+        const base = new Float32Array(COUNT * 3);
+        const sizes = new Float32Array(COUNT);
+        const colorArr = new Float32Array(COUNT * 3);
+
+        for (let i = 0; i < COUNT; i++) {
+            const x = (Math.random() - 0.5) * 52;
+            const y = (Math.random() - 0.5) * 34;
+            const z = (Math.random() - 0.5) * 8;
+            positions[i * 3] = x;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = z;
+            base[i * 3] = x;
+            base[i * 3 + 1] = y;
+            base[i * 3 + 2] = z;
+            targets[i * 3] = x;
+            targets[i * 3 + 1] = y;
+            targets[i * 3 + 2] = z;
+            velocity[i * 2] = 0;
+            velocity[i * 2 + 1] = 0;
+            sizes[i] = 0.1;
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colorArr, 3));
+
+        const material = new THREE.PointsMaterial({
+            size: 0.28,
+            map: createGlowTexture(),
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: true
+        });
+
+        function createGlowTexture() {
+            const c = document.createElement('canvas');
+            c.width = 64;
+            c.height = 64;
+            const ctx = c.getContext('2d');
+            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.3, 'rgba(200,220,255,0.6)');
+            grad.addColorStop(0.7, 'rgba(150,190,255,0.15)');
+            grad.addColorStop(1, 'rgba(120,170,255,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(c);
+        }
+
+        const points = new THREE.Points(geometry, material);
+        scene.add(points);
+
+        const cursor = { x: 0, y: 0, active: false };
+        const wind = { x: 0, y: 0, strength: 0, dx: 0, dy: 0 };
+
+        let gravityEnabled = false;
+
+        function toWorld(screenX, screenY) {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const halfH = Math.tan((75 * Math.PI) / 180 / 2) * camera.position.z;
+            const halfW = halfH * (w / h);
+            return {
+                x: (screenX / w - 0.5) * 2 * halfW,
+                y: -(screenY / h - 0.5) * 2 * halfH
+            };
+        }
+
+        let windPointerId = null;
+        let windStart = null;
+        let windCurr = null;
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const p = toWorld(e.clientX, e.clientY);
+            cursor.x = p.x;
+            cursor.y = p.y;
+            cursor.active = true;
+            windPointerId = e.pointerId;
+            windStart = { x: e.clientX, y: e.clientY };
+            windCurr = { x: e.clientX, y: e.clientY };
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            const p = toWorld(e.clientX, e.clientY);
+            cursor.x = p.x;
+            cursor.y = p.y;
+            if (cursor.active && e.pointerId === windPointerId) {
+                windCurr = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        const endPointer = (e) => {
+            if (e.pointerId === windPointerId) {
+                cursor.active = false;
+                windPointerId = null;
+                wind.strength = 0;
+                windStart = null;
+                windCurr = null;
+                gravityToggle.blur();
+            }
+        };
+
+        canvas.addEventListener('pointerup', endPointer);
+        canvas.addEventListener('pointercancel', endPointer);
+        canvas.addEventListener('pointerleave', endPointer);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') e.preventDefault();
+        });
+
+        const gravityToggle = document.getElementById('Gravity_Toggle');
+        gravityToggle.addEventListener('click', () => {
+            gravityEnabled = !gravityEnabled;
+            gravityToggle.textContent = 'Gravity : ' + (gravityEnabled ? 'ON' : 'OFF');
+            gravityToggle.classList.toggle('is-on', gravityEnabled);
+            gravityToggle.blur();
+        });
+
+        const toColor = new THREE.Color();
+
+        function updateParticles() {
+            const attract = 0.3;
+            const repel = 0.7;
+            const attractRadius = 14;
+            const repelRadius = 3.5;
+
+            if (cursor.active && windStart && windCurr) {
+                const dx = windCurr.x - windStart.x;
+                const dy = windCurr.y - windStart.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 8) {
+                    wind.dx = dx / dist;
+                    wind.dy = dy / dist;
+                    wind.strength = Math.min(0.8, dist * 0.01);
+                }
+            } else {
+                wind.strength = Math.max(0, wind.strength - 0.03);
+            }
+
+            const clampX = 26;
+            const clampY = 17;
+            const clampZ = 4.5;
+
+            for (let i = 0; i < COUNT; i++) {
+                const i3 = i * 3;
+                const px = positions[i3];
+                const py = positions[i3 + 1];
+                const pz = positions[i3 + 2];
+                const i2 = i * 2;
+                let vx = velocity[i2];
+                let vy = velocity[i2 + 1];
+
+                let dx = cursor.x - px;
+                let dy = cursor.y - py;
+                const distSq = dx * dx + dy * dy + pz * pz;
+                const dist = Math.sqrt(distSq);
+
+                if (cursor.active && dist < 0.001) dist = 0.001;
+
+                let forceX = 0;
+                let forceY = 0;
+
+                if (cursor.active && distSq < attractRadius * attractRadius) {
+                    if (dist > 0.001) {
+                        dx /= dist;
+                        dy /= dist;
+                    }
+                    if (dist > repelRadius) {
+                        const strength = attract * (1 - dist / attractRadius);
+                        forceX += dx * strength;
+                        forceY += dy * strength;
+                    } else if (dist > 0.001) {
+                        const strength = repel * (1 - dist / repelRadius) * 1.4;
+                        forceX -= dx * strength;
+                        forceY -= dy * strength;
+                    }
+                }
+
+                if (wind.strength > 0) {
+                    forceX += wind.dx * wind.strength;
+                    forceY += wind.dy * wind.strength;
+                }
+
+                if (gravityEnabled) {
+                    vy -= 0.04;
+                }
+
+                vx += forceX;
+                vy += forceY;
+
+                vx *= 0.965;
+                vy *= 0.965;
+
+                const speed = Math.hypot(vx, vy);
+
+                let nx = px + vx;
+                let ny = py + vy;
+                let nz = pz;
+
+                if (ny < -clampY) { ny = -clampY; vy *= -0.65; }
+                if (ny > clampY) { ny = clampY; vy *= -0.65; }
+                if (nx < -clampX) { nx = -clampX; vx *= -0.65; }
+                if (nx > clampX) { nx = clampX; vx *= -0.65; }
+                if (nz < -clampZ) { nz = -clampZ; }
+                if (nz > clampZ) { nz = clampZ; }
+
+                positions[i3] = nx;
+                positions[i3 + 1] = ny;
+                positions[i3 + 2] = nz;
+                velocity[i2] = vx;
+                velocity[i2 + 1] = vy;
+
+                const sizeBase = 0.12 + speed * 0.35;
+                sizes[i] = Math.min(0.7, sizeBase);
+                material.size = Math.min(0.7, 0.24 + speed * 0.32);
+
+                const t = Math.min(1, speed / 4.0);
+                const hue = 0.66 - t * 0.66;
+                const sat = 0.9;
+                const light = 0.45 + (1 - t) * 0.25;
+                toColor.setHSL(hue, sat, light);
+                colorArr[i3] = toColor.r;
+                colorArr[i3 + 1] = toColor.g;
+                colorArr[i3 + 2] = toColor.b;
+            }
+
+            geometry.attributes.position.needsUpdate = true;
+            geometry.attributes.color.needsUpdate = true;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            updateParticles();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        setTimeout(() => {
+            document.getElementById('Fade_Game').style.opacity = '0';
+        }, 60);
+
+        animate();
+    </script>
+</body>
+</html>

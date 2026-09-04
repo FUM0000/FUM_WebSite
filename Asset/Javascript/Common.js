@@ -185,6 +185,26 @@ Vue.component('main-navigation', {
                     <v-list-item-title>Gallery</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-image</v-icon></v-list-item-icon>
                 </v-list-item>
+                <v-list-item href="./Gallery_3DFish.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>3D Fish</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-fish</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Gallery_Particles.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Particles</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-dots-circle</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Gallery_FluidWater.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Water Simulation</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-water</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Gallery_FluidWind.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Wind Simulation</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-weather-windy</v-icon></v-list-item-icon>
+                </v-list-item>
             </v-list-group>
             <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
 
@@ -731,6 +751,21 @@ Vue.component('main-navigation', {
                 </v-list-group sub-group>
                 <!-- ▲ Festival ▲ ----------------------------------------------------------------------------->
 
+                <!-- ▼ History ▼ ----------------------------------------------------------------------------->
+                <v-list-group sub-group :value="false">
+                    <template v-slot:activator>
+                        <v-list-item-title>History</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-history</v-icon></v-list-item-icon>
+                    </template>
+
+                    <v-list-item href="./Japan_History_Food.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Food &amp; Drink</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group sub-group>
+                <!-- ▲ History ▲ ----------------------------------------------------------------------------->
+
                 <!-- ▼ Season ▼ ------------------------------------------------------------------------------->
                 <v-list-group sub-group :value="false">
                     <template v-slot:activator>
@@ -848,6 +883,11 @@ Vue.component('main-navigation', {
                     <v-list-item-icon />
                     <v-list-item-title>Seasoning</v-list-item-title>
                     <v-list-item-icon><v-icon>mdi-food-variant</v-icon></v-list-item-icon>
+                </v-list-item>
+                <v-list-item href="./Cooking_SeasoningOrder.html">
+                    <v-list-item-icon />
+                    <v-list-item-title>Seasoning Order</v-list-item-title>
+                    <v-list-item-icon><v-icon>mdi-sort-numeric-ascending</v-icon></v-list-item-icon>
                 </v-list-item>
                 <v-list-item href="./Cooking_Science.html">
                     <v-list-item-icon />
@@ -1001,6 +1041,11 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-sword</v-icon></v-list-item-icon>
                     </template>
 
+                    <v-list-item href="./Game_SuikaRPG.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Suika RPG</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-food-apple-outline</v-icon></v-list-item-icon>
+                    </v-list-item>
                     <v-list-item href="./Game_KittyHopper.html">
                         <v-list-item-icon />
                         <v-list-item-title>Kitty Hopper</v-list-item-title>
@@ -1087,6 +1132,16 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Type Infinity</v-list-item-title>
                         <v-list-item-icon><v-icon>mdi-keyboard-outline</v-icon></v-list-item-icon>
+                    </v-list-item>
+                    <v-list-item href="./Game_Kanji.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Kanji</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-character-recognition</v-icon></v-list-item-icon>
+                    </v-list-item>
+                    <v-list-item href="./Game_Geography.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Geography</v-list-item-title>
+                        <v-list-item-icon><v-icon>mdi-map-marker</v-icon></v-list-item-icon>
                     </v-list-item>
                 </v-list-group sub-group>
             </v-list-group>

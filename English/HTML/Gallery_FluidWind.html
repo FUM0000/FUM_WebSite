@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Game.css" rel="stylesheet" />
+    <title>Wind Simulation</title>
+    <meta name="robots" content="index, follow">
+</head>
+<body>
+    <div id="Joystick_Left" class="Joystick_Area"></div>
+    <div id="Joystick_Right" class="Joystick_Area"></div>
+    <div id="Fade_Game"></div>
+    <canvas id="Canvas"></canvas>
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            background: #04060d !important;
+            overflow: hidden !important;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            touch-action: none;
+        }
+
+        #Canvas {
+            position: fixed;
+            inset: 0;
+            display: block;
+            background: transparent;
+            z-index: 0;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .Joystick_Area {
+            position: fixed;
+            top: 0;
+            height: 100%;
+            z-index: 10;
+            touch-action: none;
+            pointer-events: none;
+        }
+
+        #Joystick_Left {
+            left: 0;
+            width: 100%;
+        }
+
+        #Joystick_Right {
+            right: 0;
+            width: 100%;
+        }
+
+        #Fade_Game {
+            background-color: #0a1020;
+        }
+
+        #HUD {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+
+        .hud-button {
+            pointer-events: auto;
+            min-width: 128px;
+            padding: 10px 16px;
+            border: 1px solid rgba(215, 215, 215, 0.55);
+            border-radius: 8px;
+            background: rgba(8, 14, 26, 0.72);
+            color: #eeeeee;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-align: center;
+            text-decoration: none;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .hud-button:hover {
+            background: rgba(32, 42, 66, 0.85);
+            color: #ffffff;
+        }
+
+        .hud-button:active {
+            transform: translateY(1px);
+        }
+
+        #Clear_Sources.is-on {
+            border-color: rgba(255, 160, 130, 0.8);
+            color: #ffc1a8;
+        }
+
+        #Hint {
+            position: fixed;
+            bottom: 16px;
+            left: 0;
+            width: 100%;
+            z-index: 15;
+            text-align: center;
+            color: rgba(190, 205, 235, 0.55);
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            pointer-events: none;
+            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+
+    <div id="HUD">
+        <a class="hud-button" href="index.html">HOME</a>
+        <button id="Clear_Sources" class="hud-button" type="button">Clear Sources</button>
+    </div>
+    <div id="Hint">CLICK : place wind source &nbsp;•&nbsp; DRAG : set direction</div>
+
+    <script>
+        const canvas = document.getElementById('Canvas');
+        const ctx = canvas.getContext('2d');
+
+        const VW = 200;
+        const VH = 120;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        function screenToWorld(x, y) {
+            return {
+                x: (x / window.innerWidth) * VW,
+                y: (y / window.innerHeight) * VH
+            };
+        }
+
+        const obstacles = [
+            { x: VW * 0.30, y: VH * 0.40, r: 8 },
+            { x: VW * 0.66, y: VH * 0.62, r: 7 },
+            { x: VW * 0.52, y: VH * 0.22, r: 5 },
+            { x: VW * 0.82, y: VH * 0.30, r: 3.5 }
+        ];
+
+        const windSources = [];
+
+        const PARTICLES = 3000;
+        const particles = new Array(PARTICLES);
+
+        function hash2(x, y) {
+            const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+            return s - Math.floor(s);
+        }
+        function smoothNoise(x, y) {
+            const ix = Math.floor(x);
+            const iy = Math.floor(y);
+            const fx = x - ix;
+            const fy = y - iy;
+            const a = hash2(ix, iy);
+            const b = hash2(ix + 1, iy);
+            const c = hash2(ix, iy + 1);
+            const d = hash2(ix + 1, iy + 1);
+            const ux = fx * fx * (3 - 2 * fx);
+            const uy = fy * fy * (3 - 2 * fy);
+            return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+        }
+        function fbm(x, y) {
+            let total = 0;
+            let amp = 1;
+            let freq = 1;
+            for (let i = 0; i < 3; i++) {
+                total += smoothNoise(x * freq, y * freq) * amp;
+                amp *= 0.5;
+                freq *= 2;
+            }
+            return total;
+        }
+
+        function resetParticle(p) {
+            p.x = VW * 0.5 + (Math.random() - 0.5) * 20;
+            p.y = VH * 0.5 + (Math.random() - 0.5) * 14;
+            p.age = Math.random() * 200;
+        }
+
+        for (let i = 0; i < PARTICLES; i++) {
+            particles[i] = {
+                x: 0,
+                y: 0,
+                px: 0,
+                py: 0,
+                age: 0
+            };
+            resetParticle(particles[i]);
+        }
+
+        function addSource(from, to) {
+            let dx = to.x - from.x;
+            let dy = to.y - from.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            if (dist > 1) {
+                dx /= dist;
+                dy /= dist;
+            }
+            const strength = 0.5 + Math.min(2.5, dist * 0.14);
+            windSources.push({
+                x: from.x,
+                y: from.y,
+                dx,
+                dy,
+                strength,
+                r: 2 + dist * 0.6
+            });
+            if (windSources.length > 12) windSources.shift();
+        }
+
+        let isPlacing = false;
+        let dragStart = null;
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            isPlacing = true;
+            dragStart = screenToWorld(e.clientX, e.clientY);
+            addSource(dragStart, dragStart);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (isPlacing && dragStart) {
+                const cur = screenToWorld(e.clientX, e.clientY);
+                if (windSources.length > 0) {
+                    const last = windSources[windSources.length - 1];
+                    const ddx = cur.x - dragStart.x;
+                    const ddy = cur.y - dragStart.y;
+                    const d = Math.hypot(ddx, ddy) || 1;
+                    last.dx = ddx / d;
+                    last.dy = ddy / d;
+                    last.strength = 0.5 + Math.min(2.5, d * 0.14);
+                    last.r = 2 + d * 0.6;
+                }
+            }
+        });
+
+        const endPointer = (e) => {
+            if (isPlacing) {
+                isPlacing = false;
+                dragStart = null;
+                clearBtn.blur();
+            }
+        };
+        canvas.addEventListener('pointerup', endPointer);
+        canvas.addEventListener('pointercancel', endPointer);
+
+        const clearBtn = document.getElementById('Clear_Sources');
+        clearBtn.addEventListener('click', () => {
+            windSources.length = 0;
+            clearBtn.blur();
+        });
+
+        function velocityAt(x, y, vx, vy) {
+            let ax = 0;
+            let ay = 0;
+
+            for (const s of windSources) {
+                let dx = x - s.x;
+                let dy = y - s.y;
+                const distSq = dx * dx + dy * dy + 1;
+                const dist = Math.sqrt(distSq);
+                const falloff = Math.exp(-distSq / (s.r * s.r * 6));
+                ax += s.dx * s.strength * falloff;
+                ay += s.dy * s.strength * falloff;
+
+                if (dist > 0.5) {
+                    dx /= dist;
+                    dy /= dist;
+                    const swirl = 2.2 * Math.exp(-distSq / (s.r * s.r * 1.5));
+                    ax += -dy * swirl;
+                    ay += dx * swirl;
+                }
+            }
+
+            const n = fbm(x * 0.09, y * 0.09) * 2 - 1;
+            const ang = n * Math.PI * 2.2;
+            ax += Math.cos(ang) * 0.22;
+            ay += Math.sin(ang) * 0.22;
+
+            for (const ob of obstacles) {
+                const dx = x - ob.x;
+                const dy = y - ob.y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < 0.01) continue;
+                const dist = Math.sqrt(distSq);
+                if (dist < ob.r) {
+                    const push = (ob.r - dist) * 0.6 / (dist * dist);
+                    ax += (dx / dist) * push;
+                    ay += (dy / dist) * push;
+                } else {
+                    const tang = (ob.r * ob.r) / distSq;
+                    ax += (dy / dist) * tang * 1.4;
+                    ay += -(dx / dist) * tang * 1.4;
+                }
+            }
+
+            const inv = 1 / (1 + Math.hypot(ax, ay) * 0.1);
+            return { vx: ax * inv, vy: ay * inv };
+        }
+
+        function velocityToColor(spd) {
+            const t = Math.min(1, spd / 6);
+            if (t < 0.5) {
+                const s = t / 0.5;
+                return `rgba(${Math.round(140 + 80 * s)}, ${Math.round(205 - 40 * s)}, 255, 0.85)`;
+            } else {
+                const s = (t - 0.5) / 0.5;
+                return `rgba(${Math.round(220 + 35 * s)}, ${Math.round(105 - 30 * s)}, ${Math.round(190 - 90 * s)}, 0.9)`;
+            }
+        }
+
+        function step(dt) {
+            for (const s of windSources) {
+                s.x += s.dx * 0.03;
+                s.y += s.dy * 0.03;
+                if (s.x < 2) s.x = 2;
+                if (s.x > VW - 2) s.x = VW - 2;
+                if (s.y < 2) s.y = 2;
+                if (s.y > VH - 2) s.y = VH - 2;
+            }
+
+            for (let i = 0; i < PARTICLES; i++) {
+                const p = particles[i];
+                p.age += dt;
+                if (p.age > 320) { resetParticle(p); }
+
+                const base = velocityAt(p.x, p.y, 0, 0);
+                p.px = p.x;
+                p.py = p.y;
+                p.x += base.vx * dt * 34;
+                p.y += base.vy * dt * 34;
+
+                if (p.x < 0) p.x = VW - 1;
+                if (p.x >= VW) p.x = 1;
+                if (p.y < 0) p.y = VH - 1;
+                if (p.y >= VH) p.y = 1;
+            }
+        }
+
+        function draw(dt) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, '#0a1220');
+            grad.addColorStop(1, '#04060d');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const sx = window.innerWidth / VW;
+            const sy = window.innerHeight / VH;
+
+            for (const ob of obstacles) {
+                const px = ob.x * sx;
+                const py = ob.y * sy;
+                ctx.beginPath();
+                ctx.arc(px, py, ob.r * sx, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(40, 52, 74, 0.95)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(120, 140, 180, 0.55)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            ctx.lineWidth = 1.25;
+            ctx.lineCap = 'round';
+
+            for (let i = 0; i < PARTICLES; i++) {
+                const p = particles[i];
+                const spd = Math.hypot(p.x - p.px, p.y - p.py) / Math.max(dt, 0.001) / 34;
+                ctx.strokeStyle = velocityToColor(spd);
+                ctx.beginPath();
+                ctx.moveTo(p.px * sx, p.py * sy);
+                ctx.lineTo(p.x * sx, p.y * sy);
+                ctx.stroke();
+            }
+
+            for (const s of windSources) {
+                ctx.beginPath();
+                ctx.arc(s.x * sx, s.y * sy, 5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.fill();
+                const ex = s.x * sx + s.dx * 34;
+                const ey = s.y * sy + s.dy * 34;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(s.x * sx, s.y * sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+            }
+        }
+
+        let lastTime = performance.now();
+
+        function loop() {
+            requestAnimationFrame(loop);
+            const now = performance.now();
+            let dt = (now - lastTime) / 1000;
+            lastTime = now;
+            if (dt > 0.04) dt = 0.04;
+
+            step(dt);
+            draw(dt);
+        }
+
+        setTimeout(() => {
+            document.getElementById('Fade_Game').style.opacity = '0';
+        }, 60);
+
+        loop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+    <link href="../../Asset/CSS/Learning.css?v=1.0" rel="stylesheet" />
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <title>Kanji Game</title>
+    <meta name="robots" content="index, follow">
+
+    <style>
+        .kanji-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .kanji-float {
+            position: absolute;
+            font-family: 'Zen Kaku Gothic New', 'Space Mono', sans-serif;
+            color: rgba(0, 0, 0, 0.05);
+            font-weight: 700;
+            user-select: none;
+            animation: KanjiFloat 12s ease-in-out infinite;
+        }
+
+        @keyframes KanjiFloat {
+            0%, 100% { transform: translateY(0) rotate(-4deg); }
+            50% { transform: translateY(-20px) rotate(6deg); }
+        }
+
+        .kanji-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .kanji-display {
+            font-family: 'Zen Kaku Gothic New', 'Space Mono', sans-serif;
+            font-size: 10rem;
+            line-height: 1;
+            font-weight: 700;
+            color: #1a1a1a;
+            letter-spacing: 0;
+        }
+
+        .answer-btn {
+            justify-content: flex-start;
+            text-transform: none;
+            white-space: normal;
+            height: auto !important;
+            min-height: 52px;
+            line-height: 1.5;
+            padding: 12px 16px !important;
+            font-size: 1.05rem;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .answer-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .timer-strip {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .timer-fill {
+            height: 100%;
+            border-radius: 4px;
+            background-color: #1976D2;
+            transition: width 0.1s linear;
+        }
+
+        .combo-chip {
+            animation: ComboPop 0.3s ease;
+        }
+
+        @keyframes ComboPop {
+            0% { transform: scale(0.6); }
+            60% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        .flash-correct {
+            animation: FlashCorrect 0.6s ease;
+        }
+
+        @keyframes FlashCorrect {
+            0% { background-color: transparent; }
+            30% { background-color: rgba(76, 175, 80, 0.35); }
+            100% { background-color: transparent; }
+        }
+
+        .shake-wrong {
+            animation: ShakeWrong 0.5s ease;
+        }
+
+        @keyframes ShakeWrong {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-12px); }
+            40% { transform: translateX(12px); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+
+        .kanji-svg {
+            width: 240px;
+            height: 240px;
+            border: 2px dashed rgba(0, 0, 0, 0.15);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(224, 224, 224, 0.55));
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        @media (max-width: 600px) {
+            .kanji-display {
+                font-size: 6rem;
+            }
+            .kanji-svg {
+                width: 170px;
+                height: 170px;
+            }
+        }
+
+        .reward-celebrate-icon {
+            width: 104px;
+            height: 104px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #fff8e1, #ffe082);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ffc107;
+            box-shadow: 0 8px 24px rgba(255, 193, 7, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <v-app id="App">
+        <template>
+
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Game > Training > Kanji</main-system-bar>
+
+            <v-main id="Main">
+                <div class="kanji-background" aria-hidden="true">
+                    <span v-for="item in FloatChars" :key="item.id" class="kanji-float"
+                        :style="{ left: item.x + '%', top: item.y + '%', fontSize: item.size + 'px', animationDelay: item.delay + 's', animationDuration: item.duration + 's' }">
+                        {{ item.char }}
+                    </span>
+                </div>
+
+                <transition name="Fade_Page">
+                    <v-container v-show="Ready_Page" fluid class="pa-5 kanji-content">
+
+                        <v-row justify="center">
+                            <v-col cols="12" md="9" lg="7">
+
+                                <!-- Setup / Start -->
+                                <v-card v-if="!Playing">
+                                    <v-system-bar>Kanji Training Setup</v-system-bar>
+                                    <v-card-text>
+                                        <div class="text-h6 mb-1">Choose a category</div>
+                                        <p class="text-body-2 mb-4">Select one or more categories of kanji. The correct reading will be asked in multiple choice.</p>
+
+                                        <v-row dense>
+                                            <v-col cols="6" md="4" v-for="cat in Categories" :key="cat.name">
+                                                <v-checkbox :label="`${cat.name} (${cat.items.length})`"
+                                                    v-model="SelectedCategories" :value="cat.name" hide-details class="mt-0"></v-checkbox>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-divider class="my-4"></v-divider>
+
+                                        <v-row dense>
+                                            <v-col cols="6" md="4">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">High Score</div>
+                                                    <div class="text-h6">{{ HighScore }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="4">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Questions</div>
+                                                    <div class="text-h6">{{ QuestionsPerRound }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="12" md="4" class="d-flex align-center">
+                                                <v-select label="Questions" v-model="QuestionsPerRound" outlined hide-details
+                                                    :items="[5, 10, 15, 20]"></v-select>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-alert type="info" outlined dense class="mt-4" v-if="SelectedCategories.length === 0">
+                                            Select at least one category to start.
+                                        </v-alert>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-btn text color="secondary" @click="ShowRewards = true">
+                                            <v-icon left>mdi-trophy-outline</v-icon> Rewards
+                                        </v-btn>
+                                        <v-spacer></v-spacer>
+                                        <v-btn color="primary" large @click="StartGame" :disabled="SelectedCategories.length === 0">
+                                            <v-icon left>mdi-play</v-icon> Start Training
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-card>
+
+                                <!-- Gameplay -->
+                                <v-card v-else :class="[CardFx]">
+                                    <v-system-bar>
+                                        <span>Score: {{ Score }}</span>
+                                        <v-spacer></v-spacer>
+                                        <v-chip small color="amber darken-2" dark class="combo-chip" :key="Combo">
+                                            <v-icon small left>mdi-fire</v-icon>Combo {{ Combo }}
+                                        </v-chip>
+                                    </v-system-bar>
+
+                                    <v-card-text>
+                                        <v-row dense align="center">
+                                            <v-col cols="6" class="text-left">
+                                                <div class="text-caption grey--text">Question {{ QuestionIndex }} / {{ WorkingQuestions.length }}</div>
+                                            </v-col>
+                                            <v-col cols="6" class="text-right">
+                                                <div class="text-caption" :class="TimeLeft <= 3 ? 'red--text font-weight-bold' : 'grey--text'">
+                                                    <v-icon small :color="TimeLeft <= 3 ? 'red' : 'grey'">mdi-timer-outline</v-icon> {{ TimeLeft.toFixed(1) }}s
+                                                </div>
+                                            </v-col>
+                                        </v-row>
+
+                                        <div class="timer-strip mt-2 mb-4">
+                                            <div class="timer-fill" :style="{ width: TimerPercent + '%', backgroundColor: TimerColor }"></div>
+                                        </div>
+
+                                        <v-row justify="center">
+                                            <v-col cols="auto">
+                                                <div class="kanji-svg" :class="[Answered ? (LastCorrect ? 'flash-correct' : 'shake-wrong') : '']">
+                                                    <span class="kanji-display">{{ CurrentQuestion.kanji }}</span>
+                                                </div>
+                                            </v-col>
+                                        </v-row>
+
+                                        <div class="text-center mt-3 mb-4">
+                                            <v-chip small :color="CategoryColor(CurrentQuestion.category)" dark class="mr-2">{{ CurrentQuestion.category }}</v-chip>
+                                            <v-chip v-if="Answered" outlined :color="LastCorrect ? 'green' : 'red'">
+                                                {{ LastCorrect ? 'Correct!' : 'Wrong' }}
+                                            </v-chip>
+                                        </div>
+
+                                        <v-row dense>
+                                            <v-col cols="12" md="6" v-for="(opt, i) in CurrentOptions" :key="i">
+                                                <v-btn block outlined class="answer-btn"
+                                                    :color="OptionColor(opt)"
+                                                    :disabled="Answered"
+                                                    @click="Answer(opt)">
+                                                    {{ opt.reading }}
+                                                </v-btn>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-expand-transition>
+                                            <v-sheet v-if="Answered" class="result-box pa-3 mt-4" outlined rounded>
+                                                <div class="font-weight-bold" :class="LastCorrect ? 'green--text text--darken-2' : 'red--text text--darken-2'">
+                                                    {{ LastCorrect ? 'Correct answer!' : 'Wrong answer' }}
+                                                </div>
+                                                <div class="mt-1"><strong>{{ CurrentQuestion.kanji }}</strong> — {{ CurrentQuestion.reading }}</div>
+                                                <div class="mt-1 text-body-2 grey--text">{{ CurrentQuestion.meaning }}</div>
+                                            </v-sheet>
+                                        </v-expand-transition>
+                                    </v-card-text>
+
+                                    <v-card-actions>
+                                        <v-spacer></v-spacer>
+                                        <template v-if="Answered && QuestionIndex < WorkingQuestions.length">
+                                            <v-btn color="primary" @click="NextQuestion">Next <v-icon right>mdi-arrow-right</v-icon></v-btn>
+                                        </template>
+                                        <template v-else-if="Answered">
+                                            <v-btn color="success" @click="FinishGame">See Results</v-btn>
+                                        </template>
+                                    </v-card-actions>
+                                </v-card>
+
+                                <!-- Results -->
+                                <v-card v-if="Finished" class="mt-4">
+                                    <v-system-bar>Results</v-system-bar>
+                                    <v-card-text>
+                                        <v-row>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Score</div>
+                                                    <div class="text-h6">{{ Score }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Correct</div>
+                                                    <div class="text-h6">{{ CorrectCount }} / {{ WorkingQuestions.length }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Accuracy</div>
+                                                    <div class="text-h6">{{ Accuracy }}%</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Max Combo</div>
+                                                    <div class="text-h6">{{ MaxCombo }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-alert v-if="NewlyEarnedRewards.length" type="success" dense class="mt-4">
+                                            <v-icon left>mdi-gift</v-icon>
+                                            New reward unlocked: {{ NewlyEarnedRewards.map(r => r.name).join(', ') }}!
+                                        </v-alert>
+
+                                        <v-alert v-if="Score === HighScore && Score > 0" type="info" dense class="mt-4">
+                                            <v-icon left>mdi-trophy</v-icon> New high score!
+                                        </v-alert>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-btn text color="secondary" @click="ShowRewards = true">
+                                            <v-icon left>mdi-trophy-outline</v-icon> Rewards
+                                        </v-btn>
+                                        <v-spacer></v-spacer>
+                                        <v-btn text color="primary" @click="ResetGame">Change Category</v-btn>
+                                        <v-btn color="primary" @click="StartGame">Play Again</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+
+                                <!-- Rewards dialog -->
+                                <v-dialog v-model="ShowRewards" max-width="520">
+                                    <v-card>
+                                        <v-system-bar>Rewards</v-system-bar>
+                                        <v-card-text class="pt-4">
+                                            <div class="text-body-2 mb-3">
+                                                <v-icon small left>mdi-chart-bar</v-icon>
+                                                Solved: <strong>{{ TotalSolved }}</strong> kanji
+                                            </div>
+                                            <v-list dense>
+                                                <v-list-item v-for="r in Rewards" :key="r.id">
+                                                    <v-list-item-avatar :color="isRewardEarned(r) ? 'amber lighten-2' : 'grey lighten-2'">
+                                                        <v-icon v-if="isRewardEarned(r)" dark>{{ r.icon }}</v-icon>
+                                                        <span v-else class="font-weight-bold grey--text text-h6">?</span>
+                                                    </v-list-item-avatar>
+                                                    <v-list-item-content>
+                                                        <v-list-item-title :class="isRewardEarned(r) ? '' : 'grey--text'">
+                                                            <span v-if="isRewardEarned(r)">{{ r.name }}</span>
+                                                            <span v-else>???</span>
+                                                        </v-list-item-title>
+                                                        <v-list-item-subtitle>{{ r.desc }}</v-list-item-subtitle>
+                                                    </v-list-item-content>
+                                                    <v-list-item-action>
+                                                        <v-chip small :color="isRewardEarned(r) ? 'green' : 'grey'" dark>{{ r.needed }}</v-chip>
+                                                    </v-list-item-action>
+                                                </v-list-item>
+                                            </v-list>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn color="primary" @click="ShowRewards = false">Close</v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-dialog>
+
+                                <!-- New reward celebration dialog -->
+                                <v-dialog v-model="ShowNewReward" max-width="420" persistent>
+                                    <v-card>
+                                        <v-card-text class="text-center pa-6">
+                                            <div class="reward-celebrate-icon mx-auto mb-3">
+                                                <v-icon size="72" color="amber">mdi-gift</v-icon>
+                                            </div>
+                                            <div class="text-overline font-weight-bold" :class="NewlyEarnedRewards.length ? 'amber--text text--darken-2' : ''">
+                                                Reward Unlocked!
+                                            </div>
+                                            <div class="text-h5 font-weight-bold mt-2" v-for="r in NewlyEarnedRewards" :key="r.id">
+                                                <v-icon left color="amber">{{ r.icon }}</v-icon>{{ r.name }}
+                                            </div>
+                                            <div class="text-body-2 grey--text mt-3">Solved {{ TotalSolved }} kanji in total.</div>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn color="primary" large @click="ShowNewReward = false">Nice!</v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-dialog>
+
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+    <script>
+        const KANJI_DATA = [
+            { kanji: '一', reading: 'ichi', meaning: 'one', category: 'Numbers' },
+            { kanji: '二', reading: 'ni', meaning: 'two', category: 'Numbers' },
+            { kanji: '三', reading: 'san', meaning: 'three', category: 'Numbers' },
+            { kanji: '四', reading: 'yon / shi', meaning: 'four', category: 'Numbers' },
+            { kanji: '五', reading: 'go', meaning: 'five', category: 'Numbers' },
+            { kanji: '六', reading: 'roku', meaning: 'six', category: 'Numbers' },
+            { kanji: '七', reading: 'nana / shichi', meaning: 'seven', category: 'Numbers' },
+            { kanji: '八', reading: 'hachi', meaning: 'eight', category: 'Numbers' },
+            { kanji: '九', reading: 'kyū', meaning: 'nine', category: 'Numbers' },
+            { kanji: '十', reading: 'jū', meaning: 'ten', category: 'Numbers' },
+            { kanji: '百', reading: 'hyaku', meaning: 'hundred', category: 'Numbers' },
+            { kanji: '千', reading: 'sen', meaning: 'thousand', category: 'Numbers' },
+            { kanji: '万', reading: 'man', meaning: 'ten thousand', category: 'Numbers' },
+            { kanji: '円', reading: 'en', meaning: 'yen / circle', category: 'Numbers' },
+            { kanji: '零', reading: 'rei / zero', meaning: 'zero', category: 'Numbers' },
+            { kanji: '半', reading: 'han', meaning: 'half', category: 'Numbers' },
+            { kanji: '億', reading: 'oku', meaning: 'hundred million', category: 'Numbers' },
+            { kanji: '兆', reading: 'chō', meaning: 'trillion', category: 'Numbers' },
+
+            { kanji: '山', reading: 'yama', meaning: 'mountain', category: 'Nature' },
+            { kanji: '川', reading: 'kawa', meaning: 'river', category: 'Nature' },
+            { kanji: '海', reading: 'umi', meaning: 'sea / ocean', category: 'Nature' },
+            { kanji: '空', reading: 'sora', meaning: 'sky', category: 'Nature' },
+            { kanji: '雨', reading: 'ame', meaning: 'rain', category: 'Nature' },
+            { kanji: '雪', reading: 'yuki', meaning: 'snow', category: 'Nature' },
+            { kanji: '火', reading: 'hi', meaning: 'fire', category: 'Nature' },
+            { kanji: '水', reading: 'mizu', meaning: 'water', category: 'Nature' },
+            { kanji: '木', reading: 'ki', meaning: 'tree / wood', category: 'Nature' },
+            { kanji: '花', reading: 'hana', meaning: 'flower', category: 'Nature' },
+            { kanji: '鳥', reading: 'tori', meaning: 'bird', category: 'Nature' },
+            { kanji: '犬', reading: 'inu', meaning: 'dog', category: 'Nature' },
+            { kanji: '風', reading: 'kaze', meaning: 'wind', category: 'Nature' },
+            { kanji: '森', reading: 'mori', meaning: 'forest', category: 'Nature' },
+            { kanji: '石', reading: 'ishi', meaning: 'stone', category: 'Nature' },
+            { kanji: '土', reading: 'tsuchi', meaning: 'soil / earth', category: 'Nature' },
+            { kanji: '草', reading: 'kusa', meaning: 'grass', category: 'Nature' },
+            { kanji: '魚', reading: 'sakana', meaning: 'fish', category: 'Nature' },
+            { kanji: '雲', reading: 'kumo', meaning: 'cloud', category: 'Nature' },
+            { kanji: '星', reading: 'hoshi', meaning: 'star', category: 'Nature' },
+            { kanji: '岩', reading: 'iwa', meaning: 'rock', category: 'Nature' },
+
+            { kanji: '人', reading: 'hito', meaning: 'person', category: 'People' },
+            { kanji: '男', reading: 'otoko', meaning: 'man', category: 'People' },
+            { kanji: '女', reading: 'onna', meaning: 'woman', category: 'People' },
+            { kanji: '子', reading: 'ko', meaning: 'child', category: 'People' },
+            { kanji: '友', reading: 'tomo', meaning: 'friend', category: 'People' },
+            { kanji: '先', reading: 'saki', meaning: 'previous / ahead', category: 'People' },
+            { kanji: '生', reading: 'sei', meaning: 'life / birth', category: 'People' },
+            { kanji: '王', reading: 'ō', meaning: 'king', category: 'People' },
+            { kanji: '医', reading: 'i', meaning: 'medicine / doctor', category: 'People' },
+            { kanji: '自', reading: 'jibun', meaning: 'oneself', category: 'People' },
+            { kanji: '主', reading: 'nushi', meaning: 'master / main', category: 'People' },
+            { kanji: '客', reading: 'kyaku', meaning: 'guest / customer', category: 'People' },
+
+            { kanji: '行', reading: 'iku', meaning: 'to go', category: 'Actions' },
+            { kanji: '来', reading: 'kuru', meaning: 'to come', category: 'Actions' },
+            { kanji: '見', reading: 'miru', meaning: 'to see', category: 'Actions' },
+            { kanji: '聞', reading: 'kiku', meaning: 'to listen / ask', category: 'Actions' },
+            { kanji: '言', reading: 'iu', meaning: 'to say', category: 'Actions' },
+            { kanji: '食', reading: 'taberu', meaning: 'to eat', category: 'Actions' },
+            { kanji: '飲', reading: 'nomu', meaning: 'to drink', category: 'Actions' },
+            { kanji: '書', reading: 'kaku', meaning: 'to write', category: 'Actions' },
+            { kanji: '読', reading: 'yomu', meaning: 'to read', category: 'Actions' },
+            { kanji: '走', reading: 'hashiru', meaning: 'to run', category: 'Actions' },
+            { kanji: '買', reading: 'kau', meaning: 'to buy', category: 'Actions' },
+            { kanji: '会', reading: 'au', meaning: 'to meet', category: 'Actions' },
+            { kanji: '出', reading: 'deru', meaning: 'to go out', category: 'Actions' },
+            { kanji: '入', reading: 'hairu', meaning: 'to enter', category: 'Actions' },
+            { kanji: '立', reading: 'tatsu', meaning: 'to stand', category: 'Actions' },
+            { kanji: '休', reading: 'yasumu', meaning: 'to rest', category: 'Actions' },
+            { kanji: '起', reading: 'okiru', meaning: 'to wake up', category: 'Actions' },
+            { kanji: '寝', reading: 'neru', meaning: 'to sleep', category: 'Actions' },
+            { kanji: '話', reading: 'hanasu', meaning: 'to speak', category: 'Actions' },
+            { kanji: '作', reading: 'tsukuru', meaning: 'to make', category: 'Actions' },
+            { kanji: '住', reading: 'sumu', meaning: 'to live', category: 'Actions' },
+            { kanji: '帰', reading: 'kaeru', meaning: 'to return home', category: 'Actions' },
+            { kanji: '使', reading: 'tsukau', meaning: 'to use', category: 'Actions' },
+            { kanji: '教', reading: 'oshieru', meaning: 'to teach', category: 'Actions' },
+
+            { kanji: '本', reading: 'hon', meaning: 'book', category: 'Objects' },
+            { kanji: '車', reading: 'kuruma', meaning: 'car', category: 'Objects' },
+            { kanji: '電', reading: 'den', meaning: 'electricity', category: 'Objects' },
+            { kanji: '道', reading: 'michi', meaning: 'road / way', category: 'Objects' },
+            { kanji: '門', reading: 'mon', meaning: 'gate', category: 'Objects' },
+            { kanji: '金', reading: 'kin', meaning: 'gold / money', category: 'Objects' },
+            { kanji: '玉', reading: 'tama', meaning: 'ball / jewel', category: 'Objects' },
+            { kanji: '茶', reading: 'cha', meaning: 'tea', category: 'Objects' },
+            { kanji: '米', reading: 'kome', meaning: 'rice', category: 'Objects' },
+            { kanji: '紙', reading: 'kami', meaning: 'paper', category: 'Objects' },
+            { kanji: '服', reading: 'fuku', meaning: 'clothes', category: 'Objects' },
+            { kanji: '靴', reading: 'kutsu', meaning: 'shoes', category: 'Objects' },
+            { kanji: '机', reading: 'tsukue', meaning: 'desk', category: 'Objects' },
+            { kanji: '傘', reading: 'kasa', meaning: 'umbrella', category: 'Objects' },
+            { kanji: '箱', reading: 'hako', meaning: 'box', category: 'Objects' },
+            { kanji: '屋', reading: 'ya', meaning: 'shop / roof', category: 'Objects' },
+
+            { kanji: '年', reading: 'toshi', meaning: 'year', category: 'Time' },
+            { kanji: '月', reading: 'tsuki', meaning: 'month / moon', category: 'Time' },
+            { kanji: '日', reading: 'hi', meaning: 'day / sun', category: 'Time' },
+            { kanji: '時', reading: 'toki', meaning: 'time', category: 'Time' },
+            { kanji: '今', reading: 'ima', meaning: 'now', category: 'Time' },
+            { kanji: '朝', reading: 'asa', meaning: 'morning', category: 'Time' },
+            { kanji: '昼', reading: 'hiru', meaning: 'noon', category: 'Time' },
+            { kanji: '夜', reading: 'yoru', meaning: 'night', category: 'Time' },
+            { kanji: '夕', reading: 'yū', meaning: 'evening', category: 'Time' },
+            { kanji: '毎', reading: 'mai', meaning: 'every', category: 'Time' },
+            { kanji: '分', reading: 'fun', meaning: 'minute', category: 'Time' },
+            { kanji: '週', reading: 'shū', meaning: 'week', category: 'Time' },
+
+            { kanji: '目', reading: 'me', meaning: 'eye', category: 'Body' },
+            { kanji: '耳', reading: 'mimi', meaning: 'ear', category: 'Body' },
+            { kanji: '口', reading: 'kuchi', meaning: 'mouth', category: 'Body' },
+            { kanji: '手', reading: 'te', meaning: 'hand', category: 'Body' },
+            { kanji: '足', reading: 'ashi', meaning: 'leg / foot', category: 'Body' },
+            { kanji: '頭', reading: 'atama', meaning: 'head', category: 'Body' },
+            { kanji: '顔', reading: 'kao', meaning: 'face', category: 'Body' },
+            { kanji: '心', reading: 'kokoro', meaning: 'heart / mind', category: 'Body' },
+            { kanji: '身', reading: 'mi', meaning: 'body', category: 'Body' },
+            { kanji: '鼻', reading: 'hana', meaning: 'nose', category: 'Body' },
+            { kanji: '首', reading: 'kubi', meaning: 'neck', category: 'Body' },
+            { kanji: '血', reading: 'chi', meaning: 'blood', category: 'Body' },
+            { kanji: '毛', reading: 'ke', meaning: 'hair / fur', category: 'Body' },
+
+            { kanji: '父', reading: 'chichi', meaning: 'father', category: 'Family' },
+            { kanji: '母', reading: 'haha', meaning: 'mother', category: 'Family' },
+            { kanji: '兄', reading: 'ani', meaning: 'older brother', category: 'Family' },
+            { kanji: '弟', reading: 'otōto', meaning: 'younger brother', category: 'Family' },
+            { kanji: '姉', reading: 'ane', meaning: 'older sister', category: 'Family' },
+            { kanji: '妹', reading: 'imōto', meaning: 'younger sister', category: 'Family' },
+            { kanji: '夫', reading: 'otto', meaning: 'husband', category: 'Family' },
+            { kanji: '妻', reading: 'tsuma', meaning: 'wife', category: 'Family' },
+            { kanji: '家', reading: 'ie', meaning: 'home / family', category: 'Family' },
+            { kanji: '族', reading: 'zoku', meaning: 'family / tribe', category: 'Family' },
+            { kanji: '親', reading: 'oya', meaning: 'parent', category: 'Family' },
+            { kanji: '祖', reading: 'so', meaning: 'ancestor', category: 'Family' },
+
+            { kanji: '赤', reading: 'aka', meaning: 'red', category: 'Colors' },
+            { kanji: '青', reading: 'ao', meaning: 'blue', category: 'Colors' },
+            { kanji: '白', reading: 'shiro', meaning: 'white', category: 'Colors' },
+            { kanji: '黒', reading: 'kuro', meaning: 'black', category: 'Colors' },
+            { kanji: '緑', reading: 'midori', meaning: 'green', category: 'Colors' },
+            { kanji: '黄', reading: 'kiiro', meaning: 'yellow', category: 'Colors' },
+            { kanji: '紫', reading: 'murasaki', meaning: 'purple', category: 'Colors' },
+            { kanji: '色', reading: 'iro', meaning: 'color', category: 'Colors' },
+            { kanji: '灰', reading: 'hai', meaning: 'gray', category: 'Colors' },
+            { kanji: '橙', reading: 'daidai', meaning: 'orange', category: 'Colors' },
+
+            { kanji: '大', reading: 'ōkii', meaning: 'big', category: 'Adjectives' },
+            { kanji: '小', reading: 'chīsai', meaning: 'small', category: 'Adjectives' },
+            { kanji: '高', reading: 'takai', meaning: 'high / expensive', category: 'Adjectives' },
+            { kanji: '低', reading: 'hikui', meaning: 'low', category: 'Adjectives' },
+            { kanji: '長', reading: 'nagai', meaning: 'long', category: 'Adjectives' },
+            { kanji: '短', reading: 'mijikai', meaning: 'short', category: 'Adjectives' },
+            { kanji: '新', reading: 'atarashii', meaning: 'new', category: 'Adjectives' },
+            { kanji: '古', reading: 'furui', meaning: 'old', category: 'Adjectives' },
+            { kanji: '多', reading: 'ōi', meaning: 'many', category: 'Adjectives' },
+            { kanji: '少', reading: 'sukunai', meaning: 'few', category: 'Adjectives' },
+            { kanji: '早', reading: 'hayai', meaning: 'early / fast', category: 'Adjectives' },
+            { kanji: '遅', reading: 'osoi', meaning: 'late / slow', category: 'Adjectives' },
+            { kanji: '美', reading: 'utsukushii', meaning: 'beautiful', category: 'Adjectives' },
+            { kanji: '強', reading: 'tsuyoi', meaning: 'strong', category: 'Adjectives' },
+            { kanji: '弱', reading: 'yowai', meaning: 'weak', category: 'Adjectives' },
+            { kanji: '安', reading: 'yasui', meaning: 'cheap', category: 'Adjectives' },
+
+            { kanji: '京', reading: 'kyō', meaning: 'capital', category: 'Places' },
+            { kanji: '都', reading: 'to', meaning: 'metropolis', category: 'Places' },
+            { kanji: '市', reading: 'shi', meaning: 'city', category: 'Places' },
+            { kanji: '町', reading: 'machi', meaning: 'town', category: 'Places' },
+            { kanji: '村', reading: 'mura', meaning: 'village', category: 'Places' },
+            { kanji: '国', reading: 'kuni', meaning: 'country', category: 'Places' },
+            { kanji: '場', reading: 'ba', meaning: 'place', category: 'Places' },
+            { kanji: '店', reading: 'mise', meaning: 'shop / store', category: 'Places' },
+            { kanji: '駅', reading: 'eki', meaning: 'station', category: 'Places' },
+            { kanji: '園', reading: 'en', meaning: 'garden / park', category: 'Places' },
+            { kanji: '所', reading: 'tokoro', meaning: 'place / location', category: 'Places' },
+            { kanji: '県', reading: 'ken', meaning: 'prefecture', category: 'Places' },
+
+            { kanji: '学', reading: 'manabu', meaning: 'to study', category: 'School' },
+            { kanji: '校', reading: 'kō', meaning: 'school', category: 'School' },
+            { kanji: '文', reading: 'bun', meaning: 'writing / sentence', category: 'School' },
+            { kanji: '字', reading: 'ji', meaning: 'character / letter', category: 'School' },
+            { kanji: '科', reading: 'ka', meaning: 'subject / section', category: 'School' },
+            { kanji: '室', reading: 'shitsu', meaning: 'room', category: 'School' },
+            { kanji: '員', reading: 'in', meaning: 'member', category: 'School' },
+            { kanji: '語', reading: 'go', meaning: 'language / word', category: 'School' },
+            { kanji: '数', reading: 'kazu', meaning: 'number', category: 'School' },
+            { kanji: '図', reading: 'zu', meaning: 'diagram / picture', category: 'School' },
+            { kanji: '点', reading: 'ten', meaning: 'point', category: 'School' },
+            { kanji: '問', reading: 'toi', meaning: 'question', category: 'School' },
+        ];
+
+        const FLOAT_CHARS = '山川海雨火水木花森日月星人天地春夏秋冬風林火山道場神寺桜富士'.split('');
+
+        new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                Categories: [
+                    { name: 'Numbers', items: [] },
+                    { name: 'Nature', items: [] },
+                    { name: 'People', items: [] },
+                    { name: 'Actions', items: [] },
+                    { name: 'Objects', items: [] },
+                    { name: 'Time', items: [] },
+                    { name: 'Body', items: [] },
+                    { name: 'Family', items: [] },
+                    { name: 'Colors', items: [] },
+                    { name: 'Adjectives', items: [] },
+                    { name: 'Places', items: [] },
+                    { name: 'School', items: [] },
+                ],
+                AllKanji: KANJI_DATA,
+                SelectedCategories: [],
+                QuestionsPerRound: 10,
+                Playing: false,
+                Finished: false,
+                WorkingQuestions: [],
+                CurrentIndex: 0,
+                CurrentOptions: [],
+                Answered: false,
+                LastCorrect: false,
+                SelectedOption: null,
+                Score: 0,
+                Combo: 0,
+                MaxCombo: 0,
+                CorrectCount: 0,
+                TimeLeft: 10,
+                Timer: null,
+                FloatChars: [],
+                HighScore: 0,
+                CardFx: '',
+                SolvedKanji: [],
+                TotalSolved: 0,
+                SolvedAtStart: 0,
+                ShowRewards: false,
+                ShowNewReward: false,
+                Rewards: [
+                    { id: 'first', name: 'First Character', icon: 'mdi-alpha-f-box-outline', desc: 'Solved 5 kanji', needed: 5 },
+                    { id: 'apprentice', name: 'Apprentice', icon: 'mdi-graduation-cap', desc: 'Solved 15 kanji', needed: 15 },
+                    { id: 'hunter', name: 'Kanji Hunter', icon: 'mdi-crosshairs', desc: 'Solved 30 kanji', needed: 30 },
+                    { id: 'century', name: 'Century Club', icon: 'mdi-medal', desc: 'Solved 50 kanji', needed: 50 },
+                    { id: 'stroke', name: 'Stroke Master', icon: 'mdi-pencil', desc: 'Solved 80 kanji', needed: 80 },
+                    { id: 'ink', name: 'Ink Warrior', icon: 'mdi-sword', desc: 'Solved 120 kanji', needed: 120 },
+                    { id: 'sage', name: 'Kanji Sage', icon: 'mdi-crown', desc: 'Solved all kanji', needed: 150 },
+                ],
+            },
+            computed: {
+                CurrentQuestion() {
+                    return this.WorkingQuestions[this.CurrentIndex] || null;
+                },
+                QuestionIndex() {
+                    return this.CurrentIndex + 1;
+                },
+                TimerPercent() {
+                    return (this.TimeLeft / 10) * 100;
+                },
+                TimerColor() {
+                    if (this.TimeLeft > 6) return '#1976D2';
+                    if (this.TimeLeft > 3) return '#FFA000';
+                    return '#D32F2F';
+                },
+                Accuracy() {
+                    if (!this.WorkingQuestions.length) return 0;
+                    return Math.round((this.CorrectCount / this.WorkingQuestions.length) * 100);
+                },
+                EarnedRewards() {
+                    return this.Rewards.filter(r => this.isRewardEarned(r));
+                },
+                NewlyEarnedRewards() {
+                    if (this.Finished) {
+                        return this.Rewards.filter(r => r.needed > this.SolvedAtStart && this.isRewardEarned(r));
+                    }
+                    return [];
+                },
+            },
+            watch: {
+                SelectedCategories() {
+                    this.Categories.forEach(c => {
+                        c.items = this.AllKanji.filter(k => k.category === c.name);
+                    });
+                }
+            },
+            created() {
+                this.Categories.forEach(c => {
+                    c.items = this.AllKanji.filter(k => k.category === c.name);
+                });
+                this.loadHighScore();
+                this.loadSolved();
+                this.buildFloatChars();
+            },
+            beforeDestroy() {
+                this.stopTimer();
+            },
+            methods: {
+                buildFloatChars() {
+                    this.FloatChars = [];
+                    for (let i = 0; i < 16; i++) {
+                        this.FloatChars.push({
+                            id: i,
+                            char: FLOAT_CHARS[Math.floor(Math.random() * FLOAT_CHARS.length)],
+                            x: Math.random() * 95,
+                            y: Math.random() * 90,
+                            size: 40 + Math.random() * 90,
+                            delay: Math.random() * 8,
+                            duration: 9 + Math.random() * 9,
+                        });
+                    }
+                },
+                loadHighScore() {
+                    try {
+                        const v = parseInt(localStorage.getItem('kanji-game-highscore'), 10);
+                        this.HighScore = isNaN(v) ? 0 : v;
+                    } catch (e) {
+                        this.HighScore = 0;
+                    }
+                },
+                saveHighScore() {
+                    if (this.Score > this.HighScore) {
+                        this.HighScore = this.Score;
+                        try {
+                            localStorage.setItem('kanji-game-highscore', this.HighScore.toString());
+                        } catch (e) {}
+                    }
+                },
+                loadSolved() {
+                    try {
+                        const v = JSON.parse(localStorage.getItem('kanji-game-solved')) || [];
+                        this.SolvedKanji = Array.isArray(v) ? v : [];
+                    } catch (e) {
+                        this.SolvedKanji = [];
+                    }
+                    this.TotalSolved = this.SolvedKanji.length;
+                },
+                saveSolved() {
+                    try {
+                        localStorage.setItem('kanji-game-solved', JSON.stringify(this.SolvedKanji));
+                    } catch (e) {}
+                },
+                recordSolved() {
+                    const k = this.CurrentQuestion.kanji;
+                    if (!this.SolvedKanji.includes(k)) {
+                        this.SolvedKanji.push(k);
+                        this.TotalSolved = this.SolvedKanji.length;
+                        this.saveSolved();
+                    }
+                },
+                isRewardEarned(r) {
+                    return this.TotalSolved >= r.needed;
+                },
+                shuffle(arr) {
+                    const out = arr.slice();
+                    for (let i = out.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [out[i], out[j]] = [out[j], out[i]];
+                    }
+                    return out;
+                },
+                categoryColorName(name) {
+                    switch (name) {
+                        case 'Numbers': return 'blue darken-2';
+                        case 'Nature': return 'green darken-2';
+                        case 'People': return 'purple darken-2';
+                        case 'Actions': return 'orange darken-2';
+                        case 'Objects': return 'teal darken-2';
+                        case 'Time': return 'indigo darken-2';
+                        case 'Body': return 'pink darken-2';
+                        case 'Family': return 'deep-orange darken-2';
+                        case 'Colors': return 'cyan darken-2';
+                        case 'Adjectives': return 'brown';
+                        case 'Places': return 'blue-grey darken-1';
+                        case 'School': return 'deep-purple darken-2';
+                        default: return 'grey darken-2';
+                    }
+                },
+                StartGame() {
+                    const candidates = this.AllKanji.filter(k => this.SelectedCategories.includes(k.category));
+                    this.WorkingQuestions = this.shuffle(candidates).slice(0, this.QuestionsPerRound);
+                    this.CurrentIndex = 0;
+                    this.Score = 0;
+                    this.Combo = 0;
+                    this.MaxCombo = 0;
+                    this.CorrectCount = 0;
+                    this.Answered = false;
+                    this.SelectedOption = null;
+                    this.Finished = false;
+                    this.Playing = true;
+                    this.SolvedAtStart = this.TotalSolved;
+                    this.prepareOptions();
+                    this.startTimer();
+                },
+                prepareOptions() {
+                    const q = this.CurrentQuestion;
+                    if (!q) return;
+                    const correct = { reading: q.reading };
+                    const wrongPool = this.AllKanji.filter(k => k.kanji !== q.kanji);
+                    const shuffledPool = this.shuffle(wrongPool);
+                    const wrong = [];
+                    for (let i = 0; i < shuffledPool.length && wrong.length < 3; i++) {
+                        const w = shuffledPool[i];
+                        if (w.reading === q.reading) continue;
+                        const exist = wrong.some(x => x.reading === w.reading);
+                        if (!exist) wrong.push({ reading: w.reading });
+                    }
+                    this.CurrentOptions = this.shuffle([correct, ...wrong]);
+                },
+                startTimer() {
+                    this.stopTimer();
+                    this.TimeLeft = 10;
+                    this.Timer = setInterval(() => {
+                        this.TimeLeft -= 0.1;
+                        if (this.TimeLeft <= 0) {
+                            this.TimeLeft = 0;
+                            this.timeUp();
+                        }
+                    }, 100);
+                },
+                stopTimer() {
+                    if (this.Timer) {
+                        clearInterval(this.Timer);
+                        this.Timer = null;
+                    }
+                },
+                timeUp() {
+                    if (this.Answered) return;
+                    this.Answered = true;
+                    this.LastCorrect = false;
+                    this.Combo = 0;
+                    this.CardFx = 'shake-wrong';
+                    this.stopTimer();
+                },
+                Answer(opt) {
+                    if (this.Answered) return;
+                    this.Answered = true;
+                    this.stopTimer();
+                    this.SelectedOption = opt;
+                    const q = this.CurrentQuestion;
+                    const isCorrect = opt.reading === q.reading;
+                    this.LastCorrect = isCorrect;
+                    if (isCorrect) {
+                        this.Combo += 1;
+                        this.MaxCombo = Math.max(this.MaxCombo, this.Combo);
+                        this.CorrectCount += 1;
+                        this.Score += (10 * this.Combo) + Math.ceil(this.TimeLeft);
+                        this.recordSolved();
+                        this.CardFx = 'flash-correct';
+                    } else {
+                        this.Combo = 0;
+                        this.CardFx = 'shake-wrong';
+                    }
+                },
+                NextQuestion() {
+                    this.CurrentIndex += 1;
+                    this.Answered = false;
+                    this.SelectedOption = null;
+                    this.CardFx = '';
+                    this.prepareOptions();
+                    this.startTimer();
+                },
+                FinishGame() {
+                    this.stopTimer();
+                    this.saveHighScore();
+                    this.Playing = false;
+                    this.Finished = true;
+                    if (this.NewlyEarnedRewards.length) {
+                        this.$nextTick(() => {
+                            this.ShowNewReward = true;
+                        });
+                    }
+                },
+                ResetGame() {
+                    this.stopTimer();
+                    this.Playing = false;
+                    this.Finished = false;
+                    this.CardFx = '';
+                },
+                OptionColor(opt) {
+                    if (!this.Answered) return '';
+                    const correctReading = this.CurrentQuestion.reading;
+                    const isCorrectOpt = opt.reading === correctReading;
+                    const isPickedWrong = (this.CurrentOptions.find(o => o.reading === correctReading) !== opt);
+                    const wasPicked = this.SelectedOption && this.SelectedOption.reading === opt.reading;
+                    if (isCorrectOpt) return 'green';
+                    if (this.LastCorrect === false && wasPicked) return 'red';
+                    return '';
+                },
+                CategoryColor(name) {
+                    return this.categoryColorName(name);
+                },
+            }
+        });
+    </script>
+
+</body>
+
+</html>

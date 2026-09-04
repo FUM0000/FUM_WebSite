@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+    <link href="../../Asset/CSS/Learning.css?v=1.0" rel="stylesheet" />
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <title>Geography Game</title>
+    <meta name="robots" content="index, follow">
+
+    <style>
+        .geo-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .japan-map {
+            width: 100%;
+            max-width: 460px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            user-select: none;
+        }
+
+        #map {
+            width: 95%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        #map path {
+            cursor: pointer;
+            transition: fill 0.2s ease;
+        }
+
+        #map path:hover {
+            filter: brightness(1.15);
+        }
+
+        .geo-display-name {
+            font-size: 2.4rem;
+            font-weight: 700;
+            line-height: 1.1;
+            color: #1a1a1a;
+            text-align: center;
+        }
+
+        .answer-btn {
+            justify-content: flex-start;
+            text-transform: none;
+            white-space: normal;
+            height: auto !important;
+            min-height: 52px;
+            line-height: 1.45;
+            padding: 12px 16px !important;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .answer-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .flash-correct {
+            animation: GFlashCorrect 0.6s ease;
+        }
+        @keyframes GFlashCorrect {
+            0% { background-color: transparent; }
+            30% { background-color: rgba(76, 175, 80, 0.35); }
+            100% { background-color: transparent; }
+        }
+
+        .shake-wrong {
+            animation: GShakeWrong 0.5s ease;
+        }
+        @keyframes GShakeWrong {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-12px); }
+            40% { transform: translateX(12px); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+
+        .detail-chip {
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 600px) {
+            .geo-display-name { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <v-app id="App">
+        <template>
+
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Game > Training > Geography</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container v-show="Ready_Page" fluid class="pa-5 geo-content">
+
+                        <v-row justify="center">
+                            <v-col cols="12" md="9" lg="7">
+
+                                <!-- Setup -->
+                                <v-card v-if="!Playing">
+                                    <v-system-bar>Geography Training Setup</v-system-bar>
+                                    <v-card-text>
+                                        <div class="text-h6 mb-1">Choose a quiz mode</div>
+                                        <p class="text-body-2 mb-4">Test your knowledge of the 47 prefectures of Japan.</p>
+
+                                        <v-radio-group v-model="Mode" row>
+                                            <v-radio label="Name the Prefecture" value="prefecture"></v-radio>
+                                            <v-radio label="Capital City" value="capital"></v-radio>
+                                        </v-radio-group>
+
+                                        <v-divider class="my-3"></v-divider>
+
+                                        <div class="text-h6 mb-2">Difficulty</div>
+                                        <v-btn-toggle v-model="Difficulty" mandatory>
+                                            <v-btn value="easy" small>Easy</v-btn>
+                                            <v-btn value="normal" small>Normal</v-btn>
+                                            <v-btn value="hard" small>Hard</v-btn>
+                                        </v-btn-toggle>
+
+                                        <div class="text-caption grey--text mt-3">
+                                            <template v-if="Difficulty === 'easy'">3 answer choices, no timer.</template>
+                                            <template v-else-if="Difficulty === 'normal'">4 answer choices, 15 second timer.</template>
+                                            <template v-else>4 answer choices, 8 second timer, points near famous products.</template>
+                                        </div>
+
+                                        <v-divider class="my-3"></v-divider>
+
+                                        <v-row dense>
+                                            <v-col cols="6" md="4">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">High Score</div>
+                                                    <div class="text-h6">{{ HighScore }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="4">
+                                                <v-select label="Questions" v-model="QuestionsPerRound" outlined hide-details
+                                                    :items="[5, 10, 15, 20]"></v-select>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-spacer></v-spacer>
+                                        <v-btn color="primary" large @click="StartGame">
+                                            <v-icon left>mdi-play</v-icon> Start Quiz
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-card>
+
+                                <!-- Gameplay -->
+                                <v-card v-else :class="[CardFx]">
+                                    <v-system-bar>
+                                        <span>Score: {{ Score }}</span>
+                                        <v-spacer></v-spacer>
+                                        <v-chip small :color="DifficultyColor" dark>
+                                            <v-icon small left>mdi-chart-line</v-icon>{{ DifficultyLabel }}
+                                        </v-chip>
+                                    </v-system-bar>
+
+                                    <v-card-text>
+                                        <v-row dense align="center">
+                                            <v-col cols="6" class="text-left">
+                                                <div class="text-caption grey--text">Question {{ QuestionIndex }} / {{ WorkingQuestions.length }}</div>
+                                            </v-col>
+                                            <v-col cols="6" class="text-right">
+                                                <div v-if="HasTimer" class="text-caption" :class="TimeLeft <= Math.max(1, TimeLimit * 0.3) ? 'red--text font-weight-bold' : 'grey--text'">
+                                                    <v-icon small :color="TimeLeft <= Math.max(1, TimeLimit * 0.3) ? 'red' : 'grey'">mdi-timer-outline</v-icon> {{ TimeLeftDisplay }}s
+                                                </div>
+                                            </v-col>
+                                        </v-row>
+
+                                        <div v-if="HasTimer" class="timer-strip mt-2 mb-4" style="height: 8px; border-radius: 4px; background-color: #e0e0e0; overflow: hidden;">
+                                            <div class="timer-fill" style="height: 100%; border-radius: 4px; transition: width 0.1s linear;"
+                                                :style="{ width: TimerPercent + '%', backgroundColor: TimerColor }"></div>
+                                        </div>
+
+                                        <v-row>
+                                            <v-col cols="12" md="5" class="text-center">
+                                                <div id="geo-map-container" v-html="SvgContent"></div>
+                                            </v-col>
+
+                                            <v-col cols="12" md="7">
+                                                <div v-if="Mode === 'prefecture'" class="geo-display-name mb-2">
+                                                    Which prefecture is this?
+                                                </div>
+                                                <div v-else class="geo-display-name mb-2">
+                                                    {{ CurrentQuestion ? CurrentQuestion.name : '' }}
+                                                </div>
+
+                                                <div class="text-center mb-3">
+                                                    <v-chip small :color="CurrentQuestion ? RegionColor(CurrentQuestion.region) : 'grey'" dark>
+                                                        {{ CurrentQuestion ? CurrentQuestion.region + ' Region' : '' }}
+                                                    </v-chip>
+                                                    <v-chip v-if="Answered" outlined :color="LastCorrect ? 'green' : 'red'" class="ml-2">
+                                                        {{ LastCorrect ? 'Correct!' : 'Wrong' }}
+                                                    </v-chip>
+                                                </div>
+
+                                                <v-row dense>
+                                                    <v-col cols="12" md="6" v-for="(opt, i) in CurrentOptions" :key="i">
+                                                        <v-btn block outlined class="answer-btn"
+                                                            :color="OptionColor(opt)"
+                                                            :disabled="Answered"
+                                                            @click="Answer(opt)">
+                                                            {{ Mode === 'prefecture' ? opt.name : opt.capital }}
+                                                        </v-btn>
+                                                    </v-col>
+                                                </v-row>
+
+                                                <v-expand-transition>
+                                                    <v-sheet v-if="Answered" class="result-box pa-3 mt-4" outlined rounded>
+                                                        <div class="font-weight-bold" :class="LastCorrect ? 'green--text text--darken-2' : 'red--text text--darken-2'">
+                                                            {{ LastCorrect ? 'Correct!' : 'Wrong' }}
+                                                        </div>
+                                                        <div class="mt-1" v-if="Mode === 'capital'">
+                                                            The capital of <strong>{{ CurrentQuestion.name }}</strong> is <strong>{{ CurrentQuestion.capital }}</strong>.
+                                                        </div>
+                                                        <div class="mt-1" v-else>
+                                                            This is <strong>{{ CurrentQuestion.name }}</strong>, capital <strong>{{ CurrentQuestion.capital }}</strong>.
+                                                        </div>
+                                                        <div class="mt-1 text-body-2 grey--text">
+                                                            <v-icon small>mdi-basket-outline</v-icon> Famous: {{ CurrentQuestion.famous }}
+                                                        </div>
+                                                    </v-sheet>
+                                                </v-expand-transition>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+
+                                    <v-card-actions>
+                                        <v-spacer></v-spacer>
+                                        <template v-if="Answered && QuestionIndex < WorkingQuestions.length">
+                                            <v-btn color="primary" @click="NextQuestion">Next <v-icon right>mdi-arrow-right</v-icon></v-btn>
+                                        </template>
+                                        <template v-else-if="Answered">
+                                            <v-btn color="success" @click="FinishGame">See Results</v-btn>
+                                        </template>
+                                    </v-card-actions>
+                                </v-card>
+
+                                <!-- Results -->
+                                <v-card v-if="Finished" class="mt-4">
+                                    <v-system-bar>Results</v-system-bar>
+                                    <v-card-text>
+                                        <v-row>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Score</div>
+                                                    <div class="text-h6">{{ Score }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Correct</div>
+                                                    <div class="text-h6">{{ CorrectCount }} / {{ WorkingQuestions.length }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Accuracy</div>
+                                                    <div class="text-h6">{{ Accuracy }}%</div>
+                                                </v-sheet>
+                                            </v-col>
+                                            <v-col cols="6" md="3">
+                                                <v-sheet outlined rounded class="pa-3 text-center">
+                                                    <div class="text-caption">Max Combo</div>
+                                                    <div class="text-h6">{{ MaxCombo }}</div>
+                                                </v-sheet>
+                                            </v-col>
+                                        </v-row>
+
+                                        <v-alert v-if="Score === HighScore && Score > 0" type="success" dense class="mt-4">
+                                            <v-icon left>mdi-trophy</v-icon> New high score!
+                                        </v-alert>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-spacer></v-spacer>
+                                        <v-btn text color="primary" @click="ResetGame">Change Settings</v-btn>
+                                        <v-btn color="primary" @click="StartGame">Play Again</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+    <script>
+        const PREFECTURES = [
+            { id: 'hokkaido', name: 'Hokkaido', capital: 'Sapporo', region: 'Hokkaido', famous: 'Lavender, dairy, seafood' },
+            { id: 'aomori', name: 'Aomori', capital: 'Aomori', region: 'Tohoku', famous: 'Apples' },
+            { id: 'iwate', name: 'Iwate', capital: 'Morioka', region: 'Tohoku', famous: 'Wanko soba' },
+            { id: 'akita', name: 'Akita', capital: 'Akita', region: 'Tohoku', famous: 'Akita dogs, sake' },
+            { id: 'miyagi', name: 'Miyagi', capital: 'Sendai', region: 'Tohoku', famous: 'Zunda mochi' },
+            { id: 'yamagata', name: 'Yamagata', capital: 'Yamagata', region: 'Tohoku', famous: 'Cherries, onsen' },
+            { id: 'fukushima', name: 'Fukushima', capital: 'Fukushima', region: 'Tohoku', famous: 'Peaches, nuclear power' },
+            { id: 'niigata', name: 'Niigata', capital: 'Niigata', region: 'Chubu', famous: 'Rice, sake' },
+            { id: 'toyama', name: 'Toyama', capital: 'Toyama', region: 'Chubu', famous: 'Glasses, medicine' },
+            { id: 'ishikawa', name: 'Ishikawa', capital: 'Kanazawa', region: 'Chubu', famous: 'Gold leaf, Kaga cuisine' },
+            { id: 'fukui', name: 'Fukui', capital: 'Fukui', region: 'Chubu', famous: 'Echizen crab, dinosaur museum' },
+            { id: 'yamanashi', name: 'Yamanashi', capital: 'Kofu', region: 'Chubu', famous: 'Grapes, Mt. Fuji' },
+            { id: 'nagano', name: 'Nagano', capital: 'Nagano', region: 'Chubu', famous: 'Apples, onsen, ski' },
+            { id: 'gifu', name: 'Gifu', capital: 'Gifu', region: 'Chubu', famous: 'Hida beef, cormorant fishing' },
+            { id: 'shizuoka', name: 'Shizuoka', capital: 'Shizuoka', region: 'Chubu', famous: 'Green tea, Fuji, eel' },
+            { id: 'aichi', name: 'Aichi', capital: 'Nagoya', region: 'Chubu', famous: 'Toyota, miso katsu' },
+            { id: 'mie', name: 'Mie', capital: 'Tsu', region: 'Kinki', famous: 'Ise shrimp, pearl' },
+            { id: 'shiga', name: 'Shiga', capital: 'Otsu', region: 'Kinki', famous: 'Shiga most famous: Biwa Lake' },
+            { id: 'kyoto', name: 'Kyoto', capital: 'Kyoto', region: 'Kinki', famous: 'Temples, matcha' },
+            { id: 'osaka', name: 'Osaka', capital: 'Osaka', region: 'Kinki', famous: 'Takoyaki, okonomiyaki' },
+            { id: 'nara', name: 'Nara', capital: 'Nara', region: 'Kinki', famous: 'Deer, Great Buddha' },
+            { id: 'wakayama', name: 'Wakayama', capital: 'Wakayama', region: 'Kinki', famous: 'Mikan (tangerines), Kumano' },
+            { id: 'hyogo', name: 'Hyogo', capital: 'Kobe', region: 'Kinki', famous: 'Kobe beef, Himeji castle' },
+            { id: 'tottori', name: 'Tottori', capital: 'Tottori', region: 'Chugoku', famous: 'Sand dunes, pear' },
+            { id: 'shimane', name: 'Shimane', capital: 'Matsue', region: 'Chugoku', famous: 'Izumo Taisha shrine' },
+            { id: 'okayama', name: 'Okayama', capital: 'Okayama', region: 'Chugoku', famous: 'Momo (peach), Korakuen' },
+            { id: 'hiroshima', name: 'Hiroshima', capital: 'Hiroshima', region: 'Chugoku', famous: 'Okonomiyaki, Peace Memorial' },
+            { id: 'yamaguchi', name: 'Yamaguchi', capital: 'Yamaguchi', region: 'Chugoku', famous: 'Fugu (blowfish)' },
+            { id: 'tokushima', name: 'Tokushima', capital: 'Tokushima', region: 'Shikoku', famous: 'Awa odori dance' },
+            { id: 'kagawa', name: 'Kagawa', capital: 'Takamatsu', region: 'Shikoku', famous: 'Sanuki udon' },
+            { id: 'ehime', name: 'Ehime', capital: 'Matsuyama', region: 'Shikoku', famous: 'Mikan (mandarin) oranges' },
+            { id: 'kochi', name: 'Kochi', capital: 'Kochi', region: 'Shikoku', famous: 'Katsuo (bonito)' },
+            { id: 'fukuoka', name: 'Fukuoka', capital: 'Fukuoka', region: 'Kyushu', famous: 'Tonkotsu ramen, yatai' },
+            { id: 'saga', name: 'Saga', capital: 'Saga', region: 'Kyushu', famous: 'Ceramics, squid' },
+            { id: 'nagasaki', name: 'Nagasaki', capital: 'Nagasaki', region: 'Kyushu', famous: 'Champon, church' },
+            { id: 'kumamoto', name: 'Kumamoto', capital: 'Kumamoto', region: 'Kyushu', famous: 'Aso volcano, Kumamon' },
+            { id: 'oita', name: 'Oita', capital: 'Oita', region: 'Kyushu', famous: 'Crab, onsen (Beppu)' },
+            { id: 'miyazaki', name: 'Miyazaki', capital: 'Miyazaki', region: 'Kyushu', famous: 'Mango, pleasant climate' },
+            { id: 'kagoshima', name: 'Kagoshima', capital: 'Kagoshima', region: 'Kyushu', famous: 'Sweet potato shochu, Sakurajima' },
+            { id: 'okinawa', name: 'Okinawa', capital: 'Naha', region: 'Okinawa', famous: 'Sea, Shurijo castle, awamori' },
+            { id: 'saitama', name: 'Saitama', capital: 'Saitama', region: 'Kanto', famous: 'Sweet potato, close to Tokyo' },
+            { id: 'gumma', name: 'Gumma', capital: 'Maebashi', region: 'Kanto', famous: 'Onsen, soba' },
+            { id: 'tochigi', name: 'Tochigi', capital: 'Utsunomiya', region: 'Kanto', famous: 'Gyoza, Nikko' },
+            { id: 'ibaraki', name: 'Ibaraki', capital: 'Mito', region: 'Kanto', famous: 'Natto, Hitachi seaside park' },
+            { id: 'chiba', name: 'Chiba', capital: 'Chiba', region: 'Kanto', famous: 'Disneyland, peanuts' },
+            { id: 'tokyo', name: 'Tokyo', capital: 'Tokyo', region: 'Kanto', famous: 'Capital, skyscrapers' },
+            { id: 'kanagawa', name: 'Kanagawa', capital: 'Yokohama', region: 'Kanto', famous: 'Yokohama, Kamakura' },
+        ];
+
+        const REGION_COLORS = {
+            'Hokkaido': '#B3E5FC',
+            'Tohoku': '#C8E6C9',
+            'Chubu': '#FFF9C4',
+            'Kanto': '#FFE0B2',
+            'Kinki': '#F8BBD0',
+            'Chugoku': '#DCEDC8',
+            'Shikoku': '#D1C4E9',
+            'Kyushu': '#B2DFDB',
+            'Okinawa': '#FFCCBC',
+        };
+
+        new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                Prefectures: PREFECTURES,
+                Mode: 'prefecture',
+                Difficulty: 'normal',
+                QuestionsPerRound: 10,
+                Playing: false,
+                Finished: false,
+                WorkingQuestions: [],
+                CurrentIndex: 0,
+                CurrentOptions: [],
+                Answered: false,
+                LastCorrect: false,
+                SelectedOption: null,
+                Score: 0,
+                Combo: 0,
+                MaxCombo: 0,
+                CorrectCount: 0,
+                TimeLeft: 15,
+                Timer: null,
+                HighScore: 0,
+                CardFx: '',
+                Hovered: null,
+                SvgContent: '',
+            },
+            computed: {
+                CurrentQuestion() {
+                    return this.WorkingQuestions[this.CurrentIndex] || null;
+                },
+                QuestionIndex() {
+                    return this.CurrentIndex + 1;
+                },
+                TimeLimit() {
+                    return this.Difficulty === 'easy' ? 0 : (this.Difficulty === 'normal' ? 15 : 8);
+                },
+                HasTimer() {
+                    return this.TimeLimit > 0;
+                },
+                TimerPercent() {
+                    if (!this.HasTimer) return 100;
+                    return (this.TimeLeft / this.TimeLimit) * 100;
+                },
+                TimerColor() {
+                    if (!this.HasTimer) return '#1976D2';
+                    if (this.TimeLeft > this.TimeLimit * 0.6) return '#1976D2';
+                    if (this.TimeLeft > this.TimeLimit * 0.3) return '#FFA000';
+                    return '#D32F2F';
+                },
+                DifficultyLabel() {
+                    if (this.Difficulty === 'easy') return 'Easy';
+                    if (this.Difficulty === 'normal') return 'Normal';
+                    return 'Hard';
+                },
+                DifficultyColor() {
+                    if (this.Difficulty === 'easy') return 'green darken-1';
+                    if (this.Difficulty === 'normal') return 'orange darken-2';
+                    return 'red darken-2';
+                },
+                Accuracy() {
+                    if (!this.WorkingQuestions.length) return 0;
+                    return Math.round((this.CorrectCount / this.WorkingQuestions.length) * 100);
+                },
+                TimeLeftDisplay() {
+                    return this.TimeLeft.toFixed(1);
+                },
+            },
+            created() {
+                this.loadHighScore();
+            },
+            beforeDestroy() {
+                this.stopTimer();
+            },
+            methods: {
+                loadHighScore() {
+                    try {
+                        const v = parseInt(localStorage.getItem('geo-game-highscore'), 10);
+                        this.HighScore = isNaN(v) ? 0 : v;
+                    } catch (e) {
+                        this.HighScore = 0;
+                    }
+                },
+                saveHighScore() {
+                    if (this.Score > this.HighScore) {
+                        this.HighScore = this.Score;
+                        try {
+                            localStorage.setItem('geo-game-highscore', this.HighScore.toString());
+                        } catch (e) {}
+                    }
+                },
+                shuffle(arr) {
+                    const out = arr.slice();
+                    for (let i = out.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [out[i], out[j]] = [out[j], out[i]];
+                    }
+                    return out;
+                },
+                RegionColor(region) {
+                    return { backgroundColor: REGION_COLORS[region] || '#90A4AE', color: '#1a1a1a' };
+                },
+                loadSVG() {
+                    return fetch('../../Asset/Image/Japan_Life/Japan_1.svg')
+                        .then(response => {
+                            if (!response.ok) throw new Error('SVG file not found.');
+                            return response.text();
+                        })
+                        .then(text => {
+                            this.SvgContent = text;
+                            this.$nextTick(() => {
+                                this.bindMapEvents();
+                                this.updateMapState();
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Failed to load SVG:', error);
+                            this.SvgContent = '<p>Could not load map.</p>';
+                        });
+                },
+                getMapEl() {
+                    const container = document.getElementById('geo-map-container');
+                    return container ? container.querySelector('svg') : null;
+                },
+                mapGroupId(p) {
+                    return (p.name === 'Gumma' ? 'Gunma' : p.name) + '_group';
+                },
+                bindMapEvents() {
+                    const svg = this.getMapEl();
+                    if (!svg) return;
+                    this.Prefectures.forEach(p => {
+                        const group = svg.querySelector('#' + this.mapGroupId(p));
+                        if (!group) return;
+                        group.style.cursor = 'pointer';
+                        group.addEventListener('mouseenter', () => { this.Hovered = p.id; });
+                        group.addEventListener('mouseleave', () => { this.Hovered = null; });
+                        group.addEventListener('click', () => { this.Preview(p); });
+                    });
+                },
+                updateMapState() {
+                    const svg = this.getMapEl();
+                    if (!svg) return;
+                    this.Prefectures.forEach(p => {
+                        const group = svg.querySelector('#' + this.mapGroupId(p));
+                        if (!group) return;
+                        const isCurrent = !!this.CurrentQuestion && this.CurrentQuestion.id === p.id;
+                        if (!this.Answered && isCurrent) {
+                            group.querySelectorAll('path').forEach(path => {
+                                path.setAttribute('fill', '#FFC107');
+                                path.setAttribute('stroke', '#1976D2');
+                                path.setAttribute('stroke-width', '2');
+                            });
+                        } else if (this.Answered && isCurrent) {
+                            const color = this.LastCorrect ? '#66BB6A' : '#E53935';
+                            group.querySelectorAll('path').forEach(path => {
+                                path.setAttribute('fill', color);
+                                path.setAttribute('stroke', '#ffffff');
+                                path.setAttribute('stroke-width', '1');
+                            });
+                        } else {
+                            group.querySelectorAll('path').forEach(path => {
+                                path.setAttribute('fill', REGION_COLORS[p.region] || '#90A4AE');
+                                path.setAttribute('stroke', '#ffffff');
+                                path.setAttribute('stroke-width', '0.6');
+                            });
+                        }
+                    });
+                },
+                StartGame() {
+                    const candidates = this.shuffle(this.Prefectures);
+                    this.WorkingQuestions = candidates.slice(0, this.QuestionsPerRound);
+                    this.CurrentIndex = 0;
+                    this.Score = 0;
+                    this.Combo = 0;
+                    this.MaxCombo = 0;
+                    this.CorrectCount = 0;
+                    this.Answered = false;
+                    this.SelectedOption = null;
+                    this.Finished = false;
+                    this.Playing = true;
+                    this.prepareOptions();
+                    if (!this.SvgContent) {
+                        this.loadSVG();
+                    } else {
+                        this.updateMapState();
+                    }
+                    this.startTimer();
+                },
+                prepareOptions() {
+                    const q = this.CurrentQuestion;
+                    if (!q) return;
+                    const correct = q;
+                    const answerValue = this.Mode === 'capital' ? q.capital : q.name;
+                    const wrongPool = this.shuffle(this.Prefectures.filter(p => p.id !== q.id));
+                    const wrong = [];
+                    for (let i = 0; i < wrongPool.length && wrong.length < (this.Difficulty === 'easy' ? 2 : 3); i++) {
+                        const val = this.Mode === 'capital' ? wrongPool[i].capital : wrongPool[i].name;
+                        const existing = wrong.some(x => (this.Mode === 'capital' ? x.capital : x.name) === val);
+                        if (!existing && val !== answerValue) wrong.push(wrongPool[i]);
+                    }
+                    this.CurrentOptions = this.shuffle([correct, ...wrong]);
+                },
+                startTimer() {
+                    this.stopTimer();
+                    if (!this.HasTimer) return;
+                    this.TimeLeft = this.TimeLimit;
+                    this.Timer = setInterval(() => {
+                        this.TimeLeft -= 0.1;
+                        if (this.TimeLeft <= 0) {
+                            this.TimeLeft = 0;
+                            this.timeUp();
+                        }
+                    }, 100);
+                },
+                stopTimer() {
+                    if (this.Timer) {
+                        clearInterval(this.Timer);
+                        this.Timer = null;
+                    }
+                },
+                timeUp() {
+                    if (this.Answered) return;
+                    this.Answered = true;
+                    this.LastCorrect = false;
+                    this.Combo = 0;
+                    this.CardFx = 'shake-wrong';
+                    this.stopTimer();
+                    this.updateMapState();
+                },
+                Preview(p) {
+                    if (!this.Playing) return;
+                    if (this.CurrentQuestion && this.CurrentQuestion.id === p.id) return;
+                    this.Hovered = p.id;
+                },
+                Answer(opt) {
+                    if (this.Answered) return;
+                    this.Answered = true;
+                    this.stopTimer();
+                    this.SelectedOption = opt;
+                    const q = this.CurrentQuestion;
+                    const answerValue = this.Mode === 'capital' ? q.capital : q.name;
+                    const picked = this.Mode === 'capital' ? opt.capital : opt.name;
+                    const isCorrect = picked === answerValue;
+                    this.LastCorrect = isCorrect;
+                    if (isCorrect) {
+                        this.Combo += 1;
+                        this.MaxCombo = Math.max(this.MaxCombo, this.Combo);
+                        this.CorrectCount += 1;
+                        let timeBonus = 0;
+                        if (this.HasTimer) timeBonus = Math.ceil(this.TimeLeft);
+                        this.Score += (10 * this.Combo) + timeBonus + (this.Difficulty === 'hard' ? 5 : 0);
+                        this.CardFx = 'flash-correct';
+                    } else {
+                        this.Combo = 0;
+                        this.CardFx = 'shake-wrong';
+                    }
+                    this.updateMapState();
+                },
+                NextQuestion() {
+                    this.CurrentIndex += 1;
+                    this.Answered = false;
+                    this.SelectedOption = null;
+                    this.CardFx = '';
+                    this.prepareOptions();
+                    this.updateMapState();
+                    this.startTimer();
+                },
+                FinishGame() {
+                    this.stopTimer();
+                    this.saveHighScore();
+                    this.Playing = false;
+                    this.Finished = true;
+                },
+                ResetGame() {
+                    this.stopTimer();
+                    this.Playing = false;
+                    this.Finished = false;
+                    this.CardFx = '';
+                },
+                OptionColor(opt) {
+                    if (!this.Answered) return '';
+                    const q = this.CurrentQuestion;
+                    if (this.Mode === 'capital') {
+                        if (opt.capital === q.capital) return 'green';
+                        if (this.LastCorrect === false && this.SelectedOption && this.SelectedOption.capital === opt.capital) return 'red';
+                        return '';
+                    }
+                    if (opt.name === q.name) return 'green';
+                    if (this.LastCorrect === false && this.SelectedOption && this.SelectedOption.name === opt.name) return 'red';
+                    return '';
+                },
+            },
+        });
+    </script>
+
+</body>
+
+</html>

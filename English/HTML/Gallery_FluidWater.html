@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="../../Asset/CSS/Game.css" rel="stylesheet" />
+    <title>Water Simulation</title>
+    <meta name="robots" content="index, follow">
+</head>
+<body>
+    <div id="Joystick_Left" class="Joystick_Area"></div>
+    <div id="Joystick_Right" class="Joystick_Area"></div>
+    <div id="Fade_Game"></div>
+    <canvas id="Canvas"></canvas>
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            background: #04070d !important;
+            overflow: hidden !important;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            touch-action: none;
+        }
+
+        #Canvas {
+            position: fixed;
+            inset: 0;
+            display: block;
+            background: transparent;
+            z-index: 0;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .Joystick_Area {
+            position: fixed;
+            top: 0;
+            height: 100%;
+            z-index: 10;
+            touch-action: none;
+            pointer-events: none;
+        }
+
+        #Joystick_Left {
+            left: 0;
+            width: 100%;
+        }
+
+        #Joystick_Right {
+            right: 0;
+            width: 100%;
+        }
+
+        #Fade_Game {
+            background-color: #0a1018;
+        }
+
+        #HUD {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+
+        .hud-button {
+            pointer-events: auto;
+            min-width: 128px;
+            padding: 10px 16px;
+            border: 1px solid rgba(215, 215, 215, 0.55);
+            border-radius: 8px;
+            background: rgba(8, 16, 28, 0.72);
+            color: #eeeeee;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-align: center;
+            text-decoration: none;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .hud-button:hover {
+            background: rgba(30, 48, 74, 0.85);
+            color: #ffffff;
+        }
+
+        .hud-button:active {
+            transform: translateY(1px);
+        }
+
+        #Rain_Toggle.is-on {
+            border-color: rgba(130, 200, 255, 0.85);
+            color: #a8dcff;
+        }
+
+        #Hint {
+            position: fixed;
+            bottom: 16px;
+            left: 0;
+            width: 100%;
+            z-index: 15;
+            text-align: center;
+            color: rgba(180, 210, 235, 0.55);
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            pointer-events: none;
+            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+
+    <div id="HUD">
+        <a class="hud-button" href="index.html">HOME</a>
+        <button id="Rain_Toggle" class="hud-button" type="button">Rain : OFF</button>
+    </div>
+    <div id="Hint">CLICK / DRAG : add water &amp; create waves</div>
+
+    <script>
+        const canvas = document.getElementById('Canvas');
+        const ctx = canvas.getContext('2d');
+
+        const GRID_W = 120;
+        const GRID_H = 80;
+        const CELL_W = 12;
+        const CELL_H = 12;
+
+        let terrain = new Float32Array(GRID_W * GRID_H);
+        let water = new Float32Array(GRID_W * GRID_H);
+        let velocity = new Float32Array(GRID_W * GRID_H);
+        let prevWater = new Float32Array(GRID_W * GRID_H);
+        let temp = new Float32Array(GRID_W * GRID_H);
+
+        const DRAIN = -7000;
+        const TERRAIN_TOP = 22;
+        const WATER_MAX = 90;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx.imageSmoothingEnabled = true;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        function buildTerrain() {
+            terrain.fill(0);
+            const cx = GRID_W / 2;
+            const cy = GRID_H / 2;
+
+            for (let gy = 0; gy < GRID_H; gy++) {
+                for (let gx = 0; gx < GRID_W; gx++) {
+                    let t = TERRAIN_TOP;
+                    const dx = (gx - cx) / GRID_W;
+                    const dy = (gy - cy) / GRID_H;
+                    const dist = Math.hypot(dx, dy);
+                    t += Math.sin(gx * 0.18 + 2.0) * 2.4;
+                    t += Math.sin(gy * 0.22 + 0.7) * 2.2;
+                    if (dist < 0.18) t -= 1.5;
+                    if (dist > 0.42) t += 4.0;
+                    let terr = Math.max(t, 0);
+                    if (terr >= TERRAIN_TOP) terr = DRAIN;
+                    terrain[gy * GRID_W + gx] = terr;
+                }
+            }
+
+            const obstacles = [
+                { x: GRID_W * 0.30, y: GRID_H * 0.42, r: 7 },
+                { x: GRID_W * 0.68, y: GRID_H * 0.60, r: 6 },
+                { x: GRID_W * 0.55, y: GRID_H * 0.28, r: 4 }
+            ];
+            for (const ob of obstacles) {
+                for (let gy = 0; gy < GRID_H; gy++) {
+                    for (let gx = 0; gx < GRID_W; gx++) {
+                        const d = Math.hypot(gx - ob.x, gy - ob.y);
+                        if (d < ob.r) terrain[gy * GRID_W + gx] = -9000;
+                    }
+                }
+            }
+
+            for (let gx = 0; gx < GRID_W; gx++) {
+                terrain[gyIndex(0, gx)] = -9000;
+                terrain[gyIndex(GRID_H - 1, gx)] = DRAIN;
+            }
+            for (let gy = 0; gy < GRID_H; gy++) {
+                terrain[gyIndex(gy, 0)] = -9000;
+                terrain[gyIndex(gy, GRID_W - 1)] = DRAIN;
+            }
+        }
+
+        function gyIndex(gy, gx) {
+            return gy * GRID_W + gx;
+        }
+
+        function initWater() {
+            water.fill(0);
+            velocity.fill(0);
+            prevWater.fill(0);
+        }
+
+        buildTerrain();
+        initWater();
+
+        let rainEnabled = false;
+        let lastTime = performance.now();
+
+        const rainToggle = document.getElementById('Rain_Toggle');
+        rainToggle.addEventListener('click', () => {
+            rainEnabled = !rainEnabled;
+            rainToggle.textContent = 'Rain : ' + (rainEnabled ? 'ON' : 'OFF');
+            rainToggle.classList.toggle('is-on', rainEnabled);
+            rainToggle.blur();
+        });
+
+        let pointerActive = false;
+        let lastPointer = { x: 0, y: 0 };
+
+        function screenToGrid(clientX, clientY) {
+            const ox = (canvas.width - GRID_W * CELL_W) / 2;
+            const oy = (canvas.height - GRID_H * CELL_H) / 2;
+            const gx = Math.floor((clientX - ox) / CELL_W);
+            const gy = Math.floor((clientY - oy) / CELL_H);
+            return { gx, gy };
+        }
+
+        function isInGrid(gx, gy) {
+            return gx >= 0 && gx < GRID_W && gy >= 0 && gy < GRID_H;
+        }
+
+        function addWaterAt(gx, gy, amount) {
+            if (!isInGrid(gx, gy)) return;
+            const idx = gyIndex(gy, gx);
+            if (terrain[idx] <= DRAIN / 2) return;
+            water[idx] += amount;
+        }
+
+        function applyPointer(gx, gy) {
+            const radius = 3;
+            for (let oy = -radius; oy <= radius; oy++) {
+                for (let ox = -radius; ox <= radius; ox++) {
+                    const nx = gx + ox;
+                    const ny = gy + oy;
+                    if (!isInGrid(nx, ny)) continue;
+                    const dist = Math.hypot(ox, oy);
+                    if (dist > radius) continue;
+                    const dIdx = gyIndex(ny, nx);
+                    if (terrain[dIdx] <= DRAIN / 2) continue;
+                    const falloff = 1.0 - dist / (radius + 1);
+                    water[dIdx] += 6.0 * falloff;
+                    velocity[dIdx] += (Math.random() - 0.5) * 8 * falloff;
+                }
+            }
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            pointerActive = true;
+            const { gx, gy } = screenToGrid(e.clientX, e.clientY);
+            applyPointer(gx, gy);
+            lastPointer = { gx, gy };
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            const { gx, gy } = screenToGrid(e.clientX, e.clientY);
+            if (pointerActive) {
+                applyPointer(gx, gy);
+                const dx = gx - lastPointer.gx;
+                const dy = gy - lastPointer.gy;
+                const dist = Math.hypot(dx, dy);
+                const steps = Math.max(1, Math.floor(dist));
+                for (let s = 1; s <= steps; s++) {
+                    const igx = Math.round(lastPointer.gx + dx * s / steps);
+                    const igy = Math.round(lastPointer.gy + dy * s / steps);
+                    const dIdx = gyIndex(igy, igx);
+                    if (isInGrid(igx, igy) && terrain[dIdx] > DRAIN / 2) {
+                        velocity[dIdx] += (Math.random() - 0.5) * 22;
+                    }
+                }
+                lastPointer = { gx, gy };
+            }
+        });
+
+        const endPointer = (e) => {
+            if (pointerActive) {
+                pointerActive = false;
+                rainToggle.blur();
+            }
+        };
+        canvas.addEventListener('pointerup', endPointer);
+        canvas.addEventListener('pointercancel', endPointer);
+        canvas.addEventListener('pointerleave', endPointer);
+
+        function updateSimulation(dt) {
+            const damp = 0.99;
+
+            for (let gy = 1; gy < GRID_H - 1; gy++) {
+                for (let gx = 1; gx < GRID_W - 1; gx++) {
+                    const idx = gyIndex(gy, gx);
+                    if (terrain[idx] <= DRAIN / 2) { water[idx] = 0; velocity[idx] = 0; temp[idx] = 0; continue; }
+
+                    const left = gyIndex(gy, gx - 1);
+                    const right = gyIndex(gy, gx + 1);
+                    const up = gyIndex(gy - 1, gx);
+                    const down = gyIndex(gy + 1, gx);
+
+                    const tLeft = terrain[left] <= DRAIN / 2 ? terrain[idx] : terrain[left];
+                    const tRight = terrain[right] <= DRAIN / 2 ? terrain[idx] : terrain[right];
+                    const tUp = terrain[up] <= DRAIN / 2 ? terrain[idx] : terrain[up];
+                    const tDown = terrain[down] <= DRAIN / 2 ? terrain[idx] : terrain[down];
+
+                    const sLeft = tLeft + water[left];
+                    const sRight = tRight + water[right];
+                    const sUp = tUp + water[up];
+                    const sDown = tDown + water[down];
+                    const sCenter = terrain[idx] + water[idx];
+
+                    const flowLeft = Math.max(0, sCenter - sLeft) * 0.5;
+                    const flowRight = Math.max(0, sCenter - sRight) * 0.5;
+                    const flowUp = Math.max(0, sCenter - sUp) * 0.5;
+                    const flowDown = Math.max(0, sCenter - sDown) * 0.5;
+
+                    const sum = Math.min(flowLeft + flowRight + flowUp + flowDown, water[idx]);
+
+                    temp[idx] = water[idx] - sum;
+                    if (flowLeft > 0) temp[left] += flowLeft;
+                    if (flowRight > 0) temp[right] += flowRight;
+                    if (flowUp > 0) temp[up] += flowUp;
+                    if (flowDown > 0) temp[down] += flowDown;
+                }
+            }
+
+            for (let gy = 1; gy < GRID_H - 1; gy++) {
+                for (let gx = 1; gx < GRID_W - 1; gx++) {
+                    const idx = gyIndex(gy, gx);
+                    if (terrain[idx] <= DRAIN / 2) { velocity[idx] = 0; continue; }
+                    velocity[idx] += (prevWater[idx] - temp[idx]) * 0.8;
+                    velocity[idx] *= damp;
+                    temp[idx] += velocity[idx] * 0.12;
+                    if (temp[idx] < 0.0001) temp[idx] = 0;
+                    if (temp[idx] > WATER_MAX) temp[idx] = WATER_MAX;
+                }
+            }
+
+            if (rainEnabled) {
+                raindrops.forEach(d => {
+                    d.y += d.speed * dt;
+                    if (d.y > canvas.height) { d.y = -10; d.x = Math.random() * canvas.width; }
+                });
+                for (let i = 0; i < 6; i++) {
+                    const rGx = Math.floor(Math.random() * GRID_W);
+                    const rIdx = gyIndex(0, rGx);
+                    if (isInGrid(rGx, 0) && terrain[rIdx] > DRAIN / 2) {
+                        temp[rIdx] += 2.2;
+                    }
+                }
+            }
+
+            const oldWater = water;
+            water = temp;
+            temp = oldWater;
+            prevWater = oldWater;
+        }
+
+        const raindrops = [];
+        for (let i = 0; i < 160; i++) {
+            raindrops.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                speed: 420 + Math.random() * 380
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, '#0a1120');
+            grad.addColorStop(1, '#05070d');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const ox = (canvas.width - GRID_W * CELL_W) / 2;
+            const oy = (canvas.height - GRID_H * CELL_H) / 2;
+
+            for (let gy = 0; gy < GRID_H; gy++) {
+                for (let gx = 0; gx < GRID_W; gx++) {
+                    const idx = gyIndex(gy, gx);
+                    const t = terrain[idx];
+
+                    if (t > -100) {
+                        if (t < TERRAIN_TOP) {
+                            ctx.fillStyle = `rgb(${Math.round(60 + t * 2.5)}, ${Math.round(70 + t * 2)}, ${Math.round(45 + t * 1.5)})`;
+                        } else {
+                            ctx.fillStyle = '#3a4356';
+                        }
+                        ctx.fillRect(ox + gx * CELL_W, oy + gy * CELL_H, CELL_W, CELL_H);
+                    }
+
+                    const w = water[idx];
+                    if (w > 0.05) {
+                        const depth = Math.min(1, w / 40);
+                        const r = Math.round(30 + 60 * depth);
+                        const g = Math.round(120 + 90 * (1 - depth));
+                        const b = Math.round(200 + 55 * depth);
+                        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.72)`;
+                        ctx.fillRect(ox + gx * CELL_W, oy + gy * CELL_H, CELL_W, CELL_H);
+                    }
+                }
+            }
+
+            if (rainEnabled) {
+                ctx.strokeStyle = 'rgba(160, 200, 255, 0.35)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                raindrops.forEach(d => {
+                    ctx.moveTo(d.x, d.y);
+                    ctx.lineTo(d.x - 2, d.y - 12);
+                });
+                ctx.stroke();
+            }
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            const now = performance.now();
+            let dt = (now - lastTime) / 1000;
+            lastTime = now;
+            if (dt > 0.05) dt = 0.05;
+
+            updateSimulation(dt);
+            draw();
+        }
+
+        setTimeout(() => {
+            document.getElementById('Fade_Game').style.opacity = '0';
+        }, 60);
+
+        loop();
+    </script>
+</body>
+</html>
