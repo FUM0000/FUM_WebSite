@@ -962,18 +962,18 @@
                 const angle = Math.random() * Math.PI * 2;
                 this._velocity.set(Math.cos(angle) * this._speed, (Math.random() - 0.5) * 0.1, Math.sin(angle) * this._speed);
                 this._group.position.copy(this._position);
-                this._UpdateRotation();
+                this._UpdateRotation(0);
             }
-            _UpdateRotation() {
+            _UpdateRotation(deltaTime) {
                 if (this._velocity.lengthSq() > 0.001) {
-                    const targetAngle = Math.atan2(this._velocity.x, this._velocity.z);
+                    const targetAngle = Math.atan2(this._velocity.z, -this._velocity.x);
                     let current = this._group.rotation.y;
                     let diff = targetAngle - current;
                     while (diff > Math.PI) diff -= Math.PI * 2;
                     while (diff < -Math.PI) diff += Math.PI * 2;
-                    this._group.rotation.y += diff * 0.1;
+                    this._group.rotation.y += diff * Math.min(1, 8 * deltaTime);
                     const tilt = -this._velocity.y * 0.3;
-                    this._group.rotation.z = THREE.MathUtils.lerp(this._group.rotation.z, tilt, 0.05);
+                    this._group.rotation.z = THREE.MathUtils.lerp(this._group.rotation.z, tilt, Math.min(1, 5 * deltaTime));
                 }
             }
             ApplyBoidRules(neighbors, time) {
@@ -1025,7 +1025,7 @@
                 if (currentSpeed < this._speed * 0.3) this._velocity.normalize().multiplyScalar(this._speed * 0.3);
                 this._position.addScaledVector(this._velocity, deltaTime);
                 this._group.position.copy(this._position);
-                this._UpdateRotation();
+                this._UpdateRotation(deltaTime);
                 this._AnimateTail(time);
                 this._AnimateBody(time);
                 this._AnimateDorsalFin(time);
