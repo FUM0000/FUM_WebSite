@@ -1626,7 +1626,7 @@
                 });
 
                 const blossomMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xffb7c5,
+                    color: 0xffffff,
                     roughness: 0.85,
                     metalness: 0.0,
                     side: THREE.DoubleSide,
@@ -1637,26 +1637,52 @@
                 fetch('../../Asset/Model/JSON/Sakura_1.json')
                     .then(_response => _response.json())
                     .then(_state => {
-                        _state.meshes.forEach((data) => {
-                            let mesh;
-                            if (data.bark) {
-                                const geo = new THREE.CylinderGeometry(
-                                    data.params.radiusTop, data.params.radiusBottom, data.params.height,
-                                    data.params.radialSegments, data.params.heightSegments
-                                );
-                                geo.translate(0, data.params.height / 2, 0);
-                                mesh = new THREE.Mesh(geo, barkMaterial);
-                            } else {
-                                const geo = new THREE.IcosahedronGeometry(data.params.radius, data.params.detail);
-                                const mat = blossomMaterial.clone();
-                                mat.color.setRGB(data.color[0], data.color[1], data.color[2]);
-                                mesh = new THREE.Mesh(geo, mat);
-                            }
-                            mesh.position.fromArray(data.pos);
-                            mesh.quaternion.fromArray(data.quat);
-                            mesh.scale.fromArray(data.scale);
-                            this._Sakura.add(mesh);
+                        const blossomMeshes = _state.meshes.filter(_d => !_d.bark);
+                        const barkMeshes = _state.meshes.filter(_d => _d.bark);
+
+                        const blossomGeo = new THREE.IcosahedronGeometry(
+                            blossomMeshes[0].params.radius,
+                            blossomMeshes[0].params.detail
+                        );
+                        const blossomInstanced = new THREE.InstancedMesh(blossomGeo, blossomMaterial, blossomMeshes.length);
+                        const blossomMatrix = new THREE.Matrix4();
+                        const blossomColor = new THREE.Color();
+                        blossomMeshes.forEach((data, i) => {
+                            blossomMatrix.compose(
+                                new THREE.Vector3().fromArray(data.pos),
+                                new THREE.Quaternion().fromArray(data.quat),
+                                new THREE.Vector3().fromArray(data.scale)
+                            );
+                            blossomInstanced.setMatrixAt(i, blossomMatrix);
+                            blossomColor.setRGB(data.color[0], data.color[1], data.color[2]);
+                            blossomInstanced.setColorAt(i, blossomColor);
                         });
+                        blossomInstanced.instanceMatrix.needsUpdate = true;
+                        if (blossomInstanced.instanceColor) blossomInstanced.instanceColor.needsUpdate = true;
+                        this._Sakura.add(blossomInstanced);
+
+                        const barkRef = barkMeshes[0].params;
+                        const barkGeo = new THREE.CylinderGeometry(
+                            barkRef.radiusTop, barkRef.radiusBottom, barkRef.height,
+                            barkRef.radialSegments, barkRef.heightSegments
+                        );
+                        barkGeo.translate(0, barkRef.height / 2, 0);
+                        const barkInstanced = new THREE.InstancedMesh(barkGeo, barkMaterial, barkMeshes.length);
+                        const barkMatrix = new THREE.Matrix4();
+                        const barkPosition = new THREE.Vector3();
+                        const barkQuaternion = new THREE.Quaternion();
+                        const barkScale = new THREE.Vector3();
+                        barkMeshes.forEach((data, i) => {
+                            barkPosition.fromArray(data.pos);
+                            barkQuaternion.fromArray(data.quat);
+                            const ratio = data.params.radiusBottom / barkRef.radiusBottom;
+                            barkScale.set(ratio, data.params.height / barkRef.height, ratio);
+                            barkMatrix.compose(barkPosition, barkQuaternion, barkScale);
+                            barkInstanced.setMatrixAt(i, barkMatrix);
+                        });
+                        barkInstanced.instanceMatrix.needsUpdate = true;
+                        this._Sakura.add(barkInstanced);
+
                         this._SakuraMaterials = null;
                         if (this._SakuraTarget === false) {
                             this._Sakura.visible = false;

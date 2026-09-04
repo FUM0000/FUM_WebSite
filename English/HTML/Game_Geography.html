@@ -51,10 +51,6 @@
             transition: fill 0.2s ease;
         }
 
-        #map path:hover {
-            filter: brightness(1.15);
-        }
-
         .geo-display-name {
             font-size: 2.4rem;
             font-weight: 700;
@@ -202,7 +198,8 @@
 
                                         <v-row>
                                             <v-col cols="12" md="5" class="text-center">
-                                                <div id="geo-map-container" v-html="SvgContent"></div>
+                                                <div id="geo-map-container" v-html="SvgContent"
+                                                    style="overflow: hidden; border: 1px solid #ddd; border-radius: 4px; cursor: grab;"></div>
                                             </v-col>
 
                                             <v-col cols="12" md="7">
@@ -321,6 +318,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 
     <script>
         const PREFECTURES = [
@@ -410,8 +408,8 @@
                 Timer: null,
                 HighScore: 0,
                 CardFx: '',
-                Hovered: null,
                 SvgContent: '',
+                panzoomInstance: null,
             },
             computed: {
                 CurrentQuestion() {
@@ -459,6 +457,7 @@
             },
             beforeDestroy() {
                 this.stopTimer();
+                this.destroyPanzoom();
             },
             methods: {
                 loadHighScore() {
@@ -498,6 +497,7 @@
                             this.SvgContent = text;
                             this.$nextTick(() => {
                                 this.bindMapEvents();
+                                this.setupPanzoom();
                                 this.updateMapState();
                             });
                         })
@@ -513,16 +513,30 @@
                 mapGroupId(p) {
                     return (p.name === 'Gumma' ? 'Gunma' : p.name) + '_group';
                 },
+                setupPanzoom() {
+                    const svg = this.getMapEl();
+                    const container = document.getElementById('geo-map-container');
+                    if (!svg || !container || typeof Panzoom === 'undefined') return;
+                    this.destroyPanzoom();
+                    this.panzoomInstance = Panzoom(svg, {
+                        maxScale: 5,
+                        minScale: 0.35,
+                        contain: 'outside'
+                    });
+                    container.addEventListener('wheel', this.panzoomInstance.zoomWithWheel);
+                },
+                destroyPanzoom() {
+                    if (this.panzoomInstance) {
+                        this.panzoomInstance.destroy();
+                        this.panzoomInstance = null;
+                    }
+                },
                 bindMapEvents() {
                     const svg = this.getMapEl();
                     if (!svg) return;
                     this.Prefectures.forEach(p => {
                         const group = svg.querySelector('#' + this.mapGroupId(p));
-                        if (!group) return;
-                        group.style.cursor = 'pointer';
-                        group.addEventListener('mouseenter', () => { this.Hovered = p.id; });
-                        group.addEventListener('mouseleave', () => { this.Hovered = null; });
-                        group.addEventListener('click', () => { this.Preview(p); });
+                        if (group) group.style.cursor = 'pointer';
                     });
                 },
                 updateMapState() {
@@ -532,26 +546,25 @@
                         const group = svg.querySelector('#' + this.mapGroupId(p));
                         if (!group) return;
                         const isCurrent = !!this.CurrentQuestion && this.CurrentQuestion.id === p.id;
+                        let fill, stroke, strokeWidth;
                         if (!this.Answered && isCurrent) {
-                            group.querySelectorAll('path').forEach(path => {
-                                path.setAttribute('fill', '#FFC107');
-                                path.setAttribute('stroke', '#1976D2');
-                                path.setAttribute('stroke-width', '2');
-                            });
+                            fill = '#FFC107';
+                            stroke = '#1976D2';
+                            strokeWidth = '2';
                         } else if (this.Answered && isCurrent) {
-                            const color = this.LastCorrect ? '#66BB6A' : '#E53935';
-                            group.querySelectorAll('path').forEach(path => {
-                                path.setAttribute('fill', color);
-                                path.setAttribute('stroke', '#ffffff');
-                                path.setAttribute('stroke-width', '1');
-                            });
+                            fill = this.LastCorrect ? '#66BB6A' : '#E53935';
+                            stroke = '#ffffff';
+                            strokeWidth = '1';
                         } else {
-                            group.querySelectorAll('path').forEach(path => {
-                                path.setAttribute('fill', REGION_COLORS[p.region] || '#90A4AE');
-                                path.setAttribute('stroke', '#ffffff');
-                                path.setAttribute('stroke-width', '0.6');
-                            });
+                            fill = REGION_COLORS[p.region] || '#90A4AE';
+                            stroke = '#ffffff';
+                            strokeWidth = '0.6';
                         }
+                        group.querySelectorAll('path').forEach(path => {
+                            path.style.fill = fill;
+                            path.style.stroke = stroke;
+                            path.style.strokeWidth = strokeWidth;
+                        });
                     });
                 },
                 StartGame() {
@@ -570,7 +583,11 @@
                     if (!this.SvgContent) {
                         this.loadSVG();
                     } else {
-                        this.updateMapState();
+                        this.$nextTick(() => {
+                            this.bindMapEvents();
+                            this.setupPanzoom();
+                            this.updateMapState();
+                        });
                     }
                     this.startTimer();
                 },
@@ -614,11 +631,6 @@
                     this.CardFx = 'shake-wrong';
                     this.stopTimer();
                     this.updateMapState();
-                },
-                Preview(p) {
-                    if (!this.Playing) return;
-                    if (this.CurrentQuestion && this.CurrentQuestion.id === p.id) return;
-                    this.Hovered = p.id;
                 },
                 Answer(opt) {
                     if (this.Answered) return;

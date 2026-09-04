@@ -248,6 +248,10 @@
             get Position() { return this._position; }
             get Velocity() { return this._velocity; }
 
+            _bodyPoints = null;
+            _tailPoints = null;
+            _dorsalPoints = null;
+
             constructor(bodyGeometry, tailGeometry, dorsalGeometry, colorRGB, scale) {
                 this._colorIndex = Math.floor(Math.random() * FISH_COLORS.length);
                 this._scaleValue = scale || (0.6 + Math.random() * 0.8);
@@ -260,28 +264,13 @@
 
                 this._group = new THREE.Group();
 
-                const bodyMat = new THREE.MeshPhongMaterial({
-                    color: new THREE.Color(color[0], color[1], color[2]),
-                    specular: new THREE.Color(0.5, 0.5, 0.5),
-                    shininess: 60,
-                    side: THREE.DoubleSide,
-                    transparent: true,
-                    opacity: 0.92,
-                    wireframe: true,
-                });
+                const bodyColor = new THREE.Color(color[0], color[1], color[2]);
+                const bodyMat = new THREE.MeshBasicMaterial({ color: bodyColor, transparent: true, opacity: 0, depthWrite: false });
                 this._bodyMesh = new THREE.Mesh(bodyGeometry.clone(), bodyMat);
                 this._bodyOriginalPositions = this._bodyMesh.geometry.attributes.position.array.slice();
 
                 const tailColor = new THREE.Color(color[0] * 0.85, color[1] * 0.85, color[2] * 0.85);
-                const tailMat = new THREE.MeshPhongMaterial({
-                    color: tailColor,
-                    specular: new THREE.Color(0.3, 0.3, 0.3),
-                    shininess: 30,
-                    side: THREE.DoubleSide,
-                    transparent: true,
-                    opacity: 0.85,
-                    wireframe: true,
-                });
+                const tailMat = new THREE.MeshBasicMaterial({ color: tailColor, transparent: true, opacity: 0, depthWrite: false });
                 this._tailMesh = new THREE.Mesh(tailGeometry.clone(), tailMat);
                 this._tailOriginalPositions = this._tailMesh.geometry.attributes.position.array.slice();
 
@@ -290,22 +279,26 @@
                     Math.min(1, color[1] * 1.1),
                     Math.min(1, color[2] * 1.1)
                 );
-                const dorsalMat = new THREE.MeshPhongMaterial({
-                    color: dorsalColor,
-                    specular: new THREE.Color(0.2, 0.2, 0.2),
-                    shininess: 20,
-                    side: THREE.DoubleSide,
-                    transparent: true,
-                    opacity: 0.8,
-                    wireframe: true,
-                });
+                const dorsalMat = new THREE.MeshBasicMaterial({ color: dorsalColor, transparent: true, opacity: 0, depthWrite: false });
                 this._dorsalMesh = new THREE.Mesh(dorsalGeometry.clone(), dorsalMat);
 
-                this._group.add(this._bodyMesh);
-                this._tailMesh.position.set(-0.85, 0, 0);
-                this._group.add(this._tailMesh);
-                this._dorsalMesh.position.set(0.0, 0.0, 0);
-                this._group.add(this._dorsalMesh);
+                const ptsMat = (c) => new THREE.PointsMaterial({
+                    color: c,
+                    size: 0.025,
+                    transparent: true,
+                    opacity: 0.95,
+                    sizeAttenuation: true,
+                    depthWrite: false,
+                });
+
+                this._bodyPoints = new THREE.Points(this._bodyMesh.geometry, ptsMat(bodyColor));
+                this._tailPoints = new THREE.Points(this._tailMesh.geometry, ptsMat(tailColor));
+                this._dorsalPoints = new THREE.Points(this._dorsalMesh.geometry, ptsMat(dorsalColor));
+
+                this._group.add(this._bodyPoints);
+                this._tailPoints.position.set(-0.85, 0, 0);
+                this._group.add(this._tailPoints);
+                this._group.add(this._dorsalPoints);
 
                 this._group.scale.setScalar(this._scaleValue);
             }
@@ -485,7 +478,7 @@
 
             _AnimateDorsalFin(time) {
                 const finWave = Math.sin(this._bodyWavePhase * 1.5) * 0.05;
-                this._dorsalMesh.rotation.z = finWave;
+                this._dorsalPoints.rotation.z = finWave;
             }
         }
 
