@@ -832,6 +832,169 @@
             }
         }
 
+        class C_MorphParticles {
+
+            constructor(scene, count = 400) {
+                this._scene = scene;
+                this._count = count;
+                this._Time = 0;
+                this._Active = false;
+                this._Done = false;
+
+                this._startPos = new Float32Array(count * 3);
+                this._targetPos = new Float32Array(count * 3);
+                this._controlPos = new Float32Array(count * 3);
+                this._delays = new Float32Array(count);
+                this._sizes = new Float32Array(count);
+                this._phases = new Float32Array(count);
+                this._positions = new Float32Array(count * 3);
+                this._alphas = new Float32Array(count);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 64; canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+                grad.addColorStop(0, 'rgba(200, 230, 255, 1)');
+                grad.addColorStop(0.15, 'rgba(160, 210, 255, 0.7)');
+                grad.addColorStop(0.4, 'rgba(120, 180, 255, 0.2)');
+                grad.addColorStop(1, 'rgba(100, 160, 255, 0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 64, 64);
+                this._texture = new THREE.CanvasTexture(canvas);
+
+                this._geometry = new THREE.BufferGeometry();
+                this._geometry.setAttribute('position', new THREE.BufferAttribute(this._positions, 3));
+                this._geometry.setAttribute('aSize', new THREE.BufferAttribute(this._sizes, 1));
+                this._geometry.setAttribute('aAlpha', new THREE.BufferAttribute(this._alphas, 1));
+
+                this._material = new THREE.ShaderMaterial({
+                    uniforms: { uTexture: { value: this._texture } },
+                    vertexShader: `
+                        attribute float aSize;
+                        attribute float aAlpha;
+                        varying float vAlpha;
+                        void main() {
+                            vAlpha = aAlpha;
+                            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                            gl_PointSize = clamp(aSize * (180.0 / -mv.z), 1.0, 14.0);
+                            gl_Position = projectionMatrix * mv;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform sampler2D uTexture;
+                        varying float vAlpha;
+                        void main() {
+                            vec4 tex = texture2D(uTexture, gl_PointCoord);
+                            gl_FragColor = vec4(vec3(0.55, 0.78, 1.0), tex.a * vAlpha);
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    fog: false,
+                });
+
+                this._points = new THREE.Points(this._geometry, this._material);
+                this._points.frustumCulled = false;
+                this._points.visible = false;
+                this._scene.add(this._points);
+            }
+
+            Start(playerPos, targets) {
+                this._Active = true;
+                this._Done = false;
+                this._Time = 0;
+                this._points.visible = true;
+
+                const numTargets = Math.max(1, Math.floor(targets.length / 3));
+                for (let i = 0; i < this._count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = 0.3 + Math.random() * 2.5;
+                    const h = (Math.random() - 0.5) * 2.0;
+                    const sx = playerPos.x + Math.cos(angle) * r;
+                    const sy = playerPos.y + h;
+                    const sz = playerPos.z + Math.sin(angle) * r;
+                    this._startPos[i * 3] = sx;
+                    this._startPos[i * 3 + 1] = sy;
+                    this._startPos[i * 3 + 2] = sz;
+
+                    const ti = (i % numTargets) * 3;
+                    const tx = targets[ti], ty = targets[ti + 1], tz = targets[ti + 2];
+                    this._targetPos[i * 3] = tx;
+                    this._targetPos[i * 3 + 1] = ty;
+                    this._targetPos[i * 3 + 2] = tz;
+
+                    this._controlPos[i * 3] = (sx + tx) * 0.5;
+                    this._controlPos[i * 3 + 1] = Math.max(sy, ty) + 1.0 + Math.random() * 2.0;
+                    this._controlPos[i * 3 + 2] = (sz + tz) * 0.5;
+
+                    this._delays[i] = Math.random() * 2.5;
+                    this._sizes[i] = 0.008 + Math.random() * 0.014;
+                    this._phases[i] = Math.random() * Math.PI * 2;
+
+                    this._positions[i * 3] = sx;
+                    this._positions[i * 3 + 1] = sy;
+                    this._positions[i * 3 + 2] = sz;
+                    this._alphas[i] = 0;
+                }
+                this._geometry.attributes.position.needsUpdate = true;
+                this._geometry.attributes.aSize.needsUpdate = true;
+                this._geometry.attributes.aAlpha.needsUpdate = true;
+            }
+
+            _Ease(t) {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            _Bezier(p0, p1, p2, t) {
+                const m = 1 - t;
+                return m * m * p0 + 2 * m * t * p1 + t * t * p2;
+            }
+
+            Update(timeDelta, morphDuration = 5.0) {
+                if (!this._Active) return;
+                this._Time += timeDelta;
+
+                let allDone = true;
+
+                for (let i = 0; i < this._count; i++) {
+                    const raw = (this._Time - this._delays[i]) / morphDuration;
+                    const c = Math.max(0, Math.min(raw, 1.3));
+                    const e = this._Ease(Math.min(c, 1.0));
+
+                    this._positions[i * 3] = this._Bezier(this._startPos[i * 3], this._controlPos[i * 3], this._targetPos[i * 3], e);
+                    this._positions[i * 3 + 1] = this._Bezier(this._startPos[i * 3 + 1], this._controlPos[i * 3 + 1], this._targetPos[i * 3 + 1], e);
+                    this._positions[i * 3 + 2] = this._Bezier(this._startPos[i * 3 + 2], this._controlPos[i * 3 + 2], this._targetPos[i * 3 + 2], e);
+
+                    if (c < 1.0) {
+                        const d = (1.0 - e) * 0.12;
+                        this._positions[i * 3] += Math.sin(this._Time * 2.0 + this._phases[i]) * d;
+                        this._positions[i * 3 + 2] += Math.cos(this._Time * 1.7 + this._phases[i] * 1.3) * d;
+                    }
+
+                    const fadeIn = Math.min(this._Time / 0.8, 1.0);
+                    const fadeOut = c > 1.0 ? Math.max(0, 1.0 - (c - 1.0) * 4.0) : 1.0;
+                    this._alphas[i] = fadeIn * fadeOut;
+
+                    if (raw < 1.3) allDone = false;
+                }
+
+                this._geometry.attributes.position.needsUpdate = true;
+                this._geometry.attributes.aAlpha.needsUpdate = true;
+
+                if (allDone) {
+                    this._Done = true;
+                    this._Active = false;
+                }
+            }
+
+            destructor() {
+                this._scene.remove(this._points);
+                this._geometry.dispose();
+                this._material.dispose();
+            }
+        }
+
         const FISH_COUNT = 25;
         const FISH_WORLD_BOUNDS = 30;
         const FISH_COLORS = [[1.0, 1.0, 1.0]];
@@ -1216,6 +1379,7 @@
             _AnimationSpeed = 0.01;
             _LastUpdateTime = performance.now();
             _AnimationDelta = 0;
+            _PauseAnimation = false;
 
             get Flag_Loaded() { return this._Flag_Loaded; }
             get Position() { return this._Object ? this._Object.position : new THREE.Vector3(); }
@@ -1278,6 +1442,7 @@
                         this._SkinnedPointsData = [];
                         for (const mesh of meshes) {
                             const ptsMat = new THREE.PointsMaterial({ color: 0xbbddff, size: 0.002, map: glowTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, sizeAttenuation: true });
+                            ptsMat.opacity = 0;
                             const pts = new THREE.Points(mesh.geometry.clone(), ptsMat);
                             mesh.add(pts);
                             mesh.material.transparent = true;
@@ -1288,6 +1453,7 @@
                                 this._SkinnedPointsData.push({
                                     mesh: mesh,
                                     points: pts,
+                                    material: ptsMat,
                                     bindPositions: pos,
                                     ptsPositions: pts.geometry.attributes.position.array,
                                     skinIndex: mesh.geometry.attributes.skinIndex,
@@ -1332,6 +1498,10 @@
 
             Update(playerFloor, isPlayerInElevator, playerPos, isCrouched, isMovingInput) {
                 if (!this._Flag_Loaded || !this._Object) return;
+                if (this._PauseAnimation) {
+                    this._LastUpdateTime = performance.now();
+                    return;
+                }
 
                 const now = performance.now();
                 this._AnimationDelta = Math.min((now - this._LastUpdateTime) / 1000, 0.1) * (this._AnimationSpeed * FC_Environment.FPS);
@@ -1470,6 +1640,41 @@
                     data.points.geometry.attributes.position.needsUpdate = true;
                 }
             }
+
+            SetPointsOpacity(opacity) {
+                if (!this._SkinnedPointsData) return;
+                for (const data of this._SkinnedPointsData) {
+                    if (data.material) data.material.opacity = opacity;
+                }
+            }
+
+            _CollectMorphTargets(maxCount = 500) {
+                if (!this._SkinnedPointsData || this._SkinnedPointsData.length === 0) return new Float32Array(0);
+                if (this._Object) this._Object.updateMatrixWorld(true);
+                let totalVerts = 0;
+                for (const data of this._SkinnedPointsData) {
+                    totalVerts += data.points.geometry.attributes.position.count;
+                }
+                if (totalVerts === 0) return new Float32Array(0);
+                const stride = Math.max(1, Math.ceil(totalVerts / maxCount));
+                const targets = new Float32Array(maxCount * 3);
+                let written = 0;
+                for (const data of this._SkinnedPointsData) {
+                    const arr = data.points.geometry.attributes.position.array;
+                    const n = arr.length / 3;
+                    const me = data.mesh.matrixWorld.elements;
+                    for (let i = 0; i < n; i += stride) {
+                        const lx = arr[i * 3], ly = arr[i * 3 + 1], lz = arr[i * 3 + 2];
+                        targets[written * 3] = me[0] * lx + me[4] * ly + me[8] * lz + me[12];
+                        targets[written * 3 + 1] = me[1] * lx + me[5] * ly + me[9] * lz + me[13];
+                        targets[written * 3 + 2] = me[2] * lx + me[6] * ly + me[10] * lz + me[14];
+                        written++;
+                        if (written >= maxCount) break;
+                    }
+                    if (written >= maxCount) break;
+                }
+                return targets.subarray(0, written * 3);
+            }
         }
 
         class C_Manager extends FC_Manager {
@@ -1529,6 +1734,9 @@
             _Fishes = [];
             _FishBubbleSystem = null;
             _FishFloorY = 0;
+            _MorphParticles = null;
+            _MorphTriggered = false;
+            _MorphPostTimer = null;
 
             get UI_Home() { return this._UI_Home; }
             get UI_Music() { return this._UI_Music; }
@@ -1828,6 +2036,9 @@
                         this._FishFloorY = this._Elevator.floors * this._Floor_Height + 10;
                         this._CreateFishes();
 
+                        if (this._MorphParticles) Scene.remove(this._MorphParticles._points);
+                        this._MorphParticles = new C_MorphParticles(Scene, 500);
+
                         this.Loaded = true;
                     });
             }
@@ -2035,6 +2246,36 @@
                 const isInElevator = this._Elevator.checkPlayerInElevator(Player) || this._Elevator.isMoving;
                 const isMovingInput = this._Input_Move.length() > 0;
                 Cat.Update(playerFloor, isInElevator, Player.Position, isCrouched, isMovingInput);
+
+                if (!this._MorphTriggered && Cat._Flag_Loaded && this._MorphParticles && this._Elevator) {
+                    const targets = Cat._CollectMorphTargets(500);
+                    if (targets.length > 0) {
+                        Cat._PauseAnimation = true;
+                        this._MorphParticles.Start(Player.Position, targets);
+                        this._MorphTriggered = true;
+                    }
+                }
+                if (this._MorphParticles) {
+                    if (this._MorphParticles._Done) {
+                        if (this._MorphPostTimer === null) this._MorphPostTimer = 0;
+                        this._MorphPostTimer += FC_Environment.TIME_DELTA;
+                        const fadeDuration = 1.05;
+                        if (this._MorphPostTimer < fadeDuration) {
+                            Cat.SetPointsOpacity(this._MorphPostTimer / fadeDuration);
+                        }
+                        if (this._MorphPostTimer >= fadeDuration) {
+                            Cat.SetPointsOpacity(1.0);
+                            Cat._PauseAnimation = false;
+                            this._MorphParticles._points.visible = false;
+                            this._MorphParticles.destructor();
+                            this._MorphParticles = null;
+                            this._MorphPostTimer = null;
+                        }
+                    } else if (this._MorphParticles._Active) {
+                        this._MorphParticles.Update(FC_Environment.TIME_DELTA);
+                    }
+                }
+
                 this._Category_Texts.forEach(_text => {
                     _text.Update();
                 });

@@ -7,8 +7,9 @@
     <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="../../Asset/CSS/Game.css" rel="stylesheet" />
-    <title>Water Simulation</title>
+    <title>3D Fluid Water</title>
     <meta name="robots" content="index, follow">
 </head>
 <body>
@@ -21,7 +22,7 @@
         html,
         body {
             margin: 0;
-            background: #04070d !important;
+            background: #03060d !important;
             overflow: hidden !important;
             font-family: 'Segoe UI', Arial, sans-serif;
             touch-action: none;
@@ -57,7 +58,7 @@
         }
 
         #Fade_Game {
-            background-color: #0a1018;
+            background-color: #03060d;
         }
 
         #HUD {
@@ -74,27 +75,27 @@
 
         .hud-button {
             pointer-events: auto;
-            min-width: 128px;
+            min-width: 132px;
             padding: 10px 16px;
-            border: 1px solid rgba(215, 215, 215, 0.55);
+            border: 1px solid rgba(215, 215, 215, 0.5);
             border-radius: 8px;
-            background: rgba(8, 16, 28, 0.72);
-            color: #eeeeee;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-            font-family: inherit;
-            font-size: 15px;
-            font-weight: 600;
-            letter-spacing: 0.02em;
+            background: rgba(6, 12, 24, 0.72);
+            color: #e8eef7;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+            font-family: 'Space Mono', 'Segoe UI', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
             text-align: center;
             text-decoration: none;
             text-transform: uppercase;
             cursor: pointer;
-            transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease;
             backdrop-filter: blur(4px);
         }
 
         .hud-button:hover {
-            background: rgba(30, 48, 74, 0.85);
+            background: rgba(20, 40, 70, 0.85);
             color: #ffffff;
         }
 
@@ -102,8 +103,8 @@
             transform: translateY(1px);
         }
 
-        #Rain_Toggle.is-on {
-            border-color: rgba(130, 200, 255, 0.85);
+        .hud-button.is-on {
+            border-color: rgba(130, 210, 255, 0.85);
             color: #a8dcff;
         }
 
@@ -114,340 +115,795 @@
             width: 100%;
             z-index: 15;
             text-align: center;
-            color: rgba(180, 210, 235, 0.55);
-            font-size: 13px;
-            letter-spacing: 0.04em;
+            color: rgba(170, 205, 235, 0.5);
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 0.06em;
             pointer-events: none;
             text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        #Stats {
+            position: fixed;
+            top: 12px;
+            right: 16px;
+            z-index: 20;
+            color: rgba(150, 200, 255, 0.55);
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-align: right;
+            pointer-events: none;
+            text-shadow: 0 0 8px rgba(80, 160, 255, 0.35);
+            line-height: 1.7;
         }
     </style>
 
     <div id="HUD">
         <a class="hud-button" href="index.html">HOME</a>
+        <button id="Reset_Btn" class="hud-button" type="button">Reset</button>
+        <button id="Pause_Btn" class="hud-button" type="button">Pause</button>
         <button id="Rain_Toggle" class="hud-button" type="button">Rain : OFF</button>
+        <button id="Add_Burst" class="hud-button" type="button">Burst</button>
     </div>
-    <div id="Hint">CLICK / DRAG : add water &amp; create waves</div>
+    <div id="Stats">&nbsp;</div>
+    <div id="Hint">DRAG : stir water &nbsp;•&nbsp; CLICK+HOLD : pour from fountain &nbsp;•&nbsp; SCROLL : zoom</div>
 
-    <script>
-        const canvas = document.getElementById('Canvas');
-        const ctx = canvas.getContext('2d');
-
-        const GRID_W = 120;
-        const GRID_H = 80;
-        const CELL_W = 12;
-        const CELL_H = 12;
-
-        let terrain = new Float32Array(GRID_W * GRID_H);
-        let water = new Float32Array(GRID_W * GRID_H);
-        let velocity = new Float32Array(GRID_W * GRID_H);
-        let prevWater = new Float32Array(GRID_W * GRID_H);
-        let temp = new Float32Array(GRID_W * GRID_H);
-
-        const DRAIN = -7000;
-        const TERRAIN_TOP = 22;
-        const WATER_MAX = 90;
-
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            ctx.imageSmoothingEnabled = true;
-        }
-        resize();
-        window.addEventListener('resize', resize);
-
-        function buildTerrain() {
-            terrain.fill(0);
-            const cx = GRID_W / 2;
-            const cy = GRID_H / 2;
-
-            for (let gy = 0; gy < GRID_H; gy++) {
-                for (let gx = 0; gx < GRID_W; gx++) {
-                    let t = TERRAIN_TOP;
-                    const dx = (gx - cx) / GRID_W;
-                    const dy = (gy - cy) / GRID_H;
-                    const dist = Math.hypot(dx, dy);
-                    t += Math.sin(gx * 0.18 + 2.0) * 2.4;
-                    t += Math.sin(gy * 0.22 + 0.7) * 2.2;
-                    if (dist < 0.18) t -= 1.5;
-                    if (dist > 0.42) t += 4.0;
-                    let terr = Math.max(t, 0);
-                    if (terr >= TERRAIN_TOP) terr = DRAIN;
-                    terrain[gy * GRID_W + gx] = terr;
-                }
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
             }
+        }
+    </script>
 
-            const obstacles = [
-                { x: GRID_W * 0.30, y: GRID_H * 0.42, r: 7 },
-                { x: GRID_W * 0.68, y: GRID_H * 0.60, r: 6 },
-                { x: GRID_W * 0.55, y: GRID_H * 0.28, r: 4 }
-            ];
-            for (const ob of obstacles) {
-                for (let gy = 0; gy < GRID_H; gy++) {
-                    for (let gx = 0; gx < GRID_W; gx++) {
-                        const d = Math.hypot(gx - ob.x, gy - ob.y);
-                        if (d < ob.r) terrain[gy * GRID_W + gx] = -9000;
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+        // ------------------------------------------------------------
+        //  Scene setup
+        // ------------------------------------------------------------
+        const canvas = document.getElementById('Canvas');
+        const Scene = new THREE.Scene();
+        Scene.background = new THREE.Color(0x03060d);
+        Scene.fog = new THREE.FogExp2(0x03060d, 0.018);
+
+        const Renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        Renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        Renderer.setSize(window.innerWidth, window.innerHeight);
+        Renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        Renderer.toneMappingExposure = 1.1;
+        Renderer.shadowMap.enabled = true;
+        Renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const Camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+        Camera.position.set(0, 11, 19);
+        Camera.lookAt(0, 1.5, 0);
+
+        const Controls = new OrbitControls(Camera, canvas);
+        Controls.target.set(0, 1.8, 0);
+        Controls.enableDamping = true;
+        Controls.dampingFactor = 0.08;
+        Controls.maxPolarAngle = Math.PI * 0.49;
+        Controls.minDistance = 6;
+        Controls.maxDistance = 60;
+        Controls.autoRotate = false;
+        // left button reserved for pouring/stirring fluid;
+        // camera orbits with right-drag / wheel and two-finger touch
+        Controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+        Controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_PAN };
+
+        const Composer = new EffectComposer(Renderer);
+        Composer.addPass(new RenderPass(Scene, Camera));
+        const Bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.4, 0.35);
+        Composer.addPass(Bloom);
+        Composer.addPass(new OutputPass());
+
+        // ------------------------------------------------------------
+        //  Lights
+        // ------------------------------------------------------------
+        Scene.add(new THREE.AmbientLight(0x1a2a44, 0.9));
+
+        const Key = new THREE.DirectionalLight(0x7fbfff, 1.2);
+        Key.position.set(12, 20, 10);
+        Key.castShadow = true;
+        Key.shadow.mapSize.set(1024, 1024);
+        Key.shadow.camera.left = -18;
+        Key.shadow.camera.right = 18;
+        Key.shadow.camera.top = 18;
+        Key.shadow.camera.bottom = -18;
+        Scene.add(Key);
+
+        const Fill = new THREE.DirectionalLight(0x2a4a8a, 0.5);
+        Fill.position.set(-10, 8, -12);
+        Scene.add(Fill);
+
+        const Rim = new THREE.DirectionalLight(0x80ccff, 0.4);
+        Rim.position.set(0, 20, -10);
+        Scene.add(Rim);
+
+        // ------------------------------------------------------------
+        //  Environment (floor + glass box)
+        // ------------------------------------------------------------
+        const Floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(60, 60),
+            new THREE.MeshStandardMaterial({ color: 0x0a1424, roughness: 0.9, metalness: 0.1 })
+        );
+        Floor.rotation.x = -Math.PI / 2;
+        Floor.position.y = -0.02;
+        Floor.receiveShadow = true;
+        Scene.add(Floor);
+
+        const container = { size: 6.6, height: 6.2 };
+        const glass = new THREE.Mesh(
+            new THREE.BoxGeometry(container.size, container.height, container.size),
+            new THREE.MeshPhysicalMaterial({
+                color: 0x88bbff,
+                transparent: true,
+                opacity: 0.08,
+                roughness: 0.15,
+                metalness: 0.0,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+            })
+        );
+        glass.position.y = container.height / 2;
+        Scene.add(glass);
+
+        // floor of the box
+        const BoxFloor = new THREE.Mesh(
+            new THREE.PlaneGeometry(container.size, container.size),
+            new THREE.MeshStandardMaterial({ color: 0x0c1626, roughness: 0.4, metalness: 0.3 })
+        );
+        BoxFloor.rotation.x = -Math.PI / 2;
+        BoxFloor.position.y = 0;
+        BoxFloor.receiveShadow = true;
+        Scene.add(BoxFloor);
+
+        // wireframe edge of the box (subtle)
+        const Edge = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(container.size, container.height, container.size)),
+            new THREE.LineBasicMaterial({ color: 0x3a6a9a, transparent: true, opacity: 0.4 })
+        );
+        Edge.position.y = container.height / 2;
+        Scene.add(Edge);
+
+        // ------------------------------------------------------------
+        //  SPH Fluid Simulation (CPU, JavaScript)
+        // ------------------------------------------------------------
+        const H = 0.55;                  // smoothing radius
+        const H2 = H * H;
+        const REST_DENSITY = 1.0;        // dimensionless rest density
+        const MASS = 0.016;
+        const GRAVITY_Y = -31;
+        const GAS_CONST = 45;
+        const VISCOSITY = 6;
+        const MAX_SPEED = 22;
+        const COL_SOFT = 0.28;
+        const SPACING = 0.22;
+
+        const KERNEL_POLY6 = 315 / (64 * Math.PI * Math.pow(H, 9));
+        const KERNEL_SPIKY_GRAD = -45 / (Math.PI * Math.pow(H, 6));
+        const KERNEL_VISC_LAP = 45 / (Math.PI * Math.pow(H, 6));
+
+        function poly6(r2) {
+            const d = H2 - r2;
+            if (d <= 0) return 0;
+            return KERNEL_POLY6 * d * d * d;
+        }
+        function spikyGrad(r, r2) {
+            if (r === 0) return 0;
+            const d = H - r;
+            return KERNEL_SPIKY_GRAD * d * d;
+        }
+        function viscLap(r) {
+            return KERNEL_VISC_LAP * (H - r);
+        }
+
+        const CELL = H;
+        const NUM_PARTICLES = 4800;
+        const HALF = container.size / 2;
+        const MIN = new THREE.Vector3(-HALF + 0.12, 0.05, -HALF + 0.12);
+        const MAX = new THREE.Vector3(HALF - 0.12, container.height - 0.4, HALF - 0.12);
+
+        const pos = new Float32Array(NUM_PARTICLES * 3);
+        const prevPos = new Float32Array(NUM_PARTICLES * 3);
+        const vel = new Float32Array(NUM_PARTICLES * 3);
+        const density = new Float32Array(NUM_PARTICLES);
+        const pressure = new Float32Array(NUM_PARTICLES);
+
+        // flat spatial grid (no per-frame allocations)
+        const GRID_NX = 14, GRID_NY = 12, GRID_NZ = 14;
+        const GRID_XZ = GRID_NX * GRID_NY;
+        const cellCount = GRID_NX * GRID_NY * GRID_NZ;
+        const cellCounts = new Int32Array(cellCount);
+        const cellStarts = new Int32Array(cellCount);
+        const cellCursor = new Int32Array(cellCount);
+        const cellIds = new Int32Array(NUM_PARTICLES);
+        const cellOf = new Int32Array(NUM_PARTICLES);
+
+        function rebuildGrid() {
+            cellCounts.fill(0);
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                let cx = Math.floor((pos[i * 3] - MIN.x) / CELL);
+                let cy = Math.floor((pos[i * 3 + 1] - MIN.y) / CELL);
+                let cz = Math.floor((pos[i * 3 + 2] - MIN.z) / CELL);
+                if (cx < 0) cx = 0; else if (cx >= GRID_NX) cx = GRID_NX - 1;
+                if (cy < 0) cy = 0; else if (cy >= GRID_NY) cy = GRID_NY - 1;
+                if (cz < 0) cz = 0; else if (cz >= GRID_NZ) cz = GRID_NZ - 1;
+                const c = cx + cy * GRID_NX + cz * GRID_XZ;
+                cellOf[i] = c;
+                cellCounts[c]++;
+            }
+            let offset = 0;
+            for (let c = 0; c < cellCount; c++) {
+                cellStarts[c] = offset;
+                offset += cellCounts[c];
+            }
+            cellCursor.set(cellStarts);
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                const c = cellOf[i];
+                cellIds[cellCursor[c]++] = i;
+            }
+        }
+
+        function resetParticles() {
+            pos.fill(0);
+            prevPos.fill(0);
+            vel.fill(0);
+            density.fill(0);
+            pressure.fill(0);
+
+            const x0 = MIN.x + 0.5;
+            const z0 = MIN.z + 0.5;
+            const w = (MAX.x - MIN.x) - 1.0;
+            const d = (MAX.z - MIN.z) - 1.0;
+            const nx = Math.max(1, Math.floor(w / SPACING));
+            const nz = Math.max(1, Math.floor(d / SPACING));
+            const perLayer = nx * nz;
+            const layers = Math.max(1, Math.ceil(NUM_PARTICLES / perLayer));
+            const layerStep = SPACING * 0.85;
+
+            let idx = 0;
+            for (let ly = 0; ly < layers && idx < NUM_PARTICLES; ly++) {
+                for (let gz = 0; gz < nz && idx < NUM_PARTICLES; gz++) {
+                    for (let gx = 0; gx < nx && idx < NUM_PARTICLES; gx++) {
+                        const x = x0 + (gx + 0.5) * SPACING;
+                        const z = z0 + (gz + 0.5) * SPACING;
+                        if (x > MAX.x - 0.4 || z > MAX.z - 0.4) continue;
+                        const y = 0.12 + ly * layerStep;
+                        pos[idx * 3] = x;
+                        pos[idx * 3 + 1] = y;
+                        pos[idx * 3 + 2] = z;
+                        prevPos[idx * 3] = x;
+                        prevPos[idx * 3 + 1] = y;
+                        prevPos[idx * 3 + 2] = z;
+                        idx++;
                     }
                 }
             }
-
-            for (let gx = 0; gx < GRID_W; gx++) {
-                terrain[gyIndex(0, gx)] = -9000;
-                terrain[gyIndex(GRID_H - 1, gx)] = DRAIN;
+            // fill any remainder near the surface
+            let i = idx;
+            while (i < NUM_PARTICLES) {
+                const x = MIN.x + 0.6 + (i % 12) * 0.25;
+                const z = MIN.z + 0.6 + ((i / 12) % 12) * 0.25;
+                const y = 0.12 + ((i / 144) % 6) * 0.25;
+                pos[i * 3] = x;
+                pos[i * 3 + 1] = y;
+                pos[i * 3 + 2] = z;
+                prevPos[i * 3] = x;
+                prevPos[i * 3 + 1] = y;
+                prevPos[i * 3 + 2] = z;
+                i++;
             }
-            for (let gy = 0; gy < GRID_H; gy++) {
-                terrain[gyIndex(gy, 0)] = -9000;
-                terrain[gyIndex(gy, GRID_W - 1)] = DRAIN;
+        }
+
+        resetParticles();
+
+        // interaction: pouring fountain and stirring
+        let pourActive = false;
+        let recycleCursor = 0;
+
+        const raycaster = new THREE.Raycaster();
+        const mouseNDC = new THREE.Vector2();
+
+        function pointerWorld(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            mouseNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            mouseNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouseNDC, Camera);
+            const target = new THREE.Vector3();
+            const hit = raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), target);
+            return hit ? target : null;
+        }
+
+        // fountain: recycle a reservoir particle up into the air at the pointer
+        function pourAt(point) {
+            if (!point) return;
+            for (let k = 0; k < 6; k++) {
+                const i = recycleCursor;
+                recycleCursor = (recycleCursor + 1) % NUM_PARTICLES;
+                const tx = point.x + (Math.random() - 0.5) * 0.6;
+                const tz = point.z + (Math.random() - 0.5) * 0.6;
+                if (tx < MIN.x + 0.1 || tx > MAX.x - 0.1 || tz < MIN.z + 0.1 || tz > MAX.z - 0.1) continue;
+                const ty = 0.9 + Math.random() * 0.7;
+                pos[i * 3] = tx;
+                pos[i * 3 + 1] = ty;
+                pos[i * 3 + 2] = tz;
+                prevPos[i * 3] = tx;
+                prevPos[i * 3 + 1] = ty;
+                prevPos[i * 3 + 2] = tz;
+                vel[i * 3] = (Math.random() - 0.5) * 1.6;
+                vel[i * 3 + 1] = 0;
+                vel[i * 3 + 2] = (Math.random() - 0.5) * 1.6;
+                break;
             }
         }
 
-        function gyIndex(gy, gx) {
-            return gy * GRID_W + gx;
-        }
-
-        function initWater() {
-            water.fill(0);
-            velocity.fill(0);
-            prevWater.fill(0);
-        }
-
-        buildTerrain();
-        initWater();
-
-        let rainEnabled = false;
-        let lastTime = performance.now();
-
-        const rainToggle = document.getElementById('Rain_Toggle');
-        rainToggle.addEventListener('click', () => {
-            rainEnabled = !rainEnabled;
-            rainToggle.textContent = 'Rain : ' + (rainEnabled ? 'ON' : 'OFF');
-            rainToggle.classList.toggle('is-on', rainEnabled);
-            rainToggle.blur();
-        });
-
-        let pointerActive = false;
-        let lastPointer = { x: 0, y: 0 };
-
-        function screenToGrid(clientX, clientY) {
-            const ox = (canvas.width - GRID_W * CELL_W) / 2;
-            const oy = (canvas.height - GRID_H * CELL_H) / 2;
-            const gx = Math.floor((clientX - ox) / CELL_W);
-            const gy = Math.floor((clientY - oy) / CELL_H);
-            return { gx, gy };
-        }
-
-        function isInGrid(gx, gy) {
-            return gx >= 0 && gx < GRID_W && gy >= 0 && gy < GRID_H;
-        }
-
-        function addWaterAt(gx, gy, amount) {
-            if (!isInGrid(gx, gy)) return;
-            const idx = gyIndex(gy, gx);
-            if (terrain[idx] <= DRAIN / 2) return;
-            water[idx] += amount;
-        }
-
-        function applyPointer(gx, gy) {
-            const radius = 3;
-            for (let oy = -radius; oy <= radius; oy++) {
-                for (let ox = -radius; ox <= radius; ox++) {
-                    const nx = gx + ox;
-                    const ny = gy + oy;
-                    if (!isInGrid(nx, ny)) continue;
-                    const dist = Math.hypot(ox, oy);
-                    if (dist > radius) continue;
-                    const dIdx = gyIndex(ny, nx);
-                    if (terrain[dIdx] <= DRAIN / 2) continue;
-                    const falloff = 1.0 - dist / (radius + 1);
-                    water[dIdx] += 6.0 * falloff;
-                    velocity[dIdx] += (Math.random() - 0.5) * 8 * falloff;
+        function stirAt(point, dirX, dirZ) {
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                const dx = pos[i * 3] - point.x;
+                const dz = pos[i * 3 + 2] - point.z;
+                const d2 = dx * dx + dz * dz;
+                if (d2 < 5.0) {
+                    const dist = Math.sqrt(d2) || 1;
+                    const mul = 1.0 - Math.min(1, dist / 2.5);
+                    vel[i * 3] += dirX * 8 * mul;
+                    vel[i * 3 + 1] += 1.5 * mul;
+                    vel[i * 3 + 2] += dirZ * 8 * mul;
                 }
             }
         }
+
+        let dragging = false;
+        let lastStir = null;
 
         canvas.addEventListener('pointerdown', (e) => {
             e.preventDefault();
-            pointerActive = true;
-            const { gx, gy } = screenToGrid(e.clientX, e.clientY);
-            applyPointer(gx, gy);
-            lastPointer = { gx, gy };
+            if (e.button !== 0 && e.pointerType === 'mouse') return;
+            canvas.setPointerCapture(e.pointerId);
+            pourActive = true;
+            dragging = true;
+            const p = pointerWorld(e.clientX, e.clientY);
+            pourAt(p);
+            lastStir = new THREE.Vector3(p.x, p.y, p.z);
         });
-
         canvas.addEventListener('pointermove', (e) => {
-            const { gx, gy } = screenToGrid(e.clientX, e.clientY);
-            if (pointerActive) {
-                applyPointer(gx, gy);
-                const dx = gx - lastPointer.gx;
-                const dy = gy - lastPointer.gy;
-                const dist = Math.hypot(dx, dy);
-                const steps = Math.max(1, Math.floor(dist));
-                for (let s = 1; s <= steps; s++) {
-                    const igx = Math.round(lastPointer.gx + dx * s / steps);
-                    const igy = Math.round(lastPointer.gy + dy * s / steps);
-                    const dIdx = gyIndex(igy, igx);
-                    if (isInGrid(igx, igy) && terrain[dIdx] > DRAIN / 2) {
-                        velocity[dIdx] += (Math.random() - 0.5) * 22;
-                    }
+            const p = pointerWorld(e.clientX, e.clientY);
+            if (pourActive && p) {
+                pourAt(p);
+            }
+            if (dragging && p) {
+                if (lastStir) {
+                    stirAt(p, (p.x - lastStir.x) * 2, (p.z - lastStir.z) * 2);
                 }
-                lastPointer = { gx, gy };
+                lastStir = new THREE.Vector3(p.x, p.y, p.z);
             }
         });
-
         const endPointer = (e) => {
-            if (pointerActive) {
-                pointerActive = false;
-                rainToggle.blur();
-            }
+            pourActive = false;
+            dragging = false;
+            lastStir = null;
         };
         canvas.addEventListener('pointerup', endPointer);
         canvas.addEventListener('pointercancel', endPointer);
         canvas.addEventListener('pointerleave', endPointer);
 
-        function updateSimulation(dt) {
-            const damp = 0.99;
+        let rainEnabled = false;
+        let paused = false;
 
-            for (let gy = 1; gy < GRID_H - 1; gy++) {
-                for (let gx = 1; gx < GRID_W - 1; gx++) {
-                    const idx = gyIndex(gy, gx);
-                    if (terrain[idx] <= DRAIN / 2) { water[idx] = 0; velocity[idx] = 0; temp[idx] = 0; continue; }
-
-                    const left = gyIndex(gy, gx - 1);
-                    const right = gyIndex(gy, gx + 1);
-                    const up = gyIndex(gy - 1, gx);
-                    const down = gyIndex(gy + 1, gx);
-
-                    const tLeft = terrain[left] <= DRAIN / 2 ? terrain[idx] : terrain[left];
-                    const tRight = terrain[right] <= DRAIN / 2 ? terrain[idx] : terrain[right];
-                    const tUp = terrain[up] <= DRAIN / 2 ? terrain[idx] : terrain[up];
-                    const tDown = terrain[down] <= DRAIN / 2 ? terrain[idx] : terrain[down];
-
-                    const sLeft = tLeft + water[left];
-                    const sRight = tRight + water[right];
-                    const sUp = tUp + water[up];
-                    const sDown = tDown + water[down];
-                    const sCenter = terrain[idx] + water[idx];
-
-                    const flowLeft = Math.max(0, sCenter - sLeft) * 0.5;
-                    const flowRight = Math.max(0, sCenter - sRight) * 0.5;
-                    const flowUp = Math.max(0, sCenter - sUp) * 0.5;
-                    const flowDown = Math.max(0, sCenter - sDown) * 0.5;
-
-                    const sum = Math.min(flowLeft + flowRight + flowUp + flowDown, water[idx]);
-
-                    temp[idx] = water[idx] - sum;
-                    if (flowLeft > 0) temp[left] += flowLeft;
-                    if (flowRight > 0) temp[right] += flowRight;
-                    if (flowUp > 0) temp[up] += flowUp;
-                    if (flowDown > 0) temp[down] += flowDown;
+        document.getElementById('Reset_Btn').addEventListener('click', () => {
+            resetParticles();
+            document.getElementById('Reset_Btn').blur();
+        });
+        document.getElementById('Pause_Btn').addEventListener('click', () => {
+            paused = !paused;
+            document.getElementById('Pause_Btn').textContent = paused ? 'Resume' : 'Pause';
+            document.getElementById('Pause_Btn').classList.toggle('is-on', paused);
+            document.getElementById('Pause_Btn').blur();
+        });
+        document.getElementById('Rain_Toggle').addEventListener('click', () => {
+            rainEnabled = !rainEnabled;
+            document.getElementById('Rain_Toggle').textContent = 'Rain : ' + (rainEnabled ? 'ON' : 'OFF');
+            document.getElementById('Rain_Toggle').classList.toggle('is-on', rainEnabled);
+            document.getElementById('Rain_Toggle').blur();
+        });
+        document.getElementById('Add_Burst').addEventListener('click', () => {
+            const cx = (Math.random() - 0.5) * 4;
+            const cz = (Math.random() - 0.5) * 4;
+            let burst = 300;
+            for (let i = 0; i < NUM_PARTICLES && burst > 0; i++) {
+                if (pos[i * 3 + 1] < 1.5) {
+                    const a = Math.random() * Math.PI * 2;
+                    const r = Math.random() * 1.5;
+                    pos[i * 3] = cx + Math.cos(a) * r;
+                    pos[i * 3 + 1] = 0.2 + Math.random() * 1.2;
+                    pos[i * 3 + 2] = cz + Math.sin(a) * r;
+                    prevPos[i * 3] = pos[i * 3];
+                    prevPos[i * 3 + 1] = pos[i * 3 + 1];
+                    prevPos[i * 3 + 2] = pos[i * 3 + 2];
+                    vel[i * 3] = (Math.random() - 0.5) * 8;
+                    vel[i * 3 + 1] = 2 + Math.random() * 5;
+                    vel[i * 3 + 2] = (Math.random() - 0.5) * 8;
+                    burst--;
                 }
             }
+            document.getElementById('Add_Burst').blur();
+        });
 
-            for (let gy = 1; gy < GRID_H - 1; gy++) {
-                for (let gx = 1; gx < GRID_W - 1; gx++) {
-                    const idx = gyIndex(gy, gx);
-                    if (terrain[idx] <= DRAIN / 2) { velocity[idx] = 0; continue; }
-                    velocity[idx] += (prevWater[idx] - temp[idx]) * 0.8;
-                    velocity[idx] *= damp;
-                    temp[idx] += velocity[idx] * 0.12;
-                    if (temp[idx] < 0.0001) temp[idx] = 0;
-                    if (temp[idx] > WATER_MAX) temp[idx] = WATER_MAX;
-                }
-            }
+        // ------------------------------------------------------------
+        //  SPH step
+        // ------------------------------------------------------------
+        function cellX(i) { return Math.floor((pos[i * 3] - MIN.x) / CELL); }
+        function cellY(i) { return Math.floor((pos[i * 3 + 1] - MIN.y) / CELL); }
+        function cellZ(i) { return Math.floor((pos[i * 3 + 2] - MIN.z) / CELL); }
 
-            if (rainEnabled) {
-                raindrops.forEach(d => {
-                    d.y += d.speed * dt;
-                    if (d.y > canvas.height) { d.y = -10; d.x = Math.random() * canvas.width; }
-                });
-                for (let i = 0; i < 6; i++) {
-                    const rGx = Math.floor(Math.random() * GRID_W);
-                    const rIdx = gyIndex(0, rGx);
-                    if (isInGrid(rGx, 0) && terrain[rIdx] > DRAIN / 2) {
-                        temp[rIdx] += 2.2;
-                    }
-                }
-            }
+        // flat compacted neighbor lists (no closures / no allocation)
+        const MAX_NEIGHBORS = 96;
+        const nCount = new Int32Array(NUM_PARTICLES);
+        const nStart = new Int32Array(NUM_PARTICLES);
+        const nList = new Int32Array(NUM_PARTICLES * MAX_NEIGHBORS);
 
-            const oldWater = water;
-            water = temp;
-            temp = oldWater;
-            prevWater = oldWater;
-        }
+        function buildNeighborLists() {
+            let offset = 0;
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                nStart[i] = offset;
+                let cx = cellX(i);
+                let cy = cellY(i);
+                let cz = cellZ(i);
+                if (cx < 0) cx = 0; else if (cx >= GRID_NX) cx = GRID_NX - 1;
+                if (cy < 0) cy = 0; else if (cy >= GRID_NY) cy = GRID_NY - 1;
+                if (cz < 0) cz = 0; else if (cz >= GRID_NZ) cz = GRID_NZ - 1;
 
-        const raindrops = [];
-        for (let i = 0; i < 160; i++) {
-            raindrops.push({
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
-                speed: 420 + Math.random() * 380
-            });
-        }
+                const ix3 = i * 3;
+                const ix = pos[ix3], iy = pos[ix3 + 1], iz = pos[ix3 + 2];
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, '#0a1120');
-            grad.addColorStop(1, '#05070d');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            const ox = (canvas.width - GRID_W * CELL_W) / 2;
-            const oy = (canvas.height - GRID_H * CELL_H) / 2;
-
-            for (let gy = 0; gy < GRID_H; gy++) {
-                for (let gx = 0; gx < GRID_W; gx++) {
-                    const idx = gyIndex(gy, gx);
-                    const t = terrain[idx];
-
-                    if (t > -100) {
-                        if (t < TERRAIN_TOP) {
-                            ctx.fillStyle = `rgb(${Math.round(60 + t * 2.5)}, ${Math.round(70 + t * 2)}, ${Math.round(45 + t * 1.5)})`;
-                        } else {
-                            ctx.fillStyle = '#3a4356';
+                let cnt = 0;
+                for (let zc = cz - 1; zc <= cz + 1; zc++) {
+                    if (zc < 0 || zc >= GRID_NZ) continue;
+                    for (let yc = cy - 1; yc <= cy + 1; yc++) {
+                        if (yc < 0 || yc >= GRID_NY) continue;
+                        for (let xc = cx - 1; xc <= cx + 1; xc++) {
+                            if (xc < 0 || xc >= GRID_NX) continue;
+                            const c = xc + yc * GRID_NX + zc * GRID_XZ;
+                            const start = cellStarts[c];
+                            const end = start + cellCounts[c];
+                            for (let k = start; k < end; k++) {
+                                const j = cellIds[k];
+                                if (j === i) continue;
+                                const jx3 = j * 3;
+                                const dx = ix - pos[jx3];
+                                const dy = iy - pos[jx3 + 1];
+                                const dz = iz - pos[jx3 + 2];
+                                const r2 = dx * dx + dy * dy + dz * dz;
+                                if (r2 < H2) {
+                                    if (cnt < MAX_NEIGHBORS) nList[offset + cnt++] = j;
+                                }
+                            }
                         }
-                        ctx.fillRect(ox + gx * CELL_W, oy + gy * CELL_H, CELL_W, CELL_H);
                     }
+                }
+                nCount[i] = cnt;
+                offset += cnt;
+            }
+        }
 
-                    const w = water[idx];
-                    if (w > 0.05) {
-                        const depth = Math.min(1, w / 40);
-                        const r = Math.round(30 + 60 * depth);
-                        const g = Math.round(120 + 90 * (1 - depth));
-                        const b = Math.round(200 + 55 * depth);
-                        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.72)`;
-                        ctx.fillRect(ox + gx * CELL_W, oy + gy * CELL_H, CELL_W, CELL_H);
+        function computeDensity() {
+            density.fill(0);
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                const ix3 = i * 3;
+                const ix = pos[ix3], iy = pos[ix3 + 1], iz = pos[ix3 + 2];
+                let d = 0;
+                const s = nStart[i], e = s + nCount[i];
+                for (let k = s; k < e; k++) {
+                    const j = nList[k];
+                    const jx3 = j * 3;
+                    const dx = ix - pos[jx3];
+                    const dy = iy - pos[jx3 + 1];
+                    const dz = iz - pos[jx3 + 2];
+                    const r2 = dx * dx + dy * dy + dz * dz;
+                    if (r2 < H2) {
+                        d += MASS * poly6(r2);
+                    }
+                }
+                density[i] = d;
+            }
+        }
+
+        function computeForcesAndIntegrate(dt) {
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                const ix3 = i * 3;
+                const rho = density[i] > 1e-5 ? density[i] : 1e-5;
+                pressure[i] = GAS_CONST * (rho - REST_DENSITY);
+
+                let ax = 0, ay = GRAVITY_Y, az = 0;
+                const ix = pos[ix3], iy = pos[ix3 + 1], iz = pos[ix3 + 2];
+
+                const s = nStart[i], e = s + nCount[i];
+                for (let k = s; k < e; k++) {
+                    const j = nList[k];
+                    const jx3 = j * 3;
+                    const dx = ix - pos[jx3];
+                    const dy = iy - pos[jx3 + 1];
+                    const dz = iz - pos[jx3 + 2];
+                    const r2 = dx * dx + dy * dy + dz * dz;
+                    if (r2 >= H2 || r2 < 1e-8) continue;
+                    const r = Math.sqrt(r2);
+
+                    // pressure force  a += -M * (p_i + p_j) / (rho_i + rho_j) * gradW  (symmetric)
+                    const grad = spikyGrad(r, r2);
+                    const rhoJ = density[j] > 1e-5 ? density[j] : 1e-5;
+                    const pForce = MASS * (pressure[i] + pressure[j]) / (rho + rhoJ);
+                    ax -= (dx / r) * pForce * grad;
+                    ay -= (dy / r) * pForce * grad;
+                    az -= (dz / r) * pForce * grad;
+
+                    // viscosity force  a = M * nu * lapW * (v_j - v_i) / rho_j
+                    const vx = vel[jx3] - vel[ix3];
+                    const vy = vel[jx3 + 1] - vel[ix3 + 1];
+                    const vz = vel[jx3 + 2] - vel[ix3 + 2];
+                    const vMul = MASS * VISCOSITY * viscLap(r) / rhoJ;
+                    ax += vx * vMul;
+                    ay += vy * vMul;
+                    az += vz * vMul;
+                }
+
+                // velocity-Verlet update
+                vel[ix3] += ax * dt;
+                vel[ix3 + 1] += ay * dt;
+                vel[ix3 + 2] += az * dt;
+
+                pos[ix3] += vel[ix3] * dt;
+                pos[ix3 + 1] += vel[ix3 + 1] * dt;
+                pos[ix3 + 2] += vel[ix3 + 2] * dt;
+            }
+        }
+
+        function collisions() {
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                const ix = i * 3;
+                // floor
+                if (pos[ix + 1] < MIN.y) {
+                    pos[ix + 1] = MIN.y;
+                    if (vel[ix + 1] < 0) vel[ix + 1] = -vel[ix + 1] * COL_SOFT;
+                }
+                if (pos[ix + 1] > MAX.y) {
+                    pos[ix + 1] = MAX.y;
+                    if (vel[ix + 1] > 0) vel[ix + 1] = -vel[ix + 1] * COL_SOFT;
+                }
+                if (pos[ix] < MIN.x) {
+                    pos[ix] = MIN.x;
+                    if (vel[ix] < 0) vel[ix] = -vel[ix] * COL_SOFT;
+                }
+                if (pos[ix] > MAX.x) {
+                    pos[ix] = MAX.x;
+                    if (vel[ix] > 0) vel[ix] = -vel[ix] * COL_SOFT;
+                }
+                if (pos[ix + 2] < MIN.z) {
+                    pos[ix + 2] = MIN.z;
+                    if (vel[ix + 2] < 0) vel[ix + 2] = -vel[ix + 2] * COL_SOFT;
+                }
+                if (pos[ix + 2] > MAX.z) {
+                    pos[ix + 2] = MAX.z;
+                    if (vel[ix + 2] > 0) vel[ix + 2] = -vel[ix + 2] * COL_SOFT;
+                }
+
+                // speed clamp
+                const vx = vel[ix], vy = vel[ix + 1], vz = vel[ix + 2];
+                const sp = Math.sqrt(vx * vx + vy * vy + vz * vz);
+                if (sp > MAX_SPEED) {
+                    const f = MAX_SPEED / sp;
+                    vel[ix] *= f; vel[ix + 1] *= f; vel[ix + 2] *= f;
+                }
+            }
+        }
+
+        function stepSPH(dt) {
+            if (rainEnabled) {
+                for (let k = 0; k < 6; k++) {
+                    let done = false;
+                    for (let i = 0; i < NUM_PARTICLES && !done; i++) {
+                        if (pos[i * 3 + 1] < 1.0) {
+                            pos[i * 3] = MIN.x + 0.4 + Math.random() * (container.size - 0.8);
+                            pos[i * 3 + 1] = MAX.y - 0.4;
+                            pos[i * 3 + 2] = MIN.z + 0.4 + Math.random() * (container.size - 0.8);
+                            prevPos[i * 3] = pos[i * 3];
+                            prevPos[i * 3 + 1] = pos[i * 3 + 1];
+                            prevPos[i * 3 + 2] = pos[i * 3 + 2];
+                            vel[i * 3] = 0;
+                            vel[i * 3 + 1] = -2;
+                            vel[i * 3 + 2] = 0;
+                            done = true;
+                        }
                     }
                 }
             }
 
-            if (rainEnabled) {
-                ctx.strokeStyle = 'rgba(160, 200, 255, 0.35)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                raindrops.forEach(d => {
-                    ctx.moveTo(d.x, d.y);
-                    ctx.lineTo(d.x - 2, d.y - 12);
-                });
-                ctx.stroke();
+            rebuildGrid();
+            buildNeighborLists();
+            computeDensity();
+            computeForcesAndIntegrate(dt);
+            collisions();
+        }
+
+        // ------------------------------------------------------------
+        //  Rendering: particles as smooth liquid through scalar field
+        // ------------------------------------------------------------
+        //  Rendering: SPH particles drawn as smooth connected liquid.
+        //  Each particle is a soft gaussian blob whose size/brightness
+        //  scales with its physical density, so clusters merge into a
+        //  continuous fluid surface.
+        // ------------------------------------------------------------
+        const displayCount = NUM_PARTICLES;
+        const fluidGeo = new THREE.BufferGeometry();
+        const fluidPos = new Float32Array(displayCount * 3);
+        const fluidAttr = new Float32Array(displayCount);          // per-particle density factor
+        fluidGeo.setAttribute('position', new THREE.BufferAttribute(fluidPos, 3).setUsage(THREE.DynamicDrawUsage));
+        fluidGeo.setAttribute('aScalar', new THREE.BufferAttribute(fluidAttr, 1).setUsage(THREE.DynamicDrawUsage));
+
+        const fluidMat = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            uniforms: {
+                uTime: { value: 0 },
+                uCamPos: { value: Camera.position },
+                uBaseColor: { value: new THREE.Color(0.16, 0.5, 0.95) },
+                uDeepColor: { value: new THREE.Color(0.02, 0.14, 0.4) },
+            },
+            vertexShader: `
+                attribute float aScalar;
+                varying float vScalar;
+                varying vec3 vWorld;
+                void main() {
+                    vScalar = aScalar;
+                    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                    vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+                    // blob grows with local density -> smooth merged surface
+                    float size = (0.7 + aScalar * 2.0);
+                    gl_PointSize = size * (280.0 / max(0.5, -mv.z));
+                    gl_Position = projectionMatrix * mv;
+                }
+            `,
+            fragmentShader: `
+                uniform float uTime;
+                uniform vec3 uCamPos;
+                uniform vec3 uBaseColor;
+                uniform vec3 uDeepColor;
+                varying float vScalar;
+                varying vec3 vWorld;
+                void main() {
+                    vec2 c = gl_PointCoord - vec2(0.5);
+                    float r2 = dot(c, c);
+                    if (r2 > 0.25) discard;
+                    // soft but fairly tight gaussian falloff:
+                    // overlapping blobs merge into a continuous surface
+                    float alpha = exp(-r2 * 12.0) * (0.35 + vScalar * 0.7);
+                    alpha = clamp(alpha, 0.0, 1.0);
+
+                    // fresnel highlight at grazing angles for glossy surface
+                    vec3 N = vec3(0.0, 1.0, 0.0);
+                    vec3 V = normalize(uCamPos - vWorld);
+                    float fresnel = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+
+                    // gentle rolling surface ripple for life
+                    float ripple = sin(vWorld.x * 3.2 + uTime * 2.2) * cos(vWorld.z * 3.2 + uTime * 1.7) * 0.5 + 0.5;
+
+                    vec3 col = mix(uDeepColor, uBaseColor, 0.3 + 0.7 * ripple);
+                    col += vec3(0.55, 0.75, 1.0) * fresnel * 0.7;
+                    col += vec3(0.45, 0.7, 1.0) * pow(alpha, 3.0) * 0.25;
+
+                    float a = min(alpha + fresnel * 0.55, 1.0);
+                    if (a < 0.02) discard;
+                    gl_FragColor = vec4(col, a);
+                }
+            `,
+            blending: THREE.NormalBlending,
+        });
+
+        const fluidPoints = new THREE.Points(fluidGeo, fluidMat);
+        fluidPoints.frustumCulled = false;
+        Scene.add(fluidPoints);
+
+        // ------------------------------------------------------------
+        //  Rain streaks overlay (simple in-scene line sprites)
+        // ------------------------------------------------------------
+        const rainParticles = new THREE.Points(
+            new THREE.BufferGeometry(),
+            new THREE.PointsMaterial({ color: 0x9fd0ff, size: 0.06, transparent: true, opacity: 0.5 })
+        );
+        rainParticles.visible = false;
+        const rainData = new Float32Array(600 * 3);
+        rainParticles.geometry.setAttribute('position', new THREE.BufferAttribute(rainData, 3).setUsage(THREE.DynamicDrawUsage));
+        Scene.add(rainParticles);
+        let rainTime = 0;
+
+        // ------------------------------------------------------------
+        //  Main loop
+        // ------------------------------------------------------------
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(1 / 40, 0.033);
+
+            Controls.update();
+            uTime += dt;
+
+            if (!paused) {
+                const sub = 2;
+                for (let s = 0; s < sub; s++) {
+                    stepSPH(dt / sub);
+                }
             }
+
+            // update display buffers using SPH density (already computed)
+            const restInv = 1 / REST_DENSITY;
+            for (let i = 0; i < displayCount; i++) {
+                fluidPos[i * 3] = pos[i * 3];
+                fluidPos[i * 3 + 1] = pos[i * 3 + 1];
+                fluidPos[i * 3 + 2] = pos[i * 3 + 2];
+                const dense = density[i] * restInv;
+                // normalized density around rest -> smooth field 0..~
+                fluidAttr[i] = Math.max(0.0, Math.min(1.6, dense));
+            }
+            fluidGeo.attributes.position.needsUpdate = true;
+            fluidGeo.attributes.aScalar.needsUpdate = true;
+            fluidMat.uniforms.uCamPos.value.copy(Camera.position);
+
+            fluidMat.uniforms.uTime.value = uTime;
+
+            // rain visualization
+            rainTime += dt;
+            if (rainEnabled) {
+                rainParticles.visible = true;
+                for (let i = 0; i < 600; i++) {
+                    const idx = i * 3;
+                    const x = (hash31(i) - 0.5) * 14;
+                    const y = ((hash31(i + 3) * 60 + rainTime * 6) % 14) - 2;
+                    const z = (hash31(i + 7) - 0.5) * 14;
+                    rainData[idx] = x;
+                    rainData[idx + 1] = y;
+                    rainData[idx + 2] = z;
+                }
+                rainParticles.geometry.attributes.position.needsUpdate = true;
+            } else {
+                rainParticles.visible = false;
+            }
+
+            Composer.render();
+
+            // stats
+            document.getElementById('Stats').innerHTML =
+                'Particles : ' + NUM_PARTICLES +
+                '<br>H : ' + H.toFixed(2) +
+                (paused ? '<br><span style="color:#ffd27f">PAUSED</span>' : '');
         }
 
-        function loop() {
-            requestAnimationFrame(loop);
-            const now = performance.now();
-            let dt = (now - lastTime) / 1000;
-            lastTime = now;
-            if (dt > 0.05) dt = 0.05;
-
-            updateSimulation(dt);
-            draw();
+        function hash31(n) {
+            const x = Math.sin(n * 127.1) * 43758.5453;
+            return x - Math.floor(x);
         }
+
+        let uTime = 0;
+
+        // resize
+        function resize() {
+            Camera.aspect = window.innerWidth / window.innerHeight;
+            Camera.updateProjectionMatrix();
+            Renderer.setSize(window.innerWidth, window.innerHeight);
+            Composer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', resize);
 
         setTimeout(() => {
             document.getElementById('Fade_Game').style.opacity = '0';
         }, 60);
 
-        loop();
+        animate();
     </script>
 </body>
 </html>
