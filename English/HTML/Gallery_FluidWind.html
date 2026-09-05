@@ -161,6 +161,12 @@
         const PARTICLES = 3000;
         const particles = new Array(PARTICLES);
 
+        const CELL = 6;
+        const COLS = Math.ceil(VW / CELL);
+        const ROWS = Math.ceil(VH / CELL);
+        const gridHead = new Int32Array(COLS * ROWS);
+        const gridNext = new Int32Array(PARTICLES);
+
         function hash2(x, y) {
             const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
             return s - Math.floor(s);
@@ -191,9 +197,13 @@
         }
 
         function resetParticle(p) {
-            p.x = VW * 0.5 + (Math.random() - 0.5) * 20;
-            p.y = VH * 0.5 + (Math.random() - 0.5) * 14;
+            p.x = Math.random() * VW;
+            p.y = Math.random() * VH;
+            p.px = p.x;
+            p.py = p.y;
             p.age = Math.random() * 200;
+            p.nx = Math.random() * 100;
+            p.ny = Math.random() * 100;
         }
 
         for (let i = 0; i < PARTICLES; i++) {
@@ -202,60 +212,52 @@
                 y: 0,
                 px: 0,
                 py: 0,
-                age: 0
+                age: 0,
+                nx: 0,
+                ny: 0
             };
             resetParticle(particles[i]);
         }
 
-        function addSource(from, to) {
-            let dx = to.x - from.x;
-            let dy = to.y - from.y;
-            const dist = Math.hypot(dx, dy) || 1;
-            if (dist > 1) {
-                dx /= dist;
-                dy /= dist;
-            }
-            const strength = 0.5 + Math.min(2.5, dist * 0.14);
-            windSources.push({
-                x: from.x,
-                y: from.y,
-                dx,
-                dy,
-                strength,
-                r: 2 + dist * 0.6
-            });
-            if (windSources.length > 12) windSources.shift();
-        }
-
         let isPlacing = false;
         let dragStart = null;
+        let dragPreview = null;
 
         canvas.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             isPlacing = true;
             dragStart = screenToWorld(e.clientX, e.clientY);
-            addSource(dragStart, dragStart);
+            dragPreview = {
+                x: dragStart.x,
+                y: dragStart.y,
+                dx: 0,
+                dy: 0,
+                strength: 0.5,
+                r: 2
+            };
         });
 
         canvas.addEventListener('pointermove', (e) => {
-            if (isPlacing && dragStart) {
+            if (isPlacing && dragStart && dragPreview) {
                 const cur = screenToWorld(e.clientX, e.clientY);
-                if (windSources.length > 0) {
-                    const last = windSources[windSources.length - 1];
-                    const ddx = cur.x - dragStart.x;
-                    const ddy = cur.y - dragStart.y;
-                    const d = Math.hypot(ddx, ddy) || 1;
-                    last.dx = ddx / d;
-                    last.dy = ddy / d;
-                    last.strength = 0.5 + Math.min(2.5, d * 0.14);
-                    last.r = 2 + d * 0.6;
-                }
+                const ddx = cur.x - dragStart.x;
+                const ddy = cur.y - dragStart.y;
+                const d = Math.hypot(ddx, ddy) || 1;
+                dragPreview.dx = ddx / d;
+                dragPreview.dy = ddy / d;
+                dragPreview.strength = 0.5 + Math.min(2.5, d * 0.14);
+                dragPreview.r = 2 + d * 0.6;
             }
         });
 
         const endPointer = (e) => {
             if (isPlacing) {
                 isPlacing = false;
+                if (dragPreview) {
+                    windSources.push(dragPreview);
+                    if (windSources.length > 12) windSources.shift();
+                    dragPreview = null;
+                }
                 dragStart = null;
                 clearBtn.blur();
             }
@@ -324,11 +326,13 @@
                 return `rgba(${Math.round(140 + 80 * s)}, ${Math.round(205 - 40 * s)}, 255, 0.85)`;
             } else {
                 const s = (t - 0.5) / 0.5;
-                return `rgba(${Math.round(220 + 35 * s)}, ${Math.round(105 - 30 * s)}, ${Math.round(190 - 90 * s)}, 0.9)`;
+                return `rgba(${Math.round(220 + 25 * s)}, ${Math.round(205 + 30 * s)}, ${Math.round(255)}, 0.9)`;
             }
         }
 
         function step(dt) {
+            gridHead.fill(-1);
+
             for (const s of windSources) {
                 s.x += s.dx * 0.03;
                 s.y += s.dy * 0.03;
@@ -344,15 +348,69 @@
                 if (p.age > 320) { resetParticle(p); }
 
                 const base = velocityAt(p.x, p.y, 0, 0);
+
+                const nn = fbm(p.nx, p.ny) * 2 - 1;
+                const nm = fbm(p.nx + 20, p.ny + 20) * 2 - 1;
+                const ndx = Math.cos(nn * Math.PI * 2.2) * 0.35;
+                const ndy = Math.sin(nm * Math.PI * 2.2) * 0.35;
+                p.nx += dt * 0.4;
+                p.ny += dt * 0.4;
+
                 p.px = p.x;
                 p.py = p.y;
-                p.x += base.vx * dt * 34;
-                p.y += base.vy * dt * 34;
+                p.x += (base.vx + ndx) * dt * 20;
+                p.y += (base.vy + ndy) * dt * 20;
 
                 if (p.x < 0) p.x = VW - 1;
                 if (p.x >= VW) p.x = 1;
                 if (p.y < 0) p.y = VH - 1;
                 if (p.y >= VH) p.y = 1;
+            }
+
+            for (let i = 0; i < PARTICLES; i++) {
+                const p = particles[i];
+                const cx = Math.min(COLS - 1, Math.max(0, (p.x / CELL) | 0));
+                const cy = Math.min(ROWS - 1, Math.max(0, (p.y / CELL) | 0));
+                const idx = cy * COLS + cx;
+                gridNext[i] = gridHead[idx];
+                gridHead[idx] = i;
+            }
+
+            for (let cx = 0; cx < COLS; cx++) {
+                for (let cy = 0; cy < ROWS; cy++) {
+                    let n = gridHead[cy * COLS + cx];
+                    while (n !== -1) {
+                        const p = particles[n];
+                        for (let ox = -1; ox <= 1; ox++) {
+                            for (let oy = -1; oy <= 1; oy++) {
+                                const gx = cx + ox;
+                                const gy = cy + oy;
+                                if (gx < 0 || gy < 0 || gx >= COLS || gy >= ROWS) continue;
+                                let m = gridHead[gy * COLS + gx];
+                                while (m !== -1) {
+                                    if (m <= n) { m = gridNext[m]; continue; }
+                                    const q = particles[m];
+                                    const dx = p.x - q.x;
+                                    const dy = p.y - q.y;
+                                    const d2 = dx * dx + dy * dy;
+                                    if (d2 < 0.36 && d2 > 0.0001) {
+                                        const d = Math.sqrt(d2);
+                                        const push = (0.6 - d) * 0.5;
+                                        const inv = 1 / d;
+                                        const ux = dx * inv * push;
+                                        const uy = dy * inv * push;
+                                        p.x += ux;
+                                        p.y += uy;
+                                        q.x -= ux;
+                                        q.y -= uy;
+                                    }
+                                    m = gridNext[m];
+                                }
+                            }
+                        }
+                        n = gridNext[n];
+                    }
+                }
             }
         }
 
@@ -380,18 +438,24 @@
                 ctx.stroke();
             }
 
-            ctx.lineWidth = 1.25;
             ctx.lineCap = 'round';
 
+            ctx.save();
             for (let i = 0; i < PARTICLES; i++) {
                 const p = particles[i];
-                const spd = Math.hypot(p.x - p.px, p.y - p.py) / Math.max(dt, 0.001) / 34;
+                const dw = Math.hypot(p.x - p.px, p.y - p.py);
+                if (dw > 10) continue;
+                const spd = dw / Math.max(dt, 0.001) / 20;
+                const fade = Math.min(1, (320 - p.age) / 40 + 0.2);
+                ctx.globalAlpha = 0.5 * fade;
                 ctx.strokeStyle = velocityToColor(spd);
+                ctx.lineWidth = 0.9;
                 ctx.beginPath();
                 ctx.moveTo(p.px * sx, p.py * sy);
                 ctx.lineTo(p.x * sx, p.y * sy);
                 ctx.stroke();
             }
+            ctx.restore();
 
             for (const s of windSources) {
                 ctx.beginPath();
@@ -406,6 +470,23 @@
                 ctx.moveTo(s.x * sx, s.y * sy);
                 ctx.lineTo(ex, ey);
                 ctx.stroke();
+            }
+
+            if (dragPreview && (dragPreview.dx !== 0 || dragPreview.dy !== 0)) {
+                ctx.beginPath();
+                ctx.arc(dragPreview.x * sx, dragPreview.y * sy, 5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.fill();
+                const ex = dragPreview.x * sx + dragPreview.dx * 34;
+                const ey = dragPreview.y * sy + dragPreview.dy * 34;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(dragPreview.x * sx, dragPreview.y * sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+                ctx.setLineDash([]);
             }
         }
 
