@@ -267,9 +267,6 @@
 
         #UI_Next_Panel {
             position: absolute;
-            bottom: 14px;
-            left: 50%;
-            transform: translateX(-50%);
             z-index: 3;
             background: var(--panel);
             border: 1px solid var(--panel-border);
@@ -278,7 +275,7 @@
             padding: 6px 16px;
             text-align: center;
             user-select: none;
-            animation: fadeSlideUp 0.5s ease both 0.2s;
+            animation: fadeNextIn 0.5s ease both 0.2s;
         }
         #UI_Next_Label {
             font-family: "Space Grotesk", "Outfit", sans-serif;
@@ -403,15 +400,15 @@
         #UI_Action {
             position: absolute;
             left: 50%;
-            top: 60%;
+            top: 84px;
             transform: translateX(-50%);
             z-index: 6;
             background: rgba(10, 16, 30, 0.92);
             border: 1px solid rgba(148, 163, 184, 0.25);
             border-radius: 12px;
-            padding: 10px 24px;
+            padding: 8px 20px;
             font-family: "Space Grotesk", "Outfit", sans-serif;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 600;
             color: var(--ink);
             letter-spacing: 0.04em;
@@ -429,8 +426,8 @@
         #UI_Action .msg-hint {
             display: block;
             color: var(--ink-dim);
-            font-size: 0.72rem;
-            margin-top: 6px;
+            font-size: 0.7rem;
+            margin-top: 5px;
             font-weight: 500;
             letter-spacing: 0.1em;
             animation: hintBounce 1.2s ease-in-out infinite;
@@ -451,6 +448,10 @@
         @keyframes fadeSlideUp {
             from { opacity: 0; transform: translateX(-50%) translateY(12px); }
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes fadeNextIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         @keyframes startBreath {
             0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
@@ -834,6 +835,9 @@
             #UI_Status_Panel {
                 font-size: 0.66rem;
             }
+            #UI_Action {
+                top: 150px;
+            }
             #UI_Item_Panel {
                 bottom: 10px;
                 right: 10px;
@@ -908,12 +912,13 @@
             'and your legend is sung across every village. Thank you for saving the realm, hero.';
 
         const GRAVITY = 0.35;
-        const DAMPING = 0.85;
-        const WALL_BOUNCE = 0.5;
+        const DAMPING = 0.72;
+        const WALL_BOUNCE = 0.35;
         const FRICTION = 0.995;
         const MERGE_DIST_FACTOR = 0.92;
         const MAX_FRUITS_ON_SCREEN = 60;
         const DROP_LINE_Y_RATIO = 0.24;
+        const MAX_FALL_SPEED = 18;
         const CRIT_THRESHOLD = 3;
 
         /* ─── Canvas Setup ─────────────────────────────────────── */
@@ -939,9 +944,23 @@
             Canvas.style.width = CW + 'px';
             Canvas.style.height = CH + 'px';
             Ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+            PositionNextPanel();
         }
         ResizeCanvas();
         window.addEventListener('resize', ResizeCanvas);
+
+        function PositionNextPanel() {
+            if (typeof UI_NextPanel === 'undefined') return;
+            const rect = Canvas.getBoundingClientRect();
+            const centerY = rect.top + rect.height * 0.22;
+            UI_NextPanel.style.top = (centerY - UI_NextPanel.offsetHeight / 2) + 'px';
+            let left = rect.right + 12;
+            const pw = UI_NextPanel.offsetWidth;
+            if (left + pw > window.innerWidth - 8) {
+                left = Math.max(8, window.innerWidth - pw - 8);
+            }
+            UI_NextPanel.style.left = left + 'px';
+        }
 
         /* ─── UI Elements ──────────────────────────────────────── */
 
@@ -988,6 +1007,7 @@
             <div id="UI_Next_Fruit">🍒</div>
         `;
         document.body.appendChild(UI_NextPanel);
+        PositionNextPanel();
 
         const UI_ItemPanel = document.createElement('div');
         UI_ItemPanel.id = 'UI_Item_Panel';
@@ -1362,6 +1382,7 @@
             update(dt) {
                 this.age += dt;
                 this.vy += GRAVITY;
+                if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;
                 this.vx *= FRICTION;
                 this.x += this.vx;
                 this.y += this.vy;
@@ -1479,11 +1500,14 @@
                         const dot = dvx * nx + dvy * ny;
 
                         if (dot > 0) {
-                            const impulse = dot * 0.6;
-                            a.vx -= impulse * (b.radius / totalMass) * nx;
-                            a.vy -= impulse * (b.radius / totalMass) * ny;
-                            b.vx += impulse * (a.radius / totalMass) * nx;
-                            b.vy += impulse * (a.radius / totalMass) * ny;
+                            const restitution = 0.35;
+                            const mA = a.radius;
+                            const mB = b.radius;
+                            const j = -(1 + restitution) * dot / (1 / mA + 1 / mB);
+                            a.vx -= j * nx / mA;
+                            a.vy -= j * ny / mA;
+                            b.vx += j * nx / mB;
+                            b.vy += j * ny / mB;
                         }
                     }
                 }

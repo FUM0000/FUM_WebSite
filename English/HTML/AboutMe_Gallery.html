@@ -1491,30 +1491,69 @@
                 this._CurrentAction = newAction;
             }
 
+            _ResolveNode(pathName) {
+                let node = this._Object;
+                const parts = pathName.split('.');
+                for (const p of parts) {
+                    const child = node.getObjectByName(p);
+                    if (!child) return this._Object.getObjectByName(pathName);
+                    node = child;
+                }
+                return node;
+            }
+
+            _GetPoseCaptureClip() {
+                const walkClip = this._Object.animations[0];
+                if (!walkClip) return null;
+                const clip = walkClip.clone();
+                for (let i = 0; i < clip.tracks.length; i++) {
+                    const track = clip.tracks[i];
+                    const m = /^(.+?)\.(position|quaternion|scale)$/.exec(track.name);
+                    if (!m) continue;
+                    const node = this._ResolveNode(m[1]);
+                    if (!node) continue;
+                    const cur = node[m[2]];
+                    if (!cur || typeof cur.x === 'undefined') continue;
+                    const times = track.times;
+                    const values = track.values;
+                    const vs = values.length / times.length;
+                    for (let k = 0; k < times.length; k++) {
+                        const base = k * vs;
+                        if (vs === 3) {
+                            values[base] = cur.x; values[base + 1] = cur.y; values[base + 2] = cur.z;
+                        } else if (vs === 4) {
+                            values[base] = cur.x; values[base + 1] = cur.y; values[base + 2] = cur.z; values[base + 3] = cur.w;
+                        }
+                    }
+                }
+                return clip;
+            }
+
             BeginBirthBlend(fadeDuration = 0.5) {
                 if (!this._AnimationControler || !this._Object || this._BirthBlend !== null) return;
-                const walkClip = this._Object.animations[0];
-                if (!walkClip) return;
+                try {
+                    const walkClip = this._Object.animations[0];
+                    const holdClip = this._GetPoseCaptureClip();
+                    if (walkClip && holdClip) {
+                        const holdAction = this._AnimationControler.clipAction(holdClip);
+                        holdAction.setEffectiveTimeScale(0);
+                        holdAction.setEffectiveWeight(1);
+                        holdAction.play();
 
-                const frozenTime = this._CurrentAction ? this._CurrentAction.time : 0;
+                        const walkAction = this._AnimationControler.clipAction(walkClip);
+                        walkAction.reset();
+                        walkAction.time = 0;
+                        walkAction.setEffectiveWeight(0);
+                        walkAction.play();
 
-                const holdClip = walkClip.clone();
-                const holdAction = this._AnimationControler.clipAction(holdClip);
-                holdAction.time = frozenTime;
-                holdAction.setEffectiveTimeScale(0);
-                holdAction.setEffectiveWeight(1);
-                holdAction.play();
-
-                const walkAction = this._AnimationControler.clipAction(walkClip);
-                walkAction.reset();
-                walkAction.time = frozenTime;
-                walkAction.setEffectiveWeight(0);
-                walkAction.play();
-
-                this._CurrentAction = walkAction;
-                this._BirthHoldAction = holdAction;
-                this._BirthBlend = 0;
-                this._BirthBlendDuration = fadeDuration;
+                        this._CurrentAction = walkAction;
+                        this._BirthHoldAction = holdAction;
+                        this._BirthBlend = 0;
+                        this._BirthBlendDuration = fadeDuration;
+                    }
+                } catch (e) {
+                    console.error('BeginBirthBlend error:', e);
+                }
                 this._PauseAnimation = false;
             }
 

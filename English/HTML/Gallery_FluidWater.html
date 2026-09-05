@@ -152,7 +152,7 @@
 
         const Camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
         Camera.position.set(7, 5, 17);
-        Camera.lookAt(0, 1.5, 0);
+        Camera.lookAt(0, 0.5, 0);
 
         const Controls = new OrbitControls(Camera, canvas);
         Controls.target.set(0, 2, 0);
@@ -171,12 +171,15 @@
         Scene.add(Key);
 
         // wireframe tank so the fluid bounds are visible (rectangular, tilted)
-        const TANK_X = 9.0, TANK_Y = 4.5, TANK_Z = 4.5;
+        const TANK_X = 9.0, TANK_Y = 0.7, TANK_Z = 4.5;
         const TILT = 0.16;              // tilt around z-axis (radians) -> low end +x
         const COS_T = Math.cos(TILT), SIN_T = Math.sin(TILT);
+        // raise the box so its lowest corner rests on the ground (world y=0)
+        const OFFY = (TANK_X / 2 - 0.2) * SIN_T - 0.05 * COS_T;
 
         const TankGroup = new THREE.Group();
         TankGroup.rotation.z = -TILT;   // +x end tips downward
+        TankGroup.position.y = OFFY;    // low corner rests at world y=0
         const LineMat = new THREE.LineBasicMaterial({ color: 0x4a6a9a, transparent: true, opacity: 0.5 });
         const TankBox = new THREE.LineSegments(
             new THREE.EdgesGeometry(new THREE.BoxGeometry(TANK_X, TANK_Y, TANK_Z)),
@@ -234,7 +237,7 @@
         // domain bounds (box-local; the tank is rendered tilted)
         const HALF_X = TANK_X / 2, HALF_Z = TANK_Z / 2;
         const MIN = { x: -HALF_X + 0.2, y: 0.05, z: -HALF_Z + 0.2 };
-        const MAX = { x: HALF_X - 0.2, y: TANK_Y - 0.4, z: HALF_Z - 0.2 };
+        const MAX = { x: HALF_X - 0.2, y: TANK_Y, z: HALF_Z - 0.2 };
 
         // particle data
         const pos = new Float32Array(NUM_PARTICLES * 3);
@@ -431,29 +434,41 @@
         function collisions() {
             for (let i = 0; i < NUM_PARTICLES; i++) {
                 const ix = i * 3;
-                if (pos[ix + 1] < MIN.y) {
+                const px = pos[ix], py = pos[ix + 1], pz = pos[ix + 2];
+
+                // recycle when the water reaches the ground (world y=0)
+                // worldY = -px*SIN_T + py*COS_T + OFFY  <= 0
+                if (-px * SIN_T + py * COS_T + OFFY <= 0) {
+                    // well up inside the box at the raised (-x) end, arcing downhill
+                    pos[ix] = MIN.x + 0.35 + Math.random() * 0.9;
+                    pos[ix + 1] = 0.06 + Math.random() * 0.12;
+                    pos[ix + 2] = (MIN.z + MAX.z) / 2 + (Math.random() - 0.5) * 1.2;
+                    const V = 5.0 + Math.random() * 3.0;
+                    vel[ix] = 2.5 + Math.random() * 1.5;   // toward the low (+x) end
+                    vel[ix + 1] = V;                        // upward (local)
+                    vel[ix + 2] = (Math.random() - 0.5) * 2.0;
+                    continue;
+                }
+
+                // box floor (local)
+                if (py < MIN.y) {
                     pos[ix + 1] = MIN.y;
                     if (vel[ix + 1] < 0) vel[ix + 1] = -vel[ix + 1] * COL_SOFT;
                 }
-                if (pos[ix + 1] > MAX.y) {
-                    pos[ix + 1] = MAX.y;
-                    if (vel[ix + 1] > 0) vel[ix + 1] = -vel[ix + 1] * COL_SOFT;
+
+                // raised end (-x) and the side walls are always closed;
+                // only the low (+x) end opens above the wall top so water spills
+                if (px < MIN.x) { pos[ix] = MIN.x; if (vel[ix] < 0) vel[ix] = -vel[ix] * COL_SOFT; }
+                if (pz < MIN.z) { pos[ix + 2] = MIN.z; if (vel[ix + 2] < 0) vel[ix + 2] = -vel[ix + 2] * COL_SOFT; }
+                if (pz > MAX.z) { pos[ix + 2] = MAX.z; if (vel[ix + 2] > 0) vel[ix + 2] = -vel[ix + 2] * COL_SOFT; }
+                if (py < TANK_Y) {
+                    if (px > MAX.x) { pos[ix] = MAX.x; if (vel[ix] > 0) vel[ix] = -vel[ix] * COL_SOFT; }
                 }
-                if (pos[ix] < MIN.x) {
-                    pos[ix] = MIN.x;
-                    if (vel[ix] < 0) vel[ix] = -vel[ix] * COL_SOFT;
-                }
-                if (pos[ix] > MAX.x) {
-                    pos[ix] = MAX.x;
-                    if (vel[ix] > 0) vel[ix] = -vel[ix] * COL_SOFT;
-                }
-                if (pos[ix + 2] < MIN.z) {
-                    pos[ix + 2] = MIN.z;
-                    if (vel[ix + 2] < 0) vel[ix + 2] = -vel[ix + 2] * COL_SOFT;
-                }
-                if (pos[ix + 2] > MAX.z) {
-                    pos[ix + 2] = MAX.z;
-                    if (vel[ix + 2] > 0) vel[ix + 2] = -vel[ix + 2] * COL_SOFT;
+                // above the wall top at +x the water leaves the box and falls
+
+                if (pos[ix + 1] > TANK_Y + 6) {   // runaway safety cap
+                    pos[ix + 1] = TANK_Y + 6;
+                    if (vel[ix + 1] > 0) vel[ix + 1] = 0;
                 }
 
                 const vx = vel[ix], vy = vel[ix + 1], vz = vel[ix + 2];
@@ -513,9 +528,9 @@
             raycaster.setFromCamera(mouseNDC, Camera);
             const target = new THREE.Vector3();
             if (!raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), target)) return null;
-            // world -> box-local (inverse of the TankGroup -TILT rotation)
-            const lx = target.x * COS_T - target.y * SIN_T;
-            const ly = target.x * SIN_T + target.y * COS_T;
+            // world -> box-local (inverse of the TankGroup -TILT rotation, minus OFFY)
+            const lx = target.x * COS_T - (target.y - OFFY) * SIN_T;
+            const ly = target.x * SIN_T + (target.y - OFFY) * COS_T;
             return new THREE.Vector3(lx, ly, target.z);
         }
 
@@ -529,7 +544,7 @@
                 const tx = point.x + (Math.random() - 0.5) * 0.7;
                 const tz = point.z + (Math.random() - 0.5) * 0.7;
                 if (tx < MIN.x + 0.1 || tx > MAX.x - 0.1 || tz < MIN.z + 0.1 || tz > MAX.z - 0.1) continue;
-                const ty = Math.min(MAX.y - 0.2, 0.9 + Math.random() * 0.7);
+                const ty = Math.min(TANK_Y + 1.0, 0.5 + Math.random() * 0.6);
                 pos[i * 3] = tx;
                 pos[i * 3 + 1] = ty;
                 pos[i * 3 + 2] = tz;
@@ -612,9 +627,9 @@
 
             for (let i = 0; i < NUM_PARTICLES; i++) {
                 const lx = pos[i * 3], ly = pos[i * 3 + 1], lz = pos[i * 3 + 2];
-// box-local -> world (SAME rotation as the tilted TankGroup)
+// box-local -> world (SAME rotation as the tilted TankGroup, plus OFFY)
             fluidPos[i * 3] = lx * COS_T + ly * SIN_T;
-            fluidPos[i * 3 + 1] = -lx * SIN_T + ly * COS_T;
+            fluidPos[i * 3 + 1] = -lx * SIN_T + ly * COS_T + OFFY;
             fluidPos[i * 3 + 2] = lz;
             }
             fluidGeo.attributes.position.needsUpdate = true;
