@@ -387,6 +387,7 @@
                     const thetaButton = Math.PI + buttonX / wallRadius;
                     const labelText = `${this.floorNames[i]}　${this.floorDescriptions[i]}`;
                     const labelMesh = this.createCurvedWallLabelMesh(labelText, labelX, y, textRadius, 0.47, 0.05);
+                    labelMesh.layers.enable(BLOOM_LAYER);
                     this.buttonPanel.add(labelMesh);
                     this.floorLabels.push(labelMesh);
                     const buttonGeometry = new THREE.BoxGeometry(buttonWidth, buttonHeight, buttonDepth);
@@ -443,6 +444,8 @@
                         new THREE.LineBasicMaterial({ color: 0x6699cc, transparent: true, opacity: 0.8, fog: false })
                     );
                     button.add(buttonOutline);
+                    button.layers.enable(BLOOM_LAYER);
+                    buttonOutline.layers.enable(BLOOM_LAYER);
                     button.userData.floor = i;
                     button.userData.outline = buttonOutline;
                     this.buttonPanel.add(button);
@@ -473,7 +476,9 @@
                             Math.cos(theta) * radius
                         ));
                     }
-                    return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), frameMaterial.clone());
+                    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), frameMaterial.clone());
+                    line.layers.enable(BLOOM_LAYER);
+                    return line;
                 };
                 const createVerticalEdge = (localX) => {
                     const theta = Math.PI + (xCenter + localX) / radius;
@@ -483,7 +488,9 @@
                         new THREE.Vector3(x, yCenter - halfHeight, z),
                         new THREE.Vector3(x, yCenter + halfHeight, z)
                     ];
-                    return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), frameMaterial.clone());
+                    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), frameMaterial.clone());
+                    line.layers.enable(BLOOM_LAYER);
+                    return line;
                 };
                 this.buttonPanel.add(createHorizontalEdge(halfHeight));
                 this.buttonPanel.add(createHorizontalEdge(-halfHeight, true));
