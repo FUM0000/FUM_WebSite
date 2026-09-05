@@ -122,6 +122,7 @@
         <a class="hud-button" href="index.html">HOME</a>
         <button id="Reset_Btn" class="hud-button" type="button">Reset</button>
         <button id="Pause_Btn" class="hud-button" type="button">Pause</button>
+        <button id="Mesh_Btn" class="hud-button" type="button">Mesh : ON</button>
     </div>
     <div id="Stats">&nbsp;</div>
     <div id="Hint">CLICK : splash &nbsp;•&nbsp; DRAG : stir &nbsp;•&nbsp; RIGHT-DRAG : orbit &nbsp;•&nbsp; SCROLL : zoom</div>
@@ -715,22 +716,17 @@
         waterGeo.setAttribute('normal', surfNrmAttr);
         waterGeo.setDrawRange(0, 0);
 
-        // background render target: the tank WITHOUT water, so the water
-        // material can show it THROUGH the surface (refraction) plus
-        // fresnel reflection + sun specular. light only, no own color.
-        const bgRT = new THREE.WebGLRenderTarget(1, 1, {
-            minFilter: THREE.LinearFilter,
-            magFilter: THREE.LinearFilter
-        });
-
-        const LightDir = new THREE.Vector3(-8, -16, -8).normalize();
+        // water color is fully TRANSPARENT; only light reflected toward the
+        // camera is added (additive blending). on/off toggle for debugging.
+        const LightDir = Key.position.clone().normalize();
         const WaterMat = new THREE.ShaderMaterial({
             side: THREE.DoubleSide,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
             uniforms: {
                 uTime: { value: 0 },
-                uLightDir: { value: LightDir },
-                tBack: { value: bgRT.texture },
-                uRes: { value: new THREE.Vector2(1, 1) }
+                uLightDir: { value: LightDir }
             },
             vertexShader: `
                 varying vec3 vPos;
@@ -745,41 +741,40 @@
             fragmentShader: `
                 uniform float uTime;
                 uniform vec3 uLightDir;
-                uniform sampler2D tBack;
-                uniform vec2 uRes;
                 varying vec3 vPos;
                 varying vec3 vNrm;
                 void main() {
                     vec3 N = normalize(vNrm);
                     vec3 V = normalize(cameraPosition - vPos);
-                    // gentle animated ripple on the surface normal
+                    // animated ripple turns flat facets into living water surface
                     float t = uTime;
-                    N = normalize(N + 0.055 * vec3(
+                    N = normalize(N + 0.09 * vec3(
                         sin(vPos.x * 6.0 + t * 1.7),
                         cos((vPos.x + vPos.z) * 4.5 + t * 1.3),
                         sin(vPos.z * 5.5 + t * 1.5)));
-                    float ndv = clamp(dot(N, V), 0.0, 1.0);
-                    float F = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);      // fresnel
-                    // screen-space refraction of the background (tank + sky)
-                    vec2 uv = gl_FragCoord.xy / uRes;
-                    vec2 off = N.xz * (1.0 - F) * 0.035;
-                    vec3 bg = texture2D(tBack, uv + off).rgb;
-                    // analytic sky gradient for the reflected part
                     vec3 R = reflect(-V, N);
-                    float skyMix = clamp(R.y * 0.5 + 0.5, 0.0, 1.0);
-                    vec3 sky = mix(vec3(0.11, 0.12, 0.16), vec3(0.90, 0.92, 0.96), skyMix);
-                    vec3 col = mix(bg, sky, F);
-                    // sun specular
-                    vec3 H = normalize(uLightDir + V);
-                    float spec = pow(clamp(dot(N, H), 0.0, 1.0), 140.0);
-                    col += vec3(1.0) * spec * 1.6;
-                    gl_FragColor = vec4(col, 1.0);
+                    float L = dot(N, normalize(uLightDir));
+                    // sun glint: light reflected exactly into the camera
+                    float sunGlint = pow(clamp(dot(R, normalize(uLightDir)), 0.0, 1.0), 300.0);
+                    // soft sun sheen on the surface plane
+                    float sunRefl = pow(clamp(L, 0.0, 1.0), 8.0);
+                    // grazing-angle sky mirroring (light only)
+                    float env = pow(clamp(R.y, 0.0, 1.0), 3.0);
+                    vec3 lit = vec3(sunGlint * 3.0 + sunRefl * 0.10 + env * 0.22);
+                    float lum = clamp(dot(lit, vec3(0.299, 0.587, 0.114)), 0.0, 1.0);
+                    gl_FragColor = vec4(clamp(lit, 0.0, 1.7), lum);
                 }
             `
         });
         const water = new THREE.Mesh(waterGeo, WaterMat);
         water.frustumCulled = false;
         Scene.add(water);
+
+        const MeshBtn = document.getElementById('Mesh_Btn');
+        MeshBtn.addEventListener('click', () => {
+            water.visible = !water.visible;
+            MeshBtn.textContent = 'Mesh : ' + (water.visible ? 'ON' : 'OFF');
+        });
 
         // ============================================================
         //  Interaction (splash + stir)
@@ -900,13 +895,6 @@
             waterGeo.setDrawRange(0, surfaceVerts);
             WaterMat.uniforms.uTime.value = uTime;
 
-            // pass 1: background (tank + sky, WITHOUT water) for refraction
-            water.visible = false;
-            Renderer.setRenderTarget(bgRT);
-            Renderer.render(Scene, Camera);
-            Renderer.setRenderTarget(null);
-            water.visible = true;
-            // pass 2: full scene including the water surface
             Renderer.render(Scene, Camera);
 
             // average |pressure| across the fluid -> proves pressure is working
@@ -939,8 +927,6 @@
             Camera.aspect = window.innerWidth / window.innerHeight;
             Camera.updateProjectionMatrix();
             Renderer.setSize(window.innerWidth, window.innerHeight);
-            bgRT.setSize(Renderer.domElement.width, Renderer.domElement.height);
-            WaterMat.uniforms.uRes.value.set(Renderer.domElement.width, Renderer.domElement.height);
         }
         window.addEventListener('resize', resize);
         resize();
