@@ -497,22 +497,289 @@
         }
 
         // ============================================================
-        //  Rendering: PLAIN particles (no fancy material yet)
+        //  Water surface: density field + marching tetrahedra mesh,
+        //  lit only (no tint) with fresnel sky reflection + sun specular
         // ============================================================
-        const fluidGeo = new THREE.BufferGeometry();
-        const fluidPos = new Float32Array(NUM_PARTICLES * 3);
-        fluidGeo.setAttribute('position', new THREE.BufferAttribute(fluidPos, 3).setUsage(THREE.DynamicDrawUsage));
+        const WATER_ISO = 0.80;                 // isosurface at this density
+        const MC_CELL = 0.45;
+        const MC_NX = 24, MC_NY = 6, MC_NZ = 12;
+        const MC_MIN_X = -5.40, MC_MIN_Y = -0.25, MC_MIN_Z = -2.70;
+        const MC_X1 = MC_NX + 1, MC_Y1 = MC_NY + 1, MC_Z1 = MC_NZ + 1;
+        const MC_SZ = MC_X1 * MC_Y1;
+        const MC_NCORN = MC_X1 * MC_Y1 * MC_Z1;
+        const fieldDens = new Float32Array(MC_NCORN);
+        const fieldGrad = new Float32Array(MC_NCORN * 3);
 
-        const PointsMat = new THREE.PointsMaterial({
-            color: 0x9fc6ff,
-            size: 0.075,
-            sizeAttenuation: true,
-            transparent: false,
-            depthWrite: true,
+        function cornerBase(ix, iy, iz) { return iz * MC_SZ + iy * MC_X1 + ix; }
+        function cornerWorld(ix, iy, iz) {
+            return [MC_MIN_X + ix * MC_CELL, MC_MIN_Y + iy * MC_CELL, MC_MIN_Z + iz * MC_CELL];
+        }
+
+        function densityAt(wx, wy, wz, cellOut) {
+            let cx = Math.floor((wx - MIN.x) / CELL);
+            let cy = Math.floor((wy - MIN.y) / CELL);
+            let cz = Math.floor((wz - MIN.z) / CELL);
+            let d = 0;
+            for (let zc = cz - 1; zc <= cz + 1; zc++) {
+                if (zc < 0 || zc >= GRID_NZ) continue;
+                for (let yc = cy - 1; yc <= cy + 1; yc++) {
+                    if (yc < 0 || yc >= GRID_NY) continue;
+                    for (let xc = cx - 1; xc <= cx + 1; xc++) {
+                        if (xc < 0 || xc >= GRID_NX) continue;
+                        const c = xc + yc * GRID_NX + zc * GRID_XZ;
+                        const start = cellStarts[c], end = start + cellCounts[c];
+                        for (let k = start; k < end; k++) {
+                            const j = cellIds[k];
+                            const jx3 = j * 3;
+                            const dx = wx - pos[jx3];
+                            const dy = wy - pos[jx3 + 1];
+                            const dz = wz - pos[jx3 + 2];
+                            const r2 = dx * dx + dy * dy + dz * dz;
+                            if (r2 < H2) d += MASS * poly6(r2);
+                        }
+                    }
+                }
+            }
+            return d;
+        }
+
+        function buildDensityField() {
+            for (let iz = 0; iz < MC_Z1; iz++) {
+                const wz = MC_MIN_Z + iz * MC_CELL;
+                for (let iy = 0; iy < MC_Y1; iy++) {
+                    const wy = MC_MIN_Y + iy * MC_CELL;
+                    const base = iz * MC_SZ + iy * MC_X1;
+                    for (let ix = 0; ix < MC_X1; ix++) {
+                        const wx = MC_MIN_X + ix * MC_CELL;
+                        fieldDens[base + ix] = densityAt(wx, wy, wz);
+                    }
+                }
+            }
+            for (let iz = 0; iz < MC_Z1; iz++) {
+                for (let iy = 0; iy < MC_Y1; iy++) {
+                    for (let ix = 0; ix < MC_X1; ix++) {
+                        const idx = cornerBase(ix, iy, iz);
+                        const gx0 = ix > 0 ? ix - 1 : 0, gx1 = ix < MC_X1 - 1 ? ix + 1 : MC_X1 - 1;
+                        const gy0 = iy > 0 ? iy - 1 : 0, gy1 = iy < MC_Y1 - 1 ? iy + 1 : MC_Y1 - 1;
+                        const gz0 = iz > 0 ? iz - 1 : 0, gz1 = iz < MC_Z1 - 1 ? iz + 1 : MC_Z1 - 1;
+                        const k = idx * 3;
+                        const dx = MC_CELL * (gx1 - gx0);
+                        const dy = MC_CELL * (gy1 - gy0);
+                        const dz2 = MC_CELL * (gz1 - gz0);
+                        fieldGrad[k] = (fieldDens[cornerBase(gx1, iy, iz)] - fieldDens[cornerBase(gx0, iy, iz)]) / dx;
+                        fieldGrad[k + 1] = (fieldDens[cornerBase(ix, gy1, iz)] - fieldDens[cornerBase(ix, gy0, iz)]) / dy;
+                        fieldGrad[k + 2] = (fieldDens[cornerBase(ix, iy, gz1)] - fieldDens[cornerBase(ix, iy, gz0)]) / dz2;
+                    }
+                }
+            }
+        }
+
+        // cube split: 12 tets, each = cell CENTER + one face triangle.
+        // guaranteed gap-free and overlap-free; conforming across cells.
+        // corners 0..7 as (x,y,z) in {0,1}^3; 8 = cell center (0.5,0.5,0.5)
+        const cOx = [0, 1, 0, 1, 0, 1, 0, 1];
+        const cOy = [0, 0, 1, 1, 0, 0, 1, 1];
+        const cOz = [0, 0, 0, 0, 1, 1, 1, 1];
+        // faces (4 corners in cyclic order), each split into 2 triangles
+        const FACES = [
+            [0, 1, 3, 2],       // -Z
+            [4, 5, 7, 6],       // +Z
+            [0, 1, 5, 4],       // -Y
+            [2, 3, 7, 6],       // +Y
+            [0, 2, 6, 4],       // -X
+            [1, 3, 7, 5]        // +X
+        ];
+        const MAX_TRIS = MC_NX * MC_NY * MC_NZ * 24;   // 12 tets * up to 2 tris
+        const MAX_VERTS = MAX_TRIS * 3;
+        const surfacePos = new Float32Array(MAX_VERTS * 3);
+        const surfaceNrm = new Float32Array(MAX_VERTS * 3);
+        let surfaceVerts = 0;
+        let sbbX0 = 1e9, sbbX1 = -1e9, sbbY0 = 1e9, sbbY1 = -1e9, sbbZ0 = 1e9, sbbZ1 = -1e9;
+
+        // per-cell scratch descriptors (9 verts: 8 corners + center)
+        const cellD = new Float32Array(9);          // density
+        const cellG = new Float32Array(27);         // gradient xyz per vert
+        const cellO = new Float32Array(27);         // offset-in-cell xyz per vert
+
+        function isoMidVerts(cx, cy, cz, a, b) {
+            const va = cellD[a], vb = cellD[b];
+            const t = (WATER_ISO - va) / (vb - va);
+            const ao = a * 3, bo = b * 3;
+            const lfx = cellO[ao] + (cellO[bo] - cellO[ao]) * t;
+            const lfy = cellO[ao + 1] + (cellO[bo + 1] - cellO[ao + 1]) * t;
+            const lfz = cellO[ao + 2] + (cellO[bo + 2] - cellO[ao + 2]) * t;
+            const wxo = MC_MIN_X + (cx + lfx) * MC_CELL;
+            const wyo = MC_MIN_Y + (cy + lfy) * MC_CELL;
+            const wzo = MC_MIN_Z + (cz + lfz) * MC_CELL;
+            if (wxo < sbbX0) sbbX0 = wxo; if (wxo > sbbX1) sbbX1 = wxo;
+            if (wyo < sbbY0) sbbY0 = wyo; if (wyo > sbbY1) sbbY1 = wyo;
+            if (wzo < sbbZ0) sbbZ0 = wzo; if (wzo > sbbZ1) sbbZ1 = wzo;
+            surfacePos[surfaceVerts * 3] = wxo * COS_T + wyo * SIN_T;
+            surfacePos[surfaceVerts * 3 + 1] = -wxo * SIN_T + wyo * COS_T + OFFY;
+            surfacePos[surfaceVerts * 3 + 2] = wzo;
+            // interpolated normal (box-local), rotated to world
+            let nx = cellG[ao] + (cellG[bo] - cellG[ao]) * t;
+            let ny = cellG[ao + 1] + (cellG[bo + 1] - cellG[ao + 1]) * t;
+            let nz = cellG[ao + 2] + (cellG[bo + 2] - cellG[ao + 2]) * t;
+            const nl = Math.sqrt(nx * nx + ny * ny + nz * nz);
+            if (nl < 1e-6) { nx = 0; ny = 1; nz = 0; }
+            else { nx /= nl; ny /= nl; nz /= nl; }
+            surfaceNrm[surfaceVerts * 3] = nx * COS_T + ny * SIN_T;
+            surfaceNrm[surfaceVerts * 3 + 1] = -nx * SIN_T + ny * COS_T;
+            surfaceNrm[surfaceVerts * 3 + 2] = nz;
+            return surfaceVerts++;
+        }
+
+        function processTetV(cx, cy, cz, v0, v1, v2, v3) {
+            let above = 0;
+            if (cellD[v0] > WATER_ISO) above |= 1;
+            if (cellD[v1] > WATER_ISO) above |= 2;
+            if (cellD[v2] > WATER_ISO) above |= 4;
+            if (cellD[v3] > WATER_ISO) above |= 8;
+            if (above === 0 || above === 15) return;
+            const V = [v0, v1, v2, v3];
+            if (above === 1 || above === 2 || above === 4 || above === 8) {
+                let a = 0;
+                for (let n = 0; n < 4; n++) if (above & (1 << n)) a = n;
+                isoMidVerts(cx, cy, cz, V[a], V[(a + 1) % 4]);
+                isoMidVerts(cx, cy, cz, V[a], V[(a + 2) % 4]);
+                isoMidVerts(cx, cy, cz, V[a], V[(a + 3) % 4]);
+                return;
+            }
+            if (above === 14 || above === 13 || above === 11 || above === 7) {
+                let b = 0;
+                for (let n = 0; n < 4; n++) if ((above & (1 << n)) === 0) b = n;
+                isoMidVerts(cx, cy, cz, V[b], V[(b + 1) % 4]);
+                isoMidVerts(cx, cy, cz, V[b], V[(b + 2) % 4]);
+                isoMidVerts(cx, cy, cz, V[b], V[(b + 3) % 4]);
+                return;
+            }
+            const ab = [], bl = [];
+            for (let n = 0; n < 4; n++) {
+                if (above & (1 << n)) ab.push(n); else bl.push(n);
+            }
+            isoMidVerts(cx, cy, cz, V[ab[0]], V[bl[0]]);
+            isoMidVerts(cx, cy, cz, V[ab[1]], V[bl[0]]);
+            isoMidVerts(cx, cy, cz, V[ab[1]], V[bl[1]]);
+            isoMidVerts(cx, cy, cz, V[ab[0]], V[bl[0]]);
+            isoMidVerts(cx, cy, cz, V[ab[1]], V[bl[1]]);
+            isoMidVerts(cx, cy, cz, V[ab[0]], V[bl[1]]);
+        }
+
+        function marchWater() {
+            surfaceVerts = 0;
+            sbbX0 = 1e9; sbbX1 = -1e9; sbbY0 = 1e9; sbbY1 = -1e9; sbbZ0 = 1e9; sbbZ1 = -1e9;
+            for (let cz = 0; cz < MC_NZ; cz++) {
+                for (let cy = 0; cy < MC_NY; cy++) {
+                    for (let cx = 0; cx < MC_NX; cx++) {
+                        const base = cornerBase(cx, cy, cz);
+                        // corner descriptors
+                        for (let ci = 0; ci < 8; ci++) {
+                            const idx = base + cOz[ci] * MC_SZ + cOy[ci] * MC_X1 + cOx[ci];
+                            cellD[ci] = fieldDens[idx];
+                            const g = idx * 3, cg = ci * 3;
+                            cellG[cg] = fieldGrad[g];
+                            cellG[cg + 1] = fieldGrad[g + 1];
+                            cellG[cg + 2] = fieldGrad[g + 2];
+                            cellO[cg] = cOx[ci];
+                            cellO[cg + 1] = cOy[ci];
+                            cellO[cg + 2] = cOz[ci];
+                        }
+                        // center descriptor (average of the 8 corners)
+                        const g0 = 24;
+                        cellD[8] = (cellD[0] + cellD[1] + cellD[2] + cellD[3] + cellD[4] + cellD[5] + cellD[6] + cellD[7]) / 8;
+                        for (let ci = 0; ci < 8; ci++) {
+                            const cg = ci * 3;
+                            cellG[g0] += cellG[cg];
+                            cellG[g0 + 1] += cellG[cg + 1];
+                            cellG[g0 + 2] += cellG[cg + 2];
+                        }
+                        cellG[g0] /= 8; cellG[g0 + 1] /= 8; cellG[g0 + 2] /= 8;
+                        cellO[g0] = 0.5; cellO[g0 + 1] = 0.5; cellO[g0 + 2] = 0.5;
+                        // 12 tets: center + each face triangle
+                        for (let f = 0; f < 6; f++) {
+                            const fc = FACES[f];
+                            processTetV(cx, cy, cz, 8, fc[0], fc[1], fc[2]);
+                            processTetV(cx, cy, cz, 8, fc[0], fc[2], fc[3]);
+                        }
+                    }
+                }
+            }
+        }
+
+        // water surface mesh (filled each frame, non-indexed triangle soup)
+        const waterGeo = new THREE.BufferGeometry();
+        const surfPosAttr = new THREE.BufferAttribute(surfacePos, 3).setUsage(THREE.DynamicDrawUsage);
+        const surfNrmAttr = new THREE.BufferAttribute(surfaceNrm, 3).setUsage(THREE.DynamicDrawUsage);
+        waterGeo.setAttribute('position', surfPosAttr);
+        waterGeo.setAttribute('normal', surfNrmAttr);
+        waterGeo.setDrawRange(0, 0);
+
+        // background render target: the tank WITHOUT water, so the water
+        // material can show it THROUGH the surface (refraction) plus
+        // fresnel reflection + sun specular. light only, no own color.
+        const bgRT = new THREE.WebGLRenderTarget(1, 1, {
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter
         });
-        const fluidPoints = new THREE.Points(fluidGeo, PointsMat);
-        fluidPoints.frustumCulled = false;
-        Scene.add(fluidPoints);
+
+        const LightDir = new THREE.Vector3(-8, -16, -8).normalize();
+        const WaterMat = new THREE.ShaderMaterial({
+            side: THREE.DoubleSide,
+            uniforms: {
+                uTime: { value: 0 },
+                uLightDir: { value: LightDir },
+                tBack: { value: bgRT.texture },
+                uRes: { value: new THREE.Vector2(1, 1) }
+            },
+            vertexShader: `
+                varying vec3 vPos;
+                varying vec3 vNrm;
+                void main() {
+                    vec4 wp = modelMatrix * vec4(position, 1.0);
+                    vPos = wp.xyz;
+                    vNrm = normalize(mat3(modelMatrix) * normal);
+                    gl_Position = projectionMatrix * viewMatrix * wp;
+                }
+            `,
+            fragmentShader: `
+                uniform float uTime;
+                uniform vec3 uLightDir;
+                uniform sampler2D tBack;
+                uniform vec2 uRes;
+                varying vec3 vPos;
+                varying vec3 vNrm;
+                void main() {
+                    vec3 N = normalize(vNrm);
+                    vec3 V = normalize(cameraPosition - vPos);
+                    // gentle animated ripple on the surface normal
+                    float t = uTime;
+                    N = normalize(N + 0.055 * vec3(
+                        sin(vPos.x * 6.0 + t * 1.7),
+                        cos((vPos.x + vPos.z) * 4.5 + t * 1.3),
+                        sin(vPos.z * 5.5 + t * 1.5)));
+                    float ndv = clamp(dot(N, V), 0.0, 1.0);
+                    float F = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);      // fresnel
+                    // screen-space refraction of the background (tank + sky)
+                    vec2 uv = gl_FragCoord.xy / uRes;
+                    vec2 off = N.xz * (1.0 - F) * 0.035;
+                    vec3 bg = texture2D(tBack, uv + off).rgb;
+                    // analytic sky gradient for the reflected part
+                    vec3 R = reflect(-V, N);
+                    float skyMix = clamp(R.y * 0.5 + 0.5, 0.0, 1.0);
+                    vec3 sky = mix(vec3(0.11, 0.12, 0.16), vec3(0.90, 0.92, 0.96), skyMix);
+                    vec3 col = mix(bg, sky, F);
+                    // sun specular
+                    vec3 H = normalize(uLightDir + V);
+                    float spec = pow(clamp(dot(N, H), 0.0, 1.0), 140.0);
+                    col += vec3(1.0) * spec * 1.6;
+                    gl_FragColor = vec4(col, 1.0);
+                }
+            `
+        });
+        const water = new THREE.Mesh(waterGeo, WaterMat);
+        water.frustumCulled = false;
+        Scene.add(water);
 
         // ============================================================
         //  Interaction (splash + stir)
@@ -625,15 +892,21 @@
 
             if (!paused) stepSPH(dt);
 
-            for (let i = 0; i < NUM_PARTICLES; i++) {
-                const lx = pos[i * 3], ly = pos[i * 3 + 1], lz = pos[i * 3 + 2];
-// box-local -> world (SAME rotation as the tilted TankGroup, plus OFFY)
-            fluidPos[i * 3] = lx * COS_T + ly * SIN_T;
-            fluidPos[i * 3 + 1] = -lx * SIN_T + ly * COS_T + OFFY;
-            fluidPos[i * 3 + 2] = lz;
-            }
-            fluidGeo.attributes.position.needsUpdate = true;
+            // rebuild the water surface mesh from the current particles
+            buildDensityField();
+            marchWater();
+            surfPosAttr.needsUpdate = true;
+            surfNrmAttr.needsUpdate = true;
+            waterGeo.setDrawRange(0, surfaceVerts);
+            WaterMat.uniforms.uTime.value = uTime;
 
+            // pass 1: background (tank + sky, WITHOUT water) for refraction
+            water.visible = false;
+            Renderer.setRenderTarget(bgRT);
+            Renderer.render(Scene, Camera);
+            Renderer.setRenderTarget(null);
+            water.visible = true;
+            // pass 2: full scene including the water surface
             Renderer.render(Scene, Camera);
 
             // average |pressure| across the fluid -> proves pressure is working
@@ -651,6 +924,10 @@
             document.getElementById('Stats').innerHTML =
                 (paused ? 'PAUSED<br>' : '') +
                 'fps&nbsp;: ' + fps.toFixed(0) +
+                '<br>water : ' + (surfaceVerts / 3).toFixed(0) + ' tris' +
+                '<br>surf x:' + sbbX0.toFixed(2) + '..' + sbbX1.toFixed(2) +
+                ' y:' + sbbY0.toFixed(2) + '..' + sbbY1.toFixed(2) +
+                ' z:' + sbbZ0.toFixed(2) + '..' + sbbZ1.toFixed(2) +
                 '<br>particles : ' + NUM_PARTICLES +
                 '<br>pressure&nbsp;av : ' + pAvg.toFixed(2) +
                 '<br>bbox x:' + bx0.toFixed(2) + '..' + bx1.toFixed(2) +
@@ -662,8 +939,11 @@
             Camera.aspect = window.innerWidth / window.innerHeight;
             Camera.updateProjectionMatrix();
             Renderer.setSize(window.innerWidth, window.innerHeight);
+            bgRT.setSize(Renderer.domElement.width, Renderer.domElement.height);
+            WaterMat.uniforms.uRes.value.set(Renderer.domElement.width, Renderer.domElement.height);
         }
         window.addEventListener('resize', resize);
+        resize();
 
         setTimeout(() => {
             document.getElementById('Fade_Game').style.opacity = '0';
