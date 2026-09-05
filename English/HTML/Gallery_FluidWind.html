@@ -201,7 +201,8 @@
             p.y = Math.random() * VH;
             p.px = p.x;
             p.py = p.y;
-            p.age = Math.random() * 200;
+            p.life = 20 + Math.random() * 40;
+            p.age = Math.random() * p.life;
             p.nx = Math.random() * 100;
             p.ny = Math.random() * 100;
         }
@@ -213,6 +214,7 @@
                 px: 0,
                 py: 0,
                 age: 0,
+                life: 0,
                 nx: 0,
                 ny: 0
             };
@@ -371,7 +373,7 @@
             for (let i = 0; i < PARTICLES; i++) {
                 const p = particles[i];
                 p.age += dt;
-                if (p.age > 320) { resetParticle(p); }
+                if (p.age > p.life) { resetParticle(p); }
 
                 const base = velocityAt(p.x, p.y, 0, 0);
 
@@ -444,6 +446,38 @@
             }
         }
 
+        function drawWindField(sx, sy) {
+            const d = 18;
+            ctx.lineCap = 'round';
+            for (let x = d * 0.5; x < VW; x += d) {
+                for (let y = d * 0.5; y < VH; y += d) {
+                    const v = velocityAt(x, y, 0, 0);
+                    const spd = Math.hypot(v.vx, v.vy);
+                    if (spd < 0.45) continue;
+                    const len = Math.min(16, spd * 4.5);
+                    const px = x * sx;
+                    const py = y * sy;
+                    const ux = v.vx / spd;
+                    const uy = v.vy / spd;
+                    const ex = px + ux * len;
+                    const ey = py + uy * len;
+                    ctx.strokeStyle = 'rgba(150, 190, 255, 0.3)';
+                    ctx.lineWidth = 1.4;
+                    ctx.beginPath();
+                    ctx.moveTo(px, py);
+                    ctx.lineTo(ex, ey);
+                    ctx.stroke();
+                    const ang = Math.atan2(uy, ux);
+                    ctx.beginPath();
+                    ctx.moveTo(ex, ey);
+                    ctx.lineTo(ex - Math.cos(ang - 0.45) * 6, ey - Math.sin(ang - 0.45) * 6);
+                    ctx.moveTo(ex, ey);
+                    ctx.lineTo(ex - Math.cos(ang + 0.45) * 6, ey - Math.sin(ang + 0.45) * 6);
+                    ctx.stroke();
+                }
+            }
+        }
+
         function draw(dt) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -455,6 +489,8 @@
 
             const sx = window.innerWidth / VW;
             const sy = window.innerHeight / VH;
+
+            drawWindField(sx, sy);
 
             for (const ob of obstacles) {
                 const px = ob.x * sx;
@@ -476,7 +512,10 @@
                 const dw = Math.hypot(p.x - p.px, p.y - p.py);
                 if (dw > 10) continue;
                 const spd = dw / Math.max(dt, 0.001) / 20;
-                const fade = Math.min(1, (320 - p.age) / 40 + 0.2);
+                const lifeProgress = p.age / p.life;
+                const fadeIn = Math.min(1, lifeProgress / 0.08);
+                const fadeOut = Math.min(1, (1 - lifeProgress) / 0.14);
+                const fade = Math.max(0, Math.min(fadeIn, fadeOut));
                 ctx.globalAlpha = 0.5 * fade;
                 ctx.strokeStyle = velocityToColor(spd);
                 ctx.lineWidth = 0.9;
