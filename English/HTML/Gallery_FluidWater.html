@@ -122,7 +122,7 @@
         <a class="hud-button" href="index.html">HOME</a>
         <button id="Reset_Btn" class="hud-button" type="button">Reset</button>
         <button id="Pause_Btn" class="hud-button" type="button">Pause</button>
-        <button id="Mesh_Btn" class="hud-button" type="button">Mesh : ON</button>
+        <button id="Mesh_Btn" class="hud-button" type="button">Mesh Color : OFF</button>
     </div>
     <div id="Stats">&nbsp;</div>
     <div id="Hint">CLICK : splash &nbsp;•&nbsp; DRAG : stir &nbsp;•&nbsp; RIGHT-DRAG : orbit &nbsp;•&nbsp; SCROLL : zoom</div>
@@ -502,8 +502,8 @@
         //  lit only (no tint) with fresnel sky reflection + sun specular
         // ============================================================
         const WATER_ISO = 0.80;                 // isosurface at this density
-        const MC_CELL = 0.45;
-        const MC_NX = 24, MC_NY = 6, MC_NZ = 12;
+        const MC_CELL = 0.40;
+        const MC_NX = 27, MC_NY = 7, MC_NZ = 14;
         const MC_MIN_X = -5.40, MC_MIN_Y = -0.25, MC_MIN_Z = -2.70;
         const MC_X1 = MC_NX + 1, MC_Y1 = MC_NY + 1, MC_Z1 = MC_NZ + 1;
         const MC_SZ = MC_X1 * MC_Y1;
@@ -560,9 +560,11 @@
                 for (let iy = 0; iy < MC_Y1; iy++) {
                     for (let ix = 0; ix < MC_X1; ix++) {
                         const idx = cornerBase(ix, iy, iz);
-                        const gx0 = ix > 0 ? ix - 1 : 0, gx1 = ix < MC_X1 - 1 ? ix + 1 : MC_X1 - 1;
-                        const gy0 = iy > 0 ? iy - 1 : 0, gy1 = iy < MC_Y1 - 1 ? iy + 1 : MC_Y1 - 1;
-                        const gz0 = iz > 0 ? iz - 1 : 0, gz1 = iz < MC_Z1 - 1 ? iz + 1 : MC_Z1 - 1;
+                        // wide-stencil gradient (spacing 2) => smooth normals,
+                        // stops flat facets from showing through the light
+                        const gx0 = ix > 1 ? ix - 2 : 0, gx1 = ix < MC_X1 - 2 ? ix + 2 : MC_X1 - 1;
+                        const gy0 = iy > 1 ? iy - 2 : 0, gy1 = iy < MC_Y1 - 2 ? iy + 2 : MC_Y1 - 1;
+                        const gz0 = iz > 1 ? iz - 2 : 0, gz1 = iz < MC_Z1 - 2 ? iz + 2 : MC_Z1 - 1;
                         const k = idx * 3;
                         const dx = MC_CELL * (gx1 - gx0);
                         const dy = MC_CELL * (gy1 - gy0);
@@ -716,8 +718,8 @@
         waterGeo.setAttribute('normal', surfNrmAttr);
         waterGeo.setDrawRange(0, 0);
 
-        // water color is fully TRANSPARENT; only light reflected toward the
-        // camera is added (additive blending). on/off toggle for debugging.
+        // water color is fully TRANSPARENT by default (light only). the Mesh
+        // button toggles between this and a plain COLORED surface (debug).
         const LightDir = Key.position.clone().normalize();
         const WaterMat = new THREE.ShaderMaterial({
             side: THREE.DoubleSide,
@@ -726,7 +728,9 @@
             blending: THREE.AdditiveBlending,
             uniforms: {
                 uTime: { value: 0 },
-                uLightDir: { value: LightDir }
+                uLightDir: { value: LightDir },
+                uFlat: { value: 0 },
+                uFlatColor: { value: new THREE.Vector3(0.72, 0.82, 0.94) }
             },
             vertexShader: `
                 varying vec3 vPos;
@@ -741,17 +745,24 @@
             fragmentShader: `
                 uniform float uTime;
                 uniform vec3 uLightDir;
+                uniform float uFlat;
+                uniform vec3 uFlatColor;
                 varying vec3 vPos;
                 varying vec3 vNrm;
                 void main() {
+                    if (uFlat > 0.5) { gl_FragColor = vec4(uFlatColor, 1.0); return; }
                     vec3 N = normalize(vNrm);
                     vec3 V = normalize(cameraPosition - vPos);
-                    // animated ripple turns flat facets into living water surface
+                    // smooth normal ripple: hides polygon facets from the light
                     float t = uTime;
-                    N = normalize(N + 0.09 * vec3(
+                    N = normalize(N + 0.13 * vec3(
                         sin(vPos.x * 6.0 + t * 1.7),
                         cos((vPos.x + vPos.z) * 4.5 + t * 1.3),
-                        sin(vPos.z * 5.5 + t * 1.5)));
+                        sin(vPos.z * 5.5 + t * 1.5))
+                        + 0.05 * vec3(
+                        sin(vPos.x * 23.0 + t * 3.1),
+                        cos(vPos.z * 19.0 + t * 2.7),
+                        sin((vPos.x + vPos.z) * 27.0 + t * 3.5)));
                     vec3 R = reflect(-V, N);
                     float L = dot(N, normalize(uLightDir));
                     // sun glint: light reflected exactly into the camera
@@ -770,11 +781,22 @@
         water.frustumCulled = false;
         Scene.add(water);
 
+        // Mesh button: toggle COLORED surface <-> TRANSPARENT (light only)
         const MeshBtn = document.getElementById('Mesh_Btn');
+        let meshColor = false;
+        function syncMeshBtn() {
+            MeshBtn.textContent = 'Mesh Color : ' + (meshColor ? 'ON' : 'OFF');
+        }
         MeshBtn.addEventListener('click', () => {
-            water.visible = !water.visible;
-            MeshBtn.textContent = 'Mesh : ' + (water.visible ? 'ON' : 'OFF');
+            meshColor = !meshColor;
+            WaterMat.uniforms.uFlat.value = meshColor ? 1 : 0;
+            WaterMat.transparent = !meshColor;
+            WaterMat.blending = meshColor ? THREE.NormalBlending : THREE.AdditiveBlending;
+            WaterMat.depthWrite = meshColor;
+            WaterMat.needsUpdate = true;
+            syncMeshBtn();
         });
+        syncMeshBtn();
 
         // ============================================================
         //  Interaction (splash + stir)
