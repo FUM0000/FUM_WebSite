@@ -400,7 +400,7 @@
         #UI_Action {
             position: absolute;
             left: 50%;
-            top: 84px;
+            top: 96px;
             transform: translateX(-50%);
             z-index: 6;
             background: rgba(10, 16, 30, 0.92);
@@ -836,7 +836,7 @@
                 font-size: 0.66rem;
             }
             #UI_Action {
-                top: 150px;
+                top: 155px;
             }
             #UI_Item_Panel {
                 bottom: 10px;
@@ -927,6 +927,7 @@
         const Ctx = Canvas.getContext('2d');
 
         let CW, CH;
+        let nextPanelReady = false;
         function ResizeCanvas() {
             const maxW = window.innerWidth;
             const maxH = window.innerHeight;
@@ -950,16 +951,18 @@
         window.addEventListener('resize', ResizeCanvas);
 
         function PositionNextPanel() {
-            if (typeof UI_NextPanel === 'undefined') return;
+            if (!nextPanelReady) return;
             const rect = Canvas.getBoundingClientRect();
-            const centerY = rect.top + rect.height * 0.22;
-            UI_NextPanel.style.top = (centerY - UI_NextPanel.offsetHeight / 2) + 'px';
-            let left = rect.right + 12;
             const pw = UI_NextPanel.offsetWidth;
-            if (left + pw > window.innerWidth - 8) {
-                left = Math.max(8, window.innerWidth - pw - 8);
+            const ph = UI_NextPanel.offsetHeight;
+            const left = rect.right + 12;
+            if (left + pw <= window.innerWidth - 8) {
+                UI_NextPanel.style.left = left + 'px';
+                UI_NextPanel.style.top = (rect.bottom - ph - 12) + 'px';
+            } else {
+                UI_NextPanel.style.left = ((window.innerWidth - pw) / 2) + 'px';
+                UI_NextPanel.style.top = (rect.bottom - ph - 16) + 'px';
             }
-            UI_NextPanel.style.left = left + 'px';
         }
 
         /* ─── UI Elements ──────────────────────────────────────── */
@@ -1007,6 +1010,7 @@
             <div id="UI_Next_Fruit">🍒</div>
         `;
         document.body.appendChild(UI_NextPanel);
+        nextPanelReady = true;
         PositionNextPanel();
 
         const UI_ItemPanel = document.createElement('div');
@@ -1465,6 +1469,16 @@
 
         /* ─── Physics ──────────────────────────────────────────── */
 
+        function ClampFruitSpeed(f) {
+            const sp = Math.hypot(f.vx, f.vy);
+            const max = 14;
+            if (sp > max) {
+                const s = max / sp;
+                f.vx *= s;
+                f.vy *= s;
+            }
+        }
+
         function ResolveCollisions() {
             let detectedMerge = false;
             for (let i = 0; i < Fruits.length; i++) {
@@ -1500,14 +1514,16 @@
                         const dot = dvx * nx + dvy * ny;
 
                         if (dot > 0) {
-                            const restitution = 0.35;
-                            const mA = a.radius;
-                            const mB = b.radius;
+                            const restitution = 0.18;
+                            const mA = a.radius * a.radius * a.radius;
+                            const mB = b.radius * b.radius * b.radius;
                             const j = -(1 + restitution) * dot / (1 / mA + 1 / mB);
                             a.vx -= j * nx / mA;
                             a.vy -= j * ny / mA;
                             b.vx += j * nx / mB;
                             b.vy += j * ny / mB;
+                            ClampFruitSpeed(a);
+                            ClampFruitSpeed(b);
                         }
                     }
                 }
