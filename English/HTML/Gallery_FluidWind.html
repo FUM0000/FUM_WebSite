@@ -301,22 +301,57 @@
             for (const ob of obstacles) {
                 const dx = x - ob.x;
                 const dy = y - ob.y;
-                const distSq = dx * dx + dy * dy;
-                if (distSq < 0.01) continue;
-                const dist = Math.sqrt(distSq);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const rim = ob.r * 1.15;
+                if (dist >= rim) continue;
+                let nx, ny;
+                if (dist < 0.001) { nx = 1; ny = 0; }
+                else { nx = dx / dist; ny = dy / dist; }
+                const rad = ax * nx + ay * ny;
+                let want;
                 if (dist < ob.r) {
-                    const push = (ob.r - dist) * 0.6 / (dist * dist);
-                    ax += (dx / dist) * push;
-                    ay += (dy / dist) * push;
+                    want = 1.5;
                 } else {
-                    const tang = (ob.r * ob.r) / distSq;
-                    ax += (dy / dist) * tang * 1.4;
-                    ay += -(dx / dist) * tang * 1.4;
+                    want = (rim - dist) / (ob.r * 0.15) * 0.8;
                 }
+                if (rad < want) {
+                    ax += nx * (want - rad);
+                    ay += ny * (want - rad);
+                }
+                const depth = Math.max(0, (rim - dist) / (ob.r * 0.15));
+                ax += (dy / dist) * depth * 0.9;
+                ay += -(dx / dist) * depth * 0.9;
             }
 
             const inv = 1 / (1 + Math.hypot(ax, ay) * 0.1);
             return { vx: ax * inv, vy: ay * inv };
+        }
+
+        function collideWithObstacles(p) {
+            for (const ob of obstacles) {
+                const dx = p.x - ob.x;
+                const dy = p.y - ob.y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq >= ob.r * ob.r) continue;
+                let nx, ny;
+                if (distSq < 0.001) {
+                    nx = 1;
+                    ny = 0;
+                } else {
+                    const dist = Math.sqrt(distSq);
+                    nx = dx / dist;
+                    ny = dy / dist;
+                }
+                const vx = p.x - p.px;
+                const vy = p.y - p.py;
+                const vdot = vx * nx + vy * ny;
+                p.x = ob.x + nx * ob.r;
+                p.y = ob.y + ny * ob.r;
+                if (vdot < 0) {
+                    p.px = p.x - (vx - 2 * vdot * nx) * 0.8;
+                    p.py = p.y - (vy - 2 * vdot * ny) * 0.8;
+                }
+            }
         }
 
         function velocityToColor(spd) {
@@ -411,6 +446,10 @@
                         n = gridNext[n];
                     }
                 }
+            }
+
+            for (let i = 0; i < PARTICLES; i++) {
+                collideWithObstacles(particles[i]);
             }
         }
 

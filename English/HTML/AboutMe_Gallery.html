@@ -1378,7 +1378,9 @@
             _LastUpdateTime = performance.now();
             _AnimationDelta = 0;
             _PauseAnimation = false;
-            _SpawnProgress = 1.0;
+            _BirthBlend = null;
+            _BirthBlendDuration = 0.5;
+            _BirthHoldAction = null;
 
             get Flag_Loaded() { return this._Flag_Loaded; }
             get Position() { return this._Object ? this._Object.position : new THREE.Vector3(); }
@@ -1489,6 +1491,33 @@
                 this._CurrentAction = newAction;
             }
 
+            BeginBirthBlend(fadeDuration = 0.5) {
+                if (!this._AnimationControler || !this._Object || this._BirthBlend !== null) return;
+                const walkClip = this._Object.animations[0];
+                if (!walkClip) return;
+
+                const frozenTime = this._CurrentAction ? this._CurrentAction.time : 0;
+
+                const holdClip = walkClip.clone();
+                const holdAction = this._AnimationControler.clipAction(holdClip);
+                holdAction.time = frozenTime;
+                holdAction.setEffectiveTimeScale(0);
+                holdAction.setEffectiveWeight(1);
+                holdAction.play();
+
+                const walkAction = this._AnimationControler.clipAction(walkClip);
+                walkAction.reset();
+                walkAction.time = frozenTime;
+                walkAction.setEffectiveWeight(0);
+                walkAction.play();
+
+                this._CurrentAction = walkAction;
+                this._BirthHoldAction = holdAction;
+                this._BirthBlend = 0;
+                this._BirthBlendDuration = fadeDuration;
+                this._PauseAnimation = false;
+            }
+
             _PickRandomWanderDir() {
                 const angle = Math.random() * Math.PI * 2;
                 this._WanderDir.set(Math.cos(angle), 0, Math.sin(angle));
@@ -1504,11 +1533,20 @@
                 }
 
                 const now = performance.now();
-                if (this._SpawnProgress < 1.0) {
-                    this._SpawnProgress = Math.min(1.0, this._SpawnProgress + (FC_Environment.TIME_DELTA / 0.5));
-                }
-                this._AnimationDelta = Math.min((now - this._LastUpdateTime) / 1000, 0.1) * (this._AnimationSpeed * FC_Environment.FPS * this._SpawnProgress);
+                this._AnimationDelta = Math.min((now - this._LastUpdateTime) / 1000, 0.1) * (this._AnimationSpeed * FC_Environment.FPS);
                 this._LastUpdateTime = now;
+
+                if (this._BirthBlend !== null) {
+                    this._BirthBlend += FC_Environment.TIME_DELTA;
+                    const b = Math.min(1.0, this._BirthBlend / this._BirthBlendDuration);
+                    if (this._BirthHoldAction) this._BirthHoldAction.setEffectiveWeight(1.0 - b);
+                    if (this._CurrentAction) this._CurrentAction.setEffectiveWeight(b);
+                    if (b >= 1.0) {
+                        if (this._BirthHoldAction) this._BirthHoldAction.stop();
+                        this._BirthHoldAction = null;
+                        this._BirthBlend = null;
+                    }
+                }
 
                 const targetFloorY = playerFloor * 5;
                 if (!Manager._Elevator.isMoving && Math.abs(this.Position.y - targetFloorY) > 0.01) {
@@ -1594,11 +1632,11 @@
                     dummy.position.copy(this.Position);
                     dummy.lookAt(targetPos);
                     const targetQuaternion = dummy.quaternion.clone();
-                    const rotationSpeed = (isRunning ? 2.0 : 0.3) * this._SpawnProgress;
+                    const rotationSpeed = isRunning ? 2.0 : 0.3;
                     this._Object.quaternion.slerp(targetQuaternion, rotationSpeed * FC_Environment.TIME_DELTA);
 
                     const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(this._Object.quaternion);
-                    this._Object.position.addScaledVector(forwardDir, speed * FC_Environment.TIME_DELTA * this._SpawnProgress);
+                    this._Object.position.addScaledVector(forwardDir, speed * FC_Environment.TIME_DELTA);
                 }
 
                 this._AnimationControler.update(this._AnimationDelta);
@@ -2269,7 +2307,7 @@
                         if (this._MorphPostTimer >= fadeDuration) {
                             Cat.SetPointsOpacity(1.0);
                             Cat._PauseAnimation = false;
-                            Cat._SpawnProgress = 0;
+                            Cat.BeginBirthBlend();
                             this._MorphParticles._points.visible = false;
                             this._MorphParticles.destructor();
                             this._MorphParticles = null;

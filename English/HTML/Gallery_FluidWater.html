@@ -151,8 +151,8 @@
         Renderer.setSize(window.innerWidth, window.innerHeight);
 
         const Camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
-        Camera.position.set(8, 8, 13);
-        Camera.lookAt(0, 2, 0);
+        Camera.position.set(7, 5, 17);
+        Camera.lookAt(0, 1.5, 0);
 
         const Controls = new OrbitControls(Camera, canvas);
         Controls.target.set(0, 2, 0);
@@ -170,23 +170,29 @@
         Key.position.set(8, 16, 8);
         Scene.add(Key);
 
-        // wireframe tank so the fluid bounds are visible
-        const TANK = 6.6, TANK_H = 6.2;
+        // wireframe tank so the fluid bounds are visible (rectangular, tilted)
+        const TANK_X = 9.0, TANK_Y = 4.5, TANK_Z = 4.5;
+        const TILT = 0.16;              // tilt around z-axis (radians) -> low end +x
+        const COS_T = Math.cos(TILT), SIN_T = Math.sin(TILT);
+
+        const TankGroup = new THREE.Group();
+        TankGroup.rotation.z = -TILT;   // +x end tips downward
         const LineMat = new THREE.LineBasicMaterial({ color: 0x4a6a9a, transparent: true, opacity: 0.5 });
         const TankBox = new THREE.LineSegments(
-            new THREE.EdgesGeometry(new THREE.BoxGeometry(TANK, TANK_H, TANK)),
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(TANK_X, TANK_Y, TANK_Z)),
             LineMat
         );
-        TankBox.position.y = TANK_H / 2;
-        Scene.add(TankBox);
+        TankBox.position.y = TANK_Y / 2;
+        TankGroup.add(TankBox);
 
         const TankFloor = new THREE.Mesh(
-            new THREE.PlaneGeometry(TANK, TANK),
+            new THREE.PlaneGeometry(TANK_X, TANK_Z),
             new THREE.MeshStandardMaterial({ color: 0x0e1726, roughness: 0.6, metalness: 0.2 })
         );
         TankFloor.rotation.x = -Math.PI / 2;
         TankFloor.position.y = 0;
-        Scene.add(TankFloor);
+        TankGroup.add(TankFloor);
+        Scene.add(TankGroup);
 
         // ============================================================
         //  SPH parameters
@@ -197,13 +203,15 @@
         const H2 = H * H;
         const REST_DENSITY = 1.0;    // rest density
         const MASS = 0.016;          // particle mass
-        const GRAVITY_Y = -31;       // gravity
+        const GRAVITY = -31;           // gravity magnitude (box-local)
+        const GRAV_X = -GRAVITY * SIN_T;   // tilt puts a downhill component along +x
+        const GRAV_Y = GRAVITY * COS_T;    // .. and a vertical component
         const GAS_CONST = 35;        // stiffness of the pressure term
         const VISCOSITY = 3;         // viscosity (lower = less honey-like)
         const MAX_SPEED = 14;        // velocity clamp
-        const COL_SOFT = 0.28;       // wall / rock restitution
+        const COL_SOFT = 0.10;       // wall / rock restitution
         const SPACING = 0.22;        // initial particle spacing
-        const NUM_PARTICLES = 4800;
+        const NUM_PARTICLES = 2200;
 
         // kernels (Poly6 density, Spiky gradient, Laplacian viscosity)
         const KERNEL_POLY6 = 315 / (64 * Math.PI * Math.pow(H, 9));
@@ -223,10 +231,10 @@
             return KERNEL_VISC_LAP * (H - r);
         }
 
-        // domain bounds
-        const HALF = TANK / 2;
-        const MIN = { x: -HALF + 0.12, y: 0.05, z: -HALF + 0.12 };
-        const MAX = { x: HALF - 0.12, y: TANK_H - 0.4, z: HALF - 0.12 };
+        // domain bounds (box-local; the tank is rendered tilted)
+        const HALF_X = TANK_X / 2, HALF_Z = TANK_Z / 2;
+        const MIN = { x: -HALF_X + 0.2, y: 0.05, z: -HALF_Z + 0.2 };
+        const MAX = { x: HALF_X - 0.2, y: TANK_Y - 0.4, z: HALF_Z - 0.2 };
 
         // particle data
         const pos = new Float32Array(NUM_PARTICLES * 3);
@@ -237,7 +245,7 @@
         // flat spatial grid (no per-frame allocation)
         const CELL = H;
         const PHYS_DT = 0.004;       // fixed physics substep (CFL-safe; stable range verified)
-        const GRID_NX = 14, GRID_NY = 12, GRID_NZ = 14;
+        const GRID_NX = 18, GRID_NY = 12, GRID_NZ = 12;
         const GRID_XZ = GRID_NX * GRID_NY;
         const cellCount = GRID_NX * GRID_NY * GRID_NZ;
         const cellCounts = new Int32Array(cellCount);
@@ -380,7 +388,7 @@
                 if (pressure[i] < 0) pressure[i] = 0;
 
                 const ix = pos[ix3], iy = pos[ix3 + 1], iz = pos[ix3 + 2];
-                let ax = 0, ay = GRAVITY_Y, az = 0;
+                let ax = GRAV_X, ay = GRAV_Y, az = 0;
 
                 const s = nStart[i], e = s + nCount[i];
                 for (let k = s; k < e; k++) {
@@ -504,8 +512,11 @@
             mouseNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
             raycaster.setFromCamera(mouseNDC, Camera);
             const target = new THREE.Vector3();
-            if (raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), target)) return target;
-            return null;
+            if (!raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), target)) return null;
+            // world -> box-local (inverse of the TankGroup -TILT rotation)
+            const lx = target.x * COS_T - target.y * SIN_T;
+            const ly = target.x * SIN_T + target.y * COS_T;
+            return new THREE.Vector3(lx, ly, target.z);
         }
 
         function splashAt(point, count) {
@@ -600,9 +611,11 @@
             if (!paused) stepSPH(dt);
 
             for (let i = 0; i < NUM_PARTICLES; i++) {
-                fluidPos[i * 3] = pos[i * 3];
-                fluidPos[i * 3 + 1] = pos[i * 3 + 1];
-                fluidPos[i * 3 + 2] = pos[i * 3 + 2];
+                const lx = pos[i * 3], ly = pos[i * 3 + 1], lz = pos[i * 3 + 2];
+// box-local -> world (SAME rotation as the tilted TankGroup)
+            fluidPos[i * 3] = lx * COS_T + ly * SIN_T;
+            fluidPos[i * 3 + 1] = -lx * SIN_T + ly * COS_T;
+            fluidPos[i * 3 + 2] = lz;
             }
             fluidGeo.attributes.position.needsUpdate = true;
 

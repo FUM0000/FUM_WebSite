@@ -1175,8 +1175,6 @@
         let shakeIntensity = 0;
         let messageTimer = 0;
         let TurnCount = 0;
-        let turnActive = false;
-        let enemyAttackTimer = 0;
         let pendingPostClear = 'next';
         let dialogLines = [];
         let dialogIndex = 0;
@@ -1185,7 +1183,6 @@
         let chapterIntroOnDone = null;
         let prevStateBeforeInfo = null;
         let actionNext = null;
-        const ATTACK_DELAY = 1.0;
 
         function GetEnemy() {
             const idx = Math.min(EnemyIndex, ENEMIES.length - 1);
@@ -1263,10 +1260,19 @@
             messageTimer = 0;
         }
 
-        function ShowWarning() {
-            document.getElementById('UI_Message_Text').textContent = 'Enemy is attacking!';
-            UI_Message.className = 'visible';
-            messageTimer = 0;
+        function ShowAction(text, className, onConfirm) {
+            document.getElementById('UI_Action_Text').innerHTML = text;
+            UI_Action.className = 'visible' + (className ? ' ' + className : '');
+            actionNext = onConfirm;
+            State = 'Action';
+        }
+
+        function ConfirmAction() {
+            if (!UI_Action.classList.contains('visible')) return;
+            UI_Action.className = '';
+            const f = actionNext;
+            actionNext = null;
+            if (f) f();
         }
 
         function AnimateEnemyPanel() {
@@ -1314,11 +1320,7 @@
         }
 
         function AdvanceTurn() {
-            if (turnActive) return;
             TurnCount++;
-            turnActive = true;
-            enemyAttackTimer = ATTACK_DELAY;
-            ShowWarning();
             UpdateUI();
         }
 
@@ -1577,10 +1579,6 @@
                 }
             }
 
-            if (didMerge) {
-                AdvanceTurn();
-            }
-
             return mergeCount;
         }
 
@@ -1652,16 +1650,20 @@
             UpdateUI();
         }
 
-        function EnemyAttack() {
-            const dmg = 5 + Math.floor(Level * 3 + EnemyIndex * 2);
+        function EnemyAction(extraDmg, label) {
+            const dmg = 5 + Math.floor(Level * 3 + EnemyIndex * 2) + (extraDmg || 0);
             PlayerHp -= dmg;
             AnimatePlayerPanel();
+            UpdateUI();
             if (PlayerHp <= 0) {
                 PlayerHp = 0;
                 State = 'GameOver';
                 ShowMessage('Defeat...', 0, 'defeat interactive');
+                return;
             }
-            UpdateUI();
+            ShowAction((label || 'Enemy attack') + ' <b>-' + dmg + ' HP</b>', label ? 'action-punish' : 'action-enemy', () => {
+                State = 'Playing';
+            });
         }
 
         /* ─── Story / Shop Flow ────────────────────────────────── */
@@ -1804,12 +1806,13 @@
 
             CurrentFruitType = NextFruitType;
             NextFruitType = Math.floor(Math.random() * Math.min(4 + Math.floor(Level / 2), FRUITS.length));
-            UpdateUI();
 
             CanDrop = false;
             DropCooldown = 0.4;
+            TurnCount++;
+            UpdateUI();
 
-            AdvanceTurn();
+            EnemyAction();
         }
 
         function AttackWithFruit(fruit) {
@@ -1836,13 +1839,19 @@
             });
 
             DealDamageToEnemy(dmg);
+            TurnCount++;
             shakeTimer = 0.15;
             shakeIntensity = Math.min(8, dmg * 0.03);
             AnimateEnemyPanel();
+            UpdateUI();
 
-            if (State === 'Playing') {
-                AdvanceTurn();
+            if (State === 'LevelClear') {
+                return;
             }
+
+            ShowAction('Your attack <b>-' + dmg + ' HP</b>', 'action-player', () => {
+                EnemyAction();
+            });
         }
 
         /* ─── Game Loop ────────────────────────────────────────── */
@@ -1862,17 +1871,6 @@
                 for (const f of Fruits) f.update(dt);
                 ResolveCollisions();
 
-                if (turnActive) {
-                    enemyAttackTimer -= dt;
-                    if (enemyAttackTimer <= 0) {
-                        EnemyAttack();
-                        turnActive = false;
-                        if (State === 'Playing') {
-                            HideMessage();
-                        }
-                    }
-                }
-
                 const heightLimit = CH * 0.28;
                 let overLimit = false;
                 for (const f of Fruits) {
@@ -1882,18 +1880,10 @@
                     }
                 }
                 if (overLimit && Fruits.length > 3) {
-                    EnemyAttack();
-                    PlayerHp -= 5;
                     shakeTimer = 0.2;
                     shakeIntensity = 4;
                     Fruits = Fruits.filter(f => f.age < 0.5);
-                    turnActive = false;
-                    enemyAttackTimer = 0;
-                    if (PlayerHp <= 0) {
-                        PlayerHp = 0;
-                        State = 'GameOver';
-                        ShowMessage('Defeat...', 0, 'defeat interactive');
-                    }
+                    EnemyAction(5, 'The enemy punishes you');
                     UpdateUI();
                 }
             }
@@ -2091,6 +2081,8 @@
                 } else {
                     SpawnFruit();
                 }
+            } else if (State === 'Action') {
+                ConfirmAction();
             } else if (State === 'LevelClear') {
                 ContinueAfterClear();
             } else if (State === 'GameOver') {
@@ -2121,6 +2113,8 @@
                         SpawnFruit();
                     }
                 }
+            } else if (State === 'Action') {
+                ConfirmAction();
             } else if (State === 'LevelClear') {
                 ContinueAfterClear();
             } else if (State === 'GameOver') {
@@ -2160,8 +2154,6 @@
             DamageNumbers = [];
             MergeEffects = [];
             TurnCount = 0;
-            turnActive = false;
-            enemyAttackTimer = 0;
             DropCooldown = 0;
             CanDrop = true;
             CurrentFruitType = 0;
@@ -2171,6 +2163,8 @@
             shopOnClose = null;
             HideMessage();
             HideOverlays();
+            UI_Action.className = '';
+            actionNext = null;
             UpdateUI();
             UI_Start.style.display = '';
             State = 'WaitingStart';
@@ -2181,13 +2175,13 @@
             DamageNumbers = [];
             MergeEffects = [];
             TurnCount = 0;
-            turnActive = false;
-            enemyAttackTimer = 0;
             DropCooldown = 0;
             CanDrop = true;
             CurrentFruitType = Math.floor(Math.random() * Math.min(3 + Math.floor(Level / 2), FRUITS.length));
             NextFruitType = Math.floor(Math.random() * Math.min(3 + Math.floor(Level / 2), FRUITS.length));
             DropX = CW / 2;
+            UI_Action.className = '';
+            actionNext = null;
             State = 'Playing';
             UpdateUI();
         }
