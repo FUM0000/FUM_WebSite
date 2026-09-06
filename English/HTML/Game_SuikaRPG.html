@@ -1541,32 +1541,54 @@
                             b.markedForMerge = true;
                             detectedMerge = true;
                         }
+                    }
+                }
+            }
+
+            const PASSES = 3;
+            const relax = 0.5;
+            for (let pass = 0; pass < PASSES; pass++) {
+                for (let i = 0; i < Fruits.length; i++) {
+                    for (let j = i + 1; j < Fruits.length; j++) {
+                        const a = Fruits[i];
+                        const b = Fruits[j];
+                        const dx = b.x - a.x;
+                        const dy = b.y - a.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 0.001) continue;
+                        const minDist = a.radius + b.radius;
+                        if (dist >= minDist) continue;
 
                         const nx = dx / dist;
                         const ny = dy / dist;
                         const overlap = minDist - dist;
-                        const totalMass = a.radius + b.radius;
-                        const pushA = overlap * (b.radius / totalMass);
-                        const pushB = overlap * (a.radius / totalMass);
 
-                        a.x -= nx * pushA;
-                        a.y -= ny * pushA;
-                        b.x += nx * pushB;
-                        b.y += ny * pushB;
+                        const invA = 1 / (a.radius * a.radius);
+                        const invB = 1 / (b.radius * b.radius);
+                        const totalInv = invA + invB;
+
+                        const pushA = overlap * (invA / totalInv) * relax;
+                        const pushB = overlap * (invB / totalInv) * relax;
+                        const maxPush = Math.min(a.radius, b.radius) * 0.6;
+                        const cA = Math.min(pushA, maxPush);
+                        const cB = Math.min(pushB, maxPush);
+
+                        a.x -= nx * cA;
+                        a.y -= ny * cA;
+                        b.x += nx * cB;
+                        b.y += ny * cB;
 
                         const dvx = a.vx - b.vx;
                         const dvy = a.vy - b.vy;
                         const dot = dvx * nx + dvy * ny;
 
                         if (dot > 0) {
-                            const restitution = 0.22;
-                            const mA = a.radius;
-                            const mB = b.radius;
-                            const j = -(1 + restitution) * dot / (1 / mA + 1 / mB);
-                            a.vx -= j * nx / mA;
-                            a.vy -= j * ny / mA;
-                            b.vx += j * nx / mB;
-                            b.vy += j * ny / mB;
+                            const restitution = 0.18;
+                            const j = -(1 + restitution) * dot / totalInv;
+                            a.vx += j * nx * invA;
+                            a.vy += j * ny * invA;
+                            b.vx -= j * nx * invB;
+                            b.vy -= j * ny * invB;
                         }
                     }
                 }

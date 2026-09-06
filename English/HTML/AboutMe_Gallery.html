@@ -1724,6 +1724,368 @@
             }
         }
 
+        class C_FluidWind {
+
+            constructor(scene, sakuraX, sakuraZ, floorY) {
+
+                const _scene = scene;
+                this._flowOn = false;
+                this._floorVisible = true;
+                this.floorVisible = true;
+                this._uTime = 0;
+
+                const NUM_PARTICLES = 350;
+                const ORBIT_SPEED = 1.2;
+                const TURBULENCE = 0.3;
+                const WANDER_RATE = 0.4;
+                const DRAG = 0.97;
+                const PLAYER_COL_RADIUS = 0.3;
+                const PLAYER_COL_HEIGHT = 1.7;
+                const MAX_RADIUS = 10;
+                const SPAWN_INNER = 3;
+                const SPAWN_OUTER = 8;
+                const FLOOR_Y_MIN = floorY;
+                const FLOOR_Y_MAX = floorY + 2;
+
+                const D = Math.sqrt(sakuraX * sakuraX + sakuraZ * sakuraZ) || 4;
+                const dX = sakuraX / D, dZ = sakuraZ / D;
+                const dist = D + 2.0;
+                const POS_X = dX * dist;
+                const POS_Z = dZ * dist;
+                const SCALE = 1.0;
+
+                function hash2(x, y) {
+                    let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263);
+                    h = Math.imul(h ^ (h >>> 13), 1274126177);
+                    h = h ^ (h >>> 16);
+                    return (h >>> 0) / 4294967295;
+                }
+                function smoothNoise(x, y) {
+                    const ix = Math.floor(x), iy = Math.floor(y);
+                    const fx = x - ix, fy = y - iy;
+                    const ux = fx * fx * (3 - 2 * fx);
+                    const uy = fy * fy * (3 - 2 * fy);
+                    const a = hash2(ix, iy), b = hash2(ix + 1, iy);
+                    const c = hash2(ix, iy + 1), d = hash2(ix + 1, iy + 1);
+                    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+                }
+                function fbm(x, y) {
+                    return smoothNoise(x, y) * 0.5 + smoothNoise(x * 2, y * 2) * 0.25 + smoothNoise(x * 4, y * 4) * 0.125;
+                }
+
+                const positions = new Float32Array(NUM_PARTICLES * 3);
+                const prevPositions = new Float32Array(NUM_PARTICLES * 3);
+                const ages = new Float32Array(NUM_PARTICLES);
+                const lifetimes = new Float32Array(NUM_PARTICLES);
+                const noiseCoords = new Float32Array(NUM_PARTICLES * 2);
+                const alphas = new Float32Array(NUM_PARTICLES);
+
+                function resetParticle(i, randomAge) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = SPAWN_INNER + Math.random() * (SPAWN_OUTER - SPAWN_INNER);
+                    const px = Math.cos(angle) * r;
+                    const pz = Math.sin(angle) * r;
+                    const py = FLOOR_Y_MIN + 0.5 + Math.random() * (FLOOR_Y_MAX - FLOOR_Y_MIN - 1.0);
+                    positions[i * 3] = px;
+                    positions[i * 3 + 1] = py;
+                    positions[i * 3 + 2] = pz;
+                    prevPositions[i * 3] = px;
+                    prevPositions[i * 3 + 1] = py;
+                    prevPositions[i * 3 + 2] = pz;
+                    lifetimes[i] = 20 + Math.random() * 40;
+                    ages[i] = randomAge ? Math.random() * lifetimes[i] : 0;
+                    noiseCoords[i * 2] = Math.random() * 100;
+                    noiseCoords[i * 2 + 1] = Math.random() * 100;
+                }
+
+                for (let i = 0; i < NUM_PARTICLES; i++) {
+                    resetParticle(i, true);
+                }
+
+                const _PositionsAttr = new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage);
+                const _AlphaAttr = new THREE.BufferAttribute(alphas, 1).setUsage(THREE.DynamicDrawUsage);
+
+                const _Geometry = new THREE.BufferGeometry();
+                _Geometry.setAttribute('position', _PositionsAttr);
+                _Geometry.setAttribute('aAlpha', _AlphaAttr);
+
+                const _Material = new THREE.ShaderMaterial({
+                    uniforms: {},
+                    vertexShader: `
+                        attribute float aAlpha;
+                        varying float vAlpha;
+                        void main() {
+                            vAlpha = aAlpha;
+                            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                            gl_PointSize = clamp(1.2 * (140.0 / -mvPosition.z), 0.4, 3.0);
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `,
+                    fragmentShader: `
+                        varying float vAlpha;
+                        void main() {
+                            vec2 uv = gl_PointCoord * 2.0 - 1.0;
+                            float d = dot(uv, uv);
+                            if (d > 1.0) discard;
+                            float soft = 1.0 - d;
+                            gl_FragColor = vec4(0.55, 0.78, 1.0, soft * vAlpha);
+                        }
+                    `,
+                    transparent: true,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending,
+                    fog: false,
+                });
+
+                this._Points = new THREE.Points(_Geometry, _Material);
+                this._Points.frustumCulled = false;
+                this._Points.visible = false;
+
+                this._group = new THREE.Group();
+                this._group.position.set(0, 0, 0);
+                this._group.scale.setScalar(SCALE);
+                this._group.add(this._Points);
+                this._group.visible = false;
+                _scene.add(this._group);
+
+                this._orbCenter = new THREE.Vector3(0, 0, 0);
+                this._colliders = [];
+
+                this.Update = (dt, playerPos) => {
+                    if (!this._flowOn) return;
+                    this._uTime += dt;
+                    const time = this._uTime;
+
+                    for (let i = 0; i < NUM_PARTICLES; i++) {
+                        ages[i] += dt;
+                        if (ages[i] > lifetimes[i]) {
+                            resetParticle(i, false);
+                            continue;
+                        }
+
+                        const i3 = i * 3;
+                        let px = positions[i3], py = positions[i3 + 1], pz = positions[i3 + 2];
+
+                        const dx = px - this._orbCenter.x;
+                        const dz = pz - this._orbCenter.z;
+                        const distXZ = Math.sqrt(dx * dx + dz * dz);
+                        const angle = Math.atan2(dz, dx);
+
+                        let vx = 0, vy = 0, vz = 0;
+
+                        if (distXZ > 0.1) {
+                            const tangentX = -Math.sin(angle);
+                            const tangentZ = Math.cos(angle);
+                            const orbitStrength = ORBIT_SPEED * Math.min(1, distXZ / 4);
+                            vx += tangentX * orbitStrength;
+                            vz += tangentZ * orbitStrength;
+                        }
+
+                        const n1 = fbm(noiseCoords[i * 2] + time * 0.1, noiseCoords[i * 2 + 1]) * 2 - 1;
+                        const n2 = fbm(noiseCoords[i * 2] + 20, noiseCoords[i * 2 + 1] + time * 0.1) * 2 - 1;
+                        vx += Math.cos(n1 * Math.PI * 2.2) * TURBULENCE;
+                        vy += Math.sin(n2 * Math.PI * 2.2) * TURBULENCE * 0.3;
+                        vz += Math.sin(n1 * Math.PI * 2.2) * TURBULENCE;
+
+                        noiseCoords[i * 2] += dt * WANDER_RATE;
+                        noiseCoords[i * 2 + 1] += dt * WANDER_RATE;
+
+                        vx *= DRAG;
+                        vy *= DRAG;
+                        vz *= DRAG;
+
+                        prevPositions[i3] = px;
+                        prevPositions[i3 + 1] = py;
+                        prevPositions[i3 + 2] = pz;
+
+                        px += vx * dt;
+                        py += vy * dt;
+                        pz += vz * dt;
+
+                        if (py < FLOOR_Y_MIN + 0.2) { py = FLOOR_Y_MIN + 0.2; vy = Math.abs(vy) * 0.5; }
+                        if (py > FLOOR_Y_MAX - 0.2) { py = FLOOR_Y_MAX - 0.2; vy = -Math.abs(vy) * 0.5; }
+
+                        const newDx = px - this._orbCenter.x;
+                        const newDz = pz - this._orbCenter.z;
+                        const newDistXZ = Math.sqrt(newDx * newDx + newDz * newDz);
+                        if (newDistXZ > MAX_RADIUS) {
+                            const scale = MAX_RADIUS / newDistXZ;
+                            px = this._orbCenter.x + newDx * scale;
+                            pz = this._orbCenter.z + newDz * scale;
+                        }
+
+                        for (let c = 0; c < this._colliders.length; c++) {
+                            const col = this._colliders[c];
+                            if (py < col.yMin || py > col.yMax) continue;
+                            const cx = px - col.x;
+                            const cz = pz - col.z;
+                            const cd2 = cx * cx + cz * cz;
+                            if (cd2 >= col.radius * col.radius) continue;
+                            const cd = Math.sqrt(cd2);
+                            if (cd > 0.001) {
+                                const push = (col.radius - cd) / cd;
+                                px += cx * push;
+                                pz += cz * push;
+                            } else {
+                                px += col.radius;
+                            }
+                        }
+
+                        if (playerPos) {
+                            const pdx = px - playerPos.x;
+                            const pdz = pz - playerPos.z;
+                            const pDistXZ = Math.sqrt(pdx * pdx + pdz * pdz);
+                            const pDy = py - playerPos.y;
+                            if (pDistXZ < PLAYER_COL_RADIUS && pDy > -0.2 && pDy < PLAYER_COL_HEIGHT) {
+                                if (pDistXZ > 0.01) {
+                                    const push = (PLAYER_COL_RADIUS - pDistXZ) / pDistXZ;
+                                    px += pdx * push;
+                                    pz += pdz * push;
+                                } else {
+                                    px += 0.5;
+                                }
+                            }
+                        }
+
+                        positions[i3] = px;
+                        positions[i3 + 1] = py;
+                        positions[i3 + 2] = pz;
+
+                        const lifeProgress = ages[i] / lifetimes[i];
+                        const fadeIn = Math.min(1, lifeProgress / 0.08);
+                        const fadeOut = Math.min(1, (1 - lifeProgress) / 0.14);
+                        alphas[i] = Math.max(0, Math.min(fadeIn, fadeOut)) * 1.0;
+                    }
+
+                    _PositionsAttr.needsUpdate = true;
+                    _AlphaAttr.needsUpdate = true;
+                };
+
+                const makeLabel = (on) => {
+                    const c = document.createElement('canvas');
+                    c.width = 256; c.height = 128;
+                    const ctx = c.getContext('2d');
+                    ctx.clearRect(0, 0, 256, 128);
+                    ctx.fillStyle = 'rgba(143, 191, 255, 0.95)';
+                    ctx.font = 'bold 54px "Space Mono", monospace';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('WIND', 128, 44);
+                    ctx.fillStyle = on ? 'rgba(120, 255, 180, 0.95)' : 'rgba(170, 195, 225, 0.65)';
+                    ctx.font = 'bold 46px "Space Mono", monospace';
+                    ctx.fillText(on ? 'ON' : 'OFF', 128, 96);
+                    return new THREE.CanvasTexture(c);
+                };
+
+                const buttonMat = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uColor: { value: new THREE.Color(0.35, 0.55, 0.8) },
+                        uPower: { value: 0 },
+                    },
+                    vertexShader: `
+                        varying vec3 vNormal;
+                        varying vec3 vViewPos;
+                        void main() {
+                            vNormal = normalize(normalMatrix * normal);
+                            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                            vViewPos = -mv.xyz;
+                            gl_Position = projectionMatrix * mv;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        uniform vec3 uColor;
+                        uniform float uPower;
+                        varying vec3 vNormal;
+                        varying vec3 vViewPos;
+                        void main() {
+                            vec3 N = normalize(vNormal);
+                            vec3 V = normalize(vViewPos);
+                            float fresnel = pow(1.0 - abs(dot(V, N)), 2.5);
+                            float pulse = 0.7 + 0.3 * sin(uTime * 2.5);
+                            vec3 color = uColor * (0.4 + fresnel * 0.9 + uPower * pulse * 0.6);
+                            float alpha = clamp(0.35 + fresnel * 0.65 + uPower * pulse * 0.25, 0.0, 1.0);
+                            gl_FragColor = vec4(color, alpha);
+                        }
+                    `,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    fog: false,
+                });
+
+                this._panelGroup = new THREE.Group();
+                const perpX = -dZ, perpZ = dX;
+                const panelDist = 1.2;
+                this._panelGroup.position.set(POS_X + perpX * panelDist, floorY + 0.8, POS_Z + perpZ * panelDist);
+                this._panelGroup.visible = false;
+
+                const panelGeo = new THREE.BoxGeometry(0.55, 0.42, 0.045);
+                const panelMesh = new THREE.Mesh(
+                    panelGeo,
+                    new THREE.MeshBasicMaterial({ color: 0x0c1526, transparent: true, opacity: 0.9, fog: false, side: THREE.DoubleSide })
+                );
+                const panelFrame = new THREE.LineSegments(
+                    new THREE.EdgesGeometry(panelGeo),
+                    new THREE.LineBasicMaterial({ color: 0x6699cc, transparent: true, opacity: 0.8, fog: false })
+                );
+                this._panelGroup.add(panelMesh);
+                this._panelGroup.add(panelFrame);
+
+                const button = new THREE.Mesh(new THREE.SphereGeometry(0.09, 24, 24), buttonMat);
+                button.position.set(0, -0.09, 0.03);
+                button.userData.buttonType = 'wind';
+                this._panelGroup.add(button);
+                this.button = button;
+
+                const labelMat = new THREE.MeshBasicMaterial({ map: makeLabel(false), transparent: true, depthWrite: false, fog: false });
+                const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.24), labelMat);
+                labelMesh.position.set(0, 0.15, 0.03);
+                this._panelGroup.add(labelMesh);
+
+                this._panelGroup.lookAt(0, this._panelGroup.position.y, 0);
+                _scene.add(this._panelGroup);
+
+                const syncButton = () => {
+                    if (this._flowOn) {
+                        buttonMat.uniforms.uColor.value.set(0.25, 0.9, 0.65);
+                        buttonMat.uniforms.uPower.value = 1;
+                    } else {
+                        buttonMat.uniforms.uColor.value.set(0.35, 0.55, 0.8);
+                        buttonMat.uniforms.uPower.value = 0;
+                    }
+                    labelMat.map = makeLabel(this._flowOn);
+                    labelMat.map.needsUpdate = true;
+                };
+
+                this.setFlowOn = (on) => {
+                    if (this._flowOn === on) return;
+                    this._flowOn = on;
+                    if (on) {
+                        for (let i = 0; i < NUM_PARTICLES; i++) resetParticle(i, true);
+                    }
+                    this._Points.visible = this._floorVisible && on;
+                    syncButton();
+                };
+
+                this.toggle = () => { this.setFlowOn(!this._flowOn); };
+
+                this.setFloorVisible = (v) => {
+                    this._floorVisible = v;
+                    this.floorVisible = v;
+                    this._group.visible = v;
+                    this._panelGroup.visible = v;
+                    this._Points.visible = v && this._flowOn;
+                    if (!v) this._flowOn = false;
+                };
+
+                this.setColliders = (list) => { this._colliders = list || []; };
+
+                this.syncUniforms = (time) => {
+                    buttonMat.uniforms.uTime.value = time;
+                };
+            }
+        }
+
         class C_Manager extends FC_Manager {
 
             _JOYSTICK_LEFT = new FC_Input_Joystick(document.getElementById("Joystick_Left"));
@@ -1739,6 +2101,7 @@
 
             _Button_Home = null;
             _Button_Music = null;
+            _Button_Wind = null;
             _CollisionBoxes = [];
 
             // _Image_Icon = new FC_ImagePlane(Scene, Camera, "../../Asset/Image/Icon_1_1.jpg", new THREE.Vector2(1, 1));
@@ -2335,6 +2698,11 @@
                     }
                 }
 
+                if (this._Wind) {
+                    this._Wind.Update(this._RealDelta, Player.Position);
+                    this._Wind.syncUniforms(performance.now() / 1000);
+                }
+
                 this._Category_Texts.forEach(_text => {
                     _text.Update();
                 });
@@ -2515,6 +2883,30 @@
                 this._Sakura.scale.setScalar(0.05);
                 this._Sakura.visible = false;
                 Scene.add(this._Sakura);
+
+                this._Wind = new C_FluidWind(Scene, subcategory_x, subcategory_z, category_y);
+                this._Button_Wind = this._Wind.button;
+
+                const windColliders = [];
+                for (const img of this._Images) {
+                    if ((img._FloorIndex || 0) === 1) {
+                        windColliders.push({
+                            x: img.Position.x,
+                            z: img.Position.z,
+                            radius: 0.55,
+                            yMin: category_y + 0.2,
+                            yMax: category_y + 2.3
+                        });
+                    }
+                }
+                windColliders.push({
+                    x: subcategory_x,
+                    z: subcategory_z,
+                    radius: 0.4,
+                    yMin: category_y + 0.2,
+                    yMax: category_y + 2.4
+                });
+                this._Wind.setColliders(windColliders);
 
                 const pedestal = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 16);
                 const pedestalMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false, fog: false });
@@ -2844,6 +3236,7 @@
                 this._CurrentVisibleFrameFloor = floor_index;
 
                 this.setSakuraVisibility(floor_index === 1);
+                if (this._Wind) this._Wind.setFloorVisible(floor_index === 1);
 
                 const matrix = new THREE.Matrix4();
                 const position = new THREE.Vector3();
@@ -2925,7 +3318,8 @@
         function getButtonTypeFromRaycast(raycaster) {
             const targets = [
                 Manager._Button_Home,
-                Manager._Button_Music
+                Manager._Button_Music,
+                Manager._Button_Wind
             ].filter(Boolean);
             const hits = raycaster.intersectObjects(targets, false);
             if (hits.length === 0) return null;
@@ -2990,6 +3384,13 @@
                 if (releasedButtonType === 'music') {
                     PressedButtonType = null;
                     Manager.BGM.Flag_Playing ? Manager.BGM.Stop() : Manager.BGM.Play();
+                    return;
+                }
+                if (releasedButtonType === 'wind') {
+                    PressedButtonType = null;
+                    if (Manager._Wind && Manager._Wind.floorVisible) {
+                        Manager._Wind.toggle();
+                    }
                     return;
                 }
             }
