@@ -1524,19 +1524,20 @@
                 this._Timer_Wander = 0;
             }
 
-            Update(playerFloor, isPlayerInElevator, playerPos, isCrouched, isMovingInput) {
+            Update(playerFloor, isPlayerInElevator, playerPos, isCrouched, isMovingInput, deltaTime = null) {
                 if (!this._Flag_Loaded || !this._Object) return;
                 if (this._PauseAnimation) {
                     this._LastUpdateTime = performance.now();
                     return;
                 }
+                const _dt = deltaTime !== null ? deltaTime : FC_Environment.TIME_DELTA;
 
                 const now = performance.now();
                 this._AnimationDelta = Math.min((now - this._LastUpdateTime) / 1000, 0.1) * (this._AnimationSpeed * FC_Environment.FPS);
                 this._LastUpdateTime = now;
 
                 if (this._BirthBlend !== null) {
-                    this._BirthBlend += FC_Environment.TIME_DELTA;
+                    this._BirthBlend += _dt;
                     if (this._BirthBlend >= this._BirthBlendDuration) {
                         this._BirthBlend = null;
                         this._BirthSnapshot = null;
@@ -1783,6 +1784,8 @@
             _MorphParticles = null;
             _MorphTriggered = false;
             _MorphPostTimer = null;
+            _LastFrameTime = null;
+            _RealDelta = FC_Environment.TIME_DELTA;
 
             get UI_Home() { return this._UI_Home; }
             get UI_Music() { return this._UI_Music; }
@@ -2090,6 +2093,12 @@
             }
             Update() {
 
+                const _frameNow = performance.now();
+                this._RealDelta = this._LastFrameTime === null
+                    ? FC_Environment.TIME_DELTA
+                    : Math.min((_frameNow - this._LastFrameTime) / 1000, 0.2);
+                this._LastFrameTime = _frameNow;
+
                 if (!this._Flag_Loaded) {
                     this._Flag_Loaded = true;
                     super.Fade(true);
@@ -2293,7 +2302,7 @@
                 const playerFloor = this.getFloorIndexFromY(Player.Position.y);
                 const isInElevator = this._Elevator.checkPlayerInElevator(Player) || this._Elevator.isMoving;
                 const isMovingInput = this._Input_Move.length() > 0;
-                Cat.Update(playerFloor, isInElevator, Player.Position, isCrouched, isMovingInput);
+                Cat.Update(playerFloor, isInElevator, Player.Position, isCrouched, isMovingInput, this._RealDelta);
 
                 if (!this._MorphTriggered && Cat._Flag_Loaded && this._MorphParticles && this._Elevator) {
                     const targets = Cat._CollectMorphTargets(500);
@@ -2307,8 +2316,8 @@
                 if (this._MorphParticles) {
                     if (this._MorphParticles._Done) {
                         if (this._MorphPostTimer === null) this._MorphPostTimer = 0;
-                        this._MorphPostTimer += FC_Environment.TIME_DELTA;
-                        const fadeDuration = 5;
+                        this._MorphPostTimer += this._RealDelta;
+                        const fadeDuration = 2;
                         if (this._MorphPostTimer < fadeDuration) {
                             Cat.SetPointsOpacity(this._MorphPostTimer / fadeDuration);
                         }
@@ -2322,7 +2331,7 @@
                             this._MorphPostTimer = null;
                         }
                     } else if (this._MorphParticles._Active) {
-                        this._MorphParticles.Update(FC_Environment.TIME_DELTA);
+                        this._MorphParticles.Update(this._RealDelta);
                     }
                 }
 

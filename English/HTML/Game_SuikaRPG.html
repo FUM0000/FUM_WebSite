@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="author" content="F U M">
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <link rel="shortcut icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
@@ -37,6 +37,11 @@
             color: var(--ink);
             letter-spacing: 0.02em;
             background: linear-gradient(160deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         body::before,
         body::after {
@@ -65,6 +70,8 @@
             position: relative;
             z-index: 1;
             margin: 0 auto;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #UI_Home_1 {
@@ -811,44 +818,79 @@
 
         @media (max-width: 768px) {
             #UI_Home_1 {
-                top: 10px;
-                left: 10px;
-                padding: 7px 12px;
-                font-size: 0.72rem;
+                top: max(8px, env(safe-area-inset-top));
+                left: max(8px, env(safe-area-inset-left));
+                padding: 6px 10px;
+                font-size: 0.68rem;
+                z-index: 4;
             }
             #UI_TopBar {
-                top: 10px;
-                gap: 6px;
+                top: 8px;
+                gap: 4px;
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 grid-template-areas: "player enemy" "status status";
-                max-width: calc(100% - 150px);
-                width: min(430px, 100%);
+                max-width: calc(100% - 100px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: min(380px, calc(100% - 100px));
             }
-            #UI_Player_Panel { grid-area: player; min-width: 0; }
-            #UI_Enemy_Panel { grid-area: enemy; min-width: 0; }
-            #UI_Status_Panel { grid-area: status; order: 3; flex-direction: row; justify-content: space-between; min-width: 0; padding: 5px 12px; }
-            #UI_Status_Panel, #UI_Player_Panel, #UI_Enemy_Panel {
-                font-size: 0.66rem;
-                padding: 6px 10px;
-            }
+            #UI_Player_Panel { grid-area: player; min-width: 0; padding: 5px 8px; font-size: 0.6rem; }
+            #UI_Enemy_Panel { grid-area: enemy; min-width: 0; padding: 5px 8px; font-size: 0.6rem; }
             #UI_Status_Panel {
-                font-size: 0.66rem;
+                grid-area: status;
+                order: 3;
+                flex-direction: row;
+                justify-content: space-between;
+                min-width: 0;
+                padding: 4px 8px;
+                font-size: 0.6rem;
+            }
+            #UI_Player_Label, #UI_Enemy_Name {
+                font-size: 0.62rem;
+            }
+            #UI_Player_Hp_Text, #UI_Enemy_Hp_Text {
+                font-size: 0.56rem;
             }
             #UI_Action {
-                top: 155px;
+                top: 140px;
+                padding: 6px 14px;
+                font-size: 0.8rem;
+                width: auto;
+                max-width: 80vw;
             }
             #UI_Item_Panel {
-                bottom: 10px;
-                right: 10px;
-                padding: 5px 12px;
+                bottom: max(8px, env(safe-area-inset-bottom));
+                right: max(8px, env(safe-area-inset-right));
+                padding: 5px 10px;
             }
             #UI_Next_Panel {
-                bottom: 10px;
-                padding: 5px 12px;
+                position: absolute;
+                bottom: max(8px, env(safe-area-inset-bottom));
+                left: max(8px, env(safe-area-inset-left));
+                padding: 5px 10px;
+                z-index: 3;
             }
             #UI_Next_Fruit {
-                font-size: 1.3rem;
+                font-size: 1.2rem;
+            }
+            #UI_Next_Label {
+                font-size: 0.55rem;
+            }
+            #UI_Message_1 {
+                top: 36%;
+            }
+            .dialog-box {
+                width: min(92vw, 480px);
+                padding: 20px 18px;
+            }
+            .shop-box {
+                width: min(92vw, 380px);
+                padding: 18px 16px;
+            }
+            .info-box {
+                width: min(92vw, 360px);
+                padding: 18px 16px;
             }
         }
     </style>
@@ -950,8 +992,19 @@
         ResizeCanvas();
         window.addEventListener('resize', ResizeCanvas);
 
+        function IsMobile() {
+            return window.innerWidth <= 768;
+        }
+
         function PositionNextPanel() {
             if (!nextPanelReady) return;
+            if (IsMobile()) {
+                UI_NextPanel.style.left = '8px';
+                UI_NextPanel.style.top = '';
+                UI_NextPanel.style.bottom = '8px';
+                UI_NextPanel.style.right = '';
+                return;
+            }
             const rect = Canvas.getBoundingClientRect();
             const pw = UI_NextPanel.offsetWidth;
             const ph = UI_NextPanel.offsetHeight;
@@ -959,9 +1012,11 @@
             if (left + pw <= window.innerWidth - 8) {
                 UI_NextPanel.style.left = left + 'px';
                 UI_NextPanel.style.top = (rect.bottom - ph - 12) + 'px';
+                UI_NextPanel.style.bottom = '';
             } else {
                 UI_NextPanel.style.left = ((window.innerWidth - pw) / 2) + 'px';
                 UI_NextPanel.style.top = (rect.bottom - ph - 16) + 'px';
+                UI_NextPanel.style.bottom = '';
             }
         }
 
@@ -2092,6 +2147,8 @@
 
         /* ─── Input ────────────────────────────────────────────── */
 
+        let lastTouchTime = 0;
+
         function GetCanvasX(clientX) {
             const rect = Canvas.getBoundingClientRect();
             return clientX - rect.left;
@@ -2102,6 +2159,10 @@
             return clientY - rect.top;
         }
 
+        function shouldIgnoreClick() {
+            return (performance.now() - lastTouchTime) < 700;
+        }
+
         Canvas.addEventListener('mousemove', (e) => {
             if (State === 'Playing') {
                 DropX = Math.max(24, Math.min(CW - 24, GetCanvasX(e.clientX)));
@@ -2110,6 +2171,7 @@
 
         Canvas.addEventListener('click', (e) => {
             e.preventDefault();
+            if (shouldIgnoreClick()) return;
             if (State === 'WaitingStart') {
                 StartGame();
             } else if (State === 'Playing') {
@@ -2139,6 +2201,7 @@
 
         Canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            lastTouchTime = performance.now();
             if (State === 'WaitingStart') {
                 StartGame();
             } else if (State === 'Playing') {
