@@ -166,6 +166,14 @@
         @media (max-width: 600px) {
             .geo-display-name { font-size: 1.8rem; }
         }
+
+        .country-select-btn {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .country-select-btn:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
     </style>
 </head>
 
@@ -183,12 +191,38 @@
                         <v-row justify="center">
                             <v-col cols="12" md="9" lg="7">
 
+                                <!-- Country Selection -->
+                                <v-card v-if="!SelectedCountry">
+                                    <v-system-bar>Select a Country</v-system-bar>
+                                    <v-card-text>
+                                        <div class="text-h6 mb-2">Choose a country to quiz on</div>
+                                        <p class="text-body-2 mb-4">More countries coming soon!</p>
+
+                                        <v-row dense>
+                                            <v-col cols="6" sm="4" md="3" v-for="c in Countries" :key="c.id">
+                                                <v-btn block outlined class="country-select-btn"
+                                                    :disabled="!c.available"
+                                                    @click="SelectCountry(c)"
+                                                    style="text-transform: none; height: auto; padding: 16px 8px;">
+                                                    <div class="text-center">
+                                                        <div class="font-weight-bold">{{ c.name }}</div>
+                                                        <div v-if="!c.available" class="text-caption grey--text">Coming Soon</div>
+                                                    </div>
+                                                </v-btn>
+                                            </v-col>
+                                        </v-row>
+                                    </v-card-text>
+                                </v-card>
+
                                 <!-- Setup -->
-                                <v-card v-if="!Playing">
-                                    <v-system-bar>Geography Training Setup</v-system-bar>
+                                <v-card v-else-if="!Playing">
+                                    <v-system-bar>
+                                        <v-btn small outlined class="back-btn" @click="SelectedCountry = null"><v-icon small>mdi-arrow-u-left-top</v-icon></v-btn>
+                                        {{ SelectedCountry.name }} - Geography Training Setup
+                                    </v-system-bar>
                                     <v-card-text>
                                         <div class="text-h6 mb-1">Choose a quiz mode</div>
-                                        <p class="text-body-2 mb-4">Test your knowledge of the 47 prefectures of Japan.</p>
+                                        <p class="text-body-2 mb-4">Test your knowledge of {{ SelectedCountry.name }}.</p>
 
                                         <v-radio-group v-model="Mode" row>
                                             <v-radio label="Name the Prefecture" value="prefecture"></v-radio>
@@ -443,6 +477,10 @@
             vuetify: new Vuetify(),
             mixins: [window.Mixins_Common],
             data: {
+                Countries: [
+                    { id: 'japan', name: 'Japan', available: true },
+                ],
+                SelectedCountry: null,
                 Prefectures: PREFECTURES,
                 Mode: 'prefecture',
                 Difficulty: 'normal',
@@ -519,6 +557,12 @@
                 this.destroyPanzoom();
             },
             methods: {
+                SelectCountry(c) {
+                    if (!c.available) return;
+                    this.SelectedCountry = c;
+                    this.MaxQuestions = this.Prefectures.length;
+                    this.CustomQuestionCount = Math.min(10, this.MaxQuestions);
+                },
                 shuffle(arr) {
                     const out = arr.slice();
                     for (let i = out.length - 1; i > 0; i--) {
@@ -722,6 +766,7 @@
                     this.Playing = false;
                     this.Finished = false;
                     this.CardFx = '';
+                    this.SelectedCountry = null;
                 },
                 OptionColor(opt) {
                     if (!this.Answered) return '';
