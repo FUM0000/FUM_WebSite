@@ -124,10 +124,11 @@ Vue.component('card-word-general', {
             }
             return preferred || fallback || null;
         },
-        speak: function (text, lang, voice, onEnd) {
+        speak: function (text, lang, voice, volume, onEnd) {
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = lang;
             utterance.rate = 0.85;
+            utterance.volume = volume;
             if (voice) utterance.voice = voice;
             utterance.onend = onEnd;
             window.speechSynthesis.speak(utterance);
@@ -143,7 +144,7 @@ Vue.component('card-word-general', {
                 return;
             }
 
-            this.synthUtterance = this.speak(this.japanese, this.ttsLang, this.ttsVoice, function () {
+            this.synthUtterance = this.speak(this.japanese, this.ttsLang, this.ttsVoice, 1.0, function () {
                 this.isPlaying = false;
                 this.synthUtterance = null;
             }.bind(this));
@@ -159,7 +160,7 @@ Vue.component('card-word-general', {
                 return;
             }
 
-            this.synthUtterance2 = this.speak(this.english, this.ttsLang2, this.ttsVoice2, function () {
+            this.synthUtterance2 = this.speak(this.english, this.ttsLang2, this.ttsVoice2, 0.6, function () {
                 this.isPlaying2 = false;
                 this.synthUtterance2 = null;
             }.bind(this));
