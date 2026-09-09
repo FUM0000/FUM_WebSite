@@ -91,7 +91,7 @@
             </div>
 
             <!-- LOG Panel -->
-            <div id="log-panel" :class="{ 'is-open': LogOpen }" :style="{ zIndex: Drawer ? 1 : 10 }">
+            <div id="log-panel" :class="{ 'is-open': LogOpen }" :style="{ zIndex: Drawer ? 2 : 11 }">
                 <div class="log-frame">
                     <div class="log-corner log-corner-tl"></div>
                     <div class="log-corner log-corner-tr"></div>
@@ -114,6 +114,54 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- RECOMMEND Panel -->
+            <div id="recommend-panel" :class="{ 'is-open': Recommend_Open }" :style="{ zIndex: Drawer ? 1 : 10 }">
+                <div class="recommend-frame">
+                    <div class="recommend-corner recommend-corner-tl"></div>
+                    <div class="recommend-corner recommend-corner-tr"></div>
+                    <div class="recommend-corner recommend-corner-bl"></div>
+                    <div class="recommend-corner recommend-corner-br"></div>
+                    <div class="recommend-scanline"></div>
+                    <div class="recommend-header" @click="Recommend_Open = !Recommend_Open">
+                        <span class="recommend-title">RECOMMEND</span>
+                        <div class="recommend-actions">
+                            <span class="recommend-refresh" v-if="Recommend_Open" title="Pick another page" @click.stop="Reselect_Recommend()">&#8635;</span>
+                            <span class="recommend-chevron" :class="{ 'open': Recommend_Open }">&#9652;</span>
+                        </div>
+                    </div>
+                    <div class="recommend-body">
+                        <template v-if="Recommend">
+                            <div class="recommend-thumb-wrap">
+                                <img v-if="Recommend_Image" class="recommend-thumb" :src="Recommend_Image" :alt="Recommend.title" />
+                                <div v-else class="recommend-loading">
+                                    <span class="recommend-loading-spinner"></span>
+                                    <span class="recommend-loading-text">Capturing preview</span>
+                                </div>
+                            </div>
+                            <div class="recommend-rows">
+                                <div class="recommend-row">
+                                    <span class="recommend-row-label">PAGE</span>
+                                    <span class="recommend-page">{{ Recommend.title }}</span>
+                                </div>
+                                <div class="recommend-row">
+                                    <span class="recommend-row-label">CATEGORY</span>
+                                    <span class="recommend-cat">{{ Recommend_Hierarchy() }}</span>
+                                </div>
+                                <div class="recommend-row">
+                                    <span class="recommend-row-label">ABOUT</span>
+                                    <span class="recommend-desc">{{ Recommend.description }}</span>
+                                </div>
+                            </div>
+                        </template>
+                        <div v-else class="recommend-loading">
+                            <span class="recommend-loading-spinner"></span>
+                            <span class="recommend-loading-text">Loading recommendations</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="recommend-capturer"></div>
             </div>
 
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
@@ -575,7 +623,7 @@
             position: fixed;
             bottom: 56px;
             left: 20px;
-            right: 20px;
+            width: min(calc(100vw - 40px), 360px);
             z-index: 10;
             pointer-events: auto;
             font-family: 'Space Mono', monospace;
@@ -769,10 +817,354 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        /* ── Recommend Panel ── */
+        #recommend-panel {
+            position: fixed;
+            bottom: 56px;
+            right: 20px;
+            width: 400px;
+            max-width: calc(100vw - 40px);
+            z-index: 10;
+            pointer-events: auto;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .recommend-frame {
+            position: relative;
+            border: 1px solid rgba(0, 255, 204, 0.5);
+            background: rgba(2, 4, 12, 0.82);
+            backdrop-filter: blur(6px);
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.4s ease;
+            max-height: 44px;
+        }
+
+        #recommend-panel.is-open .recommend-frame {
+            height: calc(100vh - 171px);
+            max-height: calc(100vh - 171px);
+        }
+
+        .recommend-frame::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(0, 255, 204, 0.08);
+            margin: 3px;
+            pointer-events: none;
+        }
+
+        .recommend-corner {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            pointer-events: none;
+        }
+
+        .recommend-corner-tl {
+            top: -1px;
+            left: -1px;
+            border-top: 2px solid #00ffcc;
+            border-left: 2px solid #00ffcc;
+        }
+
+        .recommend-corner-tr {
+            top: -1px;
+            right: -1px;
+            border-top: 2px solid #00ffcc;
+            border-right: 2px solid #00ffcc;
+        }
+
+        .recommend-corner-bl {
+            bottom: -1px;
+            left: -1px;
+            border-bottom: 2px solid #00ffcc;
+            border-left: 2px solid #00ffcc;
+        }
+
+        .recommend-corner-br {
+            bottom: -1px;
+            right: -1px;
+            border-bottom: 2px solid #00ffcc;
+            border-right: 2px solid #00ffcc;
+        }
+
+        .recommend-scanline {
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 204, 0.015) 2px,
+                    rgba(0, 255, 204, 0.015) 4px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .recommend-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0, 255, 204, 0.25);
+            user-select: none;
+            position: relative;
+            z-index: 2;
+        }
+
+        .recommend-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #00ffcc;
+            text-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
+        }
+
+        .recommend-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .recommend-refresh {
+            font-size: 16px;
+            color: #00ffcc;
+            cursor: pointer;
+            transition: transform 0.4s ease;
+        }
+
+        .recommend-refresh:hover {
+            transform: rotate(180deg);
+        }
+
+        .recommend-chevron {
+            font-size: 12px;
+            color: #00ffcc;
+            transition: transform 0.3s ease;
+            transform: rotate(0deg);
+        }
+
+        .recommend-chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .recommend-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.3s ease;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #recommend-panel.is-open .recommend-body {
+            height: calc(100vh - 165px);
+            height: calc(100dvh - 165px);
+            max-height: calc(100vh - 165px);
+            max-height: calc(100dvh - 165px);
+            padding: 10px 14px 12px;
+            overflow-y: auto;
+        }
+
+        #recommend-panel.is-open .recommend-body::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        #recommend-panel.is-open .recommend-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #recommend-panel.is-open .recommend-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 204, 0.3);
+            border-radius: 2px;
+        }
+
+        .recommend-thumb-wrap {
+            width: 200px;
+            height: 428px;
+            margin: 0 auto;
+            border: 1px solid rgba(0, 255, 204, 0.25);
+            background: #000;
+            line-height: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .recommend-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            background: #000;
+        }
+
+        .recommend-rows {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .recommend-row {
+            display: flex;
+            gap: 8px;
+            line-height: 1.4;
+            font-size: 10px;
+        }
+
+        .recommend-row-label {
+            flex-shrink: 0;
+            width: 70px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: rgba(0, 255, 204, 0.8);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .recommend-page {
+            flex: 1;
+            min-width: 0;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #00ffcc;
+            text-shadow: 0 0 8px rgba(0, 255, 204, 0.45);
+        }
+
+        .recommend-cat {
+            flex: 1;
+            min-width: 0;
+            font-size: 10px;
+            color: rgba(0, 255, 204, 0.7);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .recommend-desc {
+            flex: 1;
+            min-width: 0;
+            font-size: 10px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.65);
+            overflow: hidden;
+            height: 6.4em;
+        }
+
+        .recommend-loading {
+            font-size: 10px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            padding: 0 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .recommend-thumb-wrap > .recommend-loading {
+            width: 100%;
+            height: 100%;
+        }
+
+        .recommend-loading-spinner {
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+            border: 2px solid rgba(0, 255, 204, 0.15);
+            border-top-color: #00ffcc;
+            border-radius: 50%;
+            animation: recommend-spin 0.8s linear infinite;
+            box-shadow: 0 0 8px rgba(0, 255, 204, 0.25);
+        }
+
+        .recommend-loading-text {
+            animation: recommend-pulse 1.2s ease-in-out infinite;
+        }
+
+        .recommend-loading-text::after {
+            content: '';
+            display: block;
+            height: 1.6em;
+            line-height: 1.6em;
+            text-align: center;
+            animation: recommend-dots 1.4s steps(4, end) infinite;
+        }
+
+        @keyframes recommend-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes recommend-dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
+        }
+
+        @keyframes recommend-pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        #recommend-capturer {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            width: 390px;
+            height: 844px;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            #recommend-panel {
+                left: 20px;
+                right: 20px;
+                width: auto;
+                bottom: 100px;
+            }
+
+            .recommend-thumb-wrap {
+                width: 140px;
+                height: 300px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .recommend-refresh {
+                transition: none;
+            }
+
+            .recommend-loading-spinner,
+            .recommend-loading-text {
+                animation: none;
+            }
+
+            .recommend-loading-text::after {
+                content: '...';
+            }
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
     <script src="../../Asset/Javascript/Index.js?v=1.0"></script>
@@ -797,7 +1189,100 @@
             data: {
                 LogOpen: false,
                 LogEntries: [],
-                Ready_Page: false
+                Ready_Page: false,
+                Recommend_Open: false,
+                Recommend: null,
+                Recommend_Image: null,
+                Recommend_Category: '',
+                Recommend_Subcategory: '',
+                Page_Data: null
+            },
+            methods: {
+                Recommend_Hierarchy() {
+                    const parts = [this.Recommend_Category];
+                    if (this.Recommend_Subcategory && this.Recommend_Subcategory !== 'Top') {
+                        parts.push(this.Recommend_Subcategory);
+                    }
+                    return parts.join(' > ');
+                },
+                Reselect_Recommend() {
+                    const data = this.Page_Data;
+                    if (!data) return;
+                    const categories = Object.keys(data);
+                    if (!categories.length) return;
+
+                    const lastCategory = localStorage.getItem('RECOMMEND_LAST_CATEGORY') || '';
+                    let categoryPool = categories.filter(c => c !== lastCategory);
+                    if (!categoryPool.length) categoryPool = categories;
+                    const category = categoryPool[Math.floor(Math.random() * categoryPool.length)];
+
+                    const subcategories = Object.keys(data[category]);
+                    const lastSubcategory = localStorage.getItem('RECOMMEND_LAST_SUBCATEGORY') || '';
+                    let subPool = subcategories.filter(s => s !== lastSubcategory);
+                    if (!subPool.length) subPool = subcategories;
+                    const subcategory = subPool[Math.floor(Math.random() * subPool.length)];
+
+                    const pages = data[category][subcategory];
+                    const lastUrl = localStorage.getItem('RECOMMEND_LAST_URL') || '';
+                    let index = Math.floor(Math.random() * pages.length);
+                    if (pages.length > 1 && pages[index].url === lastUrl) {
+                        index = (index + 1) % pages.length;
+                    }
+
+                    this.Recommend_Category = category;
+                    this.Recommend_Subcategory = subcategory;
+                    this.Recommend = pages[index];
+
+                    localStorage.setItem('RECOMMEND_LAST_CATEGORY', category);
+                    localStorage.setItem('RECOMMEND_LAST_SUBCATEGORY', subcategory);
+                    localStorage.setItem('RECOMMEND_LAST_URL', pages[index].url);
+
+                    this.Freeze_Recommend_Image();
+                },
+                Freeze_Recommend_Image() {
+                    const container = document.getElementById('recommend-capturer');
+                    if (!container || !this.Recommend || !window.html2canvas) return;
+                    container.innerHTML = '';
+                    this.Recommend_Image = null;
+
+                    const frame = document.createElement('iframe');
+                    frame.style.cssText = 'width:390px;height:844px;border:0;';
+                    frame.src = this.Recommend.url;
+                    let captured = false;
+                    const capture = () => {
+                        if (captured) return;
+                        captured = true;
+                        let doc = null;
+                        try {
+                            doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+                        } catch (e) {
+                            doc = null;
+                        }
+                        if (!doc || !doc.body) {
+                            container.innerHTML = '';
+                            return;
+                        }
+                        html2canvas(doc.body, {
+                            scale: 1,
+                            logging: false,
+                            backgroundColor: '#111111',
+                            windowWidth: 390,
+                            width: 390,
+                            height: 844
+                        })
+                            .then(canvas => {
+                                this.Recommend_Image = canvas.toDataURL('image/png');
+                            })
+                            .catch(() => {})
+                            .finally(() => {
+                                container.innerHTML = '';
+                            });
+                    };
+                    frame.addEventListener('load', () => {
+                        setTimeout(capture, 2500);
+                    });
+                    container.appendChild(frame);
+                }
             },
         })
 
@@ -1147,6 +1632,15 @@
         fetch('../../Asset/Data/Log.json')
             .then(r => r.json())
             .then(data => { window.vue.LogEntries = data; realLoading.bump(10); })
+            .catch(() => { realLoading.bump(10); });
+
+        fetch('../../Asset/Data/Page.json')
+            .then(r => r.json())
+            .then(data => {
+                window.vue.Page_Data = data;
+                window.vue.Reselect_Recommend();
+                realLoading.bump(10);
+            })
             .catch(() => { realLoading.bump(10); });
 
         window.addEventListener('DOMContentLoaded', () => {
