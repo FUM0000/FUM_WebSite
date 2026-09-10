@@ -3423,7 +3423,7 @@
         // ── ブラックホール本体の内側：不透明な黒いコア球（UV効果・ワープ範囲内に収める）
         // 外側のシェーダー球は半透明なので、中に実体のある黒い球を入れて中心を黒く締める
         const blackholeCore = new THREE.Mesh(
-            new THREE.SphereGeometry(4.4, 64, 64),
+            new THREE.SphereGeometry(4, 64, 64),
             new THREE.MeshBasicMaterial({
                 color: 0x000000,
                 fog: false
@@ -4029,13 +4029,14 @@
                 camera.lookAt(0, 0, 0);
             }
 
-            // ブラックホール
+            // カメラを確定してからワープ中心を計算する（描画時と同じカメラで計算するため、
+            // アニメーション中もワープが銀河中心からずれない）
+            controls.update();
+
+            // ブラックホール（スケール固定＝常に一定サイズ）
             blackholeShaderMaterial.uniforms.time.value = time;
             blackholeShaderMaterial.uniforms.viewPos.value.copy(camera.position);
             blackholeShaderMaterial.uniforms.cameraDistance.value = camera.position.length();
-            const bhDist = camera.position.length();
-            const bhScale = THREE.MathUtils.clamp(0.1 + bhDist * 0.003, 0.1, 10.0);
-            blackhole.scale.set(bhScale, bhScale, bhScale);
             if (textMeshTitle) {
                 textMeshTitle.position.set(0, 10, 0);
                 const dirToCam = new THREE.Vector3().subVectors(camera.position, textMeshTitle.position);
@@ -4057,26 +4058,29 @@
                 if (!blackhole.geometry.boundingSphere) {
                     blackhole.geometry.computeBoundingSphere();
                 }
+                // 前フレームのカメラ行列で投影すると急旋回中に1フレーム分ずれるため、
+                // 現在フレームの行列に更新してから投影する
+                camera.updateMatrixWorld();
+                camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
                 const ndc = blackhole.position.clone().project(camera);
                 const centerUv = new THREE.Vector2(ndc.x * 0.5 + 0.5, ndc.y * 0.5 + 0.5);
                 const distance = camera.position.distanceTo(blackhole.position);
+                // ブラックホールは固定サイズ。画面上の視直径は距離に応じて自動的に縮小される
                 const worldRadius = blackhole.geometry.boundingSphere.radius * blackhole.scale.x;
                 const ndcRadius = (worldRadius / Math.max(distance, 0.001)) / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
-                const uvRadius = Math.min(0.45, Math.max(0.01, ndcRadius * 1.5));
-                const distanceFalloff = THREE.MathUtils.clamp(1.0 - (distance - 30) / 120, 0.75, 1.0);
+                // シェーダーの radius は「画面高に対する割合」単位。
+                // シルエット半径は ndcRadius*0.5（NDC→UVの半分換算）。リングがシルエットに沿う
+                // ように適用範囲をさらに半分に絞る（radius*1.8 までフェードするので十分収まる）
+                const uvRadius = Math.max(0.0004, Math.min(0.45, ndcRadius * 0.5 * 0.55));
                 blackholeWarpPass.material.uniforms.center.value.copy(centerUv);
-                blackholeWarpPass.material.uniforms.radius.value = uvRadius * 1.1 * distanceFalloff;
-                const maxWarpDist = 100;
-                const minWarpDist = 0;
-                const distFactor = 1 - THREE.MathUtils.clamp((distance - minWarpDist) / (maxWarpDist - minWarpDist), 0, 1);
-                const warpStrength = distFactor * distFactor * distFactor * distFactor * distFactor * 1;
-                blackholeWarpPass.material.uniforms.strength.value = warpStrength;
+                blackholeWarpPass.material.uniforms.radius.value = uvRadius;
+                // strength は距離に関係なく一定で、遠距離でも必ずエフェクトを適用する
+                blackholeWarpPass.material.uniforms.strength.value = 0.35;
             }
 
             // ポストエフェクト
             updateGlitch();
 
-            controls.update();
             composer.render();
             const prevAutoClear = renderer.autoClear;
             renderer.autoClear = false;
