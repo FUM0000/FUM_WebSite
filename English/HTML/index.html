@@ -498,7 +498,7 @@
             user-select: none;
             z-index: 2;
             opacity: 0;
-            transition: opacity 2s ease-out;
+            transition: opacity 1.5s ease-out 3.2s;
         }
 
         #loading-overlay.is-visible .loading-text {
@@ -1698,6 +1698,8 @@
             let orbitLetters = null;
             let orbitAngle = 0;
             let exploded = false;
+            let beginAfterGalaxy = null;
+            let progress = 0;
 
             // ── ローディング用：ローディング画面の天の川銀河を生成 ──
             // opts.holeRadius で中央のブラックホール幅（星雲中心幅）を指定できる
@@ -1845,13 +1847,23 @@
                 const core = new THREE.Points(coreGeometry, coreMaterial);
                 galaxyGroup.add(core);
 
+                // ── ローディング用：中央のブラックホール（黒い球体）
+                // メインシーンのブラックホール（radius 5 × scale 0.9 ≈ 4.5）と同じ実効サイズに揃える
+                const blackholeRadius = 4.5;
+                const blackholeSphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(blackholeRadius, 48, 48),
+                    new THREE.MeshBasicMaterial({ color: 0x000000 })
+                );
+                blackholeSphere.position.set(0, 0, 0);
+                galaxyGroup.add(blackholeSphere);
+
                 // ── ローディング用：銀河全体を覆う円盤（xz平面の1枚板）
                 createGalaxyDiskMesh(galaxyGroup, {
                     size: 700,
                     opacity: 0.25,
                     seed: 7,
                     y: 0,
-                    holeRadius: opts.holeRadius
+                    holeRadius: opts.holeRadius !== undefined ? opts.holeRadius : 0.02
                 });
 
                 let rafId = 0;
@@ -1870,8 +1882,7 @@
                     rafId = requestAnimationFrame(animateGalaxy);
                     const delta = clock.getDelta();
                     const elapsed = clock.elapsedTime;
-                    const normalized = Math.min((typeof progress !== 'undefined' ? progress : 0) / 100, 1);
-                    const galaxySpeed = 0.08 + normalized * normalized * 7;
+                    const galaxySpeed = 0.08;
                     galaxyGroup.rotation.y += delta * galaxySpeed;
                     galaxyGroup.rotation.x = 0;
                     core.material.opacity = 0.085 + Math.sin(elapsed * 1.8) * 0.006;
@@ -1895,13 +1906,17 @@
             };
 
             // ── ローディング用：ローディング画面の銀河アニメーション開始 ──
-            // { holeRadius: 0.02 } を変えるとロード中の星雲の中心幅が変わる
-            destroyLoadingGalaxy = setupLoadingGalaxy(loadingGalaxyCanvas, { holeRadius: 0 });
+            // { holeRadius: 0.02 } を変えるとロード中の星雲の中心幅（黒い球の見え方）が変わる
+            destroyLoadingGalaxy = setupLoadingGalaxy(loadingGalaxyCanvas, { holeRadius: 0.02 });
 
-            // 中央の丸・LOADING 文字・銀河をフェードインで表示（requestAnimationFrame で初回描画後に発火）
+            // 銀河が完全に表示されてからローディングバー／％を開始する
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     if (overlay) overlay.classList.add('is-visible');
+                    // CSSの銀河フェード（delay 1.2s + 2s = 3.2s）完了後にバーを動かす
+                    setTimeout(() => {
+                        if (beginAfterGalaxy) beginAfterGalaxy();
+                    }, 3200);
                 });
             });
 
@@ -1971,12 +1986,11 @@
                 });
             }
             if (overlay && loadingRing) {
-                let progress = 0;
                 const circumference = 816.81;
                 const MIN_DURATION = 2000;
                 const MAX_DURATION = 15000;
                 const ORBIT_SPEED = 2;
-                const startTime = performance.now();
+                let startTime = performance.now();
                 let progressTimer = null;
                 let pendingFinish = false;
                 let cleanupDone = false;
@@ -2043,7 +2057,11 @@
                     }
                 };
 
-                progressTimer = setInterval(tickProgress, 50);
+                beginAfterGalaxy = () => {
+                    startTime = performance.now();
+                    progress = 0;
+                    progressTimer = setInterval(tickProgress, 50);
+                };
 
                 // Slow continuous orbit via requestAnimationFrame
                 let lastRafTime = 0;
@@ -3402,6 +3420,16 @@
         blackhole.castShadow = false;
         blackhole.receiveShadow = false;
         scene.add(blackhole);
+        // ── ブラックホール本体の内側：不透明な黒いコア球（UV効果・ワープ範囲内に収める）
+        // 外側のシェーダー球は半透明なので、中に実体のある黒い球を入れて中心を黒く締める
+        const blackholeCore = new THREE.Mesh(
+            new THREE.SphereGeometry(4.4, 64, 64),
+            new THREE.MeshBasicMaterial({
+                color: 0x000000,
+                fog: false
+            })
+        );
+        blackhole.add(blackholeCore);
         // ── ブラックホール降着円盤（黄色い輝き） ──
         // 個別のノイズテクスチャ円盤（回転する）用のテクスチャ生成
         function createAccretionNoiseTexture(seed) {
