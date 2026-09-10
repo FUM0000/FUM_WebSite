@@ -1537,9 +1537,13 @@
                     const falloffSoft = falloff * falloff * (3 - 2 * falloff);
 
                     // 中央は丸くグラデーションで星雲を消す（ブラックホール領域を空ける）
+                    // holeRadius が 0 以下の場合は穴を作らず、中央まで全面を色付きにする
                     const holeRadius = holeRadiusParam !== undefined ? holeRadiusParam : 0.02;
                     const holeFeather = 0.18;
-                    const holeMask = Math.max(0, Math.min(1, (dist - holeRadius) / holeFeather));
+                    const holeMaskRaw = holeRadius > 0
+                        ? Math.max(0, Math.min(1, (dist - holeRadius) / holeFeather))
+                        : 1;
+                    const holeMask = holeMaskRaw;
                     const holeSmooth = holeMask * holeMask * (3 - 2 * holeMask);
 
                     const n = fbm(nx * 0.9 + offX, ny * 0.9 + offY);
@@ -1847,8 +1851,7 @@
                 const core = new THREE.Points(coreGeometry, coreMaterial);
                 galaxyGroup.add(core);
 
-                // ── ローディング用：中央のブラックホール（黒い球体）
-                // メインシーンのブラックホール（radius 5 × scale 0.9 ≈ 4.5）と同じ実効サイズに揃える
+                // ── ローディング用：中央のブラックホールは描かない
                 const blackholeRadius = 4.5;
                 const blackholeSphere = new THREE.Mesh(
                     new THREE.SphereGeometry(blackholeRadius, 48, 48),
