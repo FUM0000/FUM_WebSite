@@ -384,8 +384,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            opacity: 1;
+            opacity: 0;
             transition: opacity 2s ease-out, transform 2s ease-out;
+        }
+
+        #loading-overlay.is-visible .intro-circle {
+            opacity: 1;
         }
 
         #loading-overlay.fade-out .intro-circle {
@@ -410,6 +414,8 @@
             inset: 0;
             border-radius: 50%;
             overflow: hidden;
+            opacity: 0;
+            transition: opacity 2s ease-out 1.2s;
             background:
                 radial-gradient(circle at 50% 45%,
                     rgba(255, 255, 255, 0.12) 0%,
@@ -435,6 +441,10 @@
             box-shadow:
                 inset 0 0 18px rgba(0, 0, 0, 0.72),
                 inset 0 0 36px rgba(0, 170, 255, 0.08);
+        }
+
+        #loading-overlay.is-visible .loading-galaxy-mask {
+            opacity: 1;
         }
 
         #loadingGalaxyCanvas {
@@ -487,6 +497,12 @@
             font-family: 'Space Mono', monospace;
             user-select: none;
             z-index: 2;
+            opacity: 0;
+            transition: opacity 2s ease-out;
+        }
+
+        #loading-overlay.is-visible .loading-text {
+            opacity: 1;
         }
 
         .loading-label {
@@ -559,6 +575,15 @@
         @media (max-width: 768px) {
             .loading-text {
                 transform: translateX(-50%) scale(0.7);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #loading-overlay .intro-circle,
+            #loading-overlay .loading-text,
+            #loading-overlay .loading-galaxy-mask {
+                opacity: 1;
+                transition: none;
             }
         }
 
@@ -1872,6 +1897,13 @@
             // ── ローディング用：ローディング画面の銀河アニメーション開始 ──
             // { holeRadius: 0.02 } を変えるとロード中の星雲の中心幅が変わる
             destroyLoadingGalaxy = setupLoadingGalaxy(loadingGalaxyCanvas, { holeRadius: 0 });
+
+            // 中央の丸・LOADING 文字・銀河をフェードインで表示（requestAnimationFrame で初回描画後に発火）
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    if (overlay) overlay.classList.add('is-visible');
+                });
+            });
 
             const findMenuButton = () => {
                 const buttons = Array.from(document.querySelectorAll('#App .v-system-bar .v-btn'));
