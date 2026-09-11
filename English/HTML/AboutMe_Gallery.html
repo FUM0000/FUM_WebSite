@@ -1218,12 +1218,15 @@
                 const margin = 5.0;
                 const turnForce = 0.08;
                 const minY = floorY;
-                const maxY = floorY + 12;
+                const maxY = floorY + 6;
                 this._minY = minY;
                 if (this._position.x > FISH_WORLD_BOUNDS - margin) steer.x -= turnForce;
                 else if (this._position.x < -FISH_WORLD_BOUNDS + margin) steer.x += turnForce;
-                if (this._position.y > maxY) steer.y -= turnForce;
-                else if (this._position.y < minY) steer.y += turnForce;
+                if (this._position.y >= maxY) {
+                    this._velocity.y = -Math.max(Math.abs(this._velocity.y), 0.5);
+                } else if (this._position.y <= minY) {
+                    this._velocity.y = Math.max(Math.abs(this._velocity.y), 0.5);
+                }
                 if (this._position.z > FISH_WORLD_BOUNDS - margin) steer.z -= turnForce;
                 else if (this._position.z < -FISH_WORLD_BOUNDS + margin) steer.z += turnForce;
                 this._acceleration.add(steer);
@@ -2166,7 +2169,7 @@
                     const fish = new C_Fish(bodyGeom, tailGeom, dorsalGeom, pectoralGeom, pelvicGeom, analGeom);
                     const pos = new THREE.Vector3(
                         (Math.random() - 0.5) * 20,
-                        this._FishFloorY + (Math.random() - 0.5) * 8,
+                        this._FishFloorY + Math.random() * 6,
                         (Math.random() - 0.5) * 20
                     );
                     fish.Initialize(pos);
@@ -2435,17 +2438,18 @@
 
                         this._Elevator = new C_Elevator(
                             Scene,
-                            5,
+                            6,
                             this._Floor_Height,
                             1,
-                            ["F1", "F2", "F3", "F4", "F5"],
-                            ["Guide", "Art", "Cat", "Nature", "Scenery"]
+                            ["F1", "F2", "F3", "F4", "F5", "F6"],
+                            ["Guide", "Art", "Cat", "Nature", "Scenery", "Roof"]
                         );
                         if (this._Elevator.mesh) this._Elevator.mesh.layers.disable(BLOOM_LAYER);
                         this._raycaster = new THREE.Raycaster();
                         this.updateFrameVisibilityByPlayerFloor();
+                        this.createRoofFloor();
 
-                        this._FishFloorY = this._Elevator.floors * this._Floor_Height + 10;
+                        this._FishFloorY = (this._Elevator.floors - 1) * this._Floor_Height + this._Frame_BaseY + 2;
                         this._CreateFishes();
 
                         if (this._MorphParticles) Scene.remove(this._MorphParticles._points);
@@ -2780,6 +2784,78 @@
                 player.Position.copy(p);
             }
 
+            _createFloorRingShader() {
+                return new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uColor: { value: new THREE.Color(0.55, 0.75, 1.0) },
+                        uRingRadius: { value: 1 },
+                        uRingWidth: { value: 0.045 },
+                    },
+                    vertexShader: `
+                        varying vec3 vLocalPos;
+                        void main() {
+                            vLocalPos = position;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        uniform vec3 uColor;
+                        uniform float uRingRadius;
+                        uniform float uRingWidth;
+                        varying vec3 vLocalPos;
+                        void main() {
+                            float r = length(vLocalPos.xz);
+                            float edge = abs(r - uRingRadius) / uRingWidth;
+                            float band = 1.0 - smoothstep(0.0, 1.0, edge);
+                            if (band <= 0.0) discard;
+                            float angle = atan(vLocalPos.x, vLocalPos.z);
+                            float angPulse = sin(angle * 6.0 + uTime * 2.0) * 0.25 + 0.75;
+                            float flow = sin(vLocalPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
+                            flow += sin(vLocalPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
+                            flow = flow * 0.5;
+                            float glow = 0.7 + 0.3 * sin(uTime * 1.5);
+                            vec3 c = uColor * (1.0 + angPulse * 0.45 + flow * 0.2) * glow;
+                            float a = (0.7 + angPulse * 0.5) * glow * band;
+                            gl_FragColor = vec4(c, a);
+                        }
+                    `,
+                    transparent: true,
+                    depthWrite: false,
+                    fog: false,
+                    side: THREE.DoubleSide,
+                });
+            }
+            createRoofFloor() {
+                if (!this._Elevator) return;
+                const roofY = (this._Elevator.floors - 1) * this._Floor_Height;
+                const roofRadius = 8;
+
+                this._floorRingTemplate = this._floorRingTemplate || this._createFloorRingShader();
+                const ringMaterial = this._floorRingTemplate.clone();
+                ringMaterial.uniforms.uRingRadius.value = roofRadius;
+                ringMaterial.uniforms.uRingWidth.value = this._RingWidth;
+                const ringGeometry = new THREE.CircleGeometry(roofRadius + this._RingWidth, 64);
+                ringGeometry.rotateX(-Math.PI / 2);
+                const roofRing = new THREE.Mesh(ringGeometry, ringMaterial);
+                roofRing.position.set(0, roofY, 0);
+                Scene.add(roofRing);
+                this._floorRings = this._floorRings || [];
+                this._floorRings.push(roofRing);
+
+                const roofText = new FC_TextPlane(Scene, Camera, "ROOF", "#8FBFFF", new THREE.Vector2(5, 1).multiplyScalar(FC_Manager.UI_SIZE_MULTIPLY * 2));
+                roofText.Initialize();
+                roofText.Rotating(false);
+                roofText.Fog = false;
+                roofText.Depth_Test = true;
+                roofText.Depth_Write = true;
+                this.placeMainFloorTextOnElevatorCylinder(roofText, roofY + 2.5);
+                if (roofText.Mesh_Front) roofText.Mesh_Front.layers.set(BLOOM_LAYER);
+                if (roofText.Mesh_Back) roofText.Mesh_Back.layers.set(BLOOM_LAYER);
+                this._Category_Texts.push(roofText);
+            }
+
             displayArtCategory(subcategories, category_y) {
                 const subcategory_keys = Object.keys(subcategories);
                 const angle_each_subcategory = (2 * Math.PI) / subcategory_keys.length;
@@ -2822,47 +2898,7 @@
                     });
                 });
 
-                this._floorRingTemplate = this._floorRingTemplate || new THREE.ShaderMaterial({
-                    uniforms: {
-                        uTime: { value: 0 },
-                        uColor: { value: new THREE.Color(0.55, 0.75, 1.0) },
-                        uRingRadius: { value: 1 },
-                        uRingWidth: { value: 0.045 },
-                    },
-                    vertexShader: `
-                        varying vec3 vLocalPos;
-                        void main() {
-                            vLocalPos = position;
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                        }
-                    `,
-                    fragmentShader: `
-                        uniform float uTime;
-                        uniform vec3 uColor;
-                        uniform float uRingRadius;
-                        uniform float uRingWidth;
-                        varying vec3 vLocalPos;
-                        void main() {
-                            float r = length(vLocalPos.xz);
-                            float edge = abs(r - uRingRadius) / uRingWidth;
-                            float band = 1.0 - smoothstep(0.0, 1.0, edge);
-                            if (band <= 0.0) discard;
-                            float angle = atan(vLocalPos.x, vLocalPos.z);
-                            float angPulse = sin(angle * 6.0 + uTime * 2.0) * 0.25 + 0.75;
-                            float flow = sin(vLocalPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
-                            flow += sin(vLocalPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
-                            flow = flow * 0.5;
-                            float glow = 0.7 + 0.3 * sin(uTime * 1.5);
-                            vec3 c = uColor * (1.0 + angPulse * 0.45 + flow * 0.2) * glow;
-                            float a = (0.7 + angPulse * 0.5) * glow * band;
-                            gl_FragColor = vec4(c, a);
-                        }
-                    `,
-                    transparent: true,
-                    depthWrite: false,
-                    fog: false,
-                    side: THREE.DoubleSide,
-                });
+                this._floorRingTemplate = this._floorRingTemplate || this._createFloorRingShader();
                 const ringRadius = 1;
                 const ringWidth = this._RingWidth;
                 const material = this._floorRingTemplate.clone();
@@ -3101,47 +3137,7 @@
                     this.applyAspectRatioToImageObject(image_obj, image_path);
                 });
 
-                this._floorRingTemplate = this._floorRingTemplate || new THREE.ShaderMaterial({
-                    uniforms: {
-                        uTime: { value: 0 },
-                        uColor: { value: new THREE.Color(0.55, 0.75, 1.0) },
-                        uRingRadius: { value: 1 },
-                        uRingWidth: { value: 0.045 },
-                    },
-                    vertexShader: `
-                        varying vec3 vLocalPos;
-                        void main() {
-                            vLocalPos = position;
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                        }
-                    `,
-                    fragmentShader: `
-                        uniform float uTime;
-                        uniform vec3 uColor;
-                        uniform float uRingRadius;
-                        uniform float uRingWidth;
-                        varying vec3 vLocalPos;
-                        void main() {
-                            float r = length(vLocalPos.xz);
-                            float edge = abs(r - uRingRadius) / uRingWidth;
-                            float band = 1.0 - smoothstep(0.0, 1.0, edge);
-                            if (band <= 0.0) discard;
-                            float angle = atan(vLocalPos.x, vLocalPos.z);
-                            float angPulse = sin(angle * 6.0 + uTime * 2.0) * 0.25 + 0.75;
-                            float flow = sin(vLocalPos.x * 3.0 - uTime * 1.2) * 0.5 + 0.5;
-                            flow += sin(vLocalPos.z * 3.0 + uTime * 1.2) * 0.5 + 0.5;
-                            flow = flow * 0.5;
-                            float glow = 0.7 + 0.3 * sin(uTime * 1.5);
-                            vec3 c = uColor * (1.0 + angPulse * 0.45 + flow * 0.2) * glow;
-                            float a = (0.7 + angPulse * 0.5) * glow * band;
-                            gl_FragColor = vec4(c, a);
-                        }
-                    `,
-                    transparent: true,
-                    depthWrite: false,
-                    fog: false,
-                    side: THREE.DoubleSide,
-                });
+                this._floorRingTemplate = this._floorRingTemplate || this._createFloorRingShader();
                 const ringRadius = _range;
                 const ringWidth = this._RingWidth;
                 const material = this._floorRingTemplate.clone();
@@ -3222,7 +3218,7 @@
                 this.instancedMesh.instanceMatrix.needsUpdate = true;
             }
             getFloorIndexFromY(y) {
-                const floor_count = this._Elevator ? this._Elevator.floors : 5;
+                const floor_count = this._Elevator ? this._Elevator.floors : 6;
                 const floor_index = Math.round((y - this._Frame_BaseY) / this._Floor_Height);
                 return THREE.MathUtils.clamp(floor_index, 0, floor_count - 1);
             }
@@ -3396,6 +3392,302 @@
             }
             PressedButtonType = null;
         }
+    </script>
+
+    <style>
+        #HelpBtn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(100, 160, 255, 0.5);
+            background: rgba(20, 40, 80, 0.55);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            color: #8FBFFF;
+            font-family: 'Space Mono', monospace;
+            font-size: 22px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 12px rgba(100, 170, 255, 0.25), inset 0 0 8px rgba(100, 170, 255, 0.1);
+            transition: background 0.25s, box-shadow 0.25s, transform 0.15s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #HelpBtn:hover {
+            background: rgba(30, 60, 120, 0.7);
+            box-shadow: 0 0 20px rgba(100, 170, 255, 0.45), inset 0 0 12px rgba(100, 170, 255, 0.2);
+        }
+        #HelpBtn:active {
+            transform: scale(0.92);
+        }
+        #HelpOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 10, 25, 0.5);
+            z-index: 1001;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        #HelpOverlay.Open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #HelpPopup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.92);
+            width: min(420px, 88vw);
+            max-height: 78vh;
+            overflow-y: auto;
+            background: rgba(10, 20, 45, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(100, 160, 255, 0.3);
+            border-radius: 14px;
+            padding: 28px 26px 22px;
+            z-index: 1002;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            box-shadow: 0 0 40px rgba(60, 120, 220, 0.18), 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        #HelpPopup.Open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        #HelpPopup h2 {
+            margin: 0 0 18px;
+            font-family: 'Space Mono', monospace;
+            font-size: 17px;
+            font-weight: 700;
+            color: #8FBFFF;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+        #HelpPopup .help-section {
+            display: none;
+        }
+        #HelpPopup .help-section.Active {
+            display: block;
+        }
+        #HelpPopup .help-section h3 {
+            margin: 0 0 10px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(143, 191, 255, 0.65);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        #HelpPopup .help-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13.5px;
+            color: rgba(200, 220, 255, 0.88);
+            line-height: 1.55;
+        }
+        #HelpPopup .help-key {
+            flex-shrink: 0;
+            min-width: 28px;
+            height: 24px;
+            padding: 0 7px;
+            border: 1px solid rgba(100, 160, 255, 0.35);
+            border-radius: 5px;
+            background: rgba(40, 70, 130, 0.35);
+            color: #8FBFFF;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+        #HelpPopup .help-desc {
+            padding-top: 2px;
+        }
+        #HelpPopup .help-divider {
+            height: 1px;
+            background: rgba(100, 160, 255, 0.15);
+            margin: 14px 0;
+        }
+        .device-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin: 0 auto 18px;
+            width: fit-content;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(100, 160, 255, 0.3);
+            background: rgba(15, 30, 60, 0.6);
+        }
+        .device-btn {
+            padding: 7px 20px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(143, 191, 255, 0.5);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: color 0.2s, background 0.2s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            letter-spacing: 0.3px;
+        }
+        .device-btn.Active {
+            color: #8FBFFF;
+            background: rgba(60, 110, 200, 0.3);
+        }
+        .device-btn:hover:not(.Active) {
+            color: rgba(143, 191, 255, 0.75);
+        }
+        #HelpPopup::-webkit-scrollbar {
+            width: 4px;
+        }
+        #HelpPopup::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #HelpPopup::-webkit-scrollbar-thumb {
+            background: rgba(100, 160, 255, 0.25);
+            border-radius: 2px;
+        }
+    </style>
+
+    <button id="HelpBtn" aria-label="Help">?</button>
+
+    <div id="HelpOverlay"></div>
+
+    <div id="HelpPopup">
+        <h2>How to Play</h2>
+
+        <div class="device-tabs">
+            <button class="device-btn Active" data-device="pc">PC</button>
+            <button class="device-btn" data-device="mobile">Mobile</button>
+        </div>
+
+        <div id="HelpPC" class="help-section">
+            <h3>Movement</h3>
+            <div class="help-item">
+                <span class="help-key">W A S D</span>
+                <span class="help-desc">Move forward / left / back / right</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Mouse</span>
+                <span class="help-desc">Look around</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Ctrl</span>
+                <span class="help-desc">Crouch</span>
+            </div>
+
+            <div class="help-divider"></div>
+
+            <h3>Interaction</h3>
+            <div class="help-item">
+                <span class="help-key">Click</span>
+                <span class="help-desc">Operate elevator buttons / UI buttons</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Elevator</span>
+                <span class="help-desc">Step inside the cylinder, then click a floor button to move. The cat must also be inside.</span>
+            </div>
+        </div>
+
+        <div id="HelpMobile" class="help-section">
+            <h3>Movement</h3>
+            <div class="help-item">
+                <span class="help-key">Left Pad</span>
+                <span class="help-desc">Swipe to move</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Right Pad</span>
+                <span class="help-desc">Swipe to look around</span>
+            </div>
+
+            <div class="help-divider"></div>
+
+            <h3>Interaction</h3>
+            <div class="help-item">
+                <span class="help-key">Tap</span>
+                <span class="help-desc">Operate elevator buttons / UI buttons</span>
+            </div>
+            <div class="help-item">
+                <span class="help-key">Elevator</span>
+                <span class="help-desc">Step inside the cylinder, then tap a floor button. The cat must also be inside.</span>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <script>
+        (function () {
+            var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+                || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+
+            var helpBtn = document.getElementById('HelpBtn');
+            var overlay = document.getElementById('HelpOverlay');
+            var popup = document.getElementById('HelpPopup');
+            var helpPC = document.getElementById('HelpPC');
+            var helpMobile = document.getElementById('HelpMobile');
+            var switcher = document.querySelector('.device-tabs');
+            var deviceBtns = switcher.querySelectorAll('.device-btn');
+
+            var currentDevice = isMobile ? 'mobile' : 'pc';
+
+            function applyView() {
+                helpPC.classList.toggle('Active', currentDevice === 'pc');
+                helpMobile.classList.toggle('Active', currentDevice === 'mobile');
+                deviceBtns.forEach(function (b) {
+                    b.classList.toggle('Active', b.getAttribute('data-device') === currentDevice);
+                });
+            }
+
+            function openPopup() {
+                overlay.classList.add('Open');
+                popup.classList.add('Open');
+            }
+            function closePopup() {
+                overlay.classList.remove('Open');
+                popup.classList.remove('Open');
+            }
+
+            helpBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (popup.classList.contains('Open')) {
+                    closePopup();
+                } else {
+                    applyView();
+                    openPopup();
+                }
+            });
+
+            overlay.addEventListener('click', closePopup);
+
+            deviceBtns.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    currentDevice = btn.getAttribute('data-device');
+                    applyView();
+                });
+            });
+
+            applyView();
+        })();
     </script>
 
 </body>
