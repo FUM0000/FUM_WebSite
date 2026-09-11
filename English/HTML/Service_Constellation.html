@@ -344,6 +344,18 @@
             cursor: pointer;
         }
 
+        /* Updateボタンは一番上に配置 */
+        #update-btn {
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+
+        #update-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #444;
+        }
+
         /* PCでは元の位置に戻したい場合（メディアクエリ） */
         @media (min-width: 768px) {
             #controls {
@@ -414,8 +426,10 @@
                         <button id="controls-toggle" type="button">Open ▽</button>
                     </div>
                     <div id="controls-body">
+                        <button type="button" class="button" id="update-btn" onclick="simulate()" disabled>Update</button>
+
                         <label>Country:
-                            <select id="country" onchange="updateDefaultByCountry()">
+                            <select id="country" onchange="updateDefaultByCountry(); markDirty()">
                                 <option value="JP" selected>Japan</option>
                                 <option value="US">USA (East)</option>
                                 <option value="GB">United Kingdom</option>
@@ -426,17 +440,16 @@
                             </select>
                         </label>
 
-                        <label>Latitude (deg): <input type="number" id="lat" value="35.6895" step="0.1"></label>
-                        <label>Longitude (deg): <input type="number" id="lon" value="139.6917" step="0.1"></label>
+                        <label>Latitude (deg): <input type="number" id="lat" value="35.6895" step="0.1" oninput="markDirty()"></label>
+                        <label>Longitude (deg): <input type="number" id="lon" value="139.6917" step="0.1" oninput="markDirty()"></label>
                         <p id="standardMeridian" style="margin:8px 0; font-size:0.9em; color:#aaa;">
                             Standard Meridian: 135°E (Tokyo)
                         </p>
 
-                        <label>Date: <input type="date" id="date"></label>
-                        <label>Time (Local): <input type="time" id="time" step="1"></label>
-                        <label><input type="checkbox" id="showHorizon" checked onchange="updateGuideVisibility()"> Show Horizon</label>
-                        <label><input type="checkbox" id="showDirections" checked onchange="updateGuideVisibility()"> Show Directions (N/E/S/W)</label>
-                        <button type="button" class="button" onclick="simulate()">Update</button>
+                        <label>Date: <input type="date" id="date" oninput="markDirty()"></label>
+                        <label>Time (Local): <input type="time" id="time" step="1" oninput="markDirty()"></label>
+                        <label><input type="checkbox" id="showHorizon" checked onchange="updateGuideVisibility(); markDirty()"> Show Horizon</label>
+                        <label><input type="checkbox" id="showDirections" checked onchange="updateGuideVisibility(); markDirty()"> Show Directions (N/E/S/W)</label>
                     </div>
                 </div>
 
@@ -1603,7 +1616,7 @@
             if (!panel || !toggle) return;
             panel.classList.add('collapsed');
             panel.classList.remove('mobile-open');
-            toggle.textContent = 'Open ▽';
+            toggle.textContent = isMobilePanelMode() ? 'Open △' : 'Open ▽';
         }
 
         function openPanel(panelId, toggleId, otherPanelId, otherToggleId) {
@@ -1617,7 +1630,22 @@
                 panel.classList.remove('mobile-open');
             }
             panel.classList.remove('collapsed');
-            toggle.textContent = 'Close △';
+            toggle.textContent = isMobilePanelMode() ? 'Close ▽' : 'Close △';
+        }
+
+        function syncToggleLabels() {
+            [
+                ['controls', 'controls-toggle'],
+                ['learn-controls', 'learn-controls-toggle']
+            ].forEach(function (pair) {
+                const panel = document.getElementById(pair[0]);
+                const toggle = document.getElementById(pair[1]);
+                if (!panel || !toggle) return;
+                const collapsed = panel.classList.contains('collapsed');
+                toggle.textContent = collapsed
+                    ? (isMobilePanelMode() ? 'Open △' : 'Open ▽')
+                    : (isMobilePanelMode() ? 'Close ▽' : 'Close △');
+            });
         }
 
         function syncPanelLayoutMode() {
@@ -1625,6 +1653,7 @@
                 document.getElementById('controls')?.classList.remove('mobile-open');
                 document.getElementById('learn-controls')?.classList.remove('mobile-open');
             }
+            syncToggleLabels();
         }
 
         // コントロールの開閉
@@ -1964,6 +1993,11 @@
             return conditions.some(cond => cond === true);
         }
 
+        window.markDirty = function () {
+            const btn = document.getElementById('update-btn');
+            if (btn) btn.disabled = false;
+        };
+
         window.simulate = function () {
             const latDeg = parseFloat(document.getElementById('lat').value) || 35;
             const lonDeg = parseFloat(document.getElementById('lon').value) || 135;
@@ -2074,6 +2108,9 @@
 
             const points = new THREE.Points(geometry, material);
             scene.add(points);
+
+            const btn = document.getElementById('update-btn');
+            if (btn) btn.disabled = true;
         }
 
         // 初期化＆初回表示
