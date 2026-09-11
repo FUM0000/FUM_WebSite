@@ -2022,7 +2022,7 @@
                 this._panelGroup.position.set(POS_X + perpX * panelDist, floorY + 0.8, POS_Z + perpZ * panelDist);
                 this._panelGroup.visible = false;
 
-                const panelGeo = new THREE.BoxGeometry(0.55, 0.42, 0.045);
+                const panelGeo = new THREE.BoxGeometry(0.55, 0.42, 0.09);
                 const panelMesh = new THREE.Mesh(
                     panelGeo,
                     new THREE.MeshBasicMaterial({ color: 0x0c1526, transparent: true, opacity: 0.9, fog: false, side: THREE.DoubleSide })
@@ -2035,14 +2035,14 @@
                 this._panelGroup.add(panelFrame);
 
                 const button = new THREE.Mesh(new THREE.SphereGeometry(0.09, 24, 24), buttonMat);
-                button.position.set(0, -0.09, 0.03);
+                button.position.set(0, -0.09, 0.05);
                 button.userData.buttonType = 'wind';
                 this._panelGroup.add(button);
                 this.button = button;
 
                 const labelMat = new THREE.MeshBasicMaterial({ map: makeLabel(false), transparent: true, depthWrite: false, fog: false });
                 const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.24), labelMat);
-                labelMesh.position.set(0, 0.15, 0.03);
+                labelMesh.position.set(0, 0.15, 0.05);
                 this._panelGroup.add(labelMesh);
 
                 this._panelGroup.lookAt(0, this._panelGroup.position.y, 0);
@@ -2913,15 +2913,31 @@
                 this._floorRings.push(circle);
             }
             display3DCategory(subcategory_x, subcategory_z, category_y) {
+                const number = 10;
+                const angle_category = -(Math.atan2(subcategory_x, subcategory_z) - Math.PI * 0.25);
+                const angle_each_image = (2 * Math.PI) / number;
+                const exhibitPosition = (index) => {
+                    const angle = index * angle_each_image;
+                    return {
+                        x: subcategory_x + Math.cos(angle + angle_category) * this._Image_Radius_FromCategory,
+                        z: subcategory_z + Math.sin(angle + angle_category) * this._Image_Radius_FromCategory,
+                    };
+                };
+
+                const sakuraPos = exhibitPosition(0);
+                const windPos = exhibitPosition(1);
+
                 this._Sakura = new THREE.Group();
                 this._SakuraTarget = false;
-                this._Sakura.position.set(subcategory_x, category_y + 1.5, subcategory_z);
+                this._Sakura.position.set(sakuraPos.x, category_y + 1.5, sakuraPos.z);
                 this._Sakura.scale.setScalar(0.05);
                 this._Sakura.visible = false;
                 Scene.add(this._Sakura);
 
-                this._Wind = new C_FluidWind(Scene, subcategory_x, subcategory_z, category_y);
+                this._Wind = new C_FluidWind(Scene, sakuraPos.x, sakuraPos.z, category_y);
                 this._Button_Wind = this._Wind.button;
+                this._Wind._panelGroup.position.set(windPos.x, category_y + 0.8, windPos.z);
+                this._Wind._panelGroup.lookAt(subcategory_x, this._Wind._panelGroup.position.y, subcategory_z);
 
                 const windColliders = [];
                 for (const img of this._Images) {
@@ -2936,9 +2952,16 @@
                     }
                 }
                 windColliders.push({
-                    x: subcategory_x,
-                    z: subcategory_z,
+                    x: sakuraPos.x,
+                    z: sakuraPos.z,
                     radius: 0.4,
+                    yMin: category_y + 0.2,
+                    yMax: category_y + 2.4
+                });
+                windColliders.push({
+                    x: windPos.x,
+                    z: windPos.z,
+                    radius: 0.3,
                     yMin: category_y + 0.2,
                     yMax: category_y + 2.4
                 });
@@ -2947,14 +2970,14 @@
                 const pedestal = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 16);
                 const pedestalMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false, fog: false });
                 this._SakuraPedestal = new THREE.Mesh(pedestal, pedestalMaterial);
-                this._SakuraPedestal.position.set(subcategory_x, category_y + 0.75, subcategory_z);
+                this._SakuraPedestal.position.set(sakuraPos.x, category_y + 0.75, sakuraPos.z);
                 this._SakuraPedestal.visible = false;
                 Scene.add(this._SakuraPedestal);
 
                 this._CollisionCylinders = this._CollisionCylinders || [];
                 this._CollisionCylinders.push({
-                    x: subcategory_x,
-                    z: subcategory_z,
+                    x: sakuraPos.x,
+                    z: sakuraPos.z,
                     radius: 0.3
                 });
 
