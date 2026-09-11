@@ -3181,8 +3181,14 @@
                     mat.opacity += (target - mat.opacity) * speed * FC_Environment.TIME_DELTA;
                     if (mat.opacity < 0) mat.opacity = 0;
                     if (mat.opacity > 1) mat.opacity = 1;
-                    if (target === 0 && mat.opacity < 0.02) mat.opacity = 0;
+                    if (target === 0 && mat.opacity < 0.05) mat.opacity = 0;
                     if (Math.abs(mat.opacity - target) > 0.001) done = false;
+                }
+                let hideNow = false;
+                if (target === 0) {
+                    for (const mat of this._SakuraMaterials) {
+                        if (mat && mat.opacity < 0.05) { hideNow = true; break; }
+                    }
                 }
                 if (this._SakuraLights && this._SakuraLightBase) {
                     for (let i = 0; i < this._SakuraLights.length; i++) {
@@ -3194,7 +3200,7 @@
                 }
                 this._Sakura.visible = true;
                 if (this._SakuraPedestal) this._SakuraPedestal.visible = true;
-                if (done) {
+                if (done || hideNow) {
                     this._Sakura.visible = this._SakuraTarget;
                     if (this._SakuraPedestal) this._SakuraPedestal.visible = this._SakuraTarget;
                     this._SakuraMaterials.forEach(mat => { if (mat) mat.opacity = target; });
