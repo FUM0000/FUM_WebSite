@@ -156,6 +156,7 @@
 
         // ===== Monte Carlo path-tracing style sampling pass =====
         const _MC_SamplesMax = 1;
+        let _MC_Enabled = true;
         const _MC_NoiseBase = 0.1;
         const _MC_AdaptGain = 5.0;
         const _MC_FireflyBase = 0.0015;
@@ -2545,6 +2546,8 @@
             _Button_Wind = null;
             _Button_Architecture = null;
             _Button_Sakura = null;
+            _Button_Render = null;
+            _RenderPanel = null;
             _Architecture = null;
             _ExhibitModes = { wind: false, architecture: false, sakura: false };
             _CollisionBoxes = [];
@@ -2907,6 +2910,13 @@
                         if (this._MorphParticles) Scene.remove(this._MorphParticles._points);
                         this._MorphParticles = new C_MorphParticles(Scene, 500);
 
+                        this._RenderPanel = new C_TogglePanel('RENDER', 'rendering');
+                        this._Button_Render = this._RenderPanel.button;
+                        this._RenderPanel._panelGroup.position.set(-2.0, 1.0, 0);
+                        this._RenderPanel._panelGroup.lookAt(-2.0, 1.0, 1.0);
+                        Scene.add(this._RenderPanel._panelGroup);
+                        this._RenderPanel.setState(_MC_Enabled);
+
                         this.Loaded = true;
                     });
             }
@@ -2934,27 +2944,48 @@
                         Manager.Update_System();
                     }
                 }
-                Renderer.setRenderTarget(_SampledTarget);
-                Renderer.render(Scene, Camera.Object);
-                _BloomCamera.position.copy(Camera.Object.position);
-                _BloomCamera.quaternion.copy(Camera.Object.quaternion);
-                _BloomCamera.projectionMatrix.copy(Camera.Object.projectionMatrix);
-                Renderer.setRenderTarget(_SceneTarget);
-                Renderer.render(Scene, Camera.Object);
-                Renderer.setRenderTarget(_BloomDepthTarget);
-                Renderer.render(Scene, _BloomCamera);
-                Renderer.setRenderTarget(null);
-                _BloomComposer.render();
-                _BloomCompositeMaterial.uniforms.tDiffuse.value = _BloomComposer.readBuffer.texture;
-                _BloomCompositeMaterial.uniforms.tSceneDepth.value = _SceneTarget.depthTexture;
-                _BloomCompositeMaterial.uniforms.tGlowDepth.value = _BloomDepthTarget.depthTexture;
-                Renderer.setRenderTarget(_SampledTarget);
-                Renderer.autoClear = false;
-                Renderer.clearDepth();
-                Renderer.render(_BloomCompositeScene, Camera.Object);
-                Renderer.autoClear = true;
+                if (_MC_Enabled) {
+                    Renderer.setRenderTarget(_SampledTarget);
+                    Renderer.render(Scene, Camera.Object);
+                    _BloomCamera.position.copy(Camera.Object.position);
+                    _BloomCamera.quaternion.copy(Camera.Object.quaternion);
+                    _BloomCamera.projectionMatrix.copy(Camera.Object.projectionMatrix);
+                    Renderer.setRenderTarget(_SceneTarget);
+                    Renderer.render(Scene, Camera.Object);
+                    Renderer.setRenderTarget(_BloomDepthTarget);
+                    Renderer.render(Scene, _BloomCamera);
+                    Renderer.setRenderTarget(null);
+                    _BloomComposer.render();
+                    _BloomCompositeMaterial.uniforms.tDiffuse.value = _BloomComposer.readBuffer.texture;
+                    _BloomCompositeMaterial.uniforms.tSceneDepth.value = _SceneTarget.depthTexture;
+                    _BloomCompositeMaterial.uniforms.tGlowDepth.value = _BloomDepthTarget.depthTexture;
+                    Renderer.setRenderTarget(_SampledTarget);
+                    Renderer.autoClear = false;
+                    Renderer.clearDepth();
+                    Renderer.render(_BloomCompositeScene, Camera.Object);
+                    Renderer.autoClear = true;
 
-                this._UpdateMonteCarloSamplePass();
+                    this._UpdateMonteCarloSamplePass();
+                } else {
+                    Renderer.setRenderTarget(null);
+                    Renderer.render(Scene, Camera.Object);
+                    _BloomCamera.position.copy(Camera.Object.position);
+                    _BloomCamera.quaternion.copy(Camera.Object.quaternion);
+                    _BloomCamera.projectionMatrix.copy(Camera.Object.projectionMatrix);
+                    Renderer.setRenderTarget(_SceneTarget);
+                    Renderer.render(Scene, Camera.Object);
+                    Renderer.setRenderTarget(_BloomDepthTarget);
+                    Renderer.render(Scene, _BloomCamera);
+                    Renderer.setRenderTarget(null);
+                    _BloomComposer.render();
+                    _BloomCompositeMaterial.uniforms.tDiffuse.value = _BloomComposer.readBuffer.texture;
+                    _BloomCompositeMaterial.uniforms.tSceneDepth.value = _SceneTarget.depthTexture;
+                    _BloomCompositeMaterial.uniforms.tGlowDepth.value = _BloomDepthTarget.depthTexture;
+                    Renderer.autoClear = false;
+                    Renderer.clearDepth();
+                    Renderer.render(_BloomCompositeScene, Camera.Object);
+                    Renderer.autoClear = true;
+                }
 
                 requestAnimationFrame(this.Update.bind(this));
             }
@@ -3256,6 +3287,7 @@
                 if (this._Wind) this._Wind.syncUniforms(_buttonTime);
                 if (this._ArchitecturePanel) this._ArchitecturePanel.syncTime(_buttonTime);
                 if (this._SakuraPanel) this._SakuraPanel.syncTime(_buttonTime);
+                if (this._RenderPanel) this._RenderPanel.syncTime(_buttonTime);
                 if (this._Architecture) this._Architecture.Update(_buttonTime);
 
                 this._Category_Texts.forEach(_text => {
@@ -3860,6 +3892,11 @@
                     this._SakuraPanel.setFloorVisible(onArtFloor);
                     if (onArtFloor) this._SakuraPanel.setState(this._ExhibitModes.sakura);
                 }
+                const onGuideFloor = floor_index === 0;
+                if (this._RenderPanel) {
+                    this._RenderPanel.setFloorVisible(onGuideFloor);
+                    if (onGuideFloor) this._RenderPanel.setState(_MC_Enabled);
+                }
 
                 const matrix = new THREE.Matrix4();
                 const position = new THREE.Vector3();
@@ -3954,7 +3991,8 @@
                 Manager._Button_Music,
                 Manager._Button_Wind,
                 Manager._Button_Architecture,
-                Manager._Button_Sakura
+                Manager._Button_Sakura,
+                Manager._Button_Render
             ].filter(Boolean);
             const hits = raycaster.intersectObjects(targets, false);
             if (hits.length === 0) return null;
@@ -4042,9 +4080,37 @@
                     }
                     return;
                 }
+                if (releasedButtonType === 'rendering') {
+                    PressedButtonType = null;
+                    toggleRenderingMethod();
+                    return;
+                }
             }
             PressedButtonType = null;
         }
+
+        function setRenderingMethod(enabled) {
+            _MC_Enabled = enabled;
+            if (Manager) {
+                Manager._MC_Reset = true;
+                Manager._SampleInitialized = false;
+            }
+            syncRenderSwitchState();
+        }
+
+        function toggleRenderingMethod() {
+            setRenderingMethod(!_MC_Enabled);
+        }
+
+        function syncRenderSwitchState() {
+            const btn = document.getElementById('RenderBtn');
+            if (btn) btn.textContent = _MC_Enabled ? 'MC' : 'STD';
+            if (Manager && Manager._RenderPanel) Manager._RenderPanel.setState(_MC_Enabled);
+        }
+
+        const _RenderBtn = document.getElementById('RenderBtn');
+        if (_RenderBtn) _RenderBtn.addEventListener('click', toggleRenderingMethod);
+        syncRenderSwitchState();
     </script>
 
     <style>
@@ -4080,6 +4146,41 @@
             }
         }
         #HelpBtn:active {
+            transform: scale(0.92);
+        }
+        #RenderBtn {
+            position: fixed;
+            top: 8px;
+            right: 8px;
+            min-width: 56px;
+            height: 24px;
+            padding: 0 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(100, 160, 255, 0.5);
+            background: rgba(20, 40, 80, 0.55);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            color: #8FBFFF;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 8px rgba(100, 170, 255, 0.2), inset 0 0 4px rgba(100, 170, 255, 0.1);
+            transition: background 0.25s, box-shadow 0.25s, transform 0.15s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        @media (hover: hover) {
+            #RenderBtn:hover {
+                background: rgba(30, 60, 120, 0.7);
+                box-shadow: 0 0 20px rgba(100, 170, 255, 0.45), inset 0 0 12px rgba(100, 170, 255, 0.2);
+            }
+        }
+        #RenderBtn:active {
             transform: scale(0.92);
         }
         #HelpOverlay {
@@ -4224,6 +4325,8 @@
     </style>
 
     <button id="HelpBtn" aria-label="Help">?</button>
+
+    <button id="RenderBtn" aria-label="Toggle rendering method">MC</button>
 
     <div id="HelpOverlay"></div>
 
