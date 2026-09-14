@@ -1931,12 +1931,18 @@
                 }
                 let cx = 0;
                 let cy = 0;
+                let vxSum = 0;
+                let vySum = 0;
                 for (const idx of group) {
                     cx += Fruits[idx].x;
                     cy += Fruits[idx].y;
+                    vxSum += Fruits[idx].vx;
+                    vySum += Fruits[idx].vy;
                 }
                 cx /= group.length;
                 cy /= group.length;
+                vxSum /= group.length;
+                vySum /= group.length;
 
                 const newType = Math.min(Fruits[group[0]].type + 1, FRUITS.length - 1);
                 const baseDmg = FRUITS[newType].damage;
@@ -1978,14 +1984,15 @@
                     color: FRUITS[newType].color
                 });
 
-                spawnQueue.push({ x: cx, y: cy, type: newType });
+                spawnQueue.push({ x: cx, y: cy, type: newType, vx: vxSum, vy: vySum });
             }
 
             if (toRemove.size > 0) {
                 Fruits = Fruits.filter((_, idx) => !toRemove.has(idx));
                 for (const sp of spawnQueue) {
                     const nf = new Fruit(sp.x, sp.y, sp.type);
-                    nf.vy = -2;
+                    nf.vx = sp.vx || 0;
+                    nf.vy = sp.vy || 0;
                     Fruits.push(nf);
                 }
             }
