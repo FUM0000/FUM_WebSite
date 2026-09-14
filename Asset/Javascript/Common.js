@@ -1725,22 +1725,22 @@ window.Mixins_Youtube = {
     function createNextPageButton(nextPage) {
         var container = document.createElement('div');
         container.id = 'next-page-nav';
-        container.style.cssText = 'position:fixed;right:24px;z-index:9999;';
+        container.style.cssText = 'position:fixed;right:24px;z-index:5;';
 
         var btn = document.createElement('a');
         btn.href = nextPage.url;
         btn.title = nextPage.title;
         btn.innerHTML = '<span style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nextPage.title + '</span><span style="margin-left:6px;font-size:18px;line-height:1;position:relative;top:-2px;">&#8250;</span>';
-        btn.style.cssText = 'display:inline-flex;align-items:center;padding:10px 18px;background:#1976D2;color:white;border-radius:28px;text-decoration:none;font-weight:500;font-size:14px;box-shadow:0 3px 12px rgba(25,118,210,0.4);transition:all 0.3s ease;';
+        btn.style.cssText = 'display:inline-flex;align-items:center;padding:9px 17px;background:transparent;color:#4A90C4;border:2px solid #4A90C4;border-radius:28px;text-decoration:none;font-weight:500;font-size:14px;transition:all 0.3s ease;';
 
         btn.onmouseenter = function () {
-            btn.style.background = '#1565C0';
-            btn.style.boxShadow = '0 4px 16px rgba(25,118,210,0.5)';
+            btn.style.borderColor = '#3A80B4';
+            btn.style.color = '#3A80B4';
             btn.style.transform = 'translateY(-2px)';
         };
         btn.onmouseleave = function () {
-            btn.style.background = '#1976D2';
-            btn.style.boxShadow = '0 3px 12px rgba(25,118,210,0.4)';
+            btn.style.borderColor = '#4A90C4';
+            btn.style.color = '#4A90C4';
             btn.style.transform = 'translateY(0)';
         };
 
@@ -1819,14 +1819,14 @@ window.Mixins_Youtube = {
 
         var container = document.createElement('div');
         container.id = 'fixed-switch-all';
-        container.style.cssText = 'position:fixed;top:56px;right:24px;z-index:9999;display:inline-flex;align-items:center;padding:10px 18px;background:#1976D2;color:white;border-radius:28px;font-weight:500;font-size:14px;box-shadow:0 3px 12px rgba(25,118,210,0.4);transition:all 0.3s ease;cursor:pointer;user-select:none;';
+        container.style.cssText = 'position:fixed;top:56px;right:24px;z-index:5;display:inline-flex;align-items:center;padding:9px 17px;background:transparent;color:#4A90C4;border:2px solid #4A90C4;border-radius:28px;font-weight:500;font-size:14px;transition:all 0.3s ease;cursor:pointer;user-select:none;';
 
         var label = document.createElement('span');
         label.textContent = 'Switch All';
         label.style.cssText = 'font-size:13px;white-space:nowrap;';
 
         var track = document.createElement('div');
-        track.style.cssText = 'width:34px;height:18px;border-radius:9px;background:rgba(255,255,255,0.4);position:relative;transition:background 0.3s;flex-shrink:0;margin-left:8px;';
+        track.style.cssText = 'width:34px;height:18px;border-radius:9px;background:rgba(74,144,196,0.3);position:relative;transition:background 0.3s;flex-shrink:0;margin-left:8px;';
 
         var knob = document.createElement('div');
         knob.style.cssText = 'width:14px;height:14px;border-radius:50%;background:white;position:absolute;top:2px;left:2px;transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
@@ -1844,11 +1844,11 @@ window.Mixins_Youtube = {
 
         function updateVisual(isOn) {
             if (isOn) {
-                track.style.background = 'rgba(255,255,255,0.9)';
+                track.style.background = '#4A90C4';
                 knob.style.left = '18px';
-                knob.style.background = '#1976D2';
+                knob.style.background = 'white';
             } else {
-                track.style.background = 'rgba(255,255,255,0.4)';
+                track.style.background = 'rgba(74,144,196,0.3)';
                 knob.style.left = '2px';
                 knob.style.background = 'white';
             }
@@ -1868,13 +1868,13 @@ window.Mixins_Youtube = {
         });
 
         container.addEventListener('mouseenter', function () {
-            container.style.background = '#1565C0';
-            container.style.boxShadow = '0 4px 16px rgba(25,118,210,0.5)';
+            container.style.borderColor = '#3A80B4';
+            container.style.color = '#3A80B4';
             container.style.transform = 'translateY(-2px)';
         });
         container.addEventListener('mouseleave', function () {
-            container.style.background = '#1976D2';
-            container.style.boxShadow = '0 3px 12px rgba(25,118,210,0.4)';
+            container.style.borderColor = '#4A90C4';
+            container.style.color = '#4A90C4';
             container.style.transform = 'translateY(0)';
         });
     }
