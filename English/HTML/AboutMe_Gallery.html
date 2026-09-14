@@ -154,6 +154,117 @@
         const _BloomDepthTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
         _BloomDepthTarget.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight);
 
+        // ===== Monte Carlo path-tracing style sampling pass =====
+        const _MC_SamplesMax = 64;
+        const _MC_NoiseBase = 0.05;
+        const _MC_AdaptGain = 40.0;
+        const _MC_FireflyBase = 0.0015;
+        const _UseHalfFloat = Renderer.capabilities.isWebGL2
+            || (typeof Renderer.extensions.get('OES_texture_half_float') !== 'undefined');
+        const _RTType = _UseHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
+        const _RTFilter = (!_UseHalfFloat || Renderer.capabilities.isWebGL2
+            || Renderer.extensions.get('OES_texture_half_float_linear'))
+            ? THREE.LinearFilter : THREE.NearestFilter;
+        const _DBW = Math.max(1, Math.floor(window.innerWidth * Renderer.getPixelRatio()));
+        const _DBH = Math.max(1, Math.floor(window.innerHeight * Renderer.getPixelRatio()));
+        const _SampledTarget = new THREE.WebGLRenderTarget(_DBW, _DBH, { type: _RTType, minFilter: _RTFilter, magFilter: _RTFilter });
+        const _AccumTargetA = new THREE.WebGLRenderTarget(_DBW, _DBH, { type: _RTType, minFilter: _RTFilter, magFilter: _RTFilter });
+        const _AccumTargetB = new THREE.WebGLRenderTarget(_DBW, _DBH, { type: _RTType, minFilter: _RTFilter, magFilter: _RTFilter });
+
+        const _SampledMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                tPrevAccum: { value: null },
+                tCurrent: { value: null },
+                tStored: { value: null },
+                uSampleCount: { value: 1.0 },
+                uAdaptGain: { value: _MC_AdaptGain },
+                uNoiseBase: { value: _MC_NoiseBase },
+                uFireflyBase: { value: _MC_FireflyBase },
+                uResolution: { value: new THREE.Vector2(_DBW, _DBH) },
+                uFrameSeed: { value: 0 },
+                uFresh: { value: 1 },
+                uOutput: { value: 0 },
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = vec4(position.xy, 0.0, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D tPrevAccum;
+                uniform sampler2D tCurrent;
+                uniform sampler2D tStored;
+                uniform float uSampleCount;
+                uniform float uAdaptGain;
+                uniform float uNoiseBase;
+                uniform float uFireflyBase;
+                uniform vec2 uResolution;
+                uniform float uFrameSeed;
+                uniform float uFresh;
+                uniform float uOutput;
+                varying vec2 vUv;
+
+                float IGNoise(vec2 p, float seed) {
+                    return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)) + seed));
+                }
+
+                float hash13(vec3 p3) {
+                    p3 = fract(p3 * 0.1031);
+                    p3 += dot(p3, p3.zyx + 31.32);
+                    return fract((p3.x + p3.y) * p3.z);
+                }
+
+                void main() {
+                    vec3 prev = texture2D(tPrevAccum, vUv).rgb;
+                    vec3 curr = texture2D(tCurrent, vUv).rgb;
+                    float n = max(uSampleCount, 1.0);
+
+                    if (uOutput < 0.5) {
+                        float diff = length(curr - prev);
+                        float adapt = clamp(diff * uAdaptGain, 0.0, 1.0);
+                        float alpha = mix(1.0 / n, 1.0, adapt);
+                        vec3 accum = mix(prev, curr, alpha);
+                        if (uFresh > 0.5) accum = curr;
+                        gl_FragColor = vec4(accum, 1.0);
+                        return;
+                    }
+
+                    vec3 img = texture2D(tStored, vUv).rgb;
+
+                    float diff = length(curr - prev);
+                    float adapt = clamp(diff * uAdaptGain, 0.0, 1.0);
+                    float converge = 1.0 - adapt;
+                    float localN = mix(1.0, n, converge * converge);
+                    float luma = dot(img, vec3(0.2126, 0.7152, 0.0722));
+                    float amp = uNoiseBase * (0.35 + 1.65 * sqrt(luma)) * inversesqrt(max(localN, 1.0));
+
+                    vec2 sp = vUv * uResolution;
+                    float nzR = IGNoise(sp, uFrameSeed) * 2.0 - 1.0;
+                    float nzG = IGNoise(sp, uFrameSeed + 11.7) * 2.0 - 1.0;
+                    float nzB = IGNoise(sp, uFrameSeed + 23.3) * 2.0 - 1.0;
+                    vec3 grain = vec3(nzR, nzG, nzB) * amp;
+
+                    float fire = hash13(vec3(sp, uFrameSeed + 3.7));
+                    float fireThr = 1.0 - uFireflyBase * inversesqrt(max(localN, 1.0));
+                    if (luma > 0.1 && fire > fireThr) {
+                        float spike = uNoiseBase * 80.0 * pow(hash13(vec3(vUv, uFrameSeed + 9.1)), 6.0) * luma;
+                        grain += vec3(spike);
+                    }
+
+                    gl_FragColor = vec4(img + grain, 1.0);
+                }
+            `,
+            depthTest: false,
+            depthWrite: false,
+        });
+        const _SampleQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), _SampledMaterial);
+        _SampleQuad.frustumCulled = false;
+        const _SampleScene = new THREE.Scene();
+        _SampleScene.add(_SampleQuad);
+        const _camTmp = new THREE.Vector3();
+
         const Loader_FBX = new FBXLoader();
         document.addEventListener('pointerdown', function (event) { PointerDown(event); });
         document.addEventListener('touchstart', function (event) { PointerDown(event); });
@@ -2487,7 +2598,16 @@
             get UI_Home() { return this._UI_Home; }
             get UI_Music() { return this._UI_Music; }
 
-            constructor() { super(Scene, Renderer); }
+            constructor() {
+                super(Scene, Renderer);
+                this._SampleCount = 1;
+                this._FrameIndex = 0;
+                this._SampleToggle = false;
+                this._SampleInitialized = false;
+                this._MC_Reset = false;
+                this._MC_LastCamPos = null;
+                this._MC_LastCamQ = null;
+            }
 
             _CreateFishes() {
                 const bodyGeom = C_FishGeometry.createBodyBuffer(20, 12);
@@ -2814,6 +2934,7 @@
                         Manager.Update_System();
                     }
                 }
+                Renderer.setRenderTarget(_SampledTarget);
                 Renderer.render(Scene, Camera.Object);
                 _BloomCamera.position.copy(Camera.Object.position);
                 _BloomCamera.quaternion.copy(Camera.Object.quaternion);
@@ -2827,11 +2948,78 @@
                 _BloomCompositeMaterial.uniforms.tDiffuse.value = _BloomComposer.readBuffer.texture;
                 _BloomCompositeMaterial.uniforms.tSceneDepth.value = _SceneTarget.depthTexture;
                 _BloomCompositeMaterial.uniforms.tGlowDepth.value = _BloomDepthTarget.depthTexture;
+                Renderer.setRenderTarget(_SampledTarget);
                 Renderer.autoClear = false;
                 Renderer.clearDepth();
                 Renderer.render(_BloomCompositeScene, Camera.Object);
                 Renderer.autoClear = true;
+
+                this._UpdateMonteCarloSamplePass();
+
                 requestAnimationFrame(this.Update.bind(this));
+            }
+            _UpdateMonteCarloSamplePass() {
+                if (!this._SampleInitialized) {
+                    this._SampleInitialized = true;
+                    Renderer.setRenderTarget(_AccumTargetA);
+                    Renderer.clear(true, true, true);
+                    Renderer.setRenderTarget(_AccumTargetB);
+                    Renderer.clear(true, true, true);
+                    Renderer.setRenderTarget(null);
+                }
+
+                this._SampleCameraMoved();
+
+                const readAccum = this._SampleToggle ? _AccumTargetB : _AccumTargetA;
+                const writeAccum = this._SampleToggle ? _AccumTargetA : _AccumTargetB;
+                this._SampleToggle = !this._SampleToggle;
+
+                _SampledMaterial.uniforms.tPrevAccum.value = readAccum.texture;
+                _SampledMaterial.uniforms.tCurrent.value = _SampledTarget.texture;
+                _SampledMaterial.uniforms.tStored.value = null;
+                _SampledMaterial.uniforms.uSampleCount.value = this._SampleCount;
+                _SampledMaterial.uniforms.uResolution.value.set(_SampledTarget.width, _SampledTarget.height);
+                _SampledMaterial.uniforms.uFrameSeed.value = this._FrameIndex;
+                _SampledMaterial.uniforms.uFresh.value = this._FrameIndex === 0 ? 1 : 0;
+                _SampledMaterial.uniforms.uOutput.value = 0;
+
+                Renderer.autoClear = false;
+                Renderer.setRenderTarget(writeAccum);
+                Renderer.clear(true, true, true);
+                Renderer.render(_SampleScene, Camera.Object);
+
+                Renderer.setRenderTarget(null);
+                Renderer.clear(true, true, true);
+                _SampledMaterial.uniforms.tStored.value = writeAccum.texture;
+                _SampledMaterial.uniforms.uOutput.value = 1;
+                Renderer.render(_SampleScene, Camera.Object);
+                Renderer.autoClear = true;
+
+                this._FrameIndex++;
+            }
+            _SampleCameraMoved() {
+                const camPos = Camera.Object.position;
+                const camQ = Camera.Object.quaternion;
+                let moved = this._MC_Reset;
+                this._MC_Reset = false;
+                if (this._MC_LastCamPos) {
+                    _camTmp.copy(camPos).sub(this._MC_LastCamPos);
+                    if (_camTmp.lengthSq() > 1e-7) moved = true;
+                    const dq = camQ.x * this._MC_LastCamQ.x + camQ.y * this._MC_LastCamQ.y
+                        + camQ.z * this._MC_LastCamQ.z + camQ.w * this._MC_LastCamQ.w;
+                    if (Math.abs(dq) < 0.999999999) moved = true;
+                } else {
+                    this._MC_LastCamPos = new THREE.Vector3();
+                    this._MC_LastCamQ = new THREE.Quaternion();
+                }
+                this._MC_LastCamPos.copy(camPos);
+                this._MC_LastCamQ.copy(camQ);
+
+                if (moved || this._SampleCount <= 1) {
+                    this._SampleCount = 1;
+                } else if (this._SampleCount < _MC_SamplesMax) {
+                    this._SampleCount++;
+                }
             }
             Update_System() {
                 this._Timer_Input.Update();
@@ -3717,6 +3905,12 @@
             _BloomDepthTarget.depthTexture.image.width = _w;
             _BloomDepthTarget.depthTexture.image.height = _h;
             _BloomDepthTarget.depthTexture.needsUpdate = true;
+            const _dbw = Math.max(1, Math.floor(window.innerWidth * Renderer.getPixelRatio()));
+            const _dbh = Math.max(1, Math.floor(window.innerHeight * Renderer.getPixelRatio()));
+            _SampledTarget.setSize(_dbw, _dbh);
+            _AccumTargetA.setSize(_dbw, _dbh);
+            _AccumTargetB.setSize(_dbw, _dbh);
+            if (Manager) Manager._MC_Reset = true;
         }, false);
 
         const Manager = new C_Manager();
