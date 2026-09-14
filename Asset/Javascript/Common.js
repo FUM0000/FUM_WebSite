@@ -1719,3 +1719,82 @@ window.Mixins_Youtube = {
         window.removeEventListener('scroll', this.Handle_Scroll);
     },
 };
+
+// Next Page Navigation Button for Japanese Language pages
+(function () {
+    function createNextPageButton(nextPage) {
+        var container = document.createElement('div');
+        container.id = 'next-page-nav';
+        container.style.cssText = 'position:fixed;bottom:80px;right:24px;z-index:9999;';
+
+        var btn = document.createElement('a');
+        btn.href = nextPage.url;
+        btn.title = nextPage.title;
+        btn.innerHTML = '<span style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nextPage.title + '</span><span style="margin-left:6px;font-size:18px;line-height:1;">&#8250;</span>';
+        btn.style.cssText = 'display:inline-flex;align-items:center;padding:10px 18px;background:#1976D2;color:white;border-radius:28px;text-decoration:none;font-weight:500;font-size:14px;box-shadow:0 3px 12px rgba(25,118,210,0.4);transition:all 0.3s ease;';
+
+        btn.onmouseenter = function () {
+            btn.style.background = '#1565C0';
+            btn.style.boxShadow = '0 4px 16px rgba(25,118,210,0.5)';
+            btn.style.transform = 'translateY(-2px)';
+        };
+        btn.onmouseleave = function () {
+            btn.style.background = '#1976D2';
+            btn.style.boxShadow = '0 3px 12px rgba(25,118,210,0.4)';
+            btn.style.transform = 'translateY(0)';
+        };
+
+        container.appendChild(btn);
+        document.body.appendChild(container);
+    }
+
+    function getJsonPath() {
+        var scripts = document.querySelectorAll('script[src]');
+        for (var i = 0; i < scripts.length; i++) {
+            var src = scripts[i].getAttribute('src');
+            if (src && src.indexOf('Common.js') !== -1) {
+                var base = src.replace(/Common\.js.*/, '');
+                return base + '../Data/Page.json';
+            }
+        }
+        return '../../Asset/Data/Page.json';
+    }
+
+    function normalizeUrl(url) {
+        return url.replace('./', '').replace(/^\//, '');
+    }
+
+    $(function () {
+        var jsonPath = getJsonPath();
+        fetch(jsonPath)
+            .then(function (res) { return res.json(); })
+            .then(function (pageData) {
+                var jpSection = pageData['Japanese Language'];
+                if (!jpSection) return;
+
+                var flatList = [];
+                var keys = Object.keys(jpSection);
+                keys.forEach(function (key) {
+                    if (Array.isArray(jpSection[key])) {
+                        jpSection[key].forEach(function (page) {
+                            flatList.push(page);
+                        });
+                    }
+                });
+
+                var currentFile = window.location.pathname.split('/').pop();
+                var currentIndex = -1;
+                for (var i = 0; i < flatList.length; i++) {
+                    if (normalizeUrl(flatList[i].url) === currentFile) {
+                        currentIndex = i;
+                        break;
+                    }
+                }
+
+                if (currentIndex >= 0 && currentIndex < flatList.length - 1) {
+                    createNextPageButton(flatList[currentIndex + 1]);
+                }
+            })
+            .catch(function () { });
+    });
+})();
