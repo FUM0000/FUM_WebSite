@@ -1101,6 +1101,9 @@
 
         let CW, CH;
         let nextPanelReady = false;
+        let FruitScale = 1;
+        let Fruits = [];
+        let MergeEffects = [];
         function ResizeCanvas() {
             const maxW = window.innerWidth;
             const maxH = window.innerHeight;
@@ -1123,6 +1126,13 @@
             Canvas.style.width = CW + 'px';
             Canvas.style.height = CH + 'px';
             Ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+            const prevScale = FruitScale;
+            FruitScale = Math.max(0.8, Math.min(2.6, (CW - 20) / 340));
+            const k = FruitScale / prevScale;
+            if (k !== 1 && prevScale > 0) {
+                for (const f of Fruits) f.radius *= k;
+                for (const e of MergeEffects) e.maxRadius *= k;
+            }
             PositionNextPanel();
         }
         ResizeCanvas();
@@ -1444,9 +1454,7 @@
         let DropX = CW / 2;
         let CanDrop = true;
         let DropCooldown = 0;
-        let Fruits = [];
         let DamageNumbers = [];
-        let MergeEffects = [];
         let shakeTimer = 0;
         let shakeIntensity = 0;
         let messageTimer = 0;
@@ -1600,10 +1608,10 @@
             }
 
             let target = null;
-            if (className && (className.indexOf('enemy') >= 0 || className.indexOf('punish') >= 0)) {
-                target = UI_PlayerPanel;
-            } else if (className && (className.indexOf('player') >= 0 || className.indexOf('heal') >= 0)) {
+            if (className && className.indexOf('player') >= 0) {
                 target = UI_EnemyPanel;
+            } else if (className && (className.indexOf('enemy') >= 0 || className.indexOf('punish') >= 0 || className.indexOf('heal') >= 0)) {
+                target = UI_PlayerPanel;
             }
 
             const vwCenter = window.innerWidth / 2;
@@ -1795,7 +1803,7 @@
                 this.vx = 0;
                 this.vy = 0;
                 this.type = type;
-                this.radius = FRUITS[type].radius;
+                this.radius = FRUITS[type].radius * FruitScale;
                 this.settled = false;
                 this.markedForMerge = false;
                 this.age = 0;
@@ -2036,7 +2044,7 @@
                 MergeEffects.push({
                     x: cx, y: cy,
                     radius: 5,
-                    maxRadius: FRUITS[newType].radius * 2.5,
+                    maxRadius: FRUITS[newType].radius * FruitScale * 2.5,
                     alpha: 0.8,
                     color: FRUITS[newType].color
                 });
@@ -2486,7 +2494,7 @@
                 const heightLimit = CH * 0.28;
                 let overLimit = false;
                 for (const f of Fruits) {
-                    if (f.y - f.radius < heightLimit && f.age > 1 && Math.abs(f.vy) < 1) {
+                    if (f.y < heightLimit && f.age > 1 && Math.abs(f.vy) < 1) {
                         overLimit = true;
                         break;
                     }
@@ -2494,8 +2502,8 @@
                 if (overLimit && Fruits.length > 3) {
                     shakeTimer = 0.2;
                     shakeIntensity = 4;
-                    const spilled = Fruits.filter(f => f.y - f.radius < heightLimit && f.age > 1 && Math.abs(f.vy) < 1);
-                    Fruits = Fruits.filter(f => !(f.y - f.radius < heightLimit && f.age > 1 && Math.abs(f.vy) < 1));
+                    const spilled = Fruits.filter(f => f.y < heightLimit && f.age > 1 && Math.abs(f.vy) < 1);
+                    Fruits = Fruits.filter(f => !(f.y < heightLimit && f.age > 1 && Math.abs(f.vy) < 1));
                     for (const f of spilled) {
                         MergeEffects.push({
                             x: f.x, y: f.y,
@@ -2635,12 +2643,13 @@
                 Ctx.restore();
 
                 const previewFruit = FRUITS[CurrentFruitType];
+                const previewR = previewFruit.radius * FruitScale;
                 Ctx.globalAlpha = 0.5;
                 Ctx.beginPath();
-                Ctx.arc(DropX, dropY, previewFruit.radius, 0, Math.PI * 2);
+                Ctx.arc(DropX, dropY, previewR, 0, Math.PI * 2);
                 Ctx.fillStyle = previewFruit.color;
                 Ctx.fill();
-                Ctx.font = `${Math.max(10, previewFruit.radius * 0.9)}px serif`;
+                Ctx.font = `${Math.max(10, previewR * 0.9)}px serif`;
                 Ctx.textAlign = 'center';
                 Ctx.textBaseline = 'middle';
                 Ctx.fillText(previewFruit.emoji, DropX, dropY + 1);
@@ -2706,7 +2715,7 @@
         }
 
         function ClampDropX(x) {
-            const r = FRUITS[CurrentFruitType].radius;
+            const r = FRUITS[CurrentFruitType].radius * FruitScale;
             return Math.max(10 + r, Math.min(CW - 10 - r, x));
         }
 
