@@ -153,7 +153,11 @@
             padding: 8px 14px;
             min-width: 160px;
             user-select: none;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+        #UI_Enemy_Panel:hover {
+            border-color: rgba(248, 113, 113, 0.4);
         }
         #UI_Enemy_Panel.panel-shake {
             animation: panelShake 0.45s ease;
@@ -194,6 +198,33 @@
             color: var(--ink-dim);
             margin-top: 2px;
             text-align: right;
+        }
+        #UI_Enemy_Fruit_Bar {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.08);
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        #UI_Enemy_Fruit_Fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #e74c3c, #ff6b6b);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        #UI_Enemy_Fruit_Text {
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: #ff6b6b;
+            margin-top: 2px;
+            text-align: left;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         #UI_Player_Panel {
@@ -442,6 +473,7 @@
         #UI_Action.action-player b { color: #fbbf24; }
         #UI_Action.action-enemy b, #UI_Action.action-punish b { color: #f87171; }
         #UI_Action.action-heal b { color: #34d399; }
+        #UI_Action.action-dodge b { color: #38bdf8; }
 
         @keyframes actionPop {
             from { opacity: 0; transform: translateX(-50%) scale(0.85); }
@@ -641,6 +673,18 @@
         #UI_PlayerInfo.open {
             display: flex;
         }
+        #UI_EnemyInfo {
+            position: fixed;
+            inset: 0;
+            z-index: 11;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(4, 8, 20, 0.78);
+        }
+        #UI_EnemyInfo.open {
+            display: flex;
+        }
         .info-box {
             width: min(88vw, 400px);
             background: linear-gradient(160deg, #1c2440, #12172b);
@@ -837,6 +881,7 @@
             }
             #UI_Player_Panel { grid-area: player; min-width: 0; padding: 5px 8px; font-size: 0.6rem; }
             #UI_Enemy_Panel { grid-area: enemy; min-width: 0; padding: 5px 8px; font-size: 0.6rem; }
+            #UI_Enemy_Fruit_Text { font-size: 0.5rem; }
             #UI_Status_Panel {
                 grid-area: status;
                 order: 3;
@@ -917,16 +962,16 @@
         ];
 
         const ENEMIES = [
-            { name: 'Slime',        color: '#2ecc71', hp: 80,    exp: 25,  gold: 15 },
-            { name: 'Goblin',       color: '#e67e22', hp: 160,   exp: 40,  gold: 30 },
-            { name: 'Skeleton',     color: '#bdc3c7', hp: 280,   exp: 60,  gold: 45 },
-            { name: 'Orc',          color: '#27ae60', hp: 420,   exp: 85,  gold: 65 },
-            { name: 'Dark Mage',    color: '#8e44ad', hp: 600,   exp: 115, gold: 90 },
-            { name: 'Minotaur',     color: '#d35400', hp: 820,   exp: 150, gold: 120 },
-            { name: 'Vampire',      color: '#c0392b', hp: 1100,  exp: 190, gold: 155 },
-            { name: 'Demon',        color: '#7b241c', hp: 1500,  exp: 235, gold: 200 },
-            { name: 'Dragon',       color: '#f39c12', hp: 2000,  exp: 300, gold: 260 },
-            { name: 'Dark Lord',    color: '#1a1a2e', hp: 2800,  exp: 420, gold: 500 }
+            { name: 'Slime',        color: '#2ecc71', hp: 80,    exp: 25,  gold: 15, agi: 4  },
+            { name: 'Goblin',       color: '#e67e22', hp: 160,   exp: 40,  gold: 30, agi: 6  },
+            { name: 'Skeleton',     color: '#bdc3c7', hp: 280,   exp: 60,  gold: 45, agi: 8  },
+            { name: 'Orc',          color: '#27ae60', hp: 420,   exp: 85,  gold: 65, agi: 7  },
+            { name: 'Dark Mage',    color: '#8e44ad', hp: 600,   exp: 115, gold: 90, agi: 10 },
+            { name: 'Minotaur',     color: '#d35400', hp: 820,   exp: 150, gold: 120, agi: 10 },
+            { name: 'Vampire',      color: '#c0392b', hp: 1100,  exp: 190, gold: 155, agi: 14 },
+            { name: 'Demon',        color: '#7b241c', hp: 1500,  exp: 235, gold: 200, agi: 14 },
+            { name: 'Dragon',       color: '#f39c12', hp: 2000,  exp: 300, gold: 260, agi: 16 },
+            { name: 'Dark Lord',    color: '#1a1a2e', hp: 2800,  exp: 420, gold: 500, agi: 18 }
         ];
 
         const CHAPTERS = [
@@ -947,7 +992,10 @@
               boss: '' }
         ];
 
-        const SHOP_PRICES = { potion: 30, hp: 40, atk: 40 };
+        const SHOP_PRICES = { potion: 30, hp: 40, atk: 40, agi: 40 };
+
+        const AGI_BASE = 10;
+        const AGI_PER_LEVEL = 1;
 
         const ENDING_TEXT =
             'With the Dark Lord shattered, shadow drains from the land. The kingdom breathes free at last, ' +
@@ -956,7 +1004,7 @@
         const GRAVITY = 0.35;
         const DAMPING = 0.72;
         const WALL_BOUNCE = 0.35;
-        const FRICTION = 0.995;
+        const FRICTION = 0.998;
         const MERGE_DIST_FACTOR = 0.92;
         const MAX_FRUITS_ON_SCREEN = 60;
         const DROP_LINE_Y_RATIO = 0.24;
@@ -973,15 +1021,20 @@
         function ResizeCanvas() {
             const maxW = window.innerWidth;
             const maxH = window.innerHeight;
-            const ratio = 4 / 5;
-            let w = maxW;
-            let h = w / ratio;
-            if (h > maxH) {
-                h = maxH;
-                w = h * ratio;
+            if (IsMobile()) {
+                CW = Math.floor(maxW);
+                CH = Math.floor(maxH);
+            } else {
+                const ratio = 4 / 5;
+                let w = maxW;
+                let h = w / ratio;
+                if (h > maxH) {
+                    h = maxH;
+                    w = h * ratio;
+                }
+                CW = Math.floor(w);
+                CH = Math.floor(h);
             }
-            CW = Math.floor(w);
-            CH = Math.floor(h);
             Canvas.width = CW * window.devicePixelRatio;
             Canvas.height = CH * window.devicePixelRatio;
             Canvas.style.width = CW + 'px';
@@ -1055,6 +1108,8 @@
             <div id="UI_Enemy_Name">Slime</div>
             <div id="UI_Enemy_Hp_Bar"><div id="UI_Enemy_Hp_Fill"></div></div>
             <div id="UI_Enemy_Hp_Text">80 / 80</div>
+            <div id="UI_Enemy_Fruit_Bar"><div id="UI_Enemy_Fruit_Fill"></div></div>
+            <div id="UI_Enemy_Fruit_Text">—</div>
         `;
         UI_TopBar.appendChild(UI_EnemyPanel);
 
@@ -1095,6 +1150,7 @@
                 <div class="shop-item" data-buy="potion"><span>Potion</span><span class="price">30G</span></div>
                 <div class="shop-item" data-buy="hp"><span>Max HP +25</span><span class="price">40G</span></div>
                 <div class="shop-item" data-buy="atk"><span>ATK +2</span><span class="price">40G</span></div>
+                <div class="shop-item" data-buy="agi"><span>AGI +1</span><span class="price">40G</span></div>
                 <div class="shop-close">Continue ▶</div>
             </div>
         `;
@@ -1132,12 +1188,30 @@
                 <div class="info-track" style="height:6px"><div class="info-exp-fill" id="Info_Exp_Fill"></div></div>
                 <div class="info-row"><span class="info-label">Level</span><span id="Info_Level"></span></div>
                 <div class="info-row"><span class="info-label">ATK Bonus</span><span id="Info_Atk"></span></div>
+                <div class="info-row"><span class="info-label">Agility</span><span id="Info_Agi"></span></div>
                 <div class="info-row"><span class="info-label">Gold</span><span id="Info_Gold" style="color:#fbbf24"></span></div>
                 <div class="info-row"><span class="info-label">Potion</span><span id="Info_Potion"></span></div>
                 <div class="info-close">Close</div>
             </div>
         `;
         document.body.appendChild(UI_PlayerInfo);
+
+        const UI_EnemyInfo = document.createElement('div');
+        UI_EnemyInfo.id = 'UI_EnemyInfo';
+        UI_EnemyInfo.innerHTML = `
+            <div class="info-box">
+                <div class="info-title" id="EInfo_Title" style="color:#f87171">Slime</div>
+                <div class="info-bar-label"><span>HP</span><span id="EInfo_Hp_Text"></span></div>
+                <div class="info-track"><div class="info-hp-fill" id="EInfo_Hp_Fill"></div></div>
+                <div class="info-row"><span class="info-label">Level</span><span id="EInfo_Level"></span></div>
+                <div class="info-row"><span class="info-label">ATK</span><span id="EInfo_Atk"></span></div>
+                <div class="info-row"><span class="info-label">Agility</span><span id="EInfo_Agi"></span></div>
+                <div class="info-row"><span class="info-label">Reward</span><span id="EInfo_Reward" style="color:#fbbf24"></span></div>
+                <div class="info-row"><span class="info-label">Next attack</span><span id="EInfo_Next"></span></div>
+                <div class="info-close">Close</div>
+            </div>
+        `;
+        document.body.appendChild(UI_EnemyInfo);
 
         const UI_Start = document.createElement('div');
         UI_Start.id = 'UI_Start_1';
@@ -1186,6 +1260,8 @@
                         AnimatePlayerHeal();
                     } else if (key === 'atk') {
                         AttackBonus += 2;
+                    } else if (key === 'agi') {
+                        AgilityBonus += 1;
                     }
                     UpdateUI();
                 } else {
@@ -1222,9 +1298,20 @@
             OpenPlayerInfo();
         });
 
+        UI_EnemyPanel.addEventListener('click', (e) => {
+            e.stopPropagation();
+            OpenEnemyInfo();
+        });
+
         UI_PlayerInfo.addEventListener('click', (e) => {
             if (e.target.closest('.info-close') || e.target === UI_PlayerInfo) {
                 ClosePlayerInfo();
+            }
+        });
+
+        UI_EnemyInfo.addEventListener('click', (e) => {
+            if (e.target.closest('.info-close') || e.target === UI_EnemyInfo) {
+                CloseEnemyInfo();
             }
         });
 
@@ -1261,7 +1348,17 @@
         let shopOnClose = null;
         let chapterIntroOnDone = null;
         let prevStateBeforeInfo = null;
+        let prevStateBeforeEnemyInfo = null;
         let actionNext = null;
+
+        let EnemyFruitCounts = new Array(FRUITS.length).fill(0);
+        let EnemyFruitTimer = 0;
+        let AgilityBonus = 0;
+        let lastEnemyAction = 'build';
+        let playerActionThisTurn = 'drop';
+        let comboCount = 0;
+        let prevTurnCombos = 0;
+        let pendingVictoryText = '';
 
         function GetEnemy() {
             const idx = Math.min(EnemyIndex, ENEMIES.length - 1);
@@ -1302,7 +1399,7 @@
         }
 
         function UpdateUI() {
-            document.getElementById('UI_Player_Label').textContent = 'Lv.' + PlayerLevel + ' · ATK+' + AttackBonus;
+            document.getElementById('UI_Player_Label').textContent = 'Lv.' + PlayerLevel;
 
             const pRatio = Math.max(0, PlayerHp / PlayerMaxHp);
             document.getElementById('UI_Player_Hp_Fill').style.width = (pRatio * 100) + '%';
@@ -1319,11 +1416,17 @@
             document.getElementById('UI_Item_Count').textContent = '×' + Potions;
 
             const enemy = GetEnemy();
-            document.getElementById('UI_Enemy_Name').textContent = enemy.name + ' · Lv.' + Level;
+            document.getElementById('UI_Enemy_Name').textContent = enemy.name;
             const eRatio = Math.max(0, EnemyHp / EnemyMaxHp);
             document.getElementById('UI_Enemy_Hp_Fill').style.width = (eRatio * 100) + '%';
             document.getElementById('UI_Enemy_Hp_Text').textContent =
                 Math.max(0, Math.ceil(EnemyHp)) + ' / ' + EnemyMaxHp;
+
+            const eThreshold = GetEnemyAttackCycle();
+            const eProgress = Math.min(EnemyFruitTimer / eThreshold, 1);
+            document.getElementById('UI_Enemy_Fruit_Fill').style.width = (eProgress * 100) + '%';
+            document.getElementById('UI_Enemy_Fruit_Text').textContent =
+                EnemyFruitTimer > 0 ? EnemyFruitSummary() + ' ⚡' + EnemyFruitPower() : '—';
 
             document.getElementById('UI_Next_Fruit').textContent = FRUITS[NextFruitType].emoji;
         }
@@ -1348,6 +1451,7 @@
 
         function ConfirmAction() {
             if (!UI_Action.classList.contains('visible')) return;
+            lastActionTime = performance.now();
             UI_Action.className = '';
             const f = actionNext;
             actionNext = null;
@@ -1401,6 +1505,91 @@
         function AdvanceTurn() {
             TurnCount++;
             UpdateUI();
+        }
+
+        function GetEnemyAttackCycle() {
+            return Math.min(2 + Math.floor(EnemyIndex / 2), 5);
+        }
+
+        function GetEnemyMaxFruitType() {
+            return Math.min(1 + Math.floor(EnemyIndex / 1.5), FRUITS.length - 2);
+        }
+
+        function EnemyAddRandomFruit() {
+            const maxType = GetEnemyMaxFruitType();
+            const type = Math.floor(Math.random() * (maxType + 1));
+            EnemyFruitCounts[type]++;
+            EnemyTryMerge();
+            return type;
+        }
+
+        function EnemyTryMerge() {
+            let merged = true;
+            while (merged) {
+                merged = false;
+                for (let i = 0; i < FRUITS.length - 1; i++) {
+                    if (EnemyFruitCounts[i] >= 2) {
+                        EnemyFruitCounts[i] -= 2;
+                        EnemyFruitCounts[i + 1]++;
+                        merged = true;
+                    }
+                }
+            }
+        }
+
+        function EnemyStrongestFruit() {
+            for (let i = FRUITS.length - 1; i >= 0; i--) {
+                if (EnemyFruitCounts[i] > 0) {
+                    return { type: i, damage: FRUITS[i].damage, emoji: FRUITS[i].emoji };
+                }
+            }
+            return null;
+        }
+
+        function EnemyFruitPower() {
+            const s = EnemyStrongestFruit();
+            return s ? s.damage : 0;
+        }
+
+        function EnemyFruitSummary() {
+            let parts = [];
+            for (let i = FRUITS.length - 1; i >= 0; i--) {
+                if (EnemyFruitCounts[i] > 0) {
+                    parts.push(FRUITS[i].emoji + (EnemyFruitCounts[i] > 1 ? '×' + EnemyFruitCounts[i] : ''));
+                }
+            }
+            return parts.join(' ') || '—';
+        }
+
+        function Clamp(v, min, max) {
+            return Math.max(min, Math.min(max, v));
+        }
+
+        function PlayerAgility() {
+            return AGI_BASE + AgilityBonus + (PlayerLevel - 1) * AGI_PER_LEVEL;
+        }
+
+        function EnemyAgility() {
+            return GetEnemy().agi;
+        }
+
+        function RollDodge(defenderAgi, attackerAgi) {
+            const diff = defenderAgi - attackerAgi;
+            const nullifyChance = Clamp(0.04 + diff * 0.02, 0.01, 0.55);
+            const reduceChance  = Clamp(0.25 + diff * 0.01, 0.08, 0.50);
+            const r = Math.random();
+            if (r < nullifyChance) return 'nullify';
+            if (r < nullifyChance + reduceChance) return 'reduce';
+            return 'normal';
+        }
+
+        function BeginPlayerTurn() {
+            prevTurnCombos = comboCount;
+            comboCount = 0;
+        }
+
+        function ComboMultiplier() {
+            return Math.pow(1.2, prevTurnCombos);
         }
 
         function FindFruitAt(x, y) {
@@ -1461,7 +1650,7 @@
                 if (this.y + this.radius > floorY) {
                     this.y = floorY - this.radius;
                     this.vy *= -DAMPING;
-                    this.vx *= 0.92;
+                    this.vx *= 0.96;
                     if (Math.abs(this.vy) < 0.5) {
                         this.vy = 0;
                         this.settled = true;
@@ -1653,6 +1842,7 @@
                 const dmg = Math.floor(baseDmg * multiplier);
                 didMerge = true;
                 mergeCount += group.length;
+                comboCount++;
 
                 const isCrit = group.length >= CRIT_THRESHOLD;
                 DamageNumbers.push({
@@ -1663,6 +1853,17 @@
                     vy: -2.5,
                     life: 1.5
                 });
+
+                if (comboCount >= 2) {
+                    DamageNumbers.push({
+                        x: cx, y: cy - 46,
+                        text: 'COMBO ×' + comboCount,
+                        color: '#ffd166',
+                        alpha: 1,
+                        vy: -3.2,
+                        life: 1.3
+                    });
+                }
 
                 MergeEffects.push({
                     x: cx, y: cy,
@@ -1718,7 +1919,7 @@
             }
 
             State = 'LevelClear';
-            ShowMessage('Victory!<br>' + rewardText, 0, 'victory interactive');
+            pendingVictoryText = 'Victory!<br>' + rewardText;
 
             const isFinal = EnemyIndex >= ENEMIES.length - 1;
             if (isFinal) {
@@ -1756,19 +1957,91 @@
         }
 
         function EnemyAction(extraDmg, label) {
-            const dmg = 5 + Math.floor(Level * 3 + EnemyIndex * 2) + (extraDmg || 0);
-            PlayerHp -= dmg;
-            AnimatePlayerPanel();
-            UpdateUI();
-            if (PlayerHp <= 0) {
-                PlayerHp = 0;
-                State = 'GameOver';
-                ShowMessage('Defeat...', 0, 'defeat interactive');
+            if (extraDmg && extraDmg > 0) {
+                const strongest = EnemyStrongestFruit();
+                const baseDmg = (strongest ? strongest.damage : 0) + extraDmg;
+                if (strongest) EnemyFruitCounts[strongest.type]--;
+                EnemyFruitTimer = 0;
+                lastEnemyAction = 'attack';
+
+                let dmg = baseDmg;
+                let outText = label + ' <b>-' + dmg + ' HP</b>';
+                let outClass = 'action-punish';
+
+                if (playerActionThisTurn !== 'attack') {
+                    const roll = RollDodge(PlayerAgility(), EnemyAgility());
+                    if (roll === 'nullify') {
+                        dmg = 0;
+                        outText = 'You dodge the punishment! <b>0 damage</b>';
+                        outClass = 'action-dodge';
+                    } else if (roll === 'reduce') {
+                        dmg = Math.max(1, Math.floor(baseDmg * 0.5));
+                        outText = 'You brace for the hit <b>-' + dmg + ' HP</b>';
+                    }
+                }
+
+                PlayerHp -= dmg;
+                AnimatePlayerPanel();
+                UpdateUI();
+                if (PlayerHp <= 0) {
+                    PlayerHp = 0;
+                    State = 'GameOver';
+                    ShowMessage('Defeat...', 0, 'defeat interactive');
+                    return;
+                }
+                ShowAction(outText, outClass, () => {
+                    State = 'Playing';
+                });
                 return;
             }
-            ShowAction((label || 'Enemy attack') + ' <b>-' + dmg + ' HP</b>', label ? 'action-punish' : 'action-enemy', () => {
-                State = 'Playing';
-            });
+
+            const addedType = EnemyAddRandomFruit();
+            EnemyFruitTimer++;
+
+            const threshold = GetEnemyAttackCycle();
+
+            if (EnemyFruitTimer >= threshold) {
+                const strongest = EnemyStrongestFruit();
+                const baseDmg = strongest ? strongest.damage : 1;
+                if (strongest) EnemyFruitCounts[strongest.type]--;
+                EnemyFruitTimer = 0;
+                lastEnemyAction = 'attack';
+
+                let dmg = baseDmg;
+                let outText = 'Enemy throws ' + (strongest ? strongest.emoji : FRUITS[0].emoji) + ' <b>-' + dmg + ' HP</b>';
+                let outClass = 'action-enemy';
+
+                if (playerActionThisTurn !== 'attack') {
+                    const roll = RollDodge(PlayerAgility(), EnemyAgility());
+                    if (roll === 'nullify') {
+                        dmg = 0;
+                        outText = 'You dodge the attack! <b>0 damage</b>';
+                        outClass = 'action-dodge';
+                    } else if (roll === 'reduce') {
+                        dmg = Math.max(1, Math.floor(baseDmg * 0.5));
+                        outText = 'You half-dodge <b>-' + dmg + ' HP</b>';
+                    }
+                }
+
+                PlayerHp -= dmg;
+                AnimatePlayerPanel();
+                UpdateUI();
+                if (PlayerHp <= 0) {
+                    PlayerHp = 0;
+                    State = 'GameOver';
+                    ShowMessage('Defeat...', 0, 'defeat interactive');
+                    return;
+                }
+                ShowAction(outText, outClass, () => {
+                    State = 'Playing';
+                });
+            } else {
+                lastEnemyAction = 'build';
+                const strongest = EnemyStrongestFruit();
+                ShowAction('Enemy adds ' + FRUITS[addedType].emoji + ' — Next: <b>' + (strongest ? strongest.emoji + ' -' + strongest.damage + ' HP' : '—') + '</b>', 'action-enemy', () => {
+                    State = 'Playing';
+                });
+            }
         }
 
         /* ─── Story / Shop Flow ────────────────────────────────── */
@@ -1863,12 +2136,15 @@
             UI_ChapterTitle.classList.remove('open');
             UI_Ending.classList.remove('open');
             UI_PlayerInfo.classList.remove('open');
+            UI_EnemyInfo.classList.remove('open');
             prevStateBeforeInfo = null;
+            prevStateBeforeEnemyInfo = null;
         }
 
         function RefreshPlayerInfo() {
             document.getElementById('Info_Level').textContent = PlayerLevel;
             document.getElementById('Info_Atk').textContent = '+' + AttackBonus;
+            document.getElementById('Info_Agi').textContent = PlayerAgility();
             document.getElementById('Info_Hp_Text').textContent =
                 Math.max(0, Math.ceil(PlayerHp)) + ' / ' + PlayerMaxHp;
             const pRatio = Math.max(0, PlayerHp / PlayerMaxHp);
@@ -1898,11 +2174,49 @@
             prevStateBeforeInfo = null;
         }
 
+        function RefreshEnemyInfo() {
+            const enemy = GetEnemy();
+            const strongest = EnemyStrongestFruit();
+            document.getElementById('EInfo_Title').textContent = enemy.name;
+            document.getElementById('EInfo_Hp_Text').textContent =
+                Math.max(0, Math.ceil(EnemyHp)) + ' / ' + EnemyMaxHp;
+            const eRatio = Math.max(0, EnemyHp / EnemyMaxHp);
+            document.getElementById('EInfo_Hp_Fill').style.width = (eRatio * 100) + '%';
+            document.getElementById('EInfo_Level').textContent = Level;
+            document.getElementById('EInfo_Atk').textContent =
+                strongest ? strongest.emoji + ' ' + strongest.damage : '—';
+            document.getElementById('EInfo_Agi').textContent = EnemyAgility();
+            document.getElementById('EInfo_Reward').textContent =
+                'EXP ' + (enemy.exp + Level * 2) + ' / 💰 ' + (enemy.gold + Level * 3);
+            const threshold = GetEnemyAttackCycle();
+            const next = Math.max(0, threshold - EnemyFruitTimer);
+            document.getElementById('EInfo_Next').textContent = next + ' turn' + (next === 1 ? '' : 's');
+        }
+
+        function OpenEnemyInfo() {
+            RefreshEnemyInfo();
+            UI_EnemyInfo.classList.add('open');
+            if (State === 'Playing') {
+                prevStateBeforeEnemyInfo = 'Playing';
+                State = 'Paused';
+            }
+        }
+
+        function CloseEnemyInfo() {
+            UI_EnemyInfo.classList.remove('open');
+            if (prevStateBeforeEnemyInfo === 'Playing') {
+                State = 'Playing';
+            }
+            prevStateBeforeEnemyInfo = null;
+        }
+
         /* ─── Fruit Drop ───────────────────────────────────────── */
 
         function SpawnFruit() {
             if (!CanDrop || State !== 'Playing') return;
             if (Fruits.length >= MAX_FRUITS_ON_SCREEN) return;
+            BeginPlayerTurn();
+            playerActionThisTurn = 'drop';
 
             const dropY = CH * DROP_LINE_Y_RATIO;
             const f = new Fruit(DropX, dropY, CurrentFruitType);
@@ -1922,14 +2236,34 @@
 
         function AttackWithFruit(fruit) {
             if (State !== 'Playing') return;
+            BeginPlayerTurn();
+            playerActionThisTurn = 'attack';
 
-            const dmg = fruit.damage + AttackBonus;
+            const mult = ComboMultiplier();
+            const baseDmg = Math.floor((fruit.damage + AttackBonus) * mult);
             Fruits = Fruits.filter(f => f !== fruit);
+
+            let dmg = baseDmg;
+            let multText = prevTurnCombos > 0 ? ' (×' + parseFloat(mult.toFixed(2)) + ')' : '';
+            let outText = 'Your attack' + multText + ' <b>-' + dmg + ' HP</b>';
+            let outClass = 'action-player';
+
+            if (lastEnemyAction !== 'attack') {
+                const roll = RollDodge(EnemyAgility(), PlayerAgility());
+                if (roll === 'nullify') {
+                    dmg = 0;
+                    outText = 'Enemy dodges! <b>0 damage</b>';
+                    outClass = 'action-dodge';
+                } else if (roll === 'reduce') {
+                    dmg = Math.max(1, Math.floor(baseDmg * 0.5));
+                    outText = 'Enemy deflects <b>-' + dmg + ' HP</b>';
+                }
+            }
 
             DamageNumbers.push({
                 x: fruit.x, y: fruit.y,
                 text: '-' + dmg,
-                color: '#ff6b6b',
+                color: dmg === 0 ? '#38bdf8' : '#ff6b6b',
                 alpha: 1,
                 vy: -2.5,
                 life: 1.5
@@ -1950,12 +2284,14 @@
             AnimateEnemyPanel();
             UpdateUI();
 
-            if (State === 'LevelClear') {
-                return;
-            }
-
-            ShowAction('Your attack <b>-' + dmg + ' HP</b>', 'action-player', () => {
-                EnemyAction();
+            const wasKilled = EnemyHp <= 0;
+            ShowAction(outText, outClass, () => {
+                if (wasKilled) {
+                    State = 'LevelClear';
+                    ShowMessage(pendingVictoryText, 0, 'victory interactive');
+                } else {
+                    EnemyAction();
+                }
             });
         }
 
@@ -1987,7 +2323,27 @@
                 if (overLimit && Fruits.length > 3) {
                     shakeTimer = 0.2;
                     shakeIntensity = 4;
-                    Fruits = Fruits.filter(f => f.age < 0.5);
+                    const spilled = Fruits.filter(f => f.y - f.radius < heightLimit && f.age > 1 && Math.abs(f.vy) < 1);
+                    Fruits = Fruits.filter(f => !(f.y - f.radius < heightLimit && f.age > 1 && Math.abs(f.vy) < 1));
+                    for (const f of spilled) {
+                        MergeEffects.push({
+                            x: f.x, y: f.y,
+                            radius: 5,
+                            maxRadius: Math.max(16, f.radius * 1.6),
+                            alpha: 1,
+                            color: FRUITS[f.type].color
+                        });
+                    }
+                    if (spilled.length > 0) {
+                        DamageNumbers.push({
+                            x: CW / 2, y: heightLimit - 16,
+                            text: 'Overflow! -' + spilled.length,
+                            color: '#f87171',
+                            alpha: 1,
+                            vy: -2,
+                            life: 1.6
+                        });
+                    }
                     EnemyAction(5, 'The enemy punishes you');
                     UpdateUI();
                 }
@@ -2158,6 +2514,15 @@
         /* ─── Input ────────────────────────────────────────────── */
 
         let lastTouchTime = 0;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchMoved = false;
+        let lastActionTime = 0;
+        const ACTION_INTERVAL = 500;
+
+        function actionBlocked() {
+            return (performance.now() - lastActionTime) < ACTION_INTERVAL;
+        }
 
         function GetCanvasX(clientX) {
             const rect = Canvas.getBoundingClientRect();
@@ -2181,10 +2546,13 @@
 
         Canvas.addEventListener('click', (e) => {
             e.preventDefault();
+            if (actionBlocked()) return;
             if (shouldIgnoreClick()) return;
             if (State === 'WaitingStart') {
+                lastActionTime = performance.now();
                 StartGame();
             } else if (State === 'Playing') {
+                lastActionTime = performance.now();
                 const cx = GetCanvasX(e.clientX);
                 const cy = GetCanvasY(e.clientY);
                 const target = FindFruitAt(cx, cy);
@@ -2194,10 +2562,13 @@
                     SpawnFruit();
                 }
             } else if (State === 'Action') {
+                lastActionTime = performance.now();
                 ConfirmAction();
             } else if (State === 'LevelClear') {
+                lastActionTime = performance.now();
                 ContinueAfterClear();
             } else if (State === 'GameOver') {
+                lastActionTime = performance.now();
                 ResetGame();
             }
         });
@@ -2206,6 +2577,7 @@
             e.preventDefault();
             if (State === 'Playing' && e.touches.length > 0) {
                 DropX = Math.max(24, Math.min(CW - 24, GetCanvasX(e.touches[0].clientX)));
+                touchMoved = true;
             }
         }, { passive: false });
 
@@ -2213,27 +2585,49 @@
             e.preventDefault();
             lastTouchTime = performance.now();
             if (State === 'WaitingStart') {
+                if (actionBlocked()) return;
+                lastActionTime = performance.now();
                 StartGame();
             } else if (State === 'Playing') {
                 if (e.touches.length > 0) {
                     const cx = GetCanvasX(e.touches[0].clientX);
                     const cy = GetCanvasY(e.touches[0].clientY);
                     DropX = Math.max(24, Math.min(CW - 24, cx));
-                    const target = FindFruitAt(cx, cy);
-                    if (target) {
-                        AttackWithFruit(target);
-                    } else {
-                        SpawnFruit();
-                    }
+                    touchStartX = cx;
+                    touchStartY = cy;
+                    touchMoved = false;
                 }
             } else if (State === 'Action') {
+                if (actionBlocked()) return;
+                lastActionTime = performance.now();
                 ConfirmAction();
             } else if (State === 'LevelClear') {
+                if (actionBlocked()) return;
+                lastActionTime = performance.now();
                 ContinueAfterClear();
             } else if (State === 'GameOver') {
+                if (actionBlocked()) return;
+                lastActionTime = performance.now();
                 ResetGame();
             }
         }, { passive: false });
+
+        Canvas.addEventListener('touchend', (e) => {
+            if (State !== 'Playing') return;
+            if (actionBlocked()) return;
+            const cx = (e.changedTouches && e.changedTouches.length > 0)
+                ? GetCanvasX(e.changedTouches[0].clientX) : DropX;
+            const cy = (e.changedTouches && e.changedTouches.length > 0)
+                ? GetCanvasY(e.changedTouches[0].clientY) : CH * DROP_LINE_Y_RATIO;
+            if (!touchMoved) {
+                const target = FindFruitAt(cx, cy);
+                if (target) {
+                    AttackWithFruit(target);
+                    return;
+                }
+            }
+            SpawnFruit();
+        });
 
         /* ─── Game Flow ────────────────────────────────────────── */
 
@@ -2271,6 +2665,13 @@
             CanDrop = true;
             CurrentFruitType = 0;
             NextFruitType = 0;
+            EnemyFruitCounts = new Array(FRUITS.length).fill(0);
+            EnemyFruitTimer = 0;
+            AgilityBonus = 0;
+            lastEnemyAction = 'build';
+            playerActionThisTurn = 'drop';
+            comboCount = 0;
+            prevTurnCombos = 0;
             pendingPostClear = 'next';
             dialogOnDone = null;
             shopOnClose = null;
@@ -2293,6 +2694,12 @@
             CurrentFruitType = Math.floor(Math.random() * Math.min(3 + Math.floor(Level / 2), FRUITS.length));
             NextFruitType = Math.floor(Math.random() * Math.min(3 + Math.floor(Level / 2), FRUITS.length));
             DropX = CW / 2;
+            EnemyFruitCounts = new Array(FRUITS.length).fill(0);
+            EnemyFruitTimer = 0;
+            lastEnemyAction = 'build';
+            playerActionThisTurn = 'drop';
+            comboCount = 0;
+            prevTurnCombos = 0;
             UI_Action.className = '';
             actionNext = null;
             State = 'Playing';
