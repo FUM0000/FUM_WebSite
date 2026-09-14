@@ -434,34 +434,47 @@
         }
 
         #UI_Message_1 {
-            position: absolute;
-            top: 38%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 4;
-            width: min(92vw, 560px);
-            font-family: "Space Grotesk", "Outfit", sans-serif;
-            font-size: clamp(1.6rem, 5vw, 3.2rem);
-            font-weight: 700;
-            color: #ffeede;
-            text-align: center;
-            text-shadow:
-                0 8px 24px rgba(0, 0, 0, 0.5),
-                0 0 30px rgba(255, 91, 48, 0.3);
-            pointer-events: none;
-            letter-spacing: 0.06em;
-            line-height: 1.15;
+            position: fixed;
+            inset: 0;
+            z-index: 10;
             display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(4, 8, 20, 0.78);
+            box-sizing: border-box;
         }
         #UI_Message_1.visible {
-            display: block;
-            animation: clearPulse 0.85s ease-in-out infinite alternate;
+            display: flex;
+        }
+        .msg-box {
+            width: min(88vw, 430px);
+            background: linear-gradient(160deg, #1c2440, #12172b);
+            border: 1px solid var(--panel-border);
+            border-radius: 18px;
+            padding: 26px 28px 20px;
+            text-align: center;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--ink);
+            letter-spacing: 0.03em;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+            animation: overlayPop 0.35s cubic-bezier(.2,.8,.25,1.15) both;
+            cursor: pointer;
+        }
+        #UI_Message_1.victory .msg-box {
+            border-color: rgba(251, 191, 36, 0.35);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 50px rgba(251, 191, 36, 0.15);
+        }
+        #UI_Message_1.defeat .msg-box {
+            border-color: rgba(248, 113, 113, 0.35);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 50px rgba(248, 113, 113, 0.15);
         }
         #UI_Message_1 .msg-hint {
             display: none;
             color: var(--ink-dim);
-            font-size: 0.9rem;
-            margin-top: 14px;
+            font-size: 0.95rem;
+            margin-top: 18px;
             font-family: "Space Grotesk", "Outfit", sans-serif;
             font-weight: 500;
             letter-spacing: 0.08em;
@@ -470,17 +483,20 @@
             display: block;
             animation: hintBounce 1.2s ease-in-out infinite;
         }
-        #UI_Message_1.victory {
+        .vt-title {
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-weight: 900;
+            font-size: clamp(1.3rem, 5vw, 1.9rem);
+            letter-spacing: 0.12em;
             color: #fbbf24;
-            text-shadow:
-                0 8px 24px rgba(0, 0, 0, 0.5),
-                0 0 40px rgba(251, 191, 36, 0.4);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            text-shadow: 0 0 26px rgba(251, 191, 36, 0.4);
         }
-        #UI_Message_1.defeat {
-            color: var(--danger);
-            text-shadow:
-                0 8px 24px rgba(0, 0, 0, 0.5),
-                0 0 40px rgba(248, 113, 113, 0.4);
+        .vt-reward {
+            font-size: clamp(0.9rem, 3.5vw, 1.05rem);
+            line-height: 1.75;
+            color: var(--ink);
         }
 
         #UI_Action {
@@ -975,8 +991,9 @@
             #UI_Next_Label {
                 font-size: 0.55rem;
             }
-            #UI_Message_1 {
-                top: 36%;
+            .msg-box {
+                width: min(92vw, 380px);
+                padding: 20px 18px;
             }
             .dialog-box {
                 width: min(92vw, 480px);
@@ -1055,7 +1072,7 @@
             'and your legend is sung across every village. Thank you for saving the realm, hero.';
 
         const GRAVITY = 0.35;
-        const DAMPING = 0.72;
+        const DAMPING = 0.88;
         const WALL_BOUNCE = 0.35;
         const FRICTION = 0.998;
         const MERGE_DIST_FACTOR = 0.92;
@@ -1285,10 +1302,21 @@
         const UI_Message = document.createElement('div');
         UI_Message.id = 'UI_Message_1';
         UI_Message.innerHTML = `
-            <div id="UI_Message_Text"></div>
-            <div class="msg-hint">▶ Tap to continue</div>
+            <div class="msg-box">
+                <div id="UI_Message_Text"></div>
+                <div class="msg-hint">▶ Tap to continue</div>
+            </div>
         `;
         document.body.appendChild(UI_Message);
+
+        UI_Message.addEventListener('click', () => {
+            if (!UI_Message.classList.contains('visible')) return;
+            if (State === 'LevelClear') {
+                ContinueAfterClear();
+            } else if (State === 'GameOver') {
+                ResetGame();
+            }
+        });
 
         const UI_Action = document.createElement('div');
         UI_Action.id = 'UI_Action';
@@ -1945,36 +1973,9 @@
                 vySum /= group.length;
 
                 const newType = Math.min(Fruits[group[0]].type + 1, FRUITS.length - 1);
-                const baseDmg = FRUITS[newType].damage;
-                let multiplier = 1;
-                if (group.length >= CRIT_THRESHOLD) {
-                    multiplier = 1 + (group.length - CRIT_THRESHOLD + 1) * 0.5;
-                }
-                const dmg = Math.floor(baseDmg * multiplier);
                 didMerge = true;
                 mergeCount += group.length;
                 comboCount++;
-
-                const isCrit = group.length >= CRIT_THRESHOLD;
-                DamageNumbers.push({
-                    x: cx, y: cy,
-                    text: (isCrit ? 'CRIT! ' : '') + '+' + dmg,
-                    color: isCrit ? '#ffdd57' : '#fff',
-                    alpha: 1,
-                    vy: -2.5,
-                    life: 1.5
-                });
-
-                if (comboCount >= 2) {
-                    DamageNumbers.push({
-                        x: cx, y: cy - 46,
-                        text: 'COMBO ×' + comboCount,
-                        color: '#ffd166',
-                        alpha: 1,
-                        vy: -3.2,
-                        life: 1.3
-                    });
-                }
 
                 MergeEffects.push({
                     x: cx, y: cy,
@@ -2031,7 +2032,7 @@
             }
 
             State = 'LevelClear';
-            pendingVictoryText = 'Victory!<br>' + rewardText;
+            pendingVictoryText = '<div class="vt-title">🏆 Victory</div><div class="vt-reward">' + rewardText + '</div>';
 
             const isFinal = EnemyIndex >= ENEMIES.length - 1;
             if (isFinal) {
@@ -2053,8 +2054,10 @@
         }
 
         function NextStage() {
+            const prevChapter = CurrentChapter();
             AdvanceLevel();
-            ResetLevel();
+            const sameArea = CurrentChapter() === prevChapter;
+            ResetLevel(sameArea);
             UpdateUI();
         }
 
@@ -2098,7 +2101,7 @@
                 if (PlayerHp <= 0) {
                     PlayerHp = 0;
                     State = 'GameOver';
-                    ShowMessage('Defeat...', 0, 'defeat interactive');
+                    ShowMessage('<div class="vt-title" style="color:var(--danger)">💀 Defeat</div><div class="vt-reward">The brave hero has fallen...</div>', 0, 'defeat interactive');
                     return;
                 }
                 ShowAction(outText, outClass, () => {
@@ -2141,7 +2144,7 @@
                 if (PlayerHp <= 0) {
                     PlayerHp = 0;
                     State = 'GameOver';
-                    ShowMessage('Defeat...', 0, 'defeat interactive');
+                    ShowMessage('<div class="vt-title" style="color:var(--danger)">💀 Defeat</div><div class="vt-reward">The brave hero has fallen...</div>', 0, 'defeat interactive');
                     return;
                 }
                 ShowAction(outText, outClass, () => {
@@ -2801,8 +2804,8 @@
             State = 'WaitingStart';
         }
 
-        function ResetLevel() {
-            Fruits = [];
+        function ResetLevel(keepFruits) {
+            if (!keepFruits) Fruits = [];
             DamageNumbers = [];
             MergeEffects = [];
             TurnCount = 0;
