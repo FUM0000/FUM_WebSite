@@ -539,6 +539,14 @@
         #UI_Action.action-enemy b, #UI_Action.action-punish b { color: #f87171; }
         #UI_Action.action-heal b { color: #34d399; }
         #UI_Action.action-dodge b { color: #38bdf8; }
+        #UI_Action .dmg-mult {
+            font-size: 0.72em;
+            color: var(--ink-dim);
+            font-weight: 600;
+            margin-left: 6px;
+            letter-spacing: 0.05em;
+            opacity: 0.85;
+        }
         #UI_Action.action-player { --act-pop: clamp(40px, 16vw, 150px); }
         #UI_Action.action-enemy,
         #UI_Action.action-punish,
@@ -1119,6 +1127,11 @@
         }
         ResizeCanvas();
         window.addEventListener('resize', ResizeCanvas);
+        window.addEventListener('resize', () => {
+            if (UI_Action.classList.contains('visible')) {
+                RepositionActionPopup(UI_Action.className.replace('visible', '').trim());
+            }
+        });
 
         function IsMobile() {
             return window.innerWidth <= 768;
@@ -1580,9 +1593,36 @@
             messageTimer = 0;
         }
 
+        function RepositionActionPopup(className) {
+            const tb = UI_TopBar.getBoundingClientRect();
+            if (tb.height > 0) {
+                UI_Action.style.top = (tb.bottom + 4) + 'px';
+            }
+
+            let target = null;
+            if (className && (className.indexOf('enemy') >= 0 || className.indexOf('punish') >= 0)) {
+                target = UI_PlayerPanel;
+            } else if (className && (className.indexOf('player') >= 0 || className.indexOf('heal') >= 0)) {
+                target = UI_EnemyPanel;
+            }
+
+            const vwCenter = window.innerWidth / 2;
+            let center = vwCenter;
+            if (target) {
+                const r = target.getBoundingClientRect();
+                if (r.width > 0) center = r.left + r.width / 2;
+            }
+            const boxW = UI_Action.offsetWidth || 220;
+            const minC = boxW / 2 + 8;
+            const maxC = Math.max(minC, window.innerWidth - boxW / 2 - 8);
+            center = Math.max(minC, Math.min(maxC, center));
+            UI_Action.style.setProperty('--act-pop', (center - vwCenter) + 'px');
+        }
+
         function ShowAction(text, className, onConfirm) {
             document.getElementById('UI_Action_Text').innerHTML = text;
             UI_Action.className = 'visible' + (className ? ' ' + className : '');
+            RepositionActionPopup(className);
             actionNext = onConfirm;
             State = 'Action';
         }
@@ -2375,8 +2415,8 @@
             Fruits = Fruits.filter(f => f !== fruit);
 
             let dmg = baseDmg;
-            let multText = prevTurnCombos > 0 ? ' (×' + parseFloat(mult.toFixed(2)) + ')' : '';
-            let outText = 'Your attack' + multText + ' <b>-' + dmg + ' HP</b>';
+            const multText = prevTurnCombos > 0 ? ' <span class="dmg-mult">×' + parseFloat(mult.toFixed(2)) + '</span>' : '';
+            let outText = 'Your attack <b>-' + dmg + ' HP</b>' + multText;
             let outClass = 'action-player';
 
             if (lastEnemyAction !== 'attack') {
@@ -2387,13 +2427,13 @@
                     outClass = 'action-dodge';
                 } else if (roll === 'reduce') {
                     dmg = Math.max(1, Math.floor(baseDmg * 0.5));
-                    outText = 'Enemy deflects <b>-' + dmg + ' HP</b>';
+                    outText = 'Enemy deflects <b>-' + dmg + ' HP</b>' + multText;
                 }
             }
 
             DamageNumbers.push({
                 x: fruit.x, y: fruit.y,
-                text: '-' + dmg,
+                text: '-' + dmg + (dmg > 0 && mult > 1 ? ' ×' + parseFloat(mult.toFixed(2)) : ''),
                 color: dmg === 0 ? '#38bdf8' : '#ff6b6b',
                 alpha: 1,
                 vy: -2.5,
