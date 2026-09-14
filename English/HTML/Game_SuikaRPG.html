@@ -2639,13 +2639,18 @@
             return clientY - rect.top;
         }
 
+        function ClampDropX(x) {
+            const r = FRUITS[CurrentFruitType].radius;
+            return Math.max(10 + r, Math.min(CW - 10 - r, x));
+        }
+
         function shouldIgnoreClick() {
             return (performance.now() - lastTouchTime) < 700;
         }
 
         Canvas.addEventListener('mousemove', (e) => {
             if (State === 'Playing') {
-                DropX = Math.max(24, Math.min(CW - 24, GetCanvasX(e.clientX)));
+                DropX = ClampDropX(GetCanvasX(e.clientX));
             }
         });
 
@@ -2681,7 +2686,7 @@
         Canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
             if (State === 'Playing' && e.touches.length > 0) {
-                DropX = Math.max(24, Math.min(CW - 24, GetCanvasX(e.touches[0].clientX)));
+                DropX = ClampDropX(GetCanvasX(e.touches[0].clientX));
                 touchMoved = true;
             }
         }, { passive: false });
@@ -2697,7 +2702,7 @@
                 if (e.touches.length > 0) {
                     const cx = GetCanvasX(e.touches[0].clientX);
                     const cy = GetCanvasY(e.touches[0].clientY);
-                    DropX = Math.max(24, Math.min(CW - 24, cx));
+                    DropX = ClampDropX(cx);
                     touchStartX = cx;
                     touchStartY = cy;
                     touchMoved = false;
