@@ -132,6 +132,54 @@
             border-radius: 12px;
             min-width: 120px;
         }
+        #UI_Stage_Progress {
+            width: 100%;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .stage-progress-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition: all 0.35s ease;
+        }
+        .stage-dot-active {
+            width: 11px;
+            height: 11px;
+        }
+        .stage-dot-active.stage-dot-start { box-shadow: 0 0 6px rgba(52, 211, 153, 0.7); }
+        .stage-dot-active.stage-dot-mid { box-shadow: 0 0 6px rgba(255, 159, 31, 0.7); }
+        .stage-dot-active.stage-dot-end { box-shadow: 0 0 6px rgba(56, 189, 248, 0.7); }
+        .stage-dot-start { background: var(--success); }
+        .stage-dot-mid { background: var(--accent-2); }
+        .stage-dot-end { background: var(--info); }
+        .stage-progress-track {
+    flex: 1;
+    position: relative;
+    height: 7px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+}
+        .stage-progress-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0%;
+            z-index: 1;
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+        .track-seg-1 .stage-progress-fill {
+            background: linear-gradient(90deg, var(--success), var(--accent-2));
+        }
+        .track-seg-2 .stage-progress-fill {
+            background: linear-gradient(90deg, var(--accent-2), var(--info));
+        }
         #UI_Location {
             color: var(--ink);
             font-size: 0.8rem;
@@ -886,10 +934,15 @@
                 grid-area: status;
                 order: 3;
                 flex-direction: row;
+                flex-wrap: wrap;
                 justify-content: space-between;
                 min-width: 0;
                 padding: 4px 8px;
                 font-size: 0.6rem;
+            }
+            #UI_Stage_Progress {
+                flex-basis: 100%;
+                margin-bottom: 1px;
             }
             #UI_Player_Label, #UI_Enemy_Name {
                 font-size: 0.62rem;
@@ -1097,6 +1150,17 @@
         const UI_StatusPanel = document.createElement('div');
         UI_StatusPanel.id = 'UI_Status_Panel';
         UI_StatusPanel.innerHTML = `
+            <div id="UI_Stage_Progress">
+                <div class="stage-progress-dot stage-dot-start" id="Stage_Dot_Start"></div>
+                <div class="stage-progress-track track-seg-1" id="Stage_Track_1">
+                    <div class="stage-progress-fill" id="UI_Stage_Progress_Fill"></div>
+                </div>
+                <div class="stage-progress-dot stage-dot-mid" id="Stage_Dot_Mid"></div>
+                <div class="stage-progress-track track-seg-2" id="Stage_Track_2">
+                    <div class="stage-progress-fill" id="UI_Stage_Progress_Fill_2"></div>
+                </div>
+                <div class="stage-progress-dot stage-dot-end" id="Stage_Dot_End"></div>
+            </div>
             <div id="UI_Location">Grasslands</div>
             <div id="UI_Turn">Turn 0</div>
         `;
@@ -1398,6 +1462,45 @@
             }
         }
 
+        function UpdateStageProgress() {
+            const fill1 = document.getElementById('UI_Stage_Progress_Fill');
+            const fill2 = document.getElementById('UI_Stage_Progress_Fill_2');
+            const track1 = document.getElementById('Stage_Track_1');
+            const track2 = document.getElementById('Stage_Track_2');
+            const dotStart = document.getElementById('Stage_Dot_Start');
+            const dotMid   = document.getElementById('Stage_Dot_Mid');
+            const dotEnd   = document.getElementById('Stage_Dot_End');
+            if (!fill1 || !fill2) return;
+            const chapterIdx = CurrentChapter();
+            const defeatedInArea = EnemyIndex - chapterIdx * 2;
+            const hpFrac = EnemyMaxHp > 0 ? Clamp(1 - EnemyHp / EnemyMaxHp, 0, 1) : 0;
+            const progress = (defeatedInArea + hpFrac) / 2;
+            fill1.style.width = Math.min(100, progress * 200) + '%';
+            fill2.style.width = Math.max(0, Math.min(100, (progress - 0.5) * 200)) + '%';
+
+            [dotStart, dotMid, dotEnd].forEach(d => d && d.classList.remove('stage-dot-active'));
+            let activeDot = progress <= 0 ? dotStart : progress < 1 ? dotMid : dotEnd;
+            if (activeDot) activeDot.classList.add('stage-dot-active');
+
+            const startC = 'rgba(52,211,153,0.4)';
+            const midC   = 'rgba(255,159,31,0.4)';
+            const endC   = 'rgba(56,189,248,0.4)';
+            const grey   = 'rgba(255,255,255,0.08)';
+            let t1bg, t2bg;
+            if (progress <= 0) {
+                t1bg = 'linear-gradient(90deg, ' + startC + ', ' + grey + ')';
+                t2bg = grey;
+            } else if (progress < 1) {
+                t1bg = 'linear-gradient(90deg, ' + grey + ', ' + midC + ')';
+                t2bg = 'linear-gradient(90deg, ' + midC + ', ' + grey + ')';
+            } else {
+                t1bg = grey;
+                t2bg = 'linear-gradient(90deg, ' + grey + ', ' + endC + ')';
+            }
+            if (track1) track1.style.background = t1bg;
+            if (track2) track2.style.background = t2bg;
+        }
+
         function UpdateUI() {
             document.getElementById('UI_Player_Label').textContent = 'Lv.' + PlayerLevel;
 
@@ -1429,6 +1532,8 @@
                 EnemyFruitTimer > 0 ? EnemyFruitSummary() + ' ⚡' + EnemyFruitPower() : '—';
 
             document.getElementById('UI_Next_Fruit').textContent = FRUITS[NextFruitType].emoji;
+
+            UpdateStageProgress();
         }
 
         function ShowMessage(text, duration, className) {
