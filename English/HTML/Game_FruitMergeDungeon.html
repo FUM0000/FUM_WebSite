@@ -821,6 +821,73 @@
             color: var(--ink-dim);
             font-weight: 500;
         }
+        .stat-btns {
+            display: flex;
+            gap: 6px;
+            margin-left: 10px;
+        }
+        .stat-btn {
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--panel-border);
+            color: var(--ink);
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: all 0.15s ease;
+        }
+        .stat-btn:hover {
+            border-color: var(--accent-2);
+            background: rgba(251, 191, 36, 0.12);
+            color: #fde047;
+        }
+        .stat-btn:active {
+            transform: scale(0.88);
+        }
+        .stat-btn:disabled {
+            opacity: 0.28;
+            pointer-events: none;
+        }
+        .stat-confirm {
+            margin-top: 12px;
+            padding: 9px 0;
+            text-align: center;
+            align-self: stretch;
+            border-radius: 10px;
+            border: 1px solid var(--accent-2);
+            background: rgba(251, 191, 36, 0.14);
+            color: #fde047;
+            font-weight: 700;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .stat-confirm:hover {
+            background: rgba(251, 191, 36, 0.26);
+        }
+        .stat-confirm:active {
+            transform: scale(0.97);
+        }
+        .stat-confirm.off {
+            opacity: 0.32;
+            pointer-events: none;
+        }
+        .info-stat-value {
+            min-width: 44px;
+            text-align: right;
+            font-weight: 700;
+        }
         .info-close {
             margin-top: 16px;
             padding: 10px 22px;
@@ -1077,8 +1144,13 @@
 
         const SHOP_PRICES = { potion: 30, hp: 40, atk: 40, agi: 40 };
 
-        const AGI_BASE = 10;
-        const AGI_PER_LEVEL = 1;
+        const DEX_BASE = 10;
+        const POW_BASE = 10;
+
+        const SP_PER_LEVEL = 3;
+        const ATK_PER_SP = 2;
+        const HP_PER_SP = 25;
+        const DEX_PER_SP = 1;
 
         const ENDING_TEXT =
             'With the Dark Lord shattered, shadow drains from the land. The kingdom breathes free at last, ' +
@@ -1258,8 +1330,8 @@
                 <div id="UI_Shop_Gold">💰 0</div>
                 <div class="shop-item" data-buy="potion"><span>Potion</span><span class="price">30G</span></div>
                 <div class="shop-item" data-buy="hp"><span>Max HP +25</span><span class="price">40G</span></div>
-                <div class="shop-item" data-buy="atk"><span>ATK +2</span><span class="price">40G</span></div>
-                <div class="shop-item" data-buy="agi"><span>AGI +1</span><span class="price">40G</span></div>
+                <div class="shop-item" data-buy="atk"><span>POW +2</span><span class="price">40G</span></div>
+                <div class="shop-item" data-buy="agi"><span>DEX +1</span><span class="price">40G</span></div>
                 <div class="shop-close">Continue ▶</div>
             </div>
         `;
@@ -1295,9 +1367,32 @@
                 <div class="info-track"><div class="info-hp-fill" id="Info_Hp_Fill"></div></div>
                 <div class="info-bar-label"><span>EXP</span><span id="Info_Exp_Text"></span></div>
                 <div class="info-track" style="height:6px"><div class="info-exp-fill" id="Info_Exp_Fill"></div></div>
-                <div class="info-row"><span class="info-label">Level</span><span id="Info_Level"></span></div>
-                <div class="info-row"><span class="info-label">ATK Bonus</span><span id="Info_Atk"></span></div>
-                <div class="info-row"><span class="info-label">Agility</span><span id="Info_Agi"></span></div>
+                <div class="info-row"><span class="info-label">Level</span><span id="Info_Level"></span><span class="info-stat-value" id="Info_Points" style="color:#fde047"></span></div>
+                <div class="info-row">
+                    <span class="info-label">💗 HP</span>
+                    <span class="info-stat-value" id="Info_HpStat"></span>
+                    <span class="stat-btns">
+                        <span class="stat-btn" data-stat="hp">+</span>
+                        <span class="stat-btn" data-stat="hp" data-dir="-1">−</span>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⚔ POW</span>
+                    <span class="info-stat-value" id="Info_Pow"></span>
+                    <span class="stat-btns">
+                        <span class="stat-btn" data-stat="pow">+</span>
+                        <span class="stat-btn" data-stat="pow" data-dir="-1">−</span>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💨 DEX</span>
+                    <span class="info-stat-value" id="Info_Dex"></span>
+                    <span class="stat-btns">
+                        <span class="stat-btn" data-stat="dex">+</span>
+                        <span class="stat-btn" data-stat="dex" data-dir="-1">−</span>
+                    </span>
+                </div>
+                <div class="stat-confirm" id="Stat_Confirm">Apply ✓</div>
                 <div class="info-row"><span class="info-label">Gold</span><span id="Info_Gold" style="color:#fbbf24"></span></div>
                 <div class="info-row"><span class="info-label">Potion</span><span id="Info_Potion"></span></div>
                 <div class="info-close">Close</div>
@@ -1313,8 +1408,8 @@
                 <div class="info-bar-label"><span>HP</span><span id="EInfo_Hp_Text"></span></div>
                 <div class="info-track"><div class="info-hp-fill" id="EInfo_Hp_Fill"></div></div>
                 <div class="info-row"><span class="info-label">Level</span><span id="EInfo_Level"></span></div>
-                <div class="info-row"><span class="info-label">ATK</span><span id="EInfo_Atk"></span></div>
-                <div class="info-row"><span class="info-label">Agility</span><span id="EInfo_Agi"></span></div>
+                <div class="info-row"><span class="info-label">POW</span><span id="EInfo_Pow"></span></div>
+                <div class="info-row"><span class="info-label">DEX</span><span id="EInfo_Dex"></span></div>
                 <div class="info-row"><span class="info-label">Reward</span><span id="EInfo_Reward" style="color:#fbbf24"></span></div>
                 <div class="info-row"><span class="info-label">Next attack</span><span id="EInfo_Next"></span></div>
                 <div class="info-close">Close</div>
@@ -1381,7 +1476,7 @@
                     } else if (key === 'atk') {
                         AttackBonus += 2;
                     } else if (key === 'agi') {
-                        AgilityBonus += 1;
+                        DexBonus += 1;
                     }
                     UpdateUI();
                 } else {
@@ -1424,6 +1519,18 @@
         });
 
         UI_PlayerInfo.addEventListener('click', (e) => {
+            const btn = e.target.closest('.stat-btn');
+            if (btn) {
+                e.stopPropagation();
+                const dir = btn.dataset.dir ? parseInt(btn.dataset.dir, 10) : 1;
+                ChangeDraft(btn.dataset.stat, dir);
+                return;
+            }
+            if (e.target.closest('#Stat_Confirm')) {
+                e.stopPropagation();
+                ConfirmStats();
+                return;
+            }
             if (e.target.closest('.info-close') || e.target === UI_PlayerInfo) {
                 ClosePlayerInfo();
             }
@@ -1444,6 +1551,13 @@
         let PlayerLevel = 1;
         let PlayerExp = 0;
         let AttackBonus = 0;
+        let StatPoints = 0;
+        let PowerStat = 0;
+        let HpStat = 0;
+        let DexStat = 0;
+        let DraftHp = 0;
+        let DraftPow = 0;
+        let DraftDex = 0;
         let Gold = 0;
         let Potions = 1;
         let EnemyHp = 80;
@@ -1473,7 +1587,7 @@
 
         let EnemyFruitCounts = new Array(FRUITS.length).fill(0);
         let EnemyFruitTimer = 0;
-        let AgilityBonus = 0;
+        let DexBonus = 0;
         let lastEnemyAction = 'build';
         let playerActionThisTurn = 'drop';
         let comboCount = 0;
@@ -1512,8 +1626,7 @@
             while (PlayerExp >= ExpToNext(PlayerLevel)) {
                 PlayerExp -= ExpToNext(PlayerLevel);
                 PlayerLevel++;
-                PlayerMaxHp += 20;
-                AttackBonus += 2;
+                StatPoints += SP_PER_LEVEL;
                 PlayerHp = PlayerMaxHp;
             }
         }
@@ -1754,7 +1867,52 @@
         }
 
         function PlayerAgility() {
-            return AGI_BASE + AgilityBonus + (PlayerLevel - 1) * AGI_PER_LEVEL;
+            return DEX_BASE + DexBonus + DexStat * DEX_PER_SP;
+        }
+
+        function DraftTotal() {
+            return DraftHp + DraftPow + DraftDex;
+        }
+
+        function ChangeDraft(stat, dir) {
+            if (!UI_PlayerInfo.classList.contains('open')) return;
+            const remaining = StatPoints - DraftTotal();
+            if (dir > 0) {
+                if (remaining <= 0) return;
+                if (stat === 'hp') DraftHp++;
+                else if (stat === 'pow') DraftPow++;
+                else if (stat === 'dex') DraftDex++;
+            } else {
+                if (stat === 'hp') {
+                    if (DraftHp <= 0) return;
+                    DraftHp--;
+                } else if (stat === 'pow') {
+                    if (DraftPow <= 0) return;
+                    DraftPow--;
+                } else if (stat === 'dex') {
+                    if (DraftDex <= 0) return;
+                    DraftDex--;
+                }
+            }
+            RefreshPlayerInfo();
+        }
+
+        function ConfirmStats() {
+            if (!UI_PlayerInfo.classList.contains('open')) return;
+            const total = DraftTotal();
+            if (total <= 0) return;
+            PlayerMaxHp += DraftHp * HP_PER_SP;
+            PlayerHp += DraftHp * HP_PER_SP;
+            AttackBonus += DraftPow * ATK_PER_SP;
+            HpStat += DraftHp;
+            PowerStat += DraftPow;
+            DexStat += DraftDex;
+            StatPoints -= total;
+            DraftHp = 0;
+            DraftPow = 0;
+            DraftDex = 0;
+            RefreshPlayerInfo();
+            UpdateUI();
         }
 
         function EnemyAgility() {
@@ -2078,10 +2236,20 @@
             UpdateUI();
         }
 
+        function GoldRewardRange() {
+            const enemy = GetEnemy();
+            const base = enemy.gold + Level * 3;
+            return {
+                min: Math.ceil(base * 0.75),
+                max: Math.floor(base * 1.25)
+            };
+        }
+
         function OnEnemyDefeated() {
             const enemy = GetEnemy();
             const expReward = enemy.exp + Level * 2;
-            const goldReward = enemy.gold + Level * 3;
+            const range = GoldRewardRange();
+            const goldReward = range.min + Math.floor(Math.random() * (range.max - range.min + 1));
             const dropPotion = Math.random() < 0.3;
 
             Gold += goldReward;
@@ -2093,7 +2261,8 @@
             let rewardText = 'EXP +' + expReward + '&ensp;💰+' + goldReward;
             if (dropPotion) rewardText += '<br>🎁 Potion ×1';
             if (leveled) {
-                rewardText += '<br>⬆ LEVEL UP! → Lv.' + PlayerLevel;
+                const spGained = (PlayerLevel - lvlBefore) * SP_PER_LEVEL;
+                rewardText += '<br>⬆ LEVEL UP! → Lv.' + PlayerLevel + '&ensp;★ SP +' + spGained;
                 AnimateLevelUp();
             }
 
@@ -2321,9 +2490,12 @@
         }
 
         function RefreshPlayerInfo() {
+            const remaining = StatPoints - DraftTotal();
+            document.getElementById('Info_Points').textContent = 'SP ' + remaining;
             document.getElementById('Info_Level').textContent = PlayerLevel;
-            document.getElementById('Info_Atk').textContent = '+' + AttackBonus;
-            document.getElementById('Info_Agi').textContent = PlayerAgility();
+            document.getElementById('Info_Pow').textContent = POW_BASE + AttackBonus + DraftPow * ATK_PER_SP;
+            document.getElementById('Info_HpStat').textContent = PlayerMaxHp + DraftHp * HP_PER_SP;
+            document.getElementById('Info_Dex').textContent = PlayerAgility() + DraftDex * DEX_PER_SP;
             document.getElementById('Info_Hp_Text').textContent =
                 Math.max(0, Math.ceil(PlayerHp)) + ' / ' + PlayerMaxHp;
             const pRatio = Math.max(0, PlayerHp / PlayerMaxHp);
@@ -2334,6 +2506,14 @@
                 (Math.min(1, PlayerExp / expNeed) * 100) + '%';
             document.getElementById('Info_Gold').textContent = '💰 ' + Gold;
             document.getElementById('Info_Potion').textContent = '×' + Potions;
+
+            UI_PlayerInfo.querySelectorAll('.stat-btn').forEach((b) => {
+                const dir = b.dataset.dir ? parseInt(b.dataset.dir, 10) : 1;
+                const stat = b.dataset.stat;
+                const drafted = stat === 'hp' ? DraftHp : stat === 'pow' ? DraftPow : DraftDex;
+                b.disabled = dir > 0 ? remaining <= 0 : drafted <= 0;
+            });
+            document.getElementById('Stat_Confirm').classList.toggle('off', DraftTotal() <= 0);
         }
 
         function OpenPlayerInfo() {
@@ -2346,6 +2526,9 @@
         }
 
         function ClosePlayerInfo() {
+            DraftHp = 0;
+            DraftPow = 0;
+            DraftDex = 0;
             UI_PlayerInfo.classList.remove('open');
             if (prevStateBeforeInfo === 'Playing') {
                 State = 'Playing';
@@ -2362,11 +2545,12 @@
             const eRatio = Math.max(0, EnemyHp / EnemyMaxHp);
             document.getElementById('EInfo_Hp_Fill').style.width = (eRatio * 100) + '%';
             document.getElementById('EInfo_Level').textContent = Level;
-            document.getElementById('EInfo_Atk').textContent =
+            document.getElementById('EInfo_Pow').textContent =
                 strongest ? strongest.emoji + ' ' + strongest.damage : '—';
-            document.getElementById('EInfo_Agi').textContent = EnemyAgility();
+            document.getElementById('EInfo_Dex').textContent = EnemyAgility();
+            const rewardRange = GoldRewardRange();
             document.getElementById('EInfo_Reward').textContent =
-                'EXP ' + (enemy.exp + Level * 2) + ' / 💰 ' + (enemy.gold + Level * 3);
+                'EXP ' + (enemy.exp + Level * 2) + ' / 💰 ' + rewardRange.min + '-' + rewardRange.max;
             const threshold = GetEnemyAttackCycle();
             const next = Math.max(0, threshold - EnemyFruitTimer);
             document.getElementById('EInfo_Next').textContent = next + ' turn' + (next === 1 ? '' : 's');
@@ -2428,7 +2612,7 @@
             playerActionThisTurn = 'attack';
 
             const mult = ComboMultiplier();
-            const baseDmg = Math.floor((fruit.damage + AttackBonus) * mult);
+            const baseDmg = Math.floor((fruit.damage + POW_BASE + AttackBonus) * mult);
             Fruits = Fruits.filter(f => f !== fruit);
 
             let dmg = baseDmg;
@@ -2930,6 +3114,13 @@
             PlayerLevel = 1;
             PlayerExp = 0;
             AttackBonus = 0;
+            StatPoints = 0;
+            PowerStat = 0;
+            HpStat = 0;
+            DexStat = 0;
+            DraftHp = 0;
+            DraftPow = 0;
+            DraftDex = 0;
             Potions = 1;
             PlayerMaxHp = 200;
             PlayerHp = PlayerMaxHp;
@@ -2950,7 +3141,7 @@
             NextFruitType = 0;
             EnemyFruitCounts = new Array(FRUITS.length).fill(0);
             EnemyFruitTimer = 0;
-            AgilityBonus = 0;
+            DexBonus = 0;
             lastEnemyAction = 'build';
             playerActionThisTurn = 'drop';
             comboCount = 0;

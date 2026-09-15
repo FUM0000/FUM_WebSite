@@ -2544,28 +2544,34 @@
                 }
                 addLine(archVerts, BLUE, 0.45, this._buildOriginAng, 1.0);
 
-                addSmoothRing(R_OUT, 1.0, BLUE, 0.45, this._buildOriginAng);
-                addSmoothRing(R_OUT, 4.4, BLUE, 0.45, this._buildOriginAng);
-
-                // ============ Structural X-braces (tracery, clearly not floors) ============
-                const braceHeights = [9.6, 19.6];
-                braceHeights.forEach((by, bi) => {
-                    const va = [];
-                    for (let i = 0; i < N_COL; i++) {
-                        const a0 = (i / N_COL) * Math.PI * 2;
-                        const a1 = ((i + 1) / N_COL) * Math.PI * 2;
-                        const pA0 = pRing(a0, R_OUT);
-                        const pA1 = pRing(a1, R_OUT);
-                        const hL = by - 1.4;
-                        const hH = by + 1.4;
-                        pushLine(va, pA0[0], hL, pA0[1], pA1[0], hH, pA1[1]);
-                        pushLine(va, pA0[0], hH, pA0[1], pA1[0], hL, pA1[1]);
+                // ============ Ouroboros interlace belts at each floor slab ============
+                // Each floor carries interwoven strata wound around the SAME perfect
+                // circle: every strand keeps its radius constant, so from the y axis
+                // the belt appears as a true ring. The rise-and-fall of the strands is
+                // the wave of harmony (Pythagoras), their crossing an endless knot —
+                // the ouroboros of the civilizations' ornaments.
+                const beltHeights = [5, 10, 15, 20, 25];
+                const beltSegs = 48;
+                const beltStrand = (va, rr, w, amp, ph, fy) => {
+                    for (let s = 0; s < beltSegs; s++) {
+                        const a0 = (s / beltSegs) * Math.PI * 2;
+                        const a1 = ((s + 1) / beltSegs) * Math.PI * 2;
+                        const y0 = fy + amp * Math.sin(w * a0 + ph);
+                        const y1 = fy + amp * Math.sin(w * a1 + ph);
+                        pushLine(va, Math.cos(a0) * rr, y0, Math.sin(a0) * rr,
+                                    Math.cos(a1) * rr, y1, Math.sin(a1) * rr);
                     }
-                    addLine(va, BLUE, 0.45, this._buildOriginAng, by);
+                };
+                beltHeights.forEach((fy) => {
+                    const va = [];
+                    // outer interlace: an entwined wave of ascent and descent
+                    beltStrand(va, 7.30, 12, 0.50, 0.0,        fy);
+                    beltStrand(va, 7.30, 12, 0.50, Math.PI,    fy);
+                    // inner interlace: a finer braid, phase-shifted
+                    beltStrand(va, 7.15, 24, 0.25,  Math.PI * 0.5, fy);
+                    beltStrand(va, 7.15, 24, 0.25, -Math.PI * 0.5, fy);
+                    addLine(va, BLUE, 0.45, this._buildOriginAng, fy);
                 });
-
-                // ============ Drum ring crowning the columns ============
-                addSmoothRing(R_OUT, COL_H, BLUE, 0.45, this._buildOriginAng);
 
                 // ============ Ribbed lantern dome rising into the fish lane ============
                 const domeLevels = [
