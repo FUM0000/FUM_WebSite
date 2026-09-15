@@ -2242,7 +2242,7 @@
                 const BLUE = 0xaee3ff;
                 const TOP_Y = 33.4;
                 const R_OUT = 8;
-                const N_COL = 24;
+                const N_COL = 16;
                 const COL_H = 29.2;
                 const LINE_WIDTH = 0.035;
 
@@ -2422,18 +2422,23 @@
                     metalness: 0.5,
                     fog: false
                 });
-                const shaftGeo = new THREE.CylinderGeometry(0.16, 0.18, COL_H, 16);
+                const shaftGeo = new THREE.CylinderGeometry(0.16, 0.18, COL_H, 8);
                 shaftGeo.translate(0, COL_H * 0.5, 0);
-                const baseGeo = new THREE.CylinderGeometry(0.30, 0.34, 0.55, 16);
+                // Base: a squared pedestal (a cube slightly narrower at the top),
+                // 4 segments -> the blunt block used at construction sites.
+                const baseGeo = new THREE.CylinderGeometry(0.30, 0.34, 0.55, 4);
                 baseGeo.translate(0, 0.275, 0);
-                const capGeo = new THREE.CylinderGeometry(0.27, 0.35, 0.55, 16);
+                const capGeo = new THREE.CylinderGeometry(0.27, 0.35, 0.55, 8);
                 capGeo.translate(0, COL_H + 0.275, 0);
                 for (let i = 0; i < N_COL; i++) {
                     const a = (i / N_COL) * Math.PI * 2;
                     const p = pRing(a, R_OUT);
                     const cg = new THREE.Group();
                     cg.add(new THREE.Mesh(shaftGeo, columnMat));
-                    cg.add(new THREE.Mesh(baseGeo, columnMat));
+                    // A flat edge (not a corner) of the squared pedestal faces the center.
+                    const baseMesh = new THREE.Mesh(baseGeo, columnMat);
+                    baseMesh.rotation.y = Math.PI / 4 - a;
+                    cg.add(baseMesh);
                     cg.add(new THREE.Mesh(capGeo, columnMat));
                     cg.position.set(p[0], 0, p[1]);
                     cg.scale.set(0.001, 0.001, 0.001);
@@ -2535,14 +2540,6 @@
                 _floorDisc.layers.enable(BLOOM_LAYER);
                 this._group.add(_floorDisc);
                 this._lineParts.push({ obj: _floorDisc, mat: _floorMat, base: 1.0, delay: 0 });
-
-                const archVerts = [];
-                for (let i = 0; i < N_COL; i++) {
-                    const a0 = (i / N_COL) * Math.PI * 2;
-                    const a1 = ((i + 1) / N_COL) * Math.PI * 2;
-                    pointedArch(archVerts, a0, a1, R_OUT, 1.0, 4.4, 2);
-                }
-                addLine(archVerts, BLUE, 0.45, this._buildOriginAng, 1.0);
 
                 // ============ Ouroboros interlace belts at each floor slab ============
                 // Each floor carries interwoven strata wound around the SAME perfect
