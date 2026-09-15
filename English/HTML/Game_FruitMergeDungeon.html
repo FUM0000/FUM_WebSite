@@ -1454,6 +1454,8 @@
         let DropX = CW / 2;
         let CanDrop = true;
         let DropCooldown = 0;
+        let NextFruitPending = false;
+        let NextFruitCooldown = 0;
         let DamageNumbers = [];
         let shakeTimer = 0;
         let shakeIntensity = 0;
@@ -2174,7 +2176,7 @@
                 return;
             }
 
-            const addedType = EnemyAddRandomFruit();
+            EnemyAddRandomFruit();
             EnemyFruitTimer++;
 
             const threshold = GetEnemyAttackCycle();
@@ -2216,10 +2218,8 @@
                 });
             } else {
                 lastEnemyAction = 'build';
-                const strongest = EnemyStrongestFruit();
-                ShowAction('Enemy adds ' + FRUITS[addedType].emoji + ' — Next: <b>' + (strongest ? strongest.emoji + ' -' + strongest.damage + ' HP' : '—') + '</b>', 'action-enemy', () => {
-                    State = 'Playing';
-                });
+                State = 'Playing';
+                UpdateUI();
             }
         }
 
@@ -2394,6 +2394,7 @@
         function SpawnFruit() {
             if (!CanDrop || State !== 'Playing') return;
             if (Fruits.length >= MAX_FRUITS_ON_SCREEN) return;
+            if (NextFruitPending) return;
             BeginPlayerTurn();
             playerActionThisTurn = 'drop';
 
@@ -2402,8 +2403,8 @@
             f.vy = 1;
             Fruits.push(f);
 
-            CurrentFruitType = NextFruitType;
-            NextFruitType = Math.floor(Math.random() * Math.min(4 + Math.floor(Level / 2), FRUITS.length));
+            NextFruitPending = true;
+            NextFruitCooldown = 2.0;
 
             CanDrop = false;
             DropCooldown = 0.4;
@@ -2411,6 +2412,14 @@
             UpdateUI();
 
             EnemyAction();
+        }
+
+        function ReplenishNextFruit() {
+            if (!NextFruitPending) return;
+            NextFruitPending = false;
+            CurrentFruitType = NextFruitType;
+            NextFruitType = Math.floor(Math.random() * Math.min(4 + Math.floor(Level / 2), FRUITS.length));
+            UpdateUI();
         }
 
         function AttackWithFruit(fruit) {
@@ -2525,6 +2534,13 @@
                     }
                     EnemyAction(5, 'The enemy punishes you');
                     UpdateUI();
+                }
+            }
+
+            if (NextFruitPending) {
+                NextFruitCooldown -= dt;
+                if (NextFruitCooldown <= 0 && State === 'Playing') {
+                    ReplenishNextFruit();
                 }
             }
 
@@ -2682,18 +2698,20 @@
                 Ctx.stroke();
                 Ctx.restore();
 
-                const previewFruit = FRUITS[CurrentFruitType];
-                const previewR = previewFruit.radius * FruitScale;
-                Ctx.globalAlpha = 0.5;
-                Ctx.beginPath();
-                Ctx.arc(DropX, dropY, previewR, 0, Math.PI * 2);
-                Ctx.fillStyle = previewFruit.color;
-                Ctx.fill();
-                Ctx.font = `${Math.max(10, previewR * 0.9)}px serif`;
-                Ctx.textAlign = 'center';
-                Ctx.textBaseline = 'middle';
-                Ctx.fillText(previewFruit.emoji, DropX, dropY + 1);
-                Ctx.globalAlpha = 1;
+                if (!NextFruitPending) {
+                    const previewFruit = FRUITS[CurrentFruitType];
+                    const previewR = previewFruit.radius * FruitScale;
+                    Ctx.globalAlpha = 0.5;
+                    Ctx.beginPath();
+                    Ctx.arc(DropX, dropY, previewR, 0, Math.PI * 2);
+                    Ctx.fillStyle = previewFruit.color;
+                    Ctx.fill();
+                    Ctx.font = `${Math.max(10, previewR * 0.9)}px serif`;
+                    Ctx.textAlign = 'center';
+                    Ctx.textBaseline = 'middle';
+                    Ctx.fillText(previewFruit.emoji, DropX, dropY + 1);
+                    Ctx.globalAlpha = 1;
+                }
             }
 
             for (const e of MergeEffects) {
@@ -2918,7 +2936,7 @@
             EnemyIndex = 0;
             EnemyMaxHp = ScaleEnemyHp();
             EnemyHp = EnemyMaxHp;
-Fruits = [];
+            Fruits = [];
             DamageNumbers = [];
             MergeEffects = [];
             HoveredFruit = null;
@@ -2926,6 +2944,8 @@ Fruits = [];
             TurnCount = 0;
             DropCooldown = 0;
             CanDrop = true;
+            NextFruitPending = false;
+            NextFruitCooldown = 0;
             CurrentFruitType = 0;
             NextFruitType = 0;
             EnemyFruitCounts = new Array(FRUITS.length).fill(0);
@@ -2956,6 +2976,8 @@ Fruits = [];
             TurnCount = 0;
             DropCooldown = 0;
             CanDrop = true;
+            NextFruitPending = false;
+            NextFruitCooldown = 0;
             CurrentFruitType = Math.floor(Math.random() * Math.min(3 + Math.floor(Level / 2), FRUITS.length));
             NextFruitType = Math.floor(Math.random() * Math.min(3 + Math.floor(Level / 2), FRUITS.length));
             DropX = CW / 2;
