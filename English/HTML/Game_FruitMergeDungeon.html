@@ -497,6 +497,50 @@
             font-size: clamp(0.9rem, 3.5vw, 1.05rem);
             line-height: 1.75;
             color: var(--ink);
+            margin-top: 4px;
+        }
+        .vt-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .vt-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: clamp(0.9rem, 3vw, 1rem);
+        }
+        .vt-label {
+            color: var(--ink-dim);
+            font-weight: 500;
+        }
+        .vt-val {
+            margin-left: auto;
+            font-weight: 700;
+            color: var(--ink);
+        }
+        .vt-level {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 12px;
+            border: 1px solid rgba(251, 191, 36, 0.45);
+            background: rgba(251, 191, 36, 0.10);
+            border-radius: 10px;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-weight: 800;
+            color: #fde047;
+            letter-spacing: 0.04em;
         }
 
         #UI_Action {
@@ -2258,16 +2302,21 @@
             GainExp(expReward);
             const leveled = PlayerLevel > lvlBefore;
 
-            let rewardText = 'EXP +' + expReward + '&ensp;💰+' + goldReward;
-            if (dropPotion) rewardText += '<br>🎁 Potion ×1';
+            let cells = '';
+            let levelRow = '';
             if (leveled) {
                 const spGained = (PlayerLevel - lvlBefore) * SP_PER_LEVEL;
-                rewardText += '<br>⬆ LEVEL UP! → Lv.' + PlayerLevel + '&ensp;★ SP +' + spGained;
+                levelRow = '<div class="vt-level">⬆ LEVEL UP! → Lv.' + PlayerLevel + '&ensp;★ SP +' + spGained + '</div>';
                 AnimateLevelUp();
+            }
+            cells += '<div class="vt-cell"><span>⭐</span><span class="vt-label">EXP</span><span class="vt-val" style="color:#7dd3fc">+' + expReward + '</span></div>';
+            cells += '<div class="vt-cell"><span>💰</span><span class="vt-label">Gold</span><span class="vt-val" style="color:#fbbf24">+' + goldReward + '</span></div>';
+            if (dropPotion) {
+                cells += '<div class="vt-cell"><span>🎁</span><span class="vt-label">Potion</span><span class="vt-val" style="color:#4ade80">×1</span></div>';
             }
 
             State = 'LevelClear';
-            pendingVictoryText = '<div class="vt-title">🏆 Victory</div><div class="vt-reward">' + rewardText + '</div>';
+            pendingVictoryText = '<div class="vt-title">🏆 Victory</div><div class="vt-grid">' + levelRow + cells + '</div>';
 
             const isFinal = EnemyIndex >= ENEMIES.length - 1;
             if (isFinal) {
