@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
-    <title>Suika RPG</title>
+    <title>Fruit Merge Dungeon</title>
     <meta name="robots" content="index, follow">
 
     <style>
@@ -2558,6 +2558,44 @@
 
         /* ─── Render ───────────────────────────────────────────── */
 
+        function DrawFruitHalo(f, intensity, pulse) {
+            const r = f.radius;
+            const glowColor = '255, 214, 130';
+            Ctx.save();
+            Ctx.globalCompositeOperation = 'lighter';
+            const halo = Ctx.createRadialGradient(f.x, f.y, r * 0.6, f.x, f.y, r * 1.7);
+            halo.addColorStop(0, `rgba(${glowColor}, ${0.15 * intensity * pulse})`);
+            halo.addColorStop(1, `rgba(${glowColor}, 0)`);
+            Ctx.fillStyle = halo;
+            Ctx.beginPath();
+            Ctx.arc(f.x, f.y, r * 1.7, 0, Math.PI * 2);
+            Ctx.fill();
+            Ctx.strokeStyle = `rgba(${glowColor}, ${0.22 * intensity})`;
+            Ctx.lineWidth = 1.2 + intensity * 0.5;
+            Ctx.shadowColor = `rgba(${glowColor}, 0.9)`;
+            Ctx.shadowBlur = 5 * intensity;
+            Ctx.beginPath();
+            Ctx.arc(f.x, f.y, r + 3, 0, Math.PI * 2);
+            Ctx.stroke();
+            Ctx.restore();
+        }
+
+        function DrawFruitBodyGlow(f, intensity, pulse) {
+            const r = f.radius;
+            const glowColor = '255, 236, 190';
+            Ctx.save();
+            Ctx.globalCompositeOperation = 'lighter';
+            const inner = Ctx.createRadialGradient(f.x, f.y, r * 0.1, f.x, f.y, r);
+            inner.addColorStop(0, `rgba(255, 255, 235, ${0.20 * intensity * pulse})`);
+            inner.addColorStop(0.7, `rgba(${glowColor}, ${0.08 * intensity * pulse})`);
+            inner.addColorStop(1, `rgba(${glowColor}, 0)`);
+            Ctx.fillStyle = inner;
+            Ctx.beginPath();
+            Ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
+            Ctx.fill();
+            Ctx.restore();
+        }
+
         function Render() {
             Ctx.save();
 
@@ -2623,7 +2661,9 @@
             Ctx.restore();
 
             const dropY = CH * DROP_LINE_Y_RATIO;
-            if (State === 'Playing' && CanDrop) {
+            const showDropGuide = (State === 'Playing' && CanDrop) ||
+                (State !== 'WaitingStart' && State !== 'Intro' && State !== 'LevelClear' && State !== 'GameOver');
+            if (showDropGuide) {
                 Ctx.save();
                 Ctx.setLineDash([6, 6]);
                 Ctx.strokeStyle = 'rgba(255,255,255,0.15)';
@@ -2666,8 +2706,12 @@
                 Ctx.globalAlpha = 1;
             }
 
+            const glowPulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.006);
             for (const f of Fruits) {
+                const sel = (f === PressedFruit) ? 1.4 : (f === HoveredFruit ? 0.9 : 0);
+                if (sel > 0) DrawFruitHalo(f, sel, glowPulse);
                 f.draw();
+                if (sel > 0) DrawFruitBodyGlow(f, sel, glowPulse);
             }
 
             for (const d of DamageNumbers) {
@@ -2699,6 +2743,8 @@
         let touchMoved = false;
         let lastActionTime = 0;
         const ACTION_INTERVAL = 500;
+        let HoveredFruit = null;
+        let PressedFruit = null;
 
         function actionBlocked() {
             return (performance.now() - lastActionTime) < ACTION_INTERVAL;
@@ -2725,8 +2771,28 @@
 
         Canvas.addEventListener('mousemove', (e) => {
             if (State === 'Playing') {
-                DropX = ClampDropX(GetCanvasX(e.clientX));
+                const cx = GetCanvasX(e.clientX);
+                const cy = GetCanvasY(e.clientY);
+                DropX = ClampDropX(cx);
+                HoveredFruit = FindFruitAt(cx, cy);
+                Canvas.style.cursor = HoveredFruit ? 'pointer' : 'default';
             }
+        });
+
+        Canvas.addEventListener('mouseleave', () => {
+            HoveredFruit = null;
+            PressedFruit = null;
+            Canvas.style.cursor = 'default';
+        });
+
+        Canvas.addEventListener('mousedown', (e) => {
+            if (State === 'Playing') {
+                PressedFruit = FindFruitAt(GetCanvasX(e.clientX), GetCanvasY(e.clientY));
+            }
+        });
+
+        Canvas.addEventListener('mouseup', () => {
+            PressedFruit = null;
         });
 
         Canvas.addEventListener('click', (e) => {
@@ -2743,6 +2809,8 @@
                 const target = FindFruitAt(cx, cy);
                 if (target) {
                     AttackWithFruit(target);
+                    HoveredFruit = FindFruitAt(cx, cy);
+                    Canvas.style.cursor = HoveredFruit ? 'pointer' : 'default';
                 } else {
                     SpawnFruit();
                 }
@@ -2763,6 +2831,7 @@
             if (State === 'Playing' && e.touches.length > 0) {
                 DropX = ClampDropX(GetCanvasX(e.touches[0].clientX));
                 touchMoved = true;
+                PressedFruit = null;
             }
         }, { passive: false });
 
@@ -2781,6 +2850,7 @@
                     touchStartX = cx;
                     touchStartY = cy;
                     touchMoved = false;
+                    PressedFruit = FindFruitAt(cx, cy);
                 }
             } else if (State === 'Action') {
                 if (actionBlocked()) return;
@@ -2798,6 +2868,7 @@
         }, { passive: false });
 
         Canvas.addEventListener('touchend', (e) => {
+            PressedFruit = null;
             if (State !== 'Playing') return;
             if (actionBlocked()) return;
             const cx = (e.changedTouches && e.changedTouches.length > 0)
@@ -2812,6 +2883,11 @@
                 }
             }
             SpawnFruit();
+        });
+
+        Canvas.addEventListener('touchcancel', () => {
+            PressedFruit = null;
+            HoveredFruit = null;
         });
 
         /* ─── Game Flow ────────────────────────────────────────── */
@@ -2842,9 +2918,11 @@
             EnemyIndex = 0;
             EnemyMaxHp = ScaleEnemyHp();
             EnemyHp = EnemyMaxHp;
-            Fruits = [];
+Fruits = [];
             DamageNumbers = [];
             MergeEffects = [];
+            HoveredFruit = null;
+            PressedFruit = null;
             TurnCount = 0;
             DropCooldown = 0;
             CanDrop = true;
@@ -2873,6 +2951,8 @@
             if (!keepFruits) Fruits = [];
             DamageNumbers = [];
             MergeEffects = [];
+            HoveredFruit = null;
+            PressedFruit = null;
             TurnCount = 0;
             DropCooldown = 0;
             CanDrop = true;

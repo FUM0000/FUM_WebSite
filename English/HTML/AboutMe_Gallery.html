@@ -2393,19 +2393,223 @@
                     addRing(7.72 + s * 0.14, 0.16 + s * 0.1, GOLD, 0.85, 0, 64);
                 }
 
-                // ============ 1st floor: floor disc + arcade ============
-                const floorRadials = [];
-                for (let k = 0; k < 12; k++) {
-                    const ak = (k / 12) * Math.PI * 2;
-                    const p1 = pRing(ak, 1.3);
-                    const p2 = pRing(ak, 7.8);
-                    pushLine(floorRadials, p1[0], 0.06, p1[1], p2[0], 0.06, p2[1]);
+                // ============ Floor: point-symmetric gallery of mathematical curves ============
+                // A meditation on unity and duality, centered on the building axis.
+                // Every curve below is paired, mirrored, or natively invariant under a 180°
+                // rotation -> the whole floor satisfies central symmetry.
+                // Formulas rendered: golden-ratio (Fibonacci) rings, Seed of Life,
+                // rose curve r=a·cos(4θ), Bernoulli lemniscate r²=a²·cos2θ / r²=a²·sin2θ,
+                // cardioid r=a(1+cosθ), Archimedean spiral r=a·θ,
+                // Fermat spiral r²=a²·θ, and the cochleoid r=a·sinθ/θ.
+                const _floorGeo = new THREE.CircleGeometry(7.5, 128);
+                _floorGeo.rotateX(-Math.PI / 2);
+                const _floorMat = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uOpacity: { value: 0 },
+                        uBaseOp: { value: 0.8 },
+                        uColor: { value: new THREE.Color(BLUE) },
+                        uGold: { value: new THREE.Color(GOLD) },
+                    },
+                    vertexShader: `
+                        varying vec3 vW;
+                        void main() {
+                            vec4 wp = modelMatrix * vec4(position, 1.0);
+                            vW = wp.xyz;
+                            gl_Position = projectionMatrix * viewMatrix * wp;
+                        }
+                    `,
+                    fragmentShader: `
+                        precision highp float;
+                        uniform float uTime;
+                        uniform float uOpacity;
+                        uniform float uBaseOp;
+                        uniform vec3 uColor;
+                        uniform vec3 uGold;
+                        varying vec3 vW;
+                        const float PI  = 3.14159265359;
+                        const float TAU = 6.28318530718;
+                        float sd(float d, float w) { return 1.0 - smoothstep(0.0, w, d); }
+                        float ringAt(vec2 p, float rr, float w) { return sd(abs(length(p) - rr), w); }
+                        float ringAtC(vec2 p, vec2 c, float rr, float w) { return sd(abs(length(p - c) - rr), w); }
+                        float spokeAt(vec2 p, float ang, float w, float r0) {
+                            vec2 dir = vec2(cos(ang), sin(ang));
+                            if (dot(p, dir) < r0) return 0.0;
+                            return sd(abs(dot(p, vec2(-dir.y, dir.x))), w);
+                        }
+                        float polarAt(vec2 p, float a, float rr, float w) {
+                            vec2 cv = rr * vec2(cos(a), sin(a));
+                            return sd(length(p - cv), w);
+                        }
+                        float fibCurve(vec2 p) {
+                            float I = 0.0;
+                            I += ringAt(p, 1.3, 0.016) * 1.0;
+                            I += ringAt(p, 2.1, 0.016) * 0.9;
+                            I += ringAt(p, 3.4, 0.016) * 0.8;
+                            I += ringAt(p, 5.5, 0.016) * 0.7;
+                            I += ringAt(p, 7.4, 0.016) * 1.0;
+                            return I;
+                        }
+                        float spokesCurve(vec2 p) {
+                            float I = 0.0;
+                            for (int i = 0; i < 24; i++) {
+                                I += spokeAt(p, float(i) * PI / 12.0, 0.013, 1.3);
+                            }
+                            return I;
+                        }
+                        float seedCurve(vec2 p) {
+                            float sl = 0.58;
+                            float I = ringAt(p, sl, 0.016);
+                            for (int i = 0; i < 6; i++) {
+                                float sa = float(i) * PI / 3.0;
+                                vec2 c = vec2(cos(sa), sin(sa)) * sl;
+                                I = max(I, ringAtC(p, c, sl, 0.016));
+                            }
+                            return I;
+                        }
+                        float roseCurve(vec2 p) {
+                            float a = atan(p.y, p.x);
+                            return polarAt(p, a, 1.85 * cos(4.0 * a), 0.016);
+                        }
+                        float lemCurve(vec2 p) {
+                            float a = atan(p.y, p.x);
+                            return polarAt(p, a, 3.0 * sqrt(max(cos(2.0 * a), 0.0)), 0.016)
+                                 + polarAt(p, a, 3.0 * sqrt(max(sin(2.0 * a), 0.0)), 0.016);
+                        }
+                        float cardioCurve(vec2 p) {
+                            float a = atan(p.y, p.x);
+                            return polarAt(p, a, 2.8 * (1.0 + cos(a)), 0.016);
+                        }
+                        float archCurve(vec2 p) {
+                            float a = atan(p.y, p.x);
+                            float I = 0.0;
+                            for (int m = -2; m <= 2; m++) {
+                                float th = a + float(m) * TAU;
+                                float rr = 0.62 * th;
+                                if (rr > 0.0 && rr < 7.2) I = max(I, polarAt(p, a, rr, 0.015));
+                            }
+                            return I;
+                        }
+                        float fermatCurve(vec2 p) {
+                            float a = atan(p.y, p.x);
+                            float I = 0.0;
+                            for (int m = -2; m <= 2; m++) {
+                                float th = a + float(m) * TAU;
+                                float rr = 0.72 * sqrt(max(th, 0.0));
+                                if (rr > 0.01 && rr < 6.6) I = max(I, polarAt(p, a, rr, 0.015));
+                            }
+                            return I;
+                        }
+                        float cochCurve(vec2 p) {
+                            float a = atan(p.y, p.x);
+                            float I = 0.0;
+                            for (int m = -2; m <= 2; m++) {
+                                float th = a + float(m) * TAU;
+                                float tt = (abs(th) < 0.06) ? 0.06 : th;
+                                float rc = 4.6 * sin(tt) / tt;
+                                if (abs(rc) < 7.0 && rc != 0.0) I = max(I, polarAt(p, a, rc, 0.015));
+                            }
+                            return I;
+                        }
+                        void main() {
+                            vec2 p = vW.xz;
+                            float a = atan(p.y, p.x);
+                            float r = length(p);
+
+                            float fib  = fibCurve(p);
+                            float seed = seedCurve(p);
+
+                            float I = 0.0;
+                            I += fib  * 0.9;
+                            I += max(spokesCurve(p),      spokesCurve(-p))      * 0.15;
+                            I += max(seedCurve(p),        seedCurve(-p))        * 0.75;
+                            I += max(roseCurve(p),        roseCurve(-p))        * 0.5;
+                            I += max(lemCurve(p),         lemCurve(-p))         * 0.4;
+                            I += max(cardioCurve(p),      cardioCurve(-p))      * 0.45;
+                            I += max(archCurve(p),        archCurve(-p))        * 0.3;
+                            I += max(fermatCurve(p),      fermatCurve(-p))      * 0.26;
+                            I += max(cochCurve(p),        cochCurve(-p))        * 0.2;
+
+                            float breathe = 0.9 + 0.1 * sin(uTime * 0.8 + r * 0.5);
+
+                            vec3 col = uColor;
+                            col = mix(col, uGold, clamp(fib * 0.85, 0.0, 1.0));
+                            col = mix(col, vec3(0.96, 0.99, 1.0), clamp(seed * 0.5, 0.0, 1.0));
+
+                            float fade = smoothstep(0.0, 0.5, 7.45 - r) * smoothstep(0.0, 0.3, r - 0.06);
+                            float glow = 0.32 * sd(r, 1.9);
+
+                            float A = clamp((I * 0.8 + glow) * uBaseOp * uOpacity * breathe * fade, 0.0, 0.95);
+                            gl_FragColor = vec4(col * (0.7 + I * 0.35), A);
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    fog: false,
+                });
+                const _floorDisc = new THREE.Mesh(_floorGeo, _floorMat);
+                _floorDisc.position.y = 0.03;
+                _floorDisc.layers.enable(BLOOM_LAYER);
+                this._group.add(_floorDisc);
+                this._lineParts.push({ obj: _floorDisc, mat: _floorMat, base: 1.0, delay: 0 });
+
+                // ============ Formula medallions (inscribed on the floor) ============
+                // Text tiles of the very equations that generated the tracery above.
+                const _Formulas = [
+                    "e^{i\u03C0} + 1 = 0",       // Euler's identity
+                    "\u03C6 = (1+\u221A5)/2",      // Golden ratio
+                    "r = a\u00B7cos(4\u03B8)",     // Rose curve
+                    "r\u00B2 = a\u00B2\u00B7cos(2\u03B8)", // Lemmiscate of Bernoulli
+                    "r = a\u00B7(1+cos \u03B8)",   // Cardioid
+                    "r = a\u00B7\u03B8",           // Archimedean spiral
+                    "r\u00B2 = a\u00B2\u00B7\u03B8", // Fermat spiral
+                    "F[n] = F[n-1]+F[n-2]",       // Fibonacci
+                    "x\u00B2 + y\u00B2 = r\u00B2", // Pythagoras
+                    "c\u00B2 = a\u00B2 + b\u00B2", // Pythagorean theorem
+                    "\u03A3 1/n\u00B2 = \u03C0\u00B2/6", // Basel problem
+                    "\u2207\u00B7E = \u03C1/\u03B5\u2080", // Maxwell-Gauss
+                ];
+                const _createFormulaTile = (text, radius, ang) => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 1024;
+                    canvas.height = 128;
+                    ctx.font = '700 92px "Space Mono", "Zen Kaku Gothic New", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#cfe6ff';
+                    ctx.shadowColor = 'rgba(120, 190, 255, 0.9)';
+                    ctx.shadowBlur = 20;
+                    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const tileW = Math.max(0.85, 0.082 * text.length);
+                    const tileH = 0.3;
+                    const tileGeo = new THREE.PlaneGeometry(tileW, tileH);
+                    const tileMat = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        opacity: 0,
+                        depthWrite: false,
+                        fog: false,
+                    });
+                    const tile = new THREE.Mesh(tileGeo, tileMat);
+                    tile.position.set(Math.cos(ang) * radius, 0.036, Math.sin(ang) * radius);
+                    const _qA = new THREE.Quaternion().setFromUnitVectors(
+                        new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0));
+                    const _qY = new THREE.Quaternion().setFromAxisAngle(
+                        new THREE.Vector3(0, 1, 0), -(Math.PI / 2 + ang));
+                    tile.quaternion.multiplyQuaternions(_qA, _qY);
+                    tile.layers.enable(BLOOM_LAYER);
+                    this._group.add(tile);
+                    const _da = ang - this._buildOriginAng;
+                    const _dw = Math.atan2(Math.sin(_da), Math.cos(_da)) / Math.PI;
+                    this._lineParts.push({ obj: tile, mat: tileMat, base: 1.0, isTile: true, delay: _dw * 0.6 + 0.5 });
+                    return tile;
+                };
+                for (let t = 0; t < _Formulas.length; t++) {
+                    _createFormulaTile(_Formulas[t], 6.5, (t / _Formulas.length) * Math.PI * 2 + 0.15);
                 }
-                addLine(floorRadials, BLUE, 0.45, this._buildOriginAng, 0);
-                addRing(1.3, 0.06, BLUE, 0.45, this._buildOriginAng, 32);
-                addRing(3.2, 0.06, BLUE, 0.45, this._buildOriginAng, 48);
-                addRing(5.2, 0.06, BLUE, 0.45, this._buildOriginAng, 64);
-                addRing(7.8, 0.06, BLUE, 0.45, this._buildOriginAng, 78);
 
                 const archVerts = [];
                 for (let i = 0; i < N_COL; i++) {
@@ -2495,7 +2699,10 @@
                 this._group.visible = v;
                 if (v) {
                     for (const c of this._cols) c.group.scale.set(0.001, 0.001, 0.001);
-                    for (const p of this._lineParts) p.mat.uniforms.uOpacity.value = 0;
+                    for (const p of this._lineParts) {
+                        if (p.isTile) p.mat.opacity = 0;
+                        else p.mat.uniforms.uOpacity.value = 0;
+                    }
                     this._buildStart = performance.now() / 1000;
                     this._building = true;
                 } else {
@@ -2518,11 +2725,13 @@
                     for (const p of this._lineParts) {
                         const t = smooth((elapsed - p.delay) / 0.3);
                         if (t <= 0) continue;
-                        p.mat.uniforms.uOpacity.value = t;
+                        if (p.isTile) p.mat.opacity = t;
+                        else p.mat.uniforms.uOpacity.value = t;
                     }
                     if (elapsed > 4.0) this._building = false;
                 }
                 for (const p of this._lineParts) {
+                    if (p.isTile) continue;
                     p.mat.uniforms.uTime.value = time;
                 }
             }

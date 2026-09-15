@@ -1016,7 +1016,7 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-sword</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Game_SuikaRPG.html">
+                    <v-list-item href="./Game_FruitMergeDungeon.html">
                         <v-list-item-icon />
                         <v-list-item-title>Suika RPG</v-list-item-title>
                         <v-list-item-icon><v-icon>mdi-food-apple-outline</v-icon></v-list-item-icon>
