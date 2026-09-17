@@ -119,9 +119,30 @@
                                     </v-card-title>
                                     <template v-if="filteredPosts.length > 0">
                                         <v-card v-for="post in filteredPosts" :key="post.id" class="mb-6 pb-1 blog-card"
+                                            :class="{ 'story-locked-card': post.locked }"
                                             :id="'post-card-' + post.id">
-                                            <v-img :src="post.image" height="auto" style="max-height: 480px"></v-img>
-                                            <v-card-title class="text-h6 pt-4">{{ post.title }}</v-card-title>
+                                            <template v-if="post.locked">
+                                                <v-card-actions class="justify-center pt-8 pb-0">
+                                                    <v-icon x-large color="#9edcff">mdi-lock-clock</v-icon>
+                                                </v-card-actions>
+                                                <v-card-title class="text-h6 justify-center pt-2 text-center">
+                                                    {{ post.title }}
+                                                    <v-chip small class="ml-2" color="#9edcff">Story {{ post.episode }}/7</v-chip>
+                                                </v-card-title>
+                                                <v-card-subtitle class="text-center pb-2">
+                                                    <v-icon x-small color="#9edcff">mdi-calendar-clock</v-icon>
+                                                    Opens {{ post.releaseText }}
+                                                </v-card-subtitle>
+                                                <v-card-text class="text-center caption pa-0 pb-6 story-locked-excerpt">
+                                                    {{ post.excerpt }}
+                                                </v-card-text>
+                                            </template>
+                                            <template v-else>
+                                            <v-img v-if="post.image" :src="post.image" height="auto" style="max-height: 480px"></v-img>
+                                            <v-card-title class="text-h6 pt-4">
+                                                {{ post.title }}
+                                                <v-chip v-if="post.episode" small class="ml-2" color="primary">Story {{ post.episode }}/7</v-chip>
+                                            </v-card-title>
                                             <v-card-subtitle class="pb-2">{{ post.date }}</v-card-subtitle>
                                             <v-chip-group style="padding-left: 16px; padding-bottom: 16px;">
                                                 <v-chip v-for="theme in post.themes" :key="theme" small>
@@ -164,6 +185,7 @@
                                                     </div>
                                                 </transition-group>
                                             </v-card-text>
+                                            </template>
                                         </v-card>
                                     </template>
                                     <v-card-text v-else class="text-h6">
@@ -371,6 +393,28 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
         }
 
+        #Main .blog-card.story-locked-card {
+            background: rgba(10, 14, 24, 0.5) !important;
+            border: 1px dashed rgba(158, 220, 255, 0.35) !important;
+        }
+
+        #Main .blog-card.story-locked-card:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        #Main .blog-card.story-locked-card .v-card__title,
+        #Main .blog-card.story-locked-card .v-card__subtitle,
+        #Main .blog-card.story-locked-card .v-card__text {
+            color: rgba(238, 245, 255, 0.8) !important;
+        }
+
+        #Main .blog-card.story-locked-card .story-locked-excerpt {
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
         .custom-date-picker .v-date-picker-table {
             height: auto;
         }
@@ -470,6 +514,7 @@
     <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue-apexcharts"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
 
 
     <script>
@@ -495,6 +540,59 @@
                     'Japan',
                     'Science',
                     'Greeting',
+                    'Story',
+                ],
+                storyPosts: [],
+                storyFiles: [
+                    {
+                        episode: 1,
+                        title: '第1話「輪郭」',
+                        date: '2026-09-19',
+                        file: '../../Asset/Story/七日目の円/第1話_輪郭.md',
+                        excerpt: '　Day 1 of the series — a boy who draws a circle every morning, and the quiet oddness of a perfectly managed city.',
+                    },
+                    {
+                        episode: 2,
+                        title: '第2話「満たされる」',
+                        date: '2026-09-20',
+                        file: '../../Asset/Story/七日目の円/第2話_満たされる.md',
+                        excerpt: '　Day 2 — the sweetness of a full life begins to reveal a small poison.',
+                    },
+                    {
+                        episode: 3,
+                        title: '第3話「反響」',
+                        date: '2026-09-21',
+                        file: '../../Asset/Story/七日目の円/第3話_反響.md',
+                        excerpt: '　Day 3 — a voice comes from the bridge at dawn, carrying a strange question about the circle.',
+                    },
+                    {
+                        episode: 4,
+                        title: '第4話「八分目という名の鎖」',
+                        date: '2026-09-22',
+                        file: '../../Asset/Story/七日目の円/第4話_八分目という名の鎖.md',
+                        excerpt: '　Day 4 — the rule of "eight-part fullness" turns out to be shaped like a chain.',
+                    },
+                    {
+                        episode: 5,
+                        title: '第5話「臨童」',
+                        date: '2026-09-23',
+                        file: '../../Asset/Story/七日目の円/第5話_臨童.md',
+                        excerpt: '　Day 5 — the sphere calls the boy inside. A sea of memories spreads out before him.',
+                    },
+                    {
+                        episode: 6,
+                        title: '第6話「満ちる」',
+                        date: '2026-09-24',
+                        file: '../../Asset/Story/七日目の円/第6話_満ちる.md',
+                        excerpt: '　Day 6 — on the wall, the boy draws a circle that is complete.',
+                    },
+                    {
+                        episode: 7,
+                        title: '第7話「満ちない円」',
+                        date: '2026-09-25',
+                        file: '../../Asset/Story/七日目の円/第7話_満ちない円.md',
+                        excerpt: '　Day 7 — outside the ring. A rain-filled morning, and an unfinished circle.',
+                    },
                 ],
                 blogPosts: [
                     {
@@ -1171,24 +1269,35 @@
                 filteredPosts() {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    let filtered = this.blogPosts.filter(post => {
+
+                    const dateGate = (post) => {
+                        if (this.selectedDate) {
+                            return new Date(post.date).toDateString() === new Date(this.selectedDate).toDateString();
+                        }
+                        if (this.showCurrentMonth) {
+                            return new Date(post.date).getMonth() === this.pickerDate.getMonth() &&
+                                new Date(post.date).getFullYear() === this.pickerDate.getFullYear();
+                        }
+                        return true;
+                    };
+                    const themeGate = (post) => this.selectedThemes.length === 0 ||
+                        this.selectedThemes.some(theme => post.themes.includes(theme));
+
+                    const standard = this.blogPosts.filter(post => {
                         const postDate = new Date(post.date);
                         postDate.setHours(0, 0, 0, 0);
-                        const notFuture = postDate <= today;
-
-                        const dateMatch = this.selectedDate ?
-                            new Date(post.date).toDateString() === new Date(this.selectedDate).toDateString() :
-                            this.showCurrentMonth ?
-                                new Date(post.date).getMonth() === this.pickerDate.getMonth() &&
-                                new Date(post.date).getFullYear() === this.pickerDate.getFullYear() :
-                                true;
-
-                        const themeMatch = this.selectedThemes.length === 0 ||
-                            this.selectedThemes.some(theme => post.themes.includes(theme));
-
-                        return notFuture && dateMatch && themeMatch;
+                        return postDate <= today && dateGate(post) && themeGate(post);
                     });
-                    return filtered.sort((a, b) => b.id - a.id);
+
+                    const stories = this.storyPosts.filter(post => {
+                        if (post.locked) return false;
+                        if (!themeGate(post)) return false;
+                        return dateGate(post);
+                    });
+
+                    const allPosts = [...standard, ...stories];
+                    allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    return allPosts;
                 },
                 pageTitle() {
                     if (this.selectedDate) {
@@ -1207,13 +1316,17 @@
                 postDates() {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    return this.blogPosts
+                    const blog = this.blogPosts
                         .filter(post => {
                             const postDate = new Date(post.date);
                             postDate.setHours(0, 0, 0, 0);
                             return postDate <= today;
                         })
                         .map(post => post.date);
+                    const stories = this.storyPosts
+                        .filter(post => !post.locked)
+                        .map(post => post.date);
+                    return [...blog, ...stories];
                 },
                 filteredThemesText() {
                     const count = this.selectedThemes.length;
@@ -1254,7 +1367,63 @@
                         cardElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 },
-            }
+                formatReleaseText(date) {
+                    const d = new Date(date);
+                    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' }) + ' 0:00';
+                },
+                renderMarkdown(md) {
+                    if (!md) return '';
+                    let text = md.replace(/^\uFEFF/, '');
+                    // 本文の先頭にある "# 第X話「...」" タイトル行を除去 (タイトルはカード側で表示)
+                    text = text.replace(/^#[^\r\n]*\r?\n?/, '');
+                    if (window.marked) {
+                        // 小説の改行レイアウトを保つため、行内改行を <br> として出力
+                        window.marked.setOptions({ breaks: true, gfm: true });
+                        return window.marked.parse(text);
+                    }
+                    // marked が読めない場合の簡易変換 (改行ベース)
+                    return text
+                        .split(/\n{2,}/)
+                        .map(block => '<p>' + block.replace(/\n/g, '<br>') + '</p>')
+                        .join('');
+                },
+                loadStory() {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    this.storyPosts = this.storyFiles.map(item => {
+                        const postDate = new Date(item.date);
+                        postDate.setHours(0, 0, 0, 0);
+                        return {
+                            id: 100 + item.episode,
+                            episode: item.episode,
+                            title: item.title,
+                            date: item.date,
+                            excerpt: item.excerpt,
+                            themes: ['Story'],
+                            image: null,
+                            locked: postDate > today,
+                            releaseText: this.formatReleaseText(item.date),
+                            content: '',
+                        };
+                    });
+                    this.storyFiles.forEach((item, index) => {
+                        fetch(item.file)
+                            .then(res => {
+                                if (!res.ok) throw new Error('HTTP ' + res.status);
+                                return res.text();
+                            })
+                            .then(md => {
+                                this.storyPosts[index].content = this.renderMarkdown(md);
+                            })
+                            .catch(err => {
+                                console.error('Failed to load story file: ' + item.file, err);
+                            });
+                    });
+                },
+            },
+            mounted() {
+                this.loadStory();
+            },
         })
     </script>
 
