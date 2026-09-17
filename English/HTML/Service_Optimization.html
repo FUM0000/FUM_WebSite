@@ -1,0 +1,1115 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="A generic decision / optimization calculator. Solve breakeven, pricing, expected value, budget allocation, ingredient mixing and item merge problems with a single engine.">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+
+  <title>Optimization</title>
+  <meta name="robots" content="index, follow">
+
+  <style>
+    .opt-canvas-wrap { width: 100%; min-height: 280px; }
+    .opt-concept-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(25, 118, 210, 0.08); color: #1a5276; font-size: 12px; margin: 2px 4px 2px 0; }
+    .opt-best-card { border-left: 4px solid #1976d2; }
+    .opt-note { font-size: 12px; color: #777; }
+    .opt-section-title { font-weight: 600; color: #333; margin: 10px 0 6px; }
+    .opt-th { background: #f5f7fa; }
+    td.v-input__slot,
+    td.v-text-field input { margin: 0 !important; }
+    .opt-cell-input { padding: 4px 2px; }
+  </style>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Optimization</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid class="pa-4" style="max-width: 1080px; margin: 0 auto;">
+            <v-card class="mb-4" flat outlined>
+              <v-card-text class="text-center py-4">
+                <h2 class="mb-2">Optimization</h2>
+                <p style="color:#666; max-width: 760px; margin: 0 auto;">
+                  A generic calculator that explores the <b>best decision</b> under complex conditions.
+                  Pick a problem type, describe your situation with numbers, then let the engine
+                  search the choices, check the constraints and maximize (or minimize) your objective.
+                </p>
+                <div class="mt-2">
+                  <span class="opt-concept-chip">Variable</span>
+                  <span class="opt-concept-chip">Relation</span>
+                  <span class="opt-concept-chip">Constraint</span>
+                  <span class="opt-concept-chip">Probability</span>
+                  <span class="opt-concept-chip">Cost / Value</span>
+                  <span class="opt-concept-chip">Objective</span>
+                  <span class="opt-concept-chip">Search space</span>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <v-card>
+              <v-tabs v-model="tab" background-color="#1976d2" dark grow>
+                <v-tab>Pricing</v-tab>
+                <v-tab>Break-even</v-tab>
+                <v-tab>Expected Value</v-tab>
+                <v-tab>Budget</v-tab>
+                <v-tab>Material Mix</v-tab>
+                <v-tab>Merge</v-tab>
+                <v-tab>Custom</v-tab>
+              </v-tabs>
+
+              <!-- ============================ PRICING ============================ -->
+              <v-card-text v-if="tab === 0">
+                <p class="opt-note">Find the price that maximizes profit when demand depends on price.</p>
+                <v-row>
+                  <v-col cols="6" sm="3"><v-text-field label="Unit cost" type="number" v-model.number="models.pricing.cost"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Fixed cost" type="number" v-model.number="models.pricing.fixed"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Demand at price 0 (a)" type="number" v-model.number="models.pricing.a"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Demand lost per 1 price (b)" type="number" v-model.number="models.pricing.b"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Search min price" type="number" v-model.number="models.pricing.minPrice"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Search max price" type="number" v-model.number="models.pricing.maxPrice"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Resolution" type="number" v-model.number="models.pricing.res"></v-text-field></v-col>
+                </v-row>
+                <p class="opt-note">Model: demand = a − b * price, profit = (price − cost) * demand − fixed.</p>
+                <v-btn color="primary" @click="solvePricing">Solve</v-btn>
+
+                <v-alert v-if="models.pricing.error" type="error" class="mt-4">{{ models.pricing.error }}</v-alert>
+
+                <template v-if="models.pricing.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Optimal price</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.pricing.result.r.best.values.price) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Expected demand at optimum</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.pricing.result.r.best.values.demand) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Maximum profit</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.pricing.result.r.best.value) }}</div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <canvas ref="chartPricing"></canvas>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">Top candidates</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">Rank</th>
+                              <th class="opt-th">Price</th>
+                              <th class="opt-th">Demand</th>
+                              <th class="opt-th">Profit</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(c, i) in models.pricing.result.r.candidates" :key="'pc' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td>{{ fmt(c.values.price) }}</td>
+                              <td>{{ fmt(c.values.demand) }}</td>
+                              <td>{{ fmt(c.value) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">{{ fmt(models.pricing.result.r.evals, 0) }} grid points searched.</p>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ BREAK-EVEN ============================ -->
+              <v-card-text v-if="tab === 1">
+                <p class="opt-note">How many units (or sales) are needed to cover the fixed cost?</p>
+                <v-row>
+                  <v-col cols="6" sm="3"><v-text-field label="Fixed cost" type="number" v-model.number="models.breakeven.fixed"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Variable cost / unit" type="number" v-model.number="models.breakeven.varCost"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Selling price" type="number" v-model.number="models.breakeven.price"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Max demand (units)" type="number" v-model.number="models.breakeven.maxDemand"></v-text-field></v-col>
+                </v-row>
+                <p class="opt-note">Profit = (price − variable cost) * quantity − fixed cost.</p>
+                <v-btn color="primary" @click="solveBreakeven">Solve</v-btn>
+
+                <v-alert v-if="models.breakeven.error" type="error" class="mt-4">{{ models.breakeven.error }}</v-alert>
+
+                <template v-if="models.breakeven.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Break-even quantity</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.breakeven.result.beQty) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Break-even sales</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.breakeven.result.beRevenue) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Profit at max demand</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.breakeven.result.profitAtMax) }}</div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-alert v-if="!models.breakeven.result.reachable" type="warning" class="mt-3">Even at max demand the business does not break even. Raise the price or cut costs.</v-alert>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <canvas ref="chartBreakeven"></canvas>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ EXPECTED VALUE ============================ -->
+              <v-card-text v-if="tab === 2">
+                <p class="opt-note">Compare choices by expected value (probability-weighted outcome).</p>
+                <div class="opt-section-title">Alternatives</div>
+                <v-card v-for="(alt, ai) in models.expected.alts" :key="'alt' + ai" outlined class="mb-3">
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="8">
+                        <v-text-field label="Name" v-model="alt.name"></v-text-field>
+                      </v-col>
+                      <v-col cols="4" class="d-flex align-center">
+                        <v-btn small color="error" @click="removeAlt(ai)">Remove</v-btn>
+                      </v-col>
+                    </v-row>
+                    <v-simple-table dense>
+                      <template v-slot:default>
+                        <thead>
+                          <tr>
+                            <th class="opt-th">Outcome (value)</th>
+                            <th class="opt-th" style="width: 200px;">Probability</th>
+                            <th class="opt-th" style="width: 80px;"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(o, oi) in alt.outcomes" :key="'oc' + ai + oi">
+                            <td class="opt-cell-input">
+                              <v-text-field dense type="number" v-model.number="o.value" hide-details></v-text-field>
+                            </td>
+                            <td class="opt-cell-input">
+                              <v-text-field dense type="number" v-model.number="o.prob" hide-details></v-text-field>
+                            </td>
+                            <td>
+                              <v-btn small icon color="error" @click="removeOutcome(alt, oi)"><v-icon>mdi-delete</v-icon></v-btn>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </template>
+                    </v-simple-table>
+                    <v-btn small text color="primary" @click="addOutcome(alt)">+ Outcome</v-btn>
+                  </v-card-text>
+                </v-card>
+                <v-btn small color="primary" outlined @click="addAlt">+ Alternative</v-btn>
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveExpected">Solve</v-btn>
+                </div>
+
+                <v-alert v-if="models.expected.error" type="error" class="mt-4">{{ models.expected.error }}</v-alert>
+
+                <template v-if="models.expected.result">
+                  <v-card flat outlined class="mt-4">
+                    <v-card-text>
+                      <canvas ref="chartEV"></canvas>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">Ranking (highest expected value)</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">Rank</th>
+                              <th class="opt-th">Alternative</th>
+                              <th class="opt-th">Expected value</th>
+                              <th class="opt-th">Worst</th>
+                              <th class="opt-th">Best</th>
+                              <th class="opt-th">Std. dev.</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(r, i) in models.expected.result.ranking" :key="'ev' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td>{{ r.name }}</td>
+                              <td style="font-weight: 700;">{{ fmt(r.E) }}</td>
+                              <td>{{ fmt(r.min) }}</td>
+                              <td>{{ fmt(r.max) }}</td>
+                              <td>{{ fmt(r.sigma) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ BUDGET (KNAPSACK) ============================ -->
+              <v-card-text v-if="tab === 3">
+                <p class="opt-note">Allocate a limited budget to the items that give the greatest total value.</p>
+                <v-row>
+                  <v-col cols="12" sm="4">
+                    <v-text-field label="Total budget" type="number" v-model.number="models.knapsack.budget"></v-text-field>
+                  </v-col>
+                </v-row>
+                <div class="opt-section-title">Candidate items</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th">Name</th>
+                        <th class="opt-th" style="width: 180px;">Cost</th>
+                        <th class="opt-th" style="width: 180px;">Value</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(it, i) in models.knapsack.items" :key="'kpi' + i">
+                        <td class="opt-cell-input"><v-text-field dense v-model="it.name" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="it.cost" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="it.value" hide-details></v-text-field></td>
+                        <td><v-btn small icon color="error" @click="removeItem(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addItem" class="mt-2">+ Item</v-btn>
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveKnapsackFun">Solve</v-btn>
+                </div>
+
+                <v-alert v-if="models.knapsack.error" type="error" class="mt-4">{{ models.knapsack.error }}</v-alert>
+
+                <template v-if="models.knapsack.result">
+                  <v-row class="mt-4">
+                    <v-col cols="6" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Total value</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.knapsack.result.totalValue) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="6" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Used budget</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.knapsack.result.totalCost) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="6" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Leftover</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.knapsack.result.leftover) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="6" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Items selected</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ models.knapsack.result.chosen.length }}</div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">Recommended selection</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">#</th>
+                              <th class="opt-th">Item</th>
+                              <th class="opt-th">Cost</th>
+                              <th class="opt-th">Value</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(c, i) in models.knapsack.result.chosen" :key="'kp' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td>{{ c.name }}</td>
+                              <td>{{ fmt(c.cost) }}</td>
+                              <td>{{ fmt(c.value) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">{{ models.knapsack.result.note }}</p>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ MATERIAL MIX ============================ -->
+              <v-card-text v-if="tab === 4">
+                <p class="opt-note">Find the cheapest combination of materials that meets every requirement (total amount is fixed).</p>
+                <v-row>
+                  <v-col cols="6" sm="3"><v-text-field label="Total amount" type="number" v-model.number="models.mixing.total"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="Search resolution" type="number" v-model.number="models.mixing.res"></v-text-field></v-col>
+                </v-row>
+
+                <div class="opt-section-title">Requirements (per total amount)</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th">Nutrient</th>
+                        <th class="opt-th" style="width: 160px;">Min</th>
+                        <th class="opt-th" style="width: 160px;">Max</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(n, i) in models.mixing.nutrients" :key="'nut' + i">
+                        <td class="opt-cell-input"><v-text-field dense v-model="n.name" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="n.min" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="n.max" hide-details></v-text-field></td>
+                        <td><v-btn small icon color="error" @click="removeNutrient(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addNutrient" class="mt-2">+ Nutrient</v-btn>
+
+                <div class="opt-section-title mt-4">Materials (amount per 1 unit, cost per 1 unit)</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th">Material</th>
+                        <th class="opt-th" style="width: 110px;">Cost</th>
+                        <th class="opt-th" v-for="(n, ni) in models.mixing.nutrients" :key="'mh' + ni + n.name">{{ n.name }}</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(mat, i) in models.mixing.materials" :key="'mat' + i">
+                        <td class="opt-cell-input"><v-text-field dense v-model="mat.name" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="mat.cost" hide-details></v-text-field></td>
+                        <td class="opt-cell-input" v-for="n in models.mixing.nutrients" :key="'mc' + i + n.name">
+                          <v-text-field dense type="number" v-model.number="mat.amounts[n.name]" hide-details></v-text-field>
+                        </td>
+                        <td><v-btn small icon color="error" @click="removeMaterial(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addMaterial" class="mt-2">+ Material</v-btn>
+
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveMixing">Solve</v-btn>
+                </div>
+
+                <v-alert v-if="models.mixing.error" type="error" class="mt-4">{{ models.mixing.error }}</v-alert>
+
+                <template v-if="models.mixing.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Minimum total cost</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.mixing.result.cost) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="8">
+                      <v-card outlined flat pa-3 class="pa-3">
+                        <div class="opt-note">Achieved nutrients</div>
+                        <div>
+                          <span v-for="(nn, nk) in models.mixing.result.nutrients" :key="'nr' + nk" class="opt-concept-chip">
+                            {{ nn.name }}: {{ fmt(nn.value) }} ({{ nutriRange(nn) }})
+                          </span>
+                        </div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">Recommended amounts</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">Material</th>
+                              <th class="opt-th">Amount</th>
+                              <th class="opt-th">Cost</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(a, i) in models.mixing.result.amounts" :key="'mx' + i">
+                              <td>{{ a.name }}</td>
+                              <td style="font-weight: 700;">{{ fmt(a.value) }}</td>
+                              <td>{{ fmt(a.cost) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">{{ models.mixing.result.evals }} grid points searched. Approximate solution by grid search + local refinement.</p>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <canvas ref="chartMix"></canvas>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ MERGE ============================ -->
+              <v-card-text v-if="tab === 5">
+                <p class="opt-note">Should you merge item rarities? Compare each item's base value with its optimal expected value after merging (with probabilities).</p>
+                <div class="opt-section-title">Rarity definitions</div>
+                <v-card v-for="(r, ri) in models.merge.rarities" :key="'rar' + ri" outlined class="mb-3">
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="6" sm="3"><v-text-field label="Name" v-model="r.name"></v-text-field></v-col>
+                      <v-col cols="6" sm="3"><v-text-field label="Base value" type="number" v-model.number="r.value"></v-text-field></v-col>
+                      <v-col cols="6" sm="3"><v-text-field label="Owned count" type="number" v-model.number="r.count"></v-text-field></v-col>
+                      <v-col cols="6" sm="2"><v-text-field label="Needed to merge" type="number" v-model.number="r.need"></v-text-field></v-col>
+                      <v-col cols="12" sm="1" class="d-flex align-center">
+                        <v-btn small icon color="error" @click="removeRarity(ri)"><v-icon>mdi-delete</v-icon></v-btn>
+                      </v-col>
+                    </v-row>
+                    <div class="opt-note mb-1">Merge result table (probabilities of each outcome)</div>
+                    <v-simple-table dense>
+                      <template v-slot:default>
+                        <thead>
+                          <tr>
+                            <th class="opt-th" style="width: 260px;">Result rarity</th>
+                            <th class="opt-th" style="width: 160px;">Probability</th>
+                            <th class="opt-th" style="width: 80px;"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(o, oi) in r.outcomes" :key="'ro' + ri + oi">
+                            <td class="opt-cell-input">
+                              <v-select dense :items="rarityNames" v-model="o.target" hide-details></v-select>
+                            </td>
+                            <td class="opt-cell-input">
+                              <v-text-field dense type="number" v-model.number="o.prob" hide-details></v-text-field>
+                            </td>
+                            <td><v-btn small icon color="error" @click="removeRarityOutcome(r, oi)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                          </tr>
+                        </tbody>
+                      </template>
+                    </v-simple-table>
+                    <v-btn small text color="primary" @click="addRarityOutcome(r)">+ Outcome</v-btn>
+                  </v-card-text>
+                </v-card>
+                <v-btn small color="primary" outlined @click="addRarity">+ Rarity</v-btn>
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveMergeS">Solve</v-btn>
+                </div>
+
+                <v-alert v-if="models.merge.error" type="error" class="mt-4">{{ models.merge.error }}</v-alert>
+
+                <template v-if="models.merge.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Value if kept</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.merge.result.totalBase) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Optimal expected value</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.merge.result.totalBest) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Expected gain</div>
+                        <div :style="'font-size: 22px; font-weight: 700; color:' + (models.merge.result.expectedGain >= 0 ? '#1b5e20' : '#b71c1c')">
+                          {{ fmt(models.merge.result.expectedGain) }}
+                        </div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <canvas ref="chartMerge"></canvas>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">Per-rarity optimal strategy</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">Rarity</th>
+                              <th class="opt-th">Base value</th>
+                              <th class="opt-th">Optimal value/item</th>
+                              <th class="opt-th">Gain/item</th>
+                              <th class="opt-th">Strategy</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(rw, i) in models.merge.result.rows" :key="'mrw' + i">
+                              <td>{{ rw.name }}</td>
+                              <td>{{ fmt(rw.value) }}</td>
+                              <td style="font-weight: 700;">{{ fmt(rw.W) }}</td>
+                              <td>{{ fmt(rw.gain) }}</td>
+                              <td>
+                                <span v-if="rw.mergeable && rw.gain > 1e-9" style="color:#1b5e20; font-weight:700;">Merge</span>
+                                <span v-else style="color:#777;">Keep</span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3" v-if="models.merge.result.actions.length">
+                    <v-card-text>
+                      <div class="opt-section-title">Best merge actions now (using owned counts)</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">#</th>
+                              <th class="opt-th">From</th>
+                              <th class="opt-th">Need</th>
+                              <th class="opt-th">Owned</th>
+                              <th class="opt-th">Expected gain/action</th>
+                              <th class="opt-th">Feasible</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(ac, i) in models.merge.result.actions" :key="'mac' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td>{{ ac.from }}</td>
+                              <td>{{ ac.need }}</td>
+                              <td>{{ ac.owned }}</td>
+                              <td :style="'font-weight:700; color:' + (ac.gainPerAction >= 0 ? '#1b5e20' : '#b71c1c')">{{ fmt(ac.gainPerAction) }}</td>
+                              <td>{{ ac.feasible ? 'Yes' : 'No' }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">A positive gain means merging that rarity is expected to increase total value (value iteration / Bellman optimality).</p>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ CUSTOM ============================ -->
+              <v-card-text v-if="tab === 6">
+                <p class="opt-note">Define any variables, an objective and constraints, then let the engine search the space.</p>
+                <div class="opt-section-title">Variables</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th">Name</th>
+                        <th class="opt-th" style="width: 130px;">Min</th>
+                        <th class="opt-th" style="width: 130px;">Max</th>
+                        <th class="opt-th" style="width: 200px;">Options (comma separated, optional)</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(v, i) in models.custom.vars" :key="'cv' + i">
+                        <td class="opt-cell-input"><v-text-field dense v-model="v.name" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="v.min" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="v.max" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense v-model="v.options" hide-details></v-text-field></td>
+                        <td><v-btn small icon color="error" @click="removeVar(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addVar" class="mt-2">+ Variable</v-btn>
+
+                <v-row class="mt-3">
+                  <v-col cols="12" sm="4">
+                    <v-select :items="[{text:'Maximize', value:'max'}, {text:'Minimize', value:'min'}]" label="Direction" v-model="models.custom.dir"></v-select>
+                  </v-col>
+                  <v-col cols="4" sm="2">
+                    <v-text-field label="Resolution" type="number" v-model.number="models.custom.res"></v-text-field>
+                  </v-col>
+                </v-row>
+
+                <v-text-field label="Objective expression" v-model="models.custom.objective" placeholder="(price - 30) * (1000 - 2 * price) - 1500"></v-text-field>
+                <v-textarea label="Constraints (one per line, e.g. `expr >= 0`)" v-model="models.custom.constraints" rows="3"></v-textarea>
+
+                <p class="opt-note">Available functions: sqrt, abs, exp, log, log10, floor, ceil, round, pow, min, max, sin, cos, tan. Operators: + - * / ^ ( ) comparisons.</p>
+                <v-btn color="primary" @click="solveCustom">Solve</v-btn>
+
+                <v-alert v-if="models.custom.error" type="error" class="mt-4">{{ models.custom.error }}</v-alert>
+
+                <template v-if="models.custom.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">Best objective ({{ models.custom.dir }})</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.custom.result.r.best.value) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="8">
+                      <v-card outlined flat pa-3 class="pa-3">
+                        <div class="opt-note">Optimal variables</div>
+                        <div>
+                          <span v-for="(v, vi) in models.custom.vars" :key="'cvr' + vi" class="opt-concept-chip" v-if="v.name">
+                            {{ v.name }} = {{ fmt(modelVar(models.custom.result.r.best.values, v.name)) }}
+                          </span>
+                        </div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3" v-if="models.custom.result.curve">
+                    <v-card-text>
+                      <canvas ref="chartCustom"></canvas>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">Top candidates</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">Rank</th>
+                              <th class="opt-th" v-for="v in customVarNames()" :key="'chn' + v">{{ v }}</th>
+                              <th class="opt-th">Objective</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(c, i) in models.custom.result.r.candidates" :key="'cc' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td v-for="v in customVarNames()" :key="'ccv' + i + v">{{ fmt(c.values[v]) }}</td>
+                              <td style="font-weight: 700;">{{ fmt(c.value) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">{{ fmt(models.custom.result.r.evals, 0) }} grid points searched.</p>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+            </v-card>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+  <script src="../../Asset/Javascript/Optimizer.js?v=1.0"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: function () {
+        return {
+          tab: 0,
+          models: {
+            pricing: {
+              cost: 30, fixed: 1000, a: 1000, b: 2, minPrice: 0, maxPrice: 500, res: 200,
+              result: null, error: ''
+            },
+            breakeven: {
+              fixed: 1000, varCost: 20, price: 50, maxDemand: 100,
+              result: null, error: ''
+            },
+            expected: {
+              alts: [
+                { name: 'Plan A (safe)', outcomes: [{ prob: 1, value: 80 }] },
+                { name: 'Plan B (risky)', outcomes: [{ prob: 0.5, value: 200 }, { prob: 0.5, value: -40 }] }
+              ],
+              result: null, error: ''
+            },
+            knapsack: {
+              budget: 500,
+              items: [
+                { name: 'Library', cost: 150, value: 40 },
+                { name: 'Marketing', cost: 200, value: 60 },
+                { name: 'R&D', cost: 250, value: 80 },
+                { name: 'Support', cost: 100, value: 30 },
+                { name: 'Office', cost: 120, value: 25 }
+              ],
+              result: null, error: ''
+            },
+            mixing: {
+              total: 100, res: 40,
+              nutrients: [
+                { name: 'Protein', min: 30, max: null },
+                { name: 'Calorie', min: null, max: 900 }
+              ],
+              materials: [
+                { name: 'Chicken', cost: 8, amounts: { Protein: 7, Calorie: 150 } },
+                { name: 'Rice', cost: 2, amounts: { Protein: 2, Calorie: 200 } },
+                { name: 'Beans', cost: 1, amounts: { Protein: 5, Calorie: 120 } },
+                { name: 'Water', cost: 0, amounts: { Protein: 0, Calorie: 0 } }
+              ],
+              result: null, error: ''
+            },
+            merge: {
+              rarities: [
+                { name: 'Common', value: 10, count: 20, need: 3, mergeCost: 0, outcomes: [{ target: 'Rare', prob: 0.6 }, { target: 'Common', prob: 0.4 }] },
+                { name: 'Rare', value: 50, count: 6, need: 3, mergeCost: 0, outcomes: [{ target: 'Epic', prob: 0.4 }, { target: 'Rare', prob: 0.6 }] },
+                { name: 'Epic', value: 200, count: 2, need: 3, mergeCost: 0, outcomes: [] }
+              ],
+              result: null, error: ''
+            },
+            custom: {
+              vars: [{ name: 'price', min: 0, max: 500, options: '' }],
+              objective: '(price - 30) * (1000 - 2 * price) - 1500',
+              constraints: '(1000 - 2 * price) >= 0\nprice >= 30',
+              dir: 'max', res: 200,
+              result: null, error: ''
+            }
+          }
+        };
+      },
+      computed: {
+        rarityNames: function () {
+          return this.models.merge.rarities.map(function (r) { return r.name }).filter(function (x) { return x !== ''; });
+        }
+      },
+      methods: {
+        fmt: function (x, d) { return window.Opt.fmt(x, d); },
+        modelVar: function (values, name) { return values[name]; },
+        nutriRange: function (nn) {
+          var parts = [];
+          if (nn.min !== null && nn.min !== undefined && isFinite(Number(nn.min))) parts.push('≥ ' + this.fmt(nn.min));
+          if (nn.max !== null && nn.max !== undefined && isFinite(Number(nn.max))) parts.push('≤ ' + this.fmt(nn.max));
+          return parts.join(', ');
+        },
+
+        // ---- helpers for dynamic tables ----
+        addAlt: function () { this.models.expected.alts.push({ name: 'New choice', outcomes: [{ prob: 1, value: 0 }] }); },
+        removeAlt: function (i) { this.models.expected.alts.splice(i, 1); },
+        addOutcome: function (alt) { alt.outcomes.push({ prob: 0.5, value: 0 }); },
+        removeOutcome: function (alt, i) { alt.outcomes.splice(i, 1); },
+
+        addItem: function () { this.models.knapsack.items.push({ name: 'New item', cost: 10, value: 1 }); },
+        removeItem: function (i) { this.models.knapsack.items.splice(i, 1); },
+
+        addNutrient: function () {
+          var name = 'Nutrient' + (this.models.mixing.nutrients.length + 1);
+          var self = this;
+          this.models.mixing.nutrients.push({ name: name, min: null, max: null });
+          this.models.mixing.materials.forEach(function (m) { self.$set(m.amounts, name, 0); });
+        },
+        removeNutrient: function (i) {
+          var self = this;
+          var name = this.models.mixing.nutrients[i].name;
+          this.models.mixing.nutrients.splice(i, 1);
+          this.models.mixing.materials.forEach(function (m) { self.$delete(m.amounts, name); });
+        },
+        addMaterial: function () {
+          var amounts = {};
+          var self = this;
+          this.models.mixing.nutrients.forEach(function (n) { amounts[n.name] = 0; });
+          this.models.mixing.materials.push({ name: 'Material', cost: 1, amounts: amounts });
+        },
+        removeMaterial: function (i) { this.models.mixing.materials.splice(i, 1); },
+
+        addRarity: function () {
+          this.models.merge.rarities.push({ name: 'New', value: 10, count: 0, need: 3, mergeCost: 0, outcomes: [] });
+        },
+        removeRarity: function (i) { this.models.merge.rarities.splice(i, 1); },
+        addRarityOutcome: function (r) { r.outcomes.push({ target: this.rarityNames[0] || '', prob: 0.5 }); },
+        removeRarityOutcome: function (r, i) { r.outcomes.splice(i, 1); },
+
+        addVar: function () { this.models.custom.vars.push({ name: 'var' + (this.models.custom.vars.length + 1), min: 0, max: 10, options: '' }); },
+        removeVar: function (i) { this.models.custom.vars.splice(i, 1); },
+        customVarNames: function () {
+          return this.models.custom.vars.filter(function (v) { return v.name && v.name !== ''; }).map(function (v) { return v.name; });
+        },
+
+        // ---- solvers ----
+        solvePricing: function () {
+          var m = this.models.pricing;
+          m.error = ''; m.result = null;
+          try {
+            var lo = Number(m.minPrice) || 0;
+            var hi = Number(m.maxPrice) || 1;
+            if (hi <= lo) { m.error = 'Max price must be greater than min price.'; return; }
+            var problem = {
+              vars: [{ name: 'price', min: lo, max: hi }],
+              derived: [
+                { name: 'demand', expr: '(' + m.a + ') - (' + m.b + ') * price' },
+                { name: 'profit', expr: '(price - (' + m.cost + ')) * demand - (' + m.fixed + ')' }
+              ],
+              constraints: ['demand >= 0', 'price >= (' + m.cost + ')'],
+              objective: 'profit',
+              dir: 'max',
+              resolution: Number(m.res) || 200
+            };
+            var r = window.Opt.solveGrid(problem);
+            if (r.status !== 'ok') { m.error = r.message || 'No feasible solution.'; return; }
+            var curve = [];
+            var N = 80;
+            for (var i = 0; i <= N; i++) {
+              var px = lo + (hi - lo) * i / N;
+              var pt = window.Opt.evalPoint(problem, { price: px });
+              if (pt.feasible) curve.push({ x: px, y: pt.value });
+            }
+            m.result = { r: r, curve: curve };
+            this.$nextTick(function () { this.drawCharts(0); });
+          } catch (e) { m.error = String(e.message || e); }
+        },
+
+        solveBreakeven: function () {
+          var m = this.models.breakeven;
+          m.error = ''; m.result = null;
+          var fixed = Number(m.fixed) || 0;
+          var vc = Number(m.varCost) || 0;
+          var price = Number(m.price) || 0;
+          var maxD = Number(m.maxDemand) || 0;
+          var margin = price - vc;
+          if (margin <= 0) { m.error = 'Selling price must be higher than the variable cost to break even.'; return; }
+          var beQty = fixed / margin;
+          var profitAtMax = margin * maxD - fixed;
+          var curve = [];
+          var N = 100;
+          var maxX = Math.max(maxD, beQty * 1.2, 1);
+          for (var i = 0; i <= N; i++) {
+            var q = maxX * i / N;
+            curve.push({ x: q, y: margin * q - fixed });
+          }
+          m.result = {
+            beQty: beQty,
+            beRevenue: beQty * price,
+            profitAtMax: profitAtMax,
+            reachable: profitAtMax >= 0,
+            curve: curve
+          };
+          this.$nextTick(function () { this.drawCharts(1); });
+        },
+
+        solveExpected: function () {
+          var m = this.models.expected;
+          m.error = ''; m.result = null;
+          var r = window.Opt.solveExpected(m.alts);
+          if (!r.ranking.length) { m.error = 'Add at least one alternative.'; return; }
+          m.result = r;
+          this.$nextTick(function () { this.drawCharts(2); });
+        },
+
+        solveKnapsackFun: function () {
+          var m = this.models.knapsack;
+          m.error = ''; m.result = null;
+          var r = window.Opt.solveKnapsack(m.items, m.budget);
+          if (r.status === 'error') { m.error = r.message; return; }
+          m.result = r;
+        },
+
+        solveMixing: function () {
+          var m = this.models.mixing;
+          m.error = ''; m.result = null;
+          try {
+            var mats = m.materials.filter(function (x) { return x.name && x.name !== ''; });
+            if (!mats.length) { m.error = 'Add at least one material.'; return; }
+            var nutrients = m.nutrients.filter(function (n) { return n.name && n.name !== ''; });
+            var T = Number(m.total) || 0;
+            if (T <= 0) { m.error = 'Total amount must be positive.'; return; }
+            var others = mats.slice(0, -1);
+            var varNames = others.map(function (_, i) { return 'x' + i; });
+            var last = mats[mats.length - 1];
+
+            var vars = others.map(function (o, i) { return { name: varNames[i], min: 0, max: T }; });
+            var derived = [];
+            derived.push({
+              name: 'xLast',
+              expr: varNames.length ? '(' + T + ') - (' + varNames.join(' + ') + ')' : '(' + T + ')'
+            });
+
+            var constraints = [];
+            if (varNames.length) constraints.push('xLast >= 0');
+            var coefTerms = [];
+            mats.forEach(function (mat, idx) {
+              var ident = idx < others.length ? varNames[idx] : 'xLast';
+              coefTerms.push('(' + mat.cost + ') * ' + ident);
+            });
+            var costExpr = coefTerms.join(' + ');
+
+            var self = this;
+            nutrients.forEach(function (n) {
+              var terms = mats.map(function (mat, idx) {
+                var ident = idx < others.length ? varNames[idx] : 'xLast';
+                var c = Number(mat.amounts[n.name]) || 0;
+                return '(' + c + ') * ' + ident;
+              });
+              var expr = terms.join(' + ');
+              if (n.min !== null && n.min !== undefined && isFinite(Number(n.min))) constraints.push(expr + ' >= (' + Number(n.min) + ')');
+              if (n.max !== null && n.max !== undefined && isFinite(Number(n.max))) constraints.push(expr + ' <= (' + Number(n.max) + ')');
+            });
+
+            var problem = {
+              vars: vars,
+              derived: derived,
+              constraints: constraints,
+              objective: costExpr,
+              dir: 'min',
+              resolution: Math.max(2, Math.min(200, Number(m.res) || 40))
+            };
+
+            var r = window.Opt.solveGrid(problem);
+            if (r.status !== 'ok') { m.error = r.message || 'No feasible mix (requirements cannot be met).'; return; }
+
+            var vv = r.best.values;
+            var amounts = mats.map(function (mat, idx) {
+              var amt = idx < others.length ? (vv[varNames[idx]] || 0) : (vv.xLast || 0);
+              var amtC = Math.max(0, Math.min(T, amt));
+              return { name: mat.name, value: amtC, cost: amtC * Number(mat.cost) };
+            });
+            var cost = amounts.reduce(function (s, a) { return s + a.cost; }, 0);
+            var nutriRes = nutrients.map(function (n) {
+              var values = mats.map(function (mat, idx) {
+                var amt = idx < others.length ? (amounts[idx].value) : amounts[mats.length - 1].value;
+                return amt * (Number(mat.amounts[n.name]) || 0);
+              });
+              var totalV = values.reduce(function (s, v) { return s + v; }, 0);
+              return { name: n.name, value: totalV, min: n.min, max: n.max };
+            });
+
+            m.result = { cost: cost, amounts: amounts, nutrients: nutriRes, evals: r.evals };
+            this.$nextTick(function () { this.drawCharts(4); });
+          } catch (e) { m.error = String(e.message || e); }
+        },
+
+        solveMergeS: function () {
+          var m = this.models.merge;
+          m.error = ''; m.result = null;
+          var r = window.Opt.solveMerge(m.rarities);
+          if (r.status === 'error') { m.error = r.message; return; }
+          m.result = r;
+          this.$nextTick(function () { this.drawCharts(5); });
+        },
+
+        solveCustom: function () {
+          var m = this.models.custom;
+          m.error = ''; m.result = null;
+          try {
+            var vars = [];
+            var self = this;
+            m.vars.forEach(function (v) {
+              if (!v.name || v.name === '') return;
+              var optsStr = (v.options || '').trim();
+              if (optsStr) {
+                var opts = optsStr.split(/[,、]/).map(function (s) { return Number(s); }).filter(function (x) { return isFinite(x); });
+                if (opts.length) { vars.push({ name: v.name, options: opts }); return; }
+              }
+              var lo = Number(v.min) || 0;
+              var hi = Number(v.max) || 1;
+              if (hi <= lo) hi = lo + 1;
+              vars.push({ name: v.name, min: lo, max: hi });
+            });
+            if (!vars.length) { m.error = 'Define at least one variable.'; return; }
+            if (!m.objective.trim()) { m.error = 'Objective expression is required.'; return; }
+            var constraints = String(m.constraints || '').split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l !== ''; });
+            var problem = {
+              vars: vars,
+              constraints: constraints,
+              objective: m.objective.trim(),
+              dir: m.dir,
+              resolution: Math.max(2, Math.min(500, Number(m.res) || 200))
+            };
+            var r = window.Opt.solveGrid(problem);
+            if (r.status !== 'ok') { m.error = r.message || 'No feasible solution.'; return; }
+            var curve = null;
+            if (vars.length === 1 && !(vars[0].options && vars[0].options.length)) {
+              curve = [];
+              var lo = vars[0].min, hi = vars[0].max, N = 80;
+              for (var i = 0; i <= N; i++) {
+                var px = lo + (hi - lo) * i / N;
+                var o = {};
+                o[vars[0].name] = px;
+                var pt2 = window.Opt.evalPoint(problem, o);
+                if (pt2.feasible) curve.push({ x: px, y: pt2.value });
+              }
+            }
+            m.result = { r: r, curve: curve };
+            this.$nextTick(function () { this.drawCharts(6); });
+          } catch (e) { m.error = String(e.message || e); }
+        },
+
+        // ---- charts ----
+        drawCharts: function (ti) {
+          var m = this.models;
+          if (ti === 0 && m.pricing.result) {
+            window.Opt.drawLineChart(this.$refs.chartPricing, m.pricing.result.curve, { title: 'Profit vs Price', xlabel: 'Price', ylabel: 'Profit', zeroLine: true, color: '#1976d2' });
+          } else if (ti === 1 && m.breakeven.result) {
+            window.Opt.drawLineChart(this.$refs.chartBreakeven, m.breakeven.result.curve, { title: 'Profit vs Quantity', xlabel: 'Quantity', ylabel: 'Profit', zeroLine: true, color: '#e67e22' });
+          } else if (ti === 2 && m.expected.result) {
+            var groups = m.expected.result.ranking.map(function (r) {
+              return { label: r.name, bars: [{ value: r.E, color: '#1976d2' }] };
+            });
+            window.Opt.drawBarChart(this.$refs.chartEV, groups, { title: 'Expected value by choice' });
+          } else if (ti === 4 && m.mixing.result) {
+            window.Opt.drawBarChart(this.$refs.chartMix, m.mixing.result.amounts.map(function (a) {
+              return { label: a.name, bars: [{ value: a.value, color: '#388e3c' }] };
+            }), { title: 'Recommended material amounts' });
+          } else if (ti === 5 && m.merge.result) {
+            window.Opt.drawBarChart(this.$refs.chartMerge, m.merge.result.rows.map(function (rw) {
+              return { label: rw.name, bars: [{ value: rw.value, color: '#bdbdbd' }, { value: rw.W, color: '#1976d2' }] };
+            }), { title: 'Base value vs optimal expected value per item' });
+          } else if (ti === 6 && m.custom.result && m.custom.result.curve) {
+            window.Opt.drawLineChart(this.$refs.chartCustom, m.custom.result.curve, { title: 'Objective vs ' + this.customVarNames()[0], xlabel: this.customVarNames()[0], ylabel: 'Objective', zeroLine: true, color: '#1976d2' });
+          }
+        }
+      },
+      watch: {
+        tab: function (nv) {
+          this.$nextTick(function () { this.drawCharts(nv); });
+        }
+      },
+      mounted: function () {
+        var self = this;
+        var onResize = function () { self.$nextTick(function () { self.drawCharts(self.tab); }); };
+        window.addEventListener('resize', onResize);
+        this._optResize = onResize;
+      },
+      beforeDestroy: function () {
+        if (this._optResize) window.removeEventListener('resize', this._optResize);
+      }
+    });
+  </script>
+</body>
+
+</html>

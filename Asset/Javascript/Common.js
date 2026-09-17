@@ -309,6 +309,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Calculate Salary</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_Optimization.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Optimization</v-list-item-title>
+                    </v-list-item>
                 </v-list-group sub-group>
             </v-list-group>
             <!-- ▲ Service ▲ ---------------------------------------------------------------------------------->

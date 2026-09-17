@@ -2249,6 +2249,11 @@
                 this._cols = [];
                 this._lineParts = [];
                 this._BoundaryRadius = R_OUT;
+                this._lineSeg = null;
+                const _lPos = [];
+                const _lCol = [];
+                const _lOp = [];
+                const _lDelay = [];
 
                 const delayOf = (ang, y) => {
                     let d = ang - this._buildOriginAng;
@@ -2394,24 +2399,15 @@
                 const addLine = (verts, color, baseOp, ang, y) => {
                     if (verts.length === 0) return;
                     const segments = verts.length / 6;
-                    const halfW = LINE_WIDTH * 0.5;
+                    const col = new THREE.Color(color);
+                    const delay = delayOf(ang, y);
                     for (let i = 0; i < segments; i++) {
-                        const x1 = verts[i * 6], y1 = verts[i * 6 + 1], z1 = verts[i * 6 + 2];
-                        const x2 = verts[i * 6 + 3], y2 = verts[i * 6 + 4], z2 = verts[i * 6 + 5];
-                        const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
-                        const len = Math.hypot(dx, dy, dz) || 1;
-                        const capsSeg = len > LINE_WIDTH * 3 ? 1 : 2;
-                        const geo = new THREE.CylinderGeometry(halfW, halfW, len, 8, 1, capsSeg);
-                        geo.translate(0, len * 0.5, 0);
-                        const mat = createGlowMat(color, baseOp);
-                        const mesh = new THREE.Mesh(geo, mat);
-                        const dir = new THREE.Vector3(dx / len, dy / len, dz / len);
-                        const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-                        mesh.quaternion.copy(q);
-                        mesh.position.set(x1, y1, z1);
-                        mesh.layers.set(BLOOM_LAYER);
-                        this._group.add(mesh);
-                        this._lineParts.push({ obj: mesh, mat, base: baseOp, delay: delayOf(ang, y) });
+                        const i6 = i * 6;
+                        _lPos.push(verts[i6], verts[i6 + 1], verts[i6 + 2]);
+                        _lPos.push(verts[i6 + 3], verts[i6 + 4], verts[i6 + 5]);
+                        _lCol.push(col.r, col.g, col.b, col.r, col.g, col.b);
+                        _lOp.push(baseOp, baseOp);
+                        _lDelay.push(delay, delay);
                     }
                 };
 
@@ -2620,6 +2616,67 @@
                 addLine(apexRadials, BLUE, 0.7, 0, TOP_Y);
                 addLine([0, TOP_Y - 0.12, 0, 0, TOP_Y + 0.15, 0], GOLD, 0.9, 0, TOP_Y);
 
+                if (_lPos.length > 0) {
+                    const lineGeo = new THREE.BufferGeometry();
+                    lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(_lPos, 3));
+                    lineGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(_lCol, 3));
+                    lineGeo.setAttribute('aBaseOp', new THREE.Float32BufferAttribute(_lOp, 1));
+                    lineGeo.setAttribute('aDelay', new THREE.Float32BufferAttribute(_lDelay, 1));
+
+                    const lineMat = new THREE.ShaderMaterial({
+                        uniforms: {
+                            uTime: { value: 0 },
+                            uBuildTime: { value: 0 },
+                        },
+                        vertexShader: `
+                            attribute vec3 aColor;
+                            attribute float aBaseOp;
+                            attribute float aDelay;
+                            varying vec3 vColor;
+                            varying float vBaseOp;
+                            varying float vDelay;
+                            varying vec3 vWorldPos;
+                            void main() {
+                                vColor = aColor;
+                                vBaseOp = aBaseOp;
+                                vDelay = aDelay;
+                                vec4 wp = modelMatrix * vec4(position, 1.0);
+                                vWorldPos = wp.xyz;
+                                gl_Position = projectionMatrix * viewMatrix * wp;
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform float uTime;
+                            uniform float uBuildTime;
+                            varying vec3 vColor;
+                            varying float vBaseOp;
+                            varying float vDelay;
+                            varying vec3 vWorldPos;
+                            float sb(float x) {
+                                x = clamp(x, 0.0, 1.0);
+                                return x * x * (3.0 - 2.0 * x);
+                            }
+                            void main() {
+                                float build = sb((uBuildTime - vDelay) / 0.3);
+                                float breathe = 0.85 + 0.15 * sin(uTime * 1.4 + vWorldPos.y * 0.3 + vWorldPos.x * 0.2);
+                                float a = vBaseOp * build * breathe;
+                                gl_FragColor = vec4(vColor * 1.5, a);
+                            }
+                        `,
+                        transparent: true,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        depthTest: true,
+                        fog: false,
+                    });
+
+                    const lineObj = new THREE.LineSegments(lineGeo, lineMat);
+                    lineObj.layers.set(BLOOM_LAYER);
+                    lineObj.frustumCulled = false;
+                    this._group.add(lineObj);
+                    this._lineSeg = { obj: lineObj, mat: lineMat };
+                }
+
                 this._group.visible = false;
             }
             setVisible(v) {
@@ -2656,6 +2713,10 @@
                 }
                 for (const p of this._lineParts) {
                     p.mat.uniforms.uTime.value = time;
+                }
+                if (this._lineSeg) {
+                    this._lineSeg.mat.uniforms.uTime.value = time;
+                    this._lineSeg.mat.uniforms.uBuildTime.value = time - this._buildStart;
                 }
             }
         }
