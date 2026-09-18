@@ -1,0 +1,1332 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+    rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="../../Asset/CSS/Common.css?v=1.0" rel="stylesheet" />
+  <link href="../../Asset/CSS/Learning.css" rel="stylesheet" />
+
+  <title>化学反応シミュレーション</title>
+
+  <style>
+    body {
+      background: radial-gradient(1200px 700px at 20% 0%, #0d1630 0%, #05070f 60%, #030409 100%);
+      background-attachment: fixed;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    .v-application,
+    .v-application--wrap,
+    .v-main,
+    .v-main__wrap,
+    .container,
+    .container.fill-height {
+      background: transparent !important;
+    }
+    #App { position: relative; z-index: 1; }
+
+    .v-card {
+      background-color: rgba(10, 12, 30, 0.88) !important;
+      border: 1px solid rgba(80, 120, 255, 0.12) !important;
+      backdrop-filter: blur(4px);
+    }
+
+    .v-card .v-card__title,
+    .v-card .v-card__text,
+    .v-card .v-card__text span,
+    .v-sheet .caption,
+    .v-sheet .body-1,
+    .v-sheet .body-2 {
+      color: #d0d8e8 !important;
+    }
+
+    .v-card .v-btn,
+    .v-sheet .v-btn {
+      color: #b0c8e0 !important;
+    }
+
+    .v-card .v-btn--outlined,
+    .v-sheet .v-btn--outlined {
+      border-color: rgba(80, 120, 255, 0.25) !important;
+    }
+
+    .content-text {
+      color: #80b0ff !important;
+      font-weight: 500;
+    }
+
+    #ReactContainer {
+      width: 100%;
+      height: 520px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 4px;
+      background: radial-gradient(circle at 50% 30%, #0c1226 0%, #05070f 75%);
+      cursor: grab;
+    }
+    #ReactContainer:active { cursor: grabbing; }
+
+    @media (max-width: 600px) {
+      #ReactContainer { height: 380px; }
+    }
+
+    .react-card {
+      cursor: pointer;
+      transition: all 0.25s ease;
+      border-color: rgba(80, 120, 255, 0.2) !important;
+      background: rgba(12, 18, 40, 0.7) !important;
+      text-align: center;
+      height: 100%;
+    }
+    .react-card:hover {
+      border-color: rgba(80, 120, 255, 0.5) !important;
+      background: rgba(16, 26, 56, 0.95) !important;
+    }
+    .react-card.active {
+      border-color: #80b0ff !important;
+      background: rgba(30, 46, 90, 0.85) !important;
+      box-shadow: 0 0 18px rgba(80, 120, 255, 0.25) !important;
+    }
+    .react-card .v-card__title { font-size: 1.0rem; justify-content: center; }
+
+    .hint-text {
+      color: #6078a8;
+      font-size: 12px;
+    }
+
+    .param-label {
+      color: #80b0ff;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .param-value {
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .telemetry-chip {
+      background: rgba(80, 120, 255, 0.08) !important;
+      border: 1px solid rgba(80, 120, 255, 0.15) !important;
+      border-radius: 4px;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+    }
+    .telemetry-chip .t-key {
+      color: #6078a8;
+      font-size: 11px;
+    }
+    .telemetry-chip .t-val {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .formula-box {
+      background: rgba(80, 120, 255, 0.07) !important;
+      border: 1px solid rgba(80, 120, 255, 0.18) !important;
+      border-radius: 4px;
+      font-family: 'Space Mono', monospace;
+      color: #b8d0ff !important;
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 10px 12px;
+    }
+
+    .back-btn {
+      background: rgba(80, 120, 255, 0.08) !important;
+      border: 1px solid rgba(80, 120, 255, 0.2) !important;
+      transition: all 0.2s ease;
+    }
+    .back-btn:hover {
+      background: rgba(80, 120, 255, 0.2) !important;
+      border-color: rgba(80, 120, 255, 0.4) !important;
+    }
+
+    #EnergyCanvas {
+      width: 100%;
+      height: 160px;
+      display: block;
+    }
+
+    .v-slider--horizontal { margin-top: 4px; }
+
+    .species-legend {
+      display: inline-flex;
+      align-items: center;
+      margin: 2px 8px 2px 0;
+    }
+    .species-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+      box-shadow: 0 0 6px currentColor;
+    }
+  </style>
+  <meta name="robots" content="index, follow">
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Note > サイエンス > 化学 > 反応シミュレーション</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid class="pa-5">
+
+            <v-overlay :value="Loading" opacity="0.85" z-index="100">
+              <v-progress-circular indeterminate size="64" color="primary" width="4"></v-progress-circular>
+              <div class="mt-4 text-h6" style="color:#b0c8e0;">読み込み中...</div>
+            </v-overlay>
+
+            <v-row justify="center">
+              <v-col xs="12" md="10">
+
+                <v-card class="mt-4">
+                  <v-card-title class="content-text d-flex align-center pa-4">
+                    <v-btn icon small class="mr-3 back-btn" :href="'./Note_Sience_Chemistry.html'">
+                      <v-icon>mdi-arrow-left</v-icon>
+                    </v-btn>
+                    <span>化学反応シミュレーション</span>
+                  </v-card-title>
+
+                  <v-card-text class="pb-0">
+                    <v-row dense>
+                      <v-col cols="6" sm="4" md="4" lg="2" v-for="r in ReactionList" :key="r.id">
+                        <v-card outlined class="react-card pa-2"
+                                :class="{ active: Active === r.id }"
+                                @click="SelectReaction(r.id)">
+                          <v-icon large :color="Active === r.id ? '#80b0ff' : '#506090'" style="margin-top:8px;">{{ r.icon }}</v-icon>
+                          <v-card-title class="pa-0 mt-1">{{ r.title }}</v-card-title>
+                          <v-card-text class="pa-0 pb-2 caption" style="color:#7088b0;">
+                            {{ r.sub }}
+                          </v-card-text>
+                        </v-card>
+                      </v-col>
+                    </v-row>
+
+                    <v-row class="mt-2">
+                      <v-col cols="12" lg="8">
+                        <div id="ReactContainer"></div>
+
+                        <v-row class="mt-2 align-center" no-gutters>
+                          <v-col>
+                            <v-btn small outlined @click="TogglePlay">
+                              <v-icon small>{{ Playing ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                              {{ Playing ? '一時停止' : '再生' }}
+                            </v-btn>
+                            <v-btn small outlined class="ml-2" @click="ResetReaction">
+                              <v-icon small>mdi-restart</v-icon>
+                              リセット
+                            </v-btn>
+                          </v-col>
+                        </v-row>
+
+                        <div class="hint-text mt-2">
+                          <v-icon small style="color:#6078a8;">mdi-gesture</v-icon>
+                          分子が動いて衝突すると、温度が十分(活性化エネルギー以上)なら反応します。
+                          マウスドラッグで回転 / ホイールでズーム / 右ドラッグで移動(スマホは指で操作)
+                        </div>
+
+                        <div class="mt-2">
+                          <span v-for="s in SpeciesLegend" :key="s.name" class="species-legend caption">
+                            <span class="species-dot" :style="{ background: s.color, color: s.color }"></span>
+                            {{ s.name }}
+                          </span>
+                        </div>
+                      </v-col>
+
+                      <v-col cols="12" lg="4">
+
+                        <v-sheet outlined class="pa-3 mb-3" style="border-color:rgba(80,120,255,0.2);background:transparent;">
+                          <div class="caption mb-2" style="color:#80b0ff;">パラメータ</div>
+                          <div class="param-label"><span>温度 T</span><span class="param-value">{{ Temperature }} K</span></div>
+                          <v-slider :value="Temperature" @input="SetTemperature" min="300" max="2200" step="10" dense></v-slider>
+                          <div class="hint-text mb-2">反応に必要な活性化エネルギー {{ Ea }} K を越えると反応します</div>
+
+                          <div class="d-flex align-center justify-space-between">
+                            <span class="caption" style="color:#80b0ff;">反応物を補充</span>
+                            <v-switch :input-value="Replenish" @change="SetReplenish" color="#80b0ff" dense hide-details></v-switch>
+                          </div>
+                        </v-sheet>
+
+                        <v-sheet outlined class="pa-3 mb-3" style="border-color:rgba(80,120,255,0.2);background:transparent;">
+                          <div class="caption mb-2" style="color:#80b0ff;">反応の進行</div>
+                          <v-container fluid class="pa-0">
+                            <v-row no-gutters>
+                              <v-col cols="6">
+                                <div v-for="(chip, i) in TelemetryChips('A')" :key="i" class="telemetry-chip">
+                                  <div class="t-key">{{ chip.k }}</div>
+                                  <div class="t-val">{{ chip.v }}</div>
+                                </div>
+                              </v-col>
+                              <v-col cols="6">
+                                <div v-for="(chip, i) in TelemetryChips('B')" :key="i" class="telemetry-chip">
+                                  <div class="t-key">{{ chip.k }}</div>
+                                  <div class="t-val">{{ chip.v }}</div>
+                                </div>
+                              </v-col>
+                            </v-row>
+                          </v-container>
+                        </v-sheet>
+
+                        <v-sheet outlined class="pa-3 mb-3" style="border-color:rgba(80,120,255,0.2);background:transparent;">
+                          <div class="caption mb-2" style="color:#80b0ff;">反応エネルギー</div>
+                          <canvas id="EnergyCanvas"></canvas>
+                          <div class="hint-text mt-1">
+                            Ea(活性化エネルギー) = {{ Ea }}K , &Delta;H = {{ dH > 0 ? '+' : '' }}{{ dH }} kJ/mol
+                            ( {{ dH > 0 ? '吸熱' : '発熱' }}反応 )
+                          </div>
+                        </v-sheet>
+
+                        <v-sheet outlined class="pa-3 mb-2" style="border-color:rgba(80,120,255,0.2);background:transparent;">
+                          <div class="caption mb-2" style="color:#80b0ff;">反応式</div>
+                          <div class="formula-box">
+                            <div style="font-size:15px;">{{ Equation }}</div>
+                            <div style="color:#6078a8;" class="mt-1">{{ Description }}</div>
+                          </div>
+                        </v-sheet>
+
+                      </v-col>
+                    </v-row>
+
+                  </v-card-text>
+                </v-card>
+
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer-simple></main-footer-simple>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+
+  <script>
+    window.ReactionConfigs = {
+      water: {
+        title: '水の生成', sub: '2H₂ + O₂ → 2H₂O', icon: 'mdi-water',
+        reactants: { H2: 2, O2: 1 }, products: { H2O: 2 },
+        keep: { H2: 4, O2: 2 },
+        Ea: 500, dH: -286, equation: '2H₂ + O₂ → 2H₂O',
+        description: '水素と酸素が反応して水ができます。水の生成は非常に強い発熱反応です。'
+      },
+      hcl: {
+        title: '塩化水素', sub: 'H₂ + Cl₂ → 2HCl', icon: 'mdi-flask-outline',
+        reactants: { H2: 1, Cl2: 1 }, products: { HCl: 2 },
+        keep: { H2: 3, Cl2: 3 },
+        Ea: 450, dH: -184, equation: 'H₂ + Cl₂ → 2HCl',
+        description: '水素と塩素が反応すると塩化水素(塩酸)ができます。強い発光を伴います。'
+      },
+      nh3: {
+        title: 'アンモニア合成', sub: 'N₂ + 3H₂ → 2NH₃', icon: 'mdi-molecule',
+        reactants: { N2: 1, H2: 3 }, products: { NH3: 2 },
+        keep: { N2: 2, H2: 4 },
+        Ea: 800, dH: -92, equation: 'N₂ + 3H₂ → 2NH₃',
+        description: 'ハーバー・ボッシュ法。触媒と高圧高温で窒素と水素からアンモニアを合成します。'
+      },
+      co2: {
+        title: 'メタン燃焼', sub: 'CH₄ + 2O₂ → CO₂ + 2H₂O', icon: 'mdi-fire',
+        reactants: { CH4: 1, O2: 2 }, products: { CO2: 1, H2O: 2 },
+        keep: { CH4: 2, O2: 3 },
+        Ea: 800, dH: -890, equation: 'CH₄ + 2O₂ → CO₂ + 2H₂O',
+        description: 'メタンの燃焼。酸素と激しく反応して二酸化炭素と水になり、大量の熱を出します。'
+      },
+      nacl: {
+        title: 'イオン結合の生成', sub: '2Na + Cl₂ → 2NaCl', icon: 'mdi-atom',
+        reactants: { Na: 2, Cl2: 1 }, products: { NaCl: 2 },
+        keep: { Na: 5, Cl2: 3 },
+        Ea: 400, dH: -411, equation: '2Na + Cl₂ → 2NaCl',
+        description: 'ナトリウムは電子を失い、塩素は電子を受け取ります(Na⁺ と Cl⁻)。黄色い点が電子(転移)です。'
+      },
+      elect: {
+        title: '水の電気分解', sub: '2H₂O → 2H₂ + O₂', icon: 'mdi-lightning-bolt',
+        reactants: { H2O: 2 }, products: { H2: 2, O2: 1 },
+        keep: { H2O: 4 },
+        Ea: 1000, dH: +572, equation: '2H₂O → 2H₂ + O₂',
+        description: '水に電気エネルギーを加えて水素と酸素に分解します。吸熱反応の代表例です。'
+      }
+    };
+  </script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Loading: false,
+        Active: 'water',
+        Playing: true,
+        ReactionList: [
+          { id: 'water', title: '水の生成', sub: '2H₂ + O₂ → 2H₂O', icon: 'mdi-water' },
+          { id: 'hcl',   title: '塩化水素', sub: 'H₂ + Cl₂ → 2HCl', icon: 'mdi-flask-outline' },
+          { id: 'nh3',   title: 'アンモニア', sub: 'N₂ + 3H₂ → 2NH₃', icon: 'mdi-molecule' },
+          { id: 'co2',   title: 'メタン燃焼', sub: 'CH₄ + 2O₂ → CO₂ + 2H₂O', icon: 'mdi-fire' },
+          { id: 'nacl',  title: 'イオン結合', sub: '2Na + Cl₂ → 2NaCl', icon: 'mdi-atom' },
+          { id: 'elect', title: '電気分解', sub: '2H₂O → 2H₂ + O₂', icon: 'mdi-lightning-bolt' }
+        ],
+        Temperature: 700,
+        Replenish: true,
+        Telemetry: {}
+      },
+      created() {
+        const cfg = window.ReactionConfigs[this.Active];
+        this.Temperature = cfg.Ea + 250;
+        if (!window.ReactionSim) window.ReactionSim = { temperature: this.Temperature, replenish: this.Replenish };
+      },
+      mounted() {
+        this.$nextTick(() => {
+          setTimeout(() => {
+            if (typeof window.InitReactionFn === 'function') {
+              window.InitReactionFn(this.Active);
+              this.DrawEnergy();
+            }
+          }, 150);
+        });
+        this._telemetryTimer = setInterval(() => {
+          if (window.ReactionSim && window.ReactionSim.telemetry) {
+            this.Telemetry = Object.assign({}, window.ReactionSim.telemetry);
+          }
+        }, 250);
+        window.addEventListener('resize', this.DrawEnergy);
+      },
+      beforeDestroy() {
+        clearInterval(this._telemetryTimer);
+        window.removeEventListener('resize', this.DrawEnergy);
+        if (typeof window.CleanupReactionFn === 'function') {
+          window.CleanupReactionFn();
+        }
+      },
+      computed: {
+        Ea() { return window.ReactionConfigs[this.Active].Ea; },
+        dH() { return window.ReactionConfigs[this.Active].dH; },
+        Equation() { return window.ReactionConfigs[this.Active].equation; },
+        Description() { return window.ReactionConfigs[this.Active].description; },
+        SpeciesLegend() {
+          const elColors = {
+            H: '#ffffff', O: '#ff4455', C: '#556677', N: '#4488ff', Cl: '#66ff66', Na: '#ffaa44'
+          };
+          const cfg = window.ReactionConfigs[this.Active];
+          const species = {};
+          Object.keys(cfg.reactants).forEach(s => species[s] = true);
+          Object.keys(cfg.products).forEach(s => species[s] = true);
+          const nameMap = { H2: '水素H₂', O2: '酸素O₂', N2: '窒素N₂', Cl2: '塩素Cl₂', HCl: '塩化水素', H2O: '水H₂O', NH3: 'アンモニア', CO2: '二酸化炭素', CH4: 'メタン', NaCl: '塩化ナトリウム', Na: 'ナトリウム' };
+          const elMap = { H2: 'H', O2: 'O', N2: 'N', Cl2: 'Cl', HCl: 'Cl', H2O: 'O', NH3: 'N', CO2: 'C', CH4: 'C', NaCl: 'Na', Na: 'Na' };
+          return Object.keys(species).map(s => ({
+            name: nameMap[s] || s,
+            color: elColors[elMap[s]] || '#8888aa'
+          }));
+        }
+      },
+      methods: {
+        Num(v) {
+          if (v === undefined || v === null || isNaN(v)) return '—';
+          return Number(v).toFixed(0);
+        },
+        SetTemperature(v) {
+          this.Temperature = v;
+          if (!window.ReactionSim) window.ReactionSim = {};
+          window.ReactionSim.temperature = v;
+          if (typeof window.NotifyReactionParamsChanged === 'function') window.NotifyReactionParamsChanged();
+          this.DrawEnergy();
+        },
+        SetReplenish(v) {
+          this.Replenish = !!v;
+          if (!window.ReactionSim) window.ReactionSim = {};
+          window.ReactionSim.replenish = this.Replenish;
+          if (typeof window.NotifyReactionParamsChanged === 'function') window.NotifyReactionParamsChanged();
+        },
+        TogglePlay() {
+          this.Playing = !this.Playing;
+          if (typeof window.SetReactionPlaying === 'function') window.SetReactionPlaying(this.Playing);
+        },
+        SelectReaction(id) {
+          if (this.Active === id) return;
+          this.Active = id;
+          this.Playing = true;
+          this.Temperature = window.ReactionConfigs[id].Ea + 250;
+          if (window.ReactionSim) {
+            window.ReactionSim.temperature = this.Temperature;
+            window.ReactionSim.replenish = this.Replenish;
+          }
+          if (typeof window.SetReactionPlaying === 'function') window.SetReactionPlaying(true);
+          this.Loading = true;
+          this.$nextTick(() => {
+            setTimeout(() => {
+              if (typeof window.InitReactionFn === 'function') {
+                window.InitReactionFn(id);
+                this.DrawEnergy();
+              }
+              this.Loading = false;
+            }, 250);
+          });
+        },
+        ResetReaction() {
+          this.Playing = true;
+          if (typeof window.SetReactionPlaying === 'function') window.SetReactionPlaying(true);
+          if (typeof window.ResetReactionFn === 'function') window.ResetReactionFn();
+        },
+        TelemetryChips(col) {
+          const t = this.Telemetry;
+          const A = [
+            { k: '反応回数', v: this.Num(t.reactions) },
+            { k: '温度', v: this.Num(t.temperature) + ' K' },
+            { k: '経過時間', v: this.Num(t.time) + ' s' }
+          ];
+          const counts = t.counts || {};
+          const labels = { H2: 'H₂', O2: 'O₂', N2: 'N₂', Cl2: 'Cl₂', HCl: 'HCl', H2O: 'H₂O', NH3: 'NH₃', CO2: 'CO₂', CH4: 'CH₄', NaCl: 'NaCl', Na: 'Na' };
+          const cfg = window.ReactionConfigs[this.Active] || {};
+          const reactantList = Object.keys(cfg.reactants || {}).map(s => ({ k: '反応物 ' + (labels[s] || s), v: (counts[s] || 0) + ' 個' }));
+          const productList = Object.keys(cfg.products || {}).map(s => ({ k: '生成物 ' + (labels[s] || s), v: (counts[s] || 0) + ' 個' }));
+          const B = reactantList.concat(productList);
+          return col === 'A' ? A : B;
+        },
+        DrawEnergy() {
+          const canvas = document.getElementById('EnergyCanvas');
+          if (!canvas) return;
+          const cfg = window.ReactionConfigs[this.Active];
+          if (!cfg) return;
+          const dpr = window.devicePixelRatio || 1;
+          const cssW = canvas.clientWidth;
+          const cssH = canvas.clientHeight;
+          if (cssW === 0) return;
+          canvas.width = cssW * dpr;
+          canvas.height = cssH * dpr;
+          const ctx = canvas.getContext('2d');
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, cssW, cssH);
+
+          const W = cssW, H = cssH;
+          const padX = 38, padTop = 18, padBottom = 26;
+          const plotW = W - padX * 2;
+          const plotH = H - padTop - padBottom;
+
+          const xR = padX + 10;
+          const xP = padX + plotW - 10;
+          const xT = padX + plotW * 0.55;
+
+          const maxE = Math.max(cfg.Ea * 1.15, Math.abs(cfg.dH) * 1.25, 300);
+          const yBase = padTop + plotH;
+          const scale = plotH / maxE;
+
+          const yR = yBase;
+          const yPeak = yBase - cfg.Ea * scale;
+          const yP = yBase - cfg.dH * scale;
+
+          ctx.strokeStyle = 'rgba(128,176,255,0.25)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(xR, yR);
+          ctx.lineTo(xP, yR);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          const grad = ctx.createLinearGradient(0, yPeak, 0, yBase);
+          grad.addColorStop(0, 'rgba(128,176,255,0.55)');
+          grad.addColorStop(1, 'rgba(128,176,255,0.05)');
+          ctx.beginPath();
+          ctx.moveTo(xR, yR);
+          ctx.lineTo(xR, yR - 2);
+          ctx.bezierCurveTo(xR + (xT - xR) * 0.5, yPeak - 6, xT - 2, yPeak, xT, yPeak);
+          ctx.bezierCurveTo(xT + 2, yPeak, xT + (xP - xT) * 0.5, yP, xP, yP);
+          ctx.lineTo(xP, yR);
+          ctx.closePath();
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#80b0ff';
+          ctx.beginPath();
+          ctx.moveTo(xR, yR);
+          ctx.lineTo(xR, yR - 1);
+          ctx.bezierCurveTo(xR + (xT - xR) * 0.5, yPeak - 6, xT - 2, yPeak, xT, yPeak);
+          ctx.bezierCurveTo(xT + 2, yPeak, xT + (xP - xT) * 0.5, yP, xP, yP);
+          ctx.stroke();
+
+          ctx.fillStyle = '#b8d0ff';
+          ctx.font = '11px "Space Mono", monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('反応物', xR, yR + 16);
+          ctx.fillText('遷移状態', xT, yPeak - 10);
+          ctx.fillText('生成物', xP, Math.min(yP, yBase) + 16);
+
+          ctx.textAlign = 'left';
+          ctx.fillStyle = '#6078a8';
+          ctx.font = '10px "Space Mono", monospace';
+          ctx.fillText('エネルギー', 4, 14);
+          ctx.fillText('反応の進行', W / 2, H - 6);
+
+          ctx.strokeStyle = '#ffb84d';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([2, 3]);
+          ctx.beginPath();
+          ctx.moveTo(xT, yR);
+          ctx.lineTo(xT, yPeak);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#ffb84d';
+          ctx.font = '10px "Space Mono", monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText('Ea', xT - 6, (yR + yPeak) / 2);
+
+          const dHColor = cfg.dH > 0 ? '#ff6a7a' : '#66ff99';
+          ctx.strokeStyle = dHColor;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(xP + 8, yR);
+          ctx.lineTo(xP + 8, yP);
+          ctx.stroke();
+          ctx.fillStyle = dHColor;
+          ctx.textAlign = 'left';
+          ctx.fillText(cfg.dH > 0 ? '+ΔH' : 'ΔH', xP + 14, (yR + yP) / 2);
+        }
+      }
+    });
+  </script>
+
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.126.1/examples/jsm/controls/OrbitControls.js';
+
+    // ============================================================
+    // 元素定義
+    // ============================================================
+    const ELEMENTS = {
+      H:  { r: 0.35, color: 0xffffff },
+      O:  { r: 0.42, color: 0xff4455 },
+      C:  { r: 0.50, color: 0x5577aa },
+      N:  { r: 0.48, color: 0x4488ff },
+      Cl: { r: 0.55, color: 0x66ff66 },
+      Na: { r: 0.50, color: 0xffaa44 }
+    };
+
+    // 分子定義(局所座標)
+    const MOLECULES = {
+      H2:  { atoms: [{ el: 'H', x: -0.5, y: 0, z: 0 }, { el: 'H', x: 0.5, y: 0, z: 0 }], bonds: [{ a: 0, b: 1, order: 1 }] },
+      O2:  { atoms: [{ el: 'O', x: -0.6, y: 0, z: 0 }, { el: 'O', x: 0.6, y: 0, z: 0 }], bonds: [{ a: 0, b: 1, order: 2 }] },
+      N2:  { atoms: [{ el: 'N', x: -0.55, y: 0, z: 0 }, { el: 'N', x: 0.55, y: 0, z: 0 }], bonds: [{ a: 0, b: 1, order: 3 }] },
+      Cl2: { atoms: [{ el: 'Cl', x: -0.8, y: 0, z: 0 }, { el: 'Cl', x: 0.8, y: 0, z: 0 }], bonds: [{ a: 0, b: 1, order: 1 }] },
+      HCl: { atoms: [{ el: 'H', x: -0.55, y: 0, z: 0 }, { el: 'Cl', x: 0.55, y: 0, z: 0 }], bonds: [{ a: 0, b: 1, order: 1 }] },
+      H2O: { atoms: [{ el: 'O', x: 0, y: 0, z: 0 }, { el: 'H', x: 0.58, y: 0.75, z: 0 }, { el: 'H', x: 0.58, y: -0.75, z: 0 }], bonds: [{ a: 0, b: 1, order: 1 }, { a: 0, b: 2, order: 1 }] },
+      NH3: { atoms: [{ el: 'N', x: 0, y: 0, z: 0 }, { el: 'H', x: 0.94, y: 0, z: -0.33 }, { el: 'H', x: -0.47, y: 0.816, z: -0.33 }, { el: 'H', x: -0.47, y: -0.816, z: -0.33 }], bonds: [{ a: 0, b: 1, order: 1 }, { a: 0, b: 2, order: 1 }, { a: 0, b: 3, order: 1 }] },
+      CO2: { atoms: [{ el: 'C', x: 0, y: 0, z: 0 }, { el: 'O', x: 1.15, y: 0, z: 0 }, { el: 'O', x: -1.15, y: 0, z: 0 }], bonds: [{ a: 0, b: 1, order: 2 }, { a: 0, b: 2, order: 2 }] },
+      CH4: { atoms: [{ el: 'C', x: 0, y: 0, z: 0 }, { el: 'H', x: 0, y: 0.99, z: 0 }, { el: 'H', x: 0.935, y: -0.33, z: 0 }, { el: 'H', x: -0.467, y: -0.33, z: 0.81 }, { el: 'H', x: -0.467, y: -0.33, z: -0.81 }], bonds: [{ a: 0, b: 1, order: 1 }, { a: 0, b: 2, order: 1 }, { a: 0, b: 3, order: 1 }, { a: 0, b: 4, order: 1 }] },
+      NaCl: { atoms: [{ el: 'Na', x: -0.7, y: 0, z: 0 }, { el: 'Cl', x: 0.7, y: 0, z: 0 }], bonds: [{ a: 0, b: 1, order: 1 }] },
+      Na:   { atoms: [{ el: 'Na', x: 0, y: 0, z: 0 }], bonds: [] }
+    };
+
+    const RADII = {
+      H2: 1.0, O2: 1.1, N2: 1.1, Cl2: 1.4, HCl: 1.1, H2O: 1.0, NH3: 1.2, CO2: 1.4, CH4: 1.3, NaCl: 1.3, Na: 0.7
+    };
+
+    // ============================================================
+    // シーン共通
+    // ============================================================
+    let renderer = null;
+    let scene = null;
+    let camera = null;
+    let controls = null;
+    let container = null;
+    let clock = null;
+    let animId = null;
+    let resizeObs = null;
+    let booted = false;
+    let activeId = null;
+    let playing = true;
+
+    const BX = 6, BY = 4.2, BZ = 4.2;
+    const SPAWN_DUR = 0.45;
+
+    // ============================================================
+    // 分子テンプレート
+    // ============================================================
+    const templates = {};
+    const elementMatMap = {};
+
+    function makeSphereGeo(r) {
+      return new THREE.SphereGeometry(r, 20, 20);
+    }
+
+    function buildBond(p1, p2, order) {
+      const start = new THREE.Vector3(p1.x, p1.y, p1.z);
+      const end = new THREE.Vector3(p2.x, p2.y, p2.z);
+      const direction = new THREE.Vector3().copy(end).sub(start);
+      const length = direction.length();
+      direction.normalize();
+      const mid = new THREE.Vector3().copy(start).add(end).multiplyScalar(0.5);
+      const radius = 0.09;
+
+      if (order === 1) {
+        const geo = new THREE.CylinderGeometry(radius, radius, length, 8);
+        const mat = new THREE.MeshStandardMaterial({ color: 0xb0c0e0 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(mid);
+        const up = new THREE.Vector3(0, 1, 0);
+        mesh.quaternion.setFromUnitVectors(up, direction);
+        const g = new THREE.Group();
+        g.add(mesh);
+        return g;
+      }
+
+      const perp = new THREE.Vector3();
+      if (Math.abs(direction.y) < 0.9) {
+        perp.crossVectors(direction, new THREE.Vector3(0, 1, 0));
+      } else {
+        perp.crossVectors(direction, new THREE.Vector3(1, 0, 0));
+      }
+      perp.normalize();
+      const offset = radius * 2.2;
+
+      const group = new THREE.Group();
+      for (let k = 0; k < order; k++) {
+        const off = (k - (order - 1) / 2) * offset;
+        const pos = new THREE.Vector3().copy(mid).add(perp.clone().multiplyScalar(off));
+        const geo = new THREE.CylinderGeometry(radius * 0.7, radius * 0.7, length, 8);
+        const mat = new THREE.MeshStandardMaterial({ color: 0xb0c0e0 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pos);
+        const up = new THREE.Vector3(0, 1, 0);
+        mesh.quaternion.setFromUnitVectors(up, direction);
+        group.add(mesh);
+      }
+      return group;
+    }
+
+    function buildTemplate(species) {
+      const def = MOLECULES[species];
+      const group = new THREE.Group();
+      def.atoms.forEach((atom) => {
+        const el = ELEMENTS[atom.el];
+        if (!elementMatMap[atom.el]) {
+          elementMatMap[atom.el] = new THREE.MeshStandardMaterial({ color: el.color, metalness: 0.05, roughness: 0.35 });
+        }
+        const mesh = new THREE.Mesh(makeSphereGeo(el.r), elementMatMap[atom.el]);
+        mesh.position.set(atom.x, atom.y, atom.z);
+        group.add(mesh);
+      });
+      def.bonds.forEach((bond) => {
+        group.add(buildBond(def.atoms[bond.a], def.atoms[bond.b], bond.order));
+      });
+      return group;
+    }
+
+    function getTemplate(species) {
+      if (!templates[species]) templates[species] = buildTemplate(species);
+      return templates[species];
+    }
+
+    // ============================================================
+    // 分子インスタンス
+    // ============================================================
+    let molecules = [];
+    let moleculeCounter = 0;
+    let meanVelocity = 0;
+
+    function randomDir() {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      return new THREE.Vector3(
+        Math.sin(phi) * Math.cos(theta),
+        Math.sin(phi) * Math.sin(theta),
+        Math.cos(phi)
+      );
+    }
+
+    function spawnPosition() {
+      for (let i = 0; i < 30; i++) {
+        const pos = new THREE.Vector3(
+          (Math.random() * 2 - 1) * (BX - 1.5),
+          (Math.random() * 2 - 1) * (BY - 1.5),
+          (Math.random() * 2 - 1) * (BZ - 1.5)
+        );
+        let ok = true;
+        for (const m of molecules) {
+          if (m.pos.distanceTo(pos) < 2.2) { ok = false; break; }
+        }
+        if (ok) return pos;
+      }
+      return new THREE.Vector3(
+        (Math.random() * 2 - 1) * (BX - 1.5),
+        (Math.random() * 2 - 1) * (BY - 1.5),
+        (Math.random() * 2 - 1) * (BZ - 1.5)
+      );
+    }
+
+    function addMolecule(species, pos, vel, life) {
+      const g = getTemplate(species).clone();
+      g.position.copy(pos);
+      scene.add(g);
+      const mol = {
+        id: moleculeCounter++,
+        species,
+        group: g,
+        pos: pos.clone(),
+        vel: vel || randomDir().multiplyScalar(0.8),
+        rot: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(),
+        radius: RADII[species] || 1.0,
+        life: life !== undefined ? life : null,
+        birthT: 0,
+        spawnT: 0
+      };
+      g.scale.setScalar(0.001);
+      molecules.push(mol);
+      return mol;
+    }
+
+    function removeMolecule(mol) {
+      scene.remove(mol.group);
+      const idx = molecules.indexOf(mol);
+      if (idx !== -1) molecules.splice(idx, 1);
+    }
+
+    // ============================================================
+    // ミクロの反応: 火花 & 電子
+    // ============================================================
+    const MAX_PARTICLES = 300;
+    let sparks = null;
+    let sparkVel = new Float32Array(MAX_PARTICLES * 3);
+    let sparkLife = new Float32Array(MAX_PARTICLES);
+    let sparkMaxLife = new Float32Array(MAX_PARTICLES);
+
+    function makeSparks() {
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(MAX_PARTICLES * 3);
+      const col = new Float32Array(MAX_PARTICLES * 3);
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const mat = new THREE.PointsMaterial({
+        size: 0.16,
+        vertexColors: true,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      sparks = new THREE.Points(geo, mat);
+      sparks.frustumCulled = false;
+      scene.add(sparks);
+    }
+
+    function explodeSparks(pos, color1, color2) {
+      let added = 0;
+      for (let i = 0; i < MAX_PARTICLES && added < 10; i++) {
+        if (sparkLife[i] > 0) continue;
+        const speed = 3 + Math.random() * 4;
+        const dir = randomDir();
+        sparkVel[i * 3] = dir.x * speed;
+        sparkVel[i * 3 + 1] = dir.y * speed;
+        sparkVel[i * 3 + 2] = dir.z * speed;
+        sparkLife[i] = 0.4 + Math.random() * 0.4;
+        sparkMaxLife[i] = sparkLife[i];
+        const attr = sparks.geometry.attributes.position;
+        attr.array[i * 3] = pos.x;
+        attr.array[i * 3 + 1] = pos.y;
+        attr.array[i * 3 + 2] = pos.z;
+        const c = Math.random() < 0.6 ? color1 : color2;
+        const colAttr = sparks.geometry.attributes.color;
+        colAttr.array[i * 3] = c.r;
+        colAttr.array[i * 3 + 1] = c.g;
+        colAttr.array[i * 3 + 2] = c.b;
+        added++;
+      }
+    }
+
+    function updateSparks(dt) {
+      if (!sparks) return;
+      const posAttr = sparks.geometry.attributes.position;
+      const colAttr = sparks.geometry.attributes.color;
+      for (let i = 0; i < MAX_PARTICLES; i++) {
+        if (sparkLife[i] <= 0) { colAttr.array[i * 3] = 0; colAttr.array[i * 3 + 1] = 0; colAttr.array[i * 3 + 2] = 0; continue; }
+        sparkLife[i] -= dt;
+        posAttr.array[i * 3] += sparkVel[i * 3] * dt;
+        posAttr.array[i * 3 + 1] += sparkVel[i * 3 + 1] * dt;
+        posAttr.array[i * 3 + 2] += sparkVel[i * 3 + 2] * dt;
+        const f = Math.max(sparkLife[i] / sparkMaxLife[i], 0);
+        colAttr.array[i * 3] *= f * 0.95;
+        colAttr.array[i * 3 + 1] *= f * 0.95;
+        colAttr.array[i * 3 + 2] *= f * 0.95;
+      }
+      posAttr.needsUpdate = true;
+      colAttr.needsUpdate = true;
+    }
+
+    // 反応のフラッシュ(展開するリング)
+    let flashes = [];
+
+    function addFlash(pos, color) {
+      const geo = new THREE.TorusGeometry(0.4, 0.06, 8, 32);
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(pos);
+      const dir = randomDir();
+      mesh.lookAt(pos.clone().add(dir));
+      scene.add(mesh);
+      flashes.push({ mesh, t: 0, dur: 0.5 });
+    }
+
+    function updateFlashes(dt) {
+      for (let i = flashes.length - 1; i >= 0; i--) {
+        const f = flashes[i];
+        f.t += dt;
+        const p = f.t / f.dur;
+        if (p >= 1) {
+          scene.remove(f.mesh);
+          f.mesh.geometry.dispose();
+          f.mesh.material.dispose();
+          flashes.splice(i, 1);
+          continue;
+        }
+        f.mesh.scale.setScalar(0.2 + p * 2.5);
+        f.mesh.material.opacity = 0.9 * (1 - p);
+      }
+    }
+
+    // 電子(イオン結合専用)
+    let electrons = [];
+
+    function addElectron(fromPos, toPos) {
+      const geo = new THREE.SphereGeometry(0.14, 14, 14);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffdd44, emissive: 0xffdd00 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(fromPos);
+      scene.add(mesh);
+      electrons.push({ mesh, from: fromPos.clone(), to: toPos.clone(), t: 0, dur: 0.5 });
+    }
+
+    function updateElectrons(dt) {
+      for (let i = electrons.length - 1; i >= 0; i--) {
+        const e = electrons[i];
+        e.t += dt;
+        const p = Math.min(e.t / e.dur, 1);
+        e.mesh.position.lerpVectors(e.from, e.to, p);
+        e.mesh.material.opacity = 1 - p * 0.5;
+        if (p >= 1) {
+          scene.remove(e.mesh);
+          e.mesh.geometry.dispose();
+          e.mesh.material.dispose();
+          electrons.splice(i, 1);
+        }
+      }
+    }
+
+    // ============================================================
+    // 反応ロジック
+    // ============================================================
+    const cfg = () => (window.ReactionConfigs && window.ReactionConfigs[activeId]) || null;
+    const simParams = () => window.ReactionSim || {};
+    let temperature = 700;
+    let replenish = true;
+    let reactionCount = 0;
+    let elapsed = 0;
+    let spawnCooldown = 0;
+
+    function speedScale() {
+      return Math.min(1.4, Math.max(0.2, (temperature - 250) / (2000 - 250)));
+    }
+
+    function chanceFactor() {
+      const c = cfg();
+      if (!c) return 0;
+      let t = Number(simParams().temperature);
+      if (!isFinite(t)) t = c.Ea + 250;
+      if (t <= c.Ea) return 0;
+      return Math.min(1, (t - c.Ea) / (1800 - c.Ea));
+    }
+
+    function countSpecies(species) {
+      let n = 0;
+      for (const m of molecules) if (m.species === species) n++;
+      return n;
+    }
+
+    // 反応を試みる: a,b衝突 → 必要数集めて消費→生成
+    function tryReact(a, b, basePos) {
+      const c = cfg();
+      if (!c) return false;
+      const need = Object.assign({}, c.reactants);
+      if (!(a.species in need) || !(b.species in need)) return false;
+
+      need[a.species]--;
+      need[b.species]--;
+
+      const used = [a, b];
+      let failed = false;
+      for (const species of Object.keys(need)) {
+        let remaining = need[species];
+        if (remaining <= 0) continue;
+        const nearby = molecules
+          .filter(m => m.species === species && used.indexOf(m) === -1)
+          .sort((x, y) => x.pos.distanceTo(basePos) - y.pos.distanceTo(basePos));
+        for (let i = 0; i < Math.min(remaining, nearby.length); i++) {
+          used.push(nearby[i]);
+        }
+        if (used.filter(m => m.species === species).length < c.reactants[species]) {
+          failed = true;
+          break;
+        }
+      }
+      if (failed) return false;
+
+      const centroid = basePos.clone();
+      const dir = randomDir().multiplyScalar(0.45);
+
+      used.forEach(m => removeMolecule(m));
+
+      const flashColor = new THREE.Color(0x80c0ff);
+      addFlash(basePos, flashColor);
+      const c1 = new THREE.Color(0x88ccff);
+      const c2 = new THREE.Color(0xffffff);
+      explodeSparks(basePos, c1, c2);
+
+      // Na の電子移動 (Na → Cl)
+      if (activeId === 'nacl') {
+        const naMols = used.filter(m => m.species === 'Na');
+        naMols.forEach((naMol) => {
+          addElectron(naMol.pos, basePos.clone().add(new THREE.Vector3(0.6, 0.3, 0.2)));
+        });
+      }
+
+      const randomOffset = () => new THREE.Vector3(
+        (Math.random() - 0.5) * 0.7,
+        (Math.random() - 0.5) * 0.7,
+        (Math.random() - 0.5) * 0.7
+      );
+      Object.keys(c.products).forEach((species) => {
+        const n = c.products[species];
+        for (let i = 0; i < n; i++) {
+          addMolecule(species, centroid.clone().add(randomOffset()), dir.clone().add(randomOffset().multiplyScalar(0.4)), 0);
+        }
+      });
+
+      reactionCount++;
+      return true;
+    }
+
+    function tryAllReactions(dt) {
+      if (!playing) return;
+      const c = cfg();
+      if (!c) return;
+      const pf = chanceFactor();
+      if (pf <= 0) return;
+
+      const rate = 2.4 * pf;
+      const step = Math.min(rate * dt, 0.5);
+      let reacted = 0;
+      const maxPerFrame = 2;
+
+      const candidates = molecules;
+      for (let i = 0; i < candidates.length && reacted < maxPerFrame; i++) {
+        const a = candidates[i];
+        for (let j = i + 1; j < candidates.length && reacted < maxPerFrame; j++) {
+          const b = candidates[j];
+          if (!(a.species in c.reactants) || !(b.species in c.reactants)) continue;
+          if (a.species === b.species && c.reactants[a.species] === 1) continue;
+          const dist = a.pos.distanceTo(b.pos);
+          if (dist > a.radius + b.radius + 0.5) continue;
+          if (Math.random() > step) continue;
+          const base = a.pos.clone().add(b.pos).multiplyScalar(0.5);
+          if (tryReact(a, b, base)) reacted++;
+        }
+      }
+    }
+
+    // ============================================================
+    // 更新
+    // ============================================================
+    function updateMolecules(dt) {
+      const scale = speedScale();
+      const targetSpeed = 0.45 + scale * 1.1;
+      meanVelocity = 0;
+      const disappeared = [];
+
+      for (const m of molecules) {
+        // ランダムな揺らぎ(ブラウン運動)を速度に加える
+        m.vel.x += (Math.random() - 0.5) * dt * 6;
+        m.vel.y += (Math.random() - 0.5) * dt * 6;
+        m.vel.z += (Math.random() - 0.5) * dt * 6;
+
+        // 温度に応じて速度をスケーリング
+        const vlen = m.vel.length();
+        if (vlen > 0) {
+          const s = targetSpeed / Math.max(vlen, 0.001);
+          m.vel.multiplyScalar(Math.min(1.15, Math.max(0.7, s)));
+        }
+
+        m.pos.addScaledVector(m.vel, dt);
+        m.birthT += dt;
+
+        // 壁で跳ね返る
+        const bounce = (v, min, max, axis) => {
+          if (m.pos[axis] < min) { m.pos[axis] = min; v[axis] = Math.abs(v[axis]); }
+          if (m.pos[axis] > max) { m.pos[axis] = max; v[axis] = -Math.abs(v[axis]); }
+        };
+        bounce(m.vel, -BX + m.radius, BX - m.radius, 'x');
+        bounce(m.vel, -BY + m.radius, BY - m.radius, 'y');
+        bounce(m.vel, -BZ + m.radius, BZ - m.radius, 'z');
+
+        m.group.position.copy(m.pos);
+        m.group.rotateOnWorldAxis(m.rot, dt * (0.3 + scale * 0.7));
+
+        // 新しく生成された分子はスケールを 0→1 に成長させてフェードイン(瞬間出現を防ぐ)
+        if (m.spawnT < SPAWN_DUR) {
+          m.spawnT = Math.min(SPAWN_DUR, m.spawnT + dt);
+          const fp = Math.max(0.001, m.spawnT / SPAWN_DUR);
+          m.group.scale.setScalar(fp);
+        } else if (m.life !== null && m.life >= 3.5 - 0.6) {
+          const fadeP = Math.max(0.001, Math.min(1, (3.5 - m.life) / 0.6));
+          m.group.scale.setScalar(fadeP);
+        } else {
+          m.group.scale.setScalar(1);
+        }
+
+        meanVelocity += vlen;
+
+        // 生成物は時間経過でゆっくり消える
+        if (m.life !== null) {
+          m.life += dt;
+          if (m.life >= 3.5) disappeared.push(m);
+        }
+      }
+      disappeared.forEach(m => removeMolecule(m));
+      if (molecules.length) meanVelocity /= molecules.length;
+    }
+
+    function spawnReactants(dt) {
+      const c = cfg();
+      if (!c) return;
+      spawnCooldown -= dt;
+      if (spawnCooldown > 0) return;
+      if (!replenish) return;
+      for (const species of Object.keys(c.keep)) {
+        const current = countSpecies(species);
+        if (current < c.keep[species] && molecules.length < 40) {
+          addMolecule(species, spawnPosition());
+          spawnCooldown = 0.15;
+          return;
+        }
+      }
+      spawnCooldown = 0.3;
+    }
+
+    // ============================================================
+    // 初期化
+    // ============================================================
+    function clearWorld() {
+      const list = molecules.slice();
+      list.forEach(m => removeMolecule(m));
+      molecules = [];
+      flashes.forEach(f => { scene.remove(f.mesh); f.mesh.geometry.dispose(); f.mesh.material.dispose(); });
+      flashes = [];
+      electrons.forEach(e => { scene.remove(e.mesh); e.mesh.geometry.dispose(); e.mesh.material.dispose(); });
+      electrons = [];
+      if (sparks && sparks.geometry.attributes.position) {
+        sparks.geometry.attributes.position.array.fill(0);
+        sparks.geometry.attributes.color.array.fill(0);
+        sparks.geometry.attributes.position.needsUpdate = true;
+        sparks.geometry.attributes.color.needsUpdate = true;
+        sparkLife.fill(0);
+      }
+    }
+
+    function initReaction(id) {
+      activeId = id;
+      const c = window.ReactionConfigs[id];
+      clearWorld();
+
+      temperature = Math.max(simParams().temperature, 300) || c.Ea + 250;
+      replenish = simParams().replenish !== false;
+      reactionCount = 0;
+      elapsed = 0;
+      spawnCooldown = 0;
+      moleculeCounter = 0;
+
+      // 初期配置
+      Object.keys(c.keep).forEach((species) => {
+        for (let i = 0; i < c.keep[species]; i++) {
+          addMolecule(species, spawnPosition());
+        }
+      });
+    }
+
+    // ============================================================
+    // シーン構築
+    // ============================================================
+    function buildEnvironment() {
+      const boxGeo = new THREE.BoxGeometry(BX * 2, BY * 2, BZ * 2);
+      const boxEdges = new THREE.EdgesGeometry(boxGeo);
+      const lineMat = new THREE.LineBasicMaterial({ color: 0x4058a0, transparent: true, opacity: 0.4 });
+      const boxLine = new THREE.LineSegments(boxEdges, lineMat);
+      scene.add(boxLine);
+
+      const grid = new THREE.GridHelper(BX * 2.2, 12, 0x4058a0, 0x1c2a48);
+      grid.position.y = -BY;
+      grid.material.transparent = true;
+      grid.material.opacity = 0.5;
+      scene.add(grid);
+    }
+
+    function animate() {
+      animId = requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+
+      updateSparks(dt);
+      updateFlashes(dt);
+      updateElectrons(dt);
+
+      if (playing) {
+        elapsed += dt;
+        updateMolecules(dt);
+        spawnReactants(dt);
+        tryAllReactions(dt);
+      }
+
+      if (controls) controls.update();
+
+      window.ReactionSim = window.ReactionSim || {};
+      const c = cfg();
+      const counts = {};
+      if (c) {
+        const speciesList = Object.keys(c.reactants).concat(Object.keys(c.products));
+        speciesList.forEach(s => counts[s] = countSpecies(s));
+      }
+      window.ReactionSim.telemetry = {
+        reactions: reactionCount,
+        temperature: Math.round(temperature),
+        time: elapsed,
+        counts
+      };
+
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+
+    function boot() {
+      const el = document.getElementById('ReactContainer');
+      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
+        setTimeout(boot, 100);
+        return;
+      }
+      container = el;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x070a16);
+
+      camera = new THREE.PerspectiveCamera(50, el.clientWidth / el.clientHeight, 0.1, 200);
+      camera.position.set(10, 7, 10);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(el.clientWidth, el.clientHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      el.appendChild(renderer.domElement);
+
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.target.set(0, 0, 0);
+      controls.minDistance = 4;
+      controls.maxDistance = 40;
+
+      scene.add(new THREE.AmbientLight(0x7080b0, 0.55));
+      const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+      dir.position.set(10, 18, 8);
+      scene.add(dir);
+      const fill = new THREE.DirectionalLight(0x6090ff, 0.25);
+      fill.position.set(-8, 4, -10);
+      scene.add(fill);
+
+      buildEnvironment();
+      makeSparks();
+
+      clock = new THREE.Clock();
+      animate();
+
+      resizeObs = new ResizeObserver(() => {
+        if (!container || !renderer || !camera) return;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        if (w === 0 || h === 0) return;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      });
+      resizeObs.observe(container);
+
+      booted = true;
+    }
+
+    // ============================================================
+    // window インターフェイス
+    // ============================================================
+    window.InitReactionFn = function(id) {
+      if (!booted) { setTimeout(() => window.InitReactionFn(id), 50); return; }
+      initReaction(id);
+    };
+
+    window.ResetReactionFn = function() {
+      if (activeId) initReaction(activeId);
+    };
+
+    window.CleanupReactionFn = function() {
+      if (animId) { cancelAnimationFrame(animId); animId = null; }
+      if (renderer) {
+        renderer.dispose();
+        if (renderer.domElement && renderer.domElement.parentNode) {
+          renderer.domElement.parentNode.removeChild(renderer.domElement);
+        }
+        renderer = null;
+      }
+      if (resizeObs) { resizeObs.disconnect(); resizeObs = null; }
+      controls = null;
+      camera = null;
+      scene = null;
+      clock = null;
+      booted = false;
+      activeId = null;
+    };
+
+    window.SetReactionPlaying = function(v) { playing = !!v; };
+
+    window.NotifyReactionParamsChanged = function() {
+      const s = window.ReactionSim || {};
+      temperature = Math.max(s.temperature, 300) || temperature;
+      replenish = s.replenish !== false;
+    };
+
+    boot();
+  </script>
+</body>
+
+</html>

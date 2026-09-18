@@ -380,7 +380,7 @@
         fine[names[vi]] = bestSpot;
         if (bestValHere !== bestVal) {
           bestVal = bestValHere;
-          best = { values: objCopy(fine), value: bestVal };
+          best = { values: makeVarsPoint(p, fine), value: bestVal };
         }
       }
     }
@@ -612,7 +612,7 @@
           count: Number(r.count) || 0,
           W: W[i],
           gain: gain,
-          action: gain > 1e-9 ? 'merge' : (Math.abs(gain) <= 1e-9 ? 'keep' : 'merge'),
+          action: gain > 1e-9 ? 'merge' : 'keep',
           need: r.need,
           mergeable: !!((r.outcomes && r.outcomes.length))
         };

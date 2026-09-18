@@ -1183,9 +1183,13 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>化学</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Note_Sience_Plant.html">
+                    <v-list-item href="./Note_Sience_Chemistry_Simulation.html">
                         <v-list-item-icon />
-                        <v-list-item-title>植物</v-list-item-title>
+                        <v-list-item-title>化学反応シミュレーション</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Note_Sience_Biology.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>生物</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Note_Computer_Marketing.html">
                         <v-list-item-icon />
