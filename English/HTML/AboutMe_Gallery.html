@@ -2721,6 +2721,134 @@
             }
         }
 
+        class C_Aurora {
+
+            constructor(scene) {
+                this._scene = scene;
+                this._time = 0;
+                this._matDome = null;
+
+                this._buildDome();
+            }
+
+            _buildDome() {
+                const R = 42;
+                const geometry = new THREE.SphereGeometry(R, 56, 24, 0, Math.PI * 2, 0, 1.32);
+
+                this._matDome = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uOpacity: { value: 0.45 },
+                    },
+                    vertexShader: `
+                        varying vec3 vDir;
+                        void main() {
+                            vDir = normalize(position);
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        precision highp float;
+                        varying vec3 vDir;
+                        uniform float uTime;
+                        uniform float uOpacity;
+                        float hash21(vec2 p) {
+                            p = fract(p * vec2(123.34, 456.21));
+                            p += dot(p, p + 45.32);
+                            return fract(p.x * p.y);
+                        }
+                        float vnoise(vec2 p) {
+                            vec2 i = floor(p);
+                            vec2 f = fract(p);
+                            float a = hash21(i);
+                            float b = hash21(i + vec2(1.0, 0.0));
+                            float c = hash21(i + vec2(0.0, 1.0));
+                            float d = hash21(i + vec2(1.0, 1.0));
+                            vec2 u = f * f * (3.0 - 2.0 * f);
+                            return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+                        }
+                        float vfbm(vec2 p) {
+                            return vnoise(p) * 0.5 + vnoise(p * 2.03) * 0.25
+                                 + vnoise(p * 4.11) * 0.125;
+                        }
+                        void main() {
+                            float t = uTime;
+                            vec3 d = normalize(vDir);
+                            float u = atan(d.z, d.x) / 6.2831853 + 0.5;
+                            float elev = 1.0 - acos(clamp(d.y, -1.0, 1.0)) / 1.5707963;
+
+                            float aMask = smoothstep(0.04, 0.14, u) * (1.0 - smoothstep(0.76, 0.86, u));
+                            if (aMask < 0.01) discard;
+                            if (elev < 0.12 || elev > 0.99) discard;
+
+                            // --- Real aurora (curtain: meander -> vertical rays, bright lower border) ---
+                            float nS = vfbm(vec2(u * 3.0, t * 0.040));                 // master sway (large meander)
+                            float nF = vfbm(vec2(u * 7.0 - t * 0.055 + 5.3, t * 0.045)); // folds / pleats
+                            float nR = vfbm(vec2(u * 14.0 + t * 0.05 + 2.1, t * 0.055)); // fine detail
+                            float nD = vnoise(vec2(u * 22.0 - t * 0.03 + 7.7, t * 0.05));// ray jitter
+
+                            // Curtain centerline: hangs low and sways strongly along azimuth (うねり復活)
+                            float ec = 0.56
+                                     + 0.36 * (nS - 0.5) * 2.0
+                                     + 0.13 * sin(u * 5.0 - t * 0.42 + nS * 5.5)
+                                     + 0.06 * sin(u * 11.0 - t * 0.55 + nF * 6.0)
+                                     - 0.05 * (nD - 0.5) * 2.0;
+                            ec = clamp(ec, 0.22, 0.97);
+
+                            // Curtain thickness (vertical extent in elevation)
+                            float wl = 0.12 + 0.06 * nR + 0.05 * (0.5 + 0.5 * sin(u * 8.0 - t * 0.3));
+
+                            float dnv = (elev - ec) / wl;
+
+                            // Vertical rays: 2D curtain noise extruded vertically (real aurora rays)
+                            float rays = 0.55 + 0.55 * vfbm(vec2(u * 21.0 + nF * 2.5, t * 0.05 + nS * 2.0));
+
+                            // Pleats / undulation running along the curtain
+                            float fold = 0.60 + 0.40 * (0.5 + 0.5 * sin(u * 8.0 - t * 0.5 + nS * 6.0));
+
+                            // Curtain profile: crisp bright lower border, gentle fade upward
+                            float bel = max(-dnv, 0.0);
+                            float abv = max(dnv, 0.0);
+                            float band = exp(-2.2 * bel * bel) * exp(-1.0 * abv);
+
+                            float lum = band * rays * fold * aMask;
+                            lum *= 1.25;
+
+                            // Height-based colour: yellow-green at border -> green -> teal -> violet fringe
+                            float mm = clamp(dnv * 0.5 + 0.6, 0.0, 1.0);
+                            vec3 colLo = vec3(0.28, 0.95, 0.45);
+                            vec3 colMi = vec3(0.13, 0.82, 0.52);
+                            vec3 colHi = vec3(0.10, 0.62, 0.80);
+                            vec3 col = mix(colLo, colMi, smoothstep(0.0, 0.45, mm));
+                            col = mix(col, colHi, smoothstep(0.45, 0.85, mm));
+
+                            float farDissolve = smoothstep(0.12, 0.34, elev);
+                            float alpha = lum * farDissolve * 0.55 * uOpacity;
+                            gl_FragColor = vec4(col * (0.7 + 0.5 * lum) * farDissolve, clamp(alpha, 0.0, 0.8));
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    depthTest: true,
+                    side: THREE.DoubleSide,
+                    fog: false,
+                });
+
+                this._dome = new THREE.Mesh(geometry, this._matDome);
+                this._dome.frustumCulled = false;
+                this._scene.add(this._dome);
+            }
+
+            Update(time) {
+                this._time = time;
+                this._matDome.uniforms.uTime.value = time;
+                if (this._dome && Camera) {
+                    this._dome.position.copy(Camera.Position);
+                }
+            }
+        }
+
         class C_Manager extends FC_Manager {
 
             _JOYSTICK_LEFT = new FC_Input_Joystick(document.getElementById("Joystick_Left"));
@@ -2787,6 +2915,7 @@
             _FishFloorY = 0;
             _MorphParticles = null;
             _MorphTriggered = false;
+            _Aurora = null;
             _MorphPostTimer = null;
             _LastFrameTime = null;
             _RealDelta = FC_Environment.TIME_DELTA;
@@ -3096,6 +3225,7 @@
                         this._raycaster = new THREE.Raycaster();
                         this.updateFrameVisibilityByPlayerFloor();
                         this.createRoofFloor();
+                        this.createAurora();
 
                         this._FishFloorY = (this._Elevator.floors - 1) * this._Floor_Height + this._Frame_BaseY + 2;
                         this._CreateFishes();
@@ -3270,6 +3400,9 @@
                             ring.material.uniforms.uTime.value = t;
                         }
                     }
+                }
+                if (this._Aurora) {
+                    this._Aurora.Update(t);
                 }
                 if (!this._Elevator || !this._Elevator.isMoving) {
                     this.updateHomeMusicAnchor();
@@ -3631,6 +3764,11 @@
                 if (roofText.Mesh_Front) roofText.Mesh_Front.layers.set(BLOOM_LAYER);
                 if (roofText.Mesh_Back) roofText.Mesh_Back.layers.set(BLOOM_LAYER);
                 this._Category_Texts.push(roofText);
+            }
+
+            createAurora() {
+                if (this._Aurora) return;
+                this._Aurora = new C_Aurora(Scene);
             }
 
             displayArtCategory(subcategories, category_y) {
