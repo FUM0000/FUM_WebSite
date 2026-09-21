@@ -141,9 +141,39 @@ Vue.component('main-navigation', {
         </v-btn>
         <!-- ▲ Title ▲ ------------------------------------------------------------------------------------>
 
-        
+
+        <!-- ▼ Search Box ▼ ------------------------------------------------------------------------------->
+        <div style="padding: 10px 12px 4px; flex-shrink: 0;">
+            <div style="position: relative; border-radius: 999px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(120, 140, 160, 0.35); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.10);">
+                <v-icon small style="position:absolute; top:50%; left:13px; transform:translateY(-55%); color: rgba(60, 70, 90, 0.75);">mdi-magnify</v-icon>
+                <input v-model="Search_Query" type="text" placeholder="Search pages..."
+                    style="width:100%; border:none; outline:none; background:transparent; padding:9px 38px; font-size:14px; color:#333; border-radius:999px; box-sizing:border-box;">
+                <div v-if="Search_Query" @click="Clear_Search" style="position:absolute; top:50%; right:11px; transform:translateY(-55%); color: rgba(60, 70, 90, 0.6); cursor:pointer; display:flex;">
+                    <v-icon small>mdi-close-circle</v-icon>
+                </div>
+            </div>
+        </div>
+        <!-- ▲ Search Box ▲ ------------------------------------------------------------------------------->
+
+
+        <!-- ▼ Search Results ▼ ---------------------------------------------------------------------------->
+        <template v-if="Search_Query">
+            <div v-if="Search_Results.length" style="overflow-y:auto;">
+                <a v-for="r in Search_Results" :key="r.url" :href="r.url" @click="Drawer_Local = false"
+                    style="display:block; padding:8px 16px; text-decoration:none; color:inherit; border-bottom:1px solid rgba(120, 140, 160, 0.25);">
+                    <div style="font-size:14px; font-weight:600; color:#37474f;">{{ r.title }}</div>
+                    <div style="font-size:11px; color:rgba(70, 90, 110, 0.85);">{{ r.url.split('/').pop() }}</div>
+                </a>
+            </div>
+            <div v-else style="padding:16px; text-align:center; font-size:13px; color:rgba(70, 90, 110, 0.8);">
+                No pages found
+            </div>
+        </template>
+        <!-- ▲ Search Results ▲ ---------------------------------------------------------------------------->
+
+
         <!-- ▼ Navigation ▼ ------------------------------------------------------------------------------->
-        <v-list nav dense>
+        <v-list nav dense v-show="!Search_Query">
 
 
             <!-- ▼ Home ▼ ------------------------------------------------------------------------------------->
@@ -1288,14 +1318,37 @@ Vue.component('main-navigation', {
     </v-navigation-drawer>
     `,
     props: ['drawer'],
+    data() {
+        return {
+            Search_Query: '',
+            All_Pages: [],
+        };
+    },
     computed: {
         Drawer_Local: {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
+        },
+        Search_Results() {
+            const q = (this.Search_Query || '').trim().toLowerCase();
+            if (!q) return [];
+            const terms = q.split(/\s+/).map(t => this.Normalize_Search(t)).filter(t => t);
+            if (!terms.length) return [];
+            const scored = [];
+            this.All_Pages.forEach(p => {
+                const fileName = this.Normalize_Search((p.url.split('/').pop() || '').replace(/\.html?$/, ''));
+                let ok = true;
+                for (const t of terms) {
+                    if (!fileName.includes(t)) { ok = false; break; }
+                }
+                if (ok) scored.push(p);
+            });
+            return scored.slice(0, 20);
         }
     },
     mounted() {
         this.applyMenuColor();
+        this.Load_Pages();
     },
     methods: {
         applyMenuColor() {
@@ -1303,6 +1356,47 @@ Vue.component('main-navigation', {
             if (color && this.$el) {
                 this.$el.style.setProperty('background-color', color, 'important');
             }
+        },
+        Clear_Search() {
+            this.Search_Query = '';
+        },
+        Normalize_Search(text) {
+            return (text || '').toLowerCase().replace(/[\s_-]+/g, '');
+        },
+        Load_Pages() {
+            let jsonPath = '../../Asset/Data/Page.json';
+            const scripts = document.querySelectorAll('script[src]');
+            for (const s of scripts) {
+                const src = s.getAttribute('src') || '';
+                if (src.indexOf('Common.js') !== -1) {
+                    jsonPath = src.replace(/Common\.js.*/, '') + '../Data/Page.json';
+                    break;
+                }
+            }
+            fetch(jsonPath)
+                .then(res => res.json())
+                .then(data => {
+                    const flat = [];
+                    Object.keys(data).forEach(cat => {
+                        const subs = data[cat];
+                        Object.keys(subs).forEach(sub => {
+                            const pages = subs[sub];
+                            if (Array.isArray(pages)) {
+                                pages.forEach(p => {
+                                    flat.push({
+                                        title: p.title,
+                                        url: p.url,
+                                        description: p.description || '',
+                                        category: cat,
+                                        subcategory: sub === 'Top' ? '' : sub
+                                    });
+                                });
+                            }
+                        });
+                    });
+                    this.All_Pages = flat;
+                })
+                .catch(() => { });
         }
     },
 })
