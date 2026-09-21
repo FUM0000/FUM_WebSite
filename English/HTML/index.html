@@ -2826,6 +2826,21 @@
         controls.minPolarAngle = 0.1;
         camera.position.copy(new THREE.Vector3(0, 1, 0).multiplyScalar(2000));
         camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+        // スクロールで「回転しながらズームイン/アウト」するための追加回転量（減衰付き）
+        let scrollSpin = 0;
+        let scrollTilt = 0;
+        renderer.domElement.addEventListener('wheel', (event) => {
+            if (!controls.enabled || Flag_CameraAnimation) return;
+            event.preventDefault();
+            let dy = event.deltaY;
+            if (event.deltaMode === 1) dy *= 33;
+            else if (event.deltaMode === 2) dy *= 100;
+            const dir = dy > 0 ? 1 : -1;
+            const strength = Math.min(4, Math.abs(dy) / 100);
+            scrollSpin += dir * strength * 0.7;
+            scrollTilt += dir * strength * 0.06;
+        }, { passive: false });
         function easeInOutCubic(t) {
             return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         }
@@ -4009,8 +4024,12 @@
                     newDistance = 18;
                     countDistance += Math.PI * delta;
                 }
+                // スクロールによる回転量を減衰させながら加算する（止めたら徐々に落ち着く）
+                const scrollDecay = Math.max(0, 1 - 2.2 * delta);
+                scrollSpin *= scrollDecay;
+                scrollTilt *= scrollDecay;
                 const currentPhi = Math.atan2(camera.position.z, camera.position.x);
-                const newPhi = currentPhi + Math.PI * 0.05 * delta;
+                const newPhi = currentPhi + Math.PI * 0.05 * delta + scrollSpin * delta;
                 countTheata += Math.PI * 0.2 * delta;
                 let currentTheta = Math.asin(camera.position.y / newDistance);
                 if (currentTheta <= -Math.PI * 0.49) {
@@ -4019,7 +4038,8 @@
                 if (currentTheta >= Math.PI * 0.49) {
                     currentTheta = Math.PI * 0.49;
                 }
-                const newTheta = currentTheta + Math.sin(countTheata) * Math.PI * 2.5 / 180 * delta;
+                let newTheta = currentTheta + Math.sin(countTheata) * Math.PI * 2.5 / 180 * delta + scrollTilt * delta;
+                newTheta = Math.min(Math.PI * 0.49, Math.max(-Math.PI * 0.49, newTheta));
                 const x = newDistance * Math.cos(newTheta) * Math.cos(newPhi);
                 const y = newDistance * Math.sin(newTheta);
                 const z = newDistance * Math.cos(newTheta) * Math.sin(newPhi);
