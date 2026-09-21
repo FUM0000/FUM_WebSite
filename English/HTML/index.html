@@ -18,7 +18,7 @@
 
     <link rel="icon" href="/FUM_WebSite/Asset/Image/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
-    <link href="../../Asset/CSS/Common.css?v=1.1" rel="stylesheet" />
+    <link href="../../Asset/CSS/Common.css?v=1.2" rel="stylesheet" />
 
     <title>FUM Website</title>
     <meta name="description"
@@ -3792,6 +3792,7 @@
                 'center': { value: new THREE.Vector2(0.5, 0.5) },
                 'radius': { value: 0.08 },
                 'strength': { value: 0.08 },
+                'drag': { value: 0.0 },
                 'aspect': { value: window.innerWidth / window.innerHeight }
             },
             vertexShader: `
@@ -3806,6 +3807,7 @@
                 uniform vec2 center;
                 uniform float radius;
                 uniform float strength;
+                uniform float drag;
                 uniform float aspect;
                 varying vec2 vUv;
 
@@ -3819,7 +3821,9 @@
                     float protection = smoothstep(0.0, protectRadius, r);
                     float warp = strength * ring * falloff * protection;
                     vec2 dir = normalize(deltaAspect + 1e-6);
-                    vec2 offset = dir * warp;
+                    vec2 perp = vec2(-dir.y, dir.x);
+                    // フレームドラッギング：中心の周りでタンジェンシャル方向にも引きずる
+                    vec2 offset = (dir * warp) + (perp * warp * drag);
                     offset.x /= aspect;
                     vec2 warpedUv = vUv + offset;
                     gl_FragColor = texture2D(tDiffuse, warpedUv);
@@ -3961,6 +3965,14 @@
         let time = 0.0;
         let countDistance = Math.PI;
         let countTheata = Math.PI;
+
+        // フレームドラッギング（回転ブラックホールによる時空の引きずり）用
+        const BH_DRAG_NEAR = 60;
+        const BH_DRAG_FAR = 300;
+        const BH_DRAG_SWIRL_MAX = 2.0;   // 背景光が渦を巻くスメア量の最大値
+        const BH_DRAG_CAM_MAX = 0.8;     // カメラ座標系が引き込まれて回転する最大速度(rad/s)
+        let frameDragCam = 0;            // 現在の引き込み回転速度（追従・減衰で滑らかに）
+
         let firstRenderDone = false;
         let sceneRevealed = false;
         window.__revealScene = () => {
@@ -4029,7 +4041,7 @@
                 scrollSpin *= scrollDecay;
                 scrollTilt *= scrollDecay;
                 const currentPhi = Math.atan2(camera.position.z, camera.position.x);
-                const newPhi = currentPhi + Math.PI * 0.05 * delta + scrollSpin * delta;
+                const newPhi = currentPhi + Math.PI * 0.05 * delta + scrollSpin * delta + frameDragCam * delta;
                 countTheata += Math.PI * 0.2 * delta;
                 let currentTheta = Math.asin(camera.position.y / newDistance);
                 if (currentTheta <= -Math.PI * 0.49) {
@@ -4050,6 +4062,21 @@
             // カメラを確定してからワープ中心を計算する（描画時と同じカメラで計算するため、
             // アニメーション中もワープが銀河中心からずれない）
             controls.update();
+
+            // フレームドラッギング：ブラックホールに近いほど時空が引きずられ、
+            // 背景光が中心の周りで渦を巻き、観測者の座標系も回転へ引き込まれる。
+            const bhDistance = camera.position.length();
+            let bhDragIntensity = 0;
+            if (bhDistance < BH_DRAG_FAR) {
+                bhDragIntensity = THREE.MathUtils.clamp(
+                    1 - (bhDistance - BH_DRAG_NEAR) / (BH_DRAG_FAR - BH_DRAG_NEAR),
+                    0, 1
+                );
+            }
+            frameDragCam += (bhDragIntensity * BH_DRAG_CAM_MAX - frameDragCam) * Math.min(1, 2.5 * delta);
+            if (blackholeWarpPass) {
+                blackholeWarpPass.material.uniforms.drag.value = bhDragIntensity * BH_DRAG_SWIRL_MAX;
+            }
 
             // ブラックホール（スケール固定＝常に一定サイズ）
             blackholeShaderMaterial.uniforms.time.value = time;
