@@ -1115,6 +1115,10 @@
         const FISH_COUNT = 25;
         const FISH_WORLD_BOUNDS = 30;
         const FISH_COLORS = [[1.0, 1.0, 1.0]];
+        const FISH_VIZ_IDLE_DELAY = 10;
+        const FISH_VIZ_SEP_RADIUS = 2.0;
+        const FISH_VIZ_ALI_RADIUS = 5.0;
+        const FISH_VIZ_COH_RADIUS = 6.0;
 
         class C_FishGeometry {
             static _catmullRom(p0, p1, p2, p3, t) {
@@ -1203,6 +1207,9 @@
             _pectoralLeftPoints = null; _pectoralRightPoints = null;
             _pelvicLeftPoints = null; _pelvicRightPoints = null; _analPoints = null;
             _minY = -Infinity;
+            _VizSep = new THREE.Vector3();
+            _VizAli = new THREE.Vector3();
+            _VizCoh = new THREE.Vector3();
             get Group() { return this._group; }
             get Position() { return this._position; }
             get Velocity() { return this._velocity; }
@@ -1321,6 +1328,9 @@
                 if (separationCount > 0) { separation.divideScalar(separationCount).normalize().multiplyScalar(0.15); }
                 if (alignCount > 0) { alignment.divideScalar(alignCount).normalize().multiplyScalar(0.08); }
                 if (cohesionCount > 0) { cohesion.divideScalar(cohesionCount).sub(this._position).normalize().multiplyScalar(0.04); }
+                this._VizSep.copy(separation);
+                this._VizAli.copy(alignment);
+                this._VizCoh.copy(cohesion);
                 this._acceleration.add(separation);
                 this._acceleration.add(alignment);
                 this._acceleration.add(cohesion);
@@ -1398,6 +1408,217 @@
                 this._pelvicLeftPoints.rotation.x = flap * 0.5;
                 this._pelvicRightPoints.rotation.x = -flap * 0.5;
                 this._analPoints.rotation.z = Math.sin(this._bodyWavePhase * 1.5) * 0.03;
+            }
+        }
+
+        class C_FishViz {
+
+            constructor(scene, fishes) {
+                this._scene = scene;
+                this._fishes = fishes;
+                this._triggered = false;
+                this._reveal = 0;
+                this._statTimer = 0;
+                this._pairCount = 0;
+                this._SEG = 32;
+                this._VEC_SCALE = 9.0;
+                this._maxLinks = (fishes.length * (fishes.length - 1)) / 2;
+
+                this._hud = document.getElementById('FishVizHud');
+                this._hudStat = document.getElementById('FishVizStat');
+
+                this._group = new THREE.Group();
+                this._group.visible = false;
+                scene.add(this._group);
+
+                this._linkPos = new Float32Array(this._maxLinks * 6);
+                this._linkCol = new Float32Array(this._maxLinks * 6);
+                this._linkGeo = new THREE.BufferGeometry();
+                this._linkGeo.setAttribute('position', new THREE.BufferAttribute(this._linkPos, 3));
+                this._linkGeo.setAttribute('color', new THREE.BufferAttribute(this._linkCol, 3));
+                this._linkGeo.setDrawRange(0, 0);
+                this._linkMat = new THREE.LineBasicMaterial({
+                    vertexColors: true, transparent: true, opacity: 0,
+                    depthWrite: false, fog: false, blending: THREE.AdditiveBlending,
+                });
+                this._linkLines = new THREE.LineSegments(this._linkGeo, this._linkMat);
+                this._linkLines.frustumCulled = false;
+                this._group.add(this._linkLines);
+
+                const fishCount = fishes.length;
+                this._ringPos = new Float32Array(fishCount * this._SEG * 6);
+                this._ringCol = new Float32Array(fishCount * this._SEG * 6);
+                for (let i = 0; i < fishCount * this._SEG * 2; i++) {
+                    const o = i * 3;
+                    this._ringCol[o] = 1.0;
+                    this._ringCol[o + 1] = 0.5;
+                    this._ringCol[o + 2] = 0.3;
+                }
+                this._ringGeo = new THREE.BufferGeometry();
+                this._ringGeo.setAttribute('position', new THREE.BufferAttribute(this._ringPos, 3));
+                this._ringGeo.setAttribute('color', new THREE.BufferAttribute(this._ringCol, 3));
+                this._ringMat = new THREE.LineBasicMaterial({
+                    vertexColors: true, transparent: true, opacity: 0,
+                    depthWrite: false, fog: false, blending: THREE.AdditiveBlending,
+                });
+                this._ringLines = new THREE.LineSegments(this._ringGeo, this._ringMat);
+                this._ringLines.frustumCulled = false;
+                this._group.add(this._ringLines);
+
+                const arrowColors = [
+                    [1.0, 0.55, 0.3],
+                    [0.35, 1.0, 0.65],
+                    [0.4, 0.7, 1.0],
+                ];
+                this._arrowPos = new Float32Array(fishCount * 54);
+                this._arrowCol = new Float32Array(fishCount * 54);
+                for (let i = 0; i < fishCount; i++) {
+                    for (let k = 0; k < 3; k++) {
+                        const c = arrowColors[k];
+                        for (let v = 0; v < 6; v++) {
+                            const o = (i * 54) + (k * 18) + (v * 3);
+                            this._arrowCol[o] = c[0];
+                            this._arrowCol[o + 1] = c[1];
+                            this._arrowCol[o + 2] = c[2];
+                        }
+                    }
+                }
+                this._arrowGeo = new THREE.BufferGeometry();
+                this._arrowGeo.setAttribute('position', new THREE.BufferAttribute(this._arrowPos, 3));
+                this._arrowGeo.setAttribute('color', new THREE.BufferAttribute(this._arrowCol, 3));
+                this._arrowMat = new THREE.LineBasicMaterial({
+                    vertexColors: true, transparent: true, opacity: 0,
+                    depthWrite: false, fog: false, blending: THREE.AdditiveBlending,
+                });
+                this._arrowLines = new THREE.LineSegments(this._arrowGeo, this._arrowMat);
+                this._arrowLines.frustumCulled = false;
+                this._group.add(this._arrowLines);
+            }
+
+            get IsShown() { return this._reveal > 0.002; }
+
+            SetTriggered(triggered) {
+                this._triggered = triggered;
+            }
+
+            Update(deltaTime, time) {
+                if (this._triggered) {
+                    this._reveal = Math.min(1, this._reveal + deltaTime / 3.0);
+                } else {
+                    this._reveal = Math.max(0, this._reveal - deltaTime / 0.6);
+                }
+                const r = this._reveal;
+                this._group.visible = r > 0.002;
+                this._ringMat.opacity = 0.55 * THREE.MathUtils.clamp(r / 0.35, 0, 1);
+                this._linkMat.opacity = 0.8 * THREE.MathUtils.clamp((r - 0.25) / 0.35, 0, 1);
+                this._arrowMat.opacity = 1.0 * THREE.MathUtils.clamp((r - 0.55) / 0.4, 0, 1);
+                if (this._hud) this._hud.classList.toggle('On', r > 0.06);
+                if (!this._group.visible) return;
+
+                const fishes = this._fishes;
+                const n = fishes.length;
+                const SEG = this._SEG;
+                const SEP_R = FISH_VIZ_SEP_RADIUS;
+                const COH_R = FISH_VIZ_COH_RADIUS;
+                const VEC = this._VEC_SCALE;
+                const lp = this._linkPos, lc = this._linkCol;
+                const ap = this._arrowPos, rp = this._ringPos;
+                let li = 0;
+                let pairCount = 0;
+                let neighborTotal = 0;
+                let speedTotal = 0;
+
+                for (let i = 0; i < n; i++) {
+                    const a = fishes[i];
+                    const pa = a.Position;
+                    speedTotal += a.Velocity.length();
+
+                    const ro = i * SEG * 6;
+                    for (let s = 0; s < SEG; s++) {
+                        const a0 = (s / SEG) * Math.PI * 2;
+                        const a1 = ((s + 1) / SEG) * Math.PI * 2;
+                        const o = ro + s * 6;
+                        rp[o] = pa.x + Math.cos(a0) * SEP_R;
+                        rp[o + 1] = pa.y;
+                        rp[o + 2] = pa.z + Math.sin(a0) * SEP_R;
+                        rp[o + 3] = pa.x + Math.cos(a1) * SEP_R;
+                        rp[o + 4] = pa.y;
+                        rp[o + 5] = pa.z + Math.sin(a1) * SEP_R;
+                    }
+
+                    const vectors = [a._VizSep, a._VizAli, a._VizCoh];
+                    for (let k = 0; k < 3; k++) {
+                        const v = vectors[k];
+                        const base = (i * 54) + (k * 18);
+                        const vl = v.length();
+                        if (vl * VEC < 1e-4) {
+                            for (let f = 0; f < 6; f++) {
+                                ap[base + f * 3] = pa.x;
+                                ap[base + f * 3 + 1] = pa.y;
+                                ap[base + f * 3 + 2] = pa.z;
+                            }
+                            continue;
+                        }
+                        const dirx = v.x / vl, diry = v.y / vl, dirz = v.z / vl;
+                        const len = vl * VEC;
+                        const tipx = pa.x + dirx * len;
+                        const tipy = pa.y + diry * len;
+                        const tipz = pa.z + dirz * len;
+                        let upx = 0, upy = 1, upz = 0;
+                        if (Math.abs(diry) > 0.9) { upx = 1; upy = 0; upz = 0; }
+                        let sidex = diry * upz - dirz * upy;
+                        let sidey = dirz * upx - dirx * upz;
+                        let sidez = dirx * upy - diry * upx;
+                        const sl = Math.sqrt(sidex * sidex + sidey * sidey + sidez * sidez) || 1;
+                        const head = Math.min(len * 0.35, 0.28);
+                        sidex = sidex / sl * head;
+                        sidey = sidey / sl * head;
+                        sidez = sidez / sl * head;
+                        const backx = tipx - dirx * head;
+                        const backy = tipy - diry * head;
+                        const backz = tipz - dirz * head;
+                        ap[base] = pa.x; ap[base + 1] = pa.y; ap[base + 2] = pa.z;
+                        ap[base + 3] = tipx; ap[base + 4] = tipy; ap[base + 5] = tipz;
+                        ap[base + 6] = tipx; ap[base + 7] = tipy; ap[base + 8] = tipz;
+                        ap[base + 9] = backx + sidex; ap[base + 10] = backy + sidey; ap[base + 11] = backz + sidez;
+                        ap[base + 12] = tipx; ap[base + 13] = tipy; ap[base + 14] = tipz;
+                        ap[base + 15] = backx - sidex; ap[base + 16] = backy - sidey; ap[base + 17] = backz - sidez;
+                    }
+
+                    for (let j = i + 1; j < n; j++) {
+                        const b = fishes[j].Position;
+                        const dx = pa.x - b.x, dy = pa.y - b.y, dz = pa.z - b.z;
+                        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                        if (dist >= COH_R) continue;
+                        neighborTotal += 2;
+                        const t = dist / COH_R;
+                        const cr = 0.6 * (1 - t) + 0.12 * t;
+                        const cg = 0.9 * (1 - t) + 0.3 * t;
+                        const cb = 1.0 * (1 - t) + 0.6 * t;
+                        lp[li] = pa.x; lp[li + 1] = pa.y; lp[li + 2] = pa.z;
+                        lc[li] = cr; lc[li + 1] = cg; lc[li + 2] = cb;
+                        lp[li + 3] = b.x; lp[li + 4] = b.y; lp[li + 5] = b.z;
+                        lc[li + 3] = cr; lc[li + 4] = cg; lc[li + 5] = cb;
+                        li += 6;
+                        pairCount++;
+                    }
+                }
+
+                this._linkGeo.setDrawRange(0, pairCount * 2);
+                this._linkGeo.attributes.position.needsUpdate = true;
+                this._linkGeo.attributes.color.needsUpdate = true;
+                this._ringGeo.attributes.position.needsUpdate = true;
+                this._arrowGeo.attributes.position.needsUpdate = true;
+
+                this._statTimer += deltaTime;
+                if (this._statTimer >= 0.25) {
+                    this._statTimer = 0;
+                    this._pairCount = pairCount;
+                    if (this._hudStat) {
+                        this._hudStat.textContent =
+                            `LINKS ${pairCount}  ·  NB AVG ${(n > 0 ? neighborTotal / n : 0).toFixed(1)}  ·  SPEED AVG ${(n > 0 ? speedTotal / n : 0).toFixed(2)}`;
+                    }
+                }
             }
         }
 
@@ -2916,6 +3137,9 @@
             _Fishes = [];
             _FishBubbleSystem = null;
             _FishFloorY = 0;
+            _FishViz = null;
+            _FishVizIdleTimer = 0;
+            _FishVizTriggered = false;
             _MorphParticles = null;
             _MorphTriggered = false;
             _Aurora = null;
@@ -2957,6 +3181,7 @@
                     Scene.add(fish.Group);
                 }
                 this._FishBubbleSystem = new C_BubbleSystem(Scene, 80, this._FishFloorY);
+                this._FishViz = new C_FishViz(Scene, this._Fishes);
             }
 
             Initialize() {
@@ -3566,6 +3791,23 @@
                 }
                 if (this._FishBubbleSystem) {
                     this._FishBubbleSystem.Update(performance.now() / 1000, FC_Environment.TIME_DELTA);
+                }
+                if (this._FishViz) {
+                    const roofFloor = (this._Elevator ? this._Elevator.floors : 6) - 1;
+                    const onRoof = this.getFloorIndexFromY(Player.Position.y) === roofFloor;
+                    const isIdle = this._Input_Move.length() === 0 && this._Input_Look.length() === 0
+                        && !this._Elevator.isMoving;
+                    if (!onRoof || !isIdle) {
+                        this._FishVizIdleTimer = 0;
+                        this._FishVizTriggered = false;
+                    } else if (!this._FishVizTriggered) {
+                        this._FishVizIdleTimer += this._RealDelta;
+                        if (this._FishVizIdleTimer >= FISH_VIZ_IDLE_DELAY) {
+                            this._FishVizTriggered = true;
+                        }
+                    }
+                    this._FishViz.SetTriggered(this._FishVizTriggered);
+                    this._FishViz.Update(this._RealDelta, performance.now() / 1000);
                 }
                 Camera.Update(this._Input_Look, this._SENSIVILITY);
 
@@ -4468,6 +4710,72 @@
         #HelpBtn:active {
             transform: scale(0.92);
         }
+        #FishVizHud {
+            position: fixed;
+            top: 40px;
+            right: 8px;
+            width: 190px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(100, 160, 255, 0.35);
+            background: rgba(10, 20, 45, 0.6);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            color: #8FBFFF;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            line-height: 1.65;
+            z-index: 999;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+            box-shadow: 0 0 16px rgba(60, 120, 220, 0.15);
+        }
+        #FishVizHud.On {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        #FishVizHud .fv-title {
+            font-weight: 700;
+            font-size: 10px;
+            letter-spacing: 1.2px;
+            color: rgba(143, 191, 255, 0.9);
+            border-bottom: 1px solid rgba(100, 160, 255, 0.25);
+            padding-bottom: 6px;
+            margin-bottom: 6px;
+        }
+        #FishVizHud .fv-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        #FishVizHud .fv-key {
+            font-size: 9px;
+            line-height: 1;
+        }
+        #FishVizHud .fv-val {
+            margin-left: auto;
+            color: rgba(143, 191, 255, 0.55);
+            font-size: 10px;
+        }
+        #FishVizStat {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(100, 160, 255, 0.25);
+            color: rgba(200, 224, 255, 0.85);
+            font-size: 10px;
+            letter-spacing: 0.4px;
+            min-height: 14px;
+        }
+        @media (max-width: 600px) {
+            #FishVizHud {
+                width: 165px;
+                font-size: 10px;
+                padding: 8px 10px;
+            }
+        }
         #HelpOverlay {
             position: fixed;
             inset: 0;
@@ -4610,6 +4918,15 @@
     </style>
 
     <button id="HelpBtn" aria-label="Help">?</button>
+
+    <div id="FishVizHud">
+        <div class="fv-title">BOIDS ANALYSIS / ROOF</div>
+        <div class="fv-row"><span class="fv-key" style="color:#ff8c4d">&#9679;</span>SEPARATION <span class="fv-val">radius 2.0</span></div>
+        <div class="fv-row"><span class="fv-key" style="color:#59ff9e">&#9679;</span>ALIGNMENT <span class="fv-val">radius 5.0</span></div>
+        <div class="fv-row"><span class="fv-key" style="color:#77b3ff">&#9679;</span>COHESION <span class="fv-val">radius 6.0</span></div>
+        <div class="fv-row"><span class="fv-key" style="color:#bfe0ff">&#9679;</span>NEIGHBOR LINK <span class="fv-val">dist &lt; 6.0</span></div>
+        <div id="FishVizStat"></div>
+    </div>
 
     <div id="HelpOverlay"></div>
 
