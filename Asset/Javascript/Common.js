@@ -307,6 +307,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Constellation</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_Exercise.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Exercise</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Service_Health.html">
                         <v-list-item-icon />
                         <v-list-item-title>Health</v-list-item-title>
