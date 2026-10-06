@@ -82,8 +82,8 @@
                     </v-card-text>
 
                     <v-card-text class="pt-0">
-                      <v-slider class="Seek_Slider" :value="Current_Time" :max="Duration || 1" :step="0.01" hide-details
-                        thumb-label="always" :disabled="!Duration" @start="Scrubbing = true"
+                      <v-slider class="Seek_Slider" :value="Current_Time" :min="Seek_Min" :max="Seek_Max" :step="0.01"
+                        hide-details thumb-label="always" :disabled="!Duration" @start="Scrubbing = true"
                         @change="Seek_End" @end="Scrubbing = false" />
 
                       <div class="Time_Row">
@@ -147,6 +147,53 @@
               <!-- ▲ Player ▲ -->
 
 
+              <!-- ▼ Trim ▼ -->
+              <v-row justify="center" class="mt-4">
+                <v-col cols="12" md="8">
+                  <v-card>
+                    <v-card-title>
+                      <v-icon small class="mr-1">mdi-content-cut</v-icon>
+                      Trim
+                      <v-spacer></v-spacer>
+                      <v-btn small text class="mr-1" :disabled="!Trim_Enabled || !Duration || Busy" @click="Set_Trim_Start">
+                        Set In
+                      </v-btn>
+                      <v-btn small text class="mr-1" :disabled="!Trim_Enabled || !Duration || Busy" @click="Set_Trim_End">
+                        Set Out
+                      </v-btn>
+                      <v-switch v-model="Trim_Enabled" inset hide-details class="mt-0"></v-switch>
+                    </v-card-title>
+                    <v-card-text>
+                      <v-slider v-model="Trim_Start" :min="0" :max="Trim_End" :step="0.01" label="Trim Start"
+                        color="primary" thumb-label :disabled="!Duration || Busy" @end="Normalize_Trim">
+                        <template v-slot:append>
+                          <input type="number" class="Trim_Num_Input" v-model="Trim_Start_Text" step="0.01" min="0"
+                            :disabled="!Duration" @focus="Focus_Trim_Input('Trim_Start', $event)"
+                            @change="Commit_Trim_Start" @blur="Commit_Trim_Start">
+                        </template>
+                      </v-slider>
+
+                      <v-slider v-model="Trim_End" :min="Trim_Start" :max="Duration" :step="0.01" label="Trim End"
+                        color="primary" thumb-label :disabled="!Duration || Busy" @end="Normalize_Trim">
+                        <template v-slot:append>
+                          <input type="number" class="Trim_Num_Input" v-model="Trim_End_Text" step="0.01" min="0"
+                            :disabled="!Duration" @focus="Focus_Trim_Input('Trim_End', $event)"
+                            @change="Commit_Trim_End" @blur="Commit_Trim_End">
+                        </template>
+                      </v-slider>
+
+                      <div class="Export_Hint">
+                        <span>Only the selected range is played back and exported.</span>
+                        <v-spacer></v-spacer>
+                        <span>Clip <b>{{ Format_Time(Clip_Duration) }}</b></span>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <!-- ▲ Trim ▲ -->
+
+
               <!-- ▼ Info + Playlist ▼ -->
               <v-row justify="center">
                 <v-col cols="12" md="4">
@@ -163,10 +210,14 @@
                             <th>Size</th>
                             <td class="Selectable">{{ Format_Size(Current_Video.size) }}</td>
                           </tr>
-                          <tr>
-                            <th>Duration</th>
-                            <td class="Selectable">{{ Format_Time(Duration) }}</td>
-                          </tr>
+<tr>
+                              <th>Duration</th>
+                              <td class="Selectable">{{ Format_Time(Duration) }}</td>
+                            </tr>
+                            <tr>
+                              <th>Clip</th>
+                              <td class="Selectable">{{ Clip_Range }}</td>
+                            </tr>
                           <tr>
                             <th>Resolution</th>
                             <td class="Selectable">{{ Current_Video.width }} x {{ Current_Video.height }}</td>
@@ -311,7 +362,7 @@
                       <v-divider class="my-4"></v-divider>
 
                       <div class="Export_Hint">
-                        <span>Estimated size</span>
+                        <span>Estimated size ({{ Format_Time(Clip_Duration) }})</span>
                         <v-spacer></v-spacer>
                         <span>
                           <b>{{ Format_Size(Estimated_Size) }}</b>
@@ -358,6 +409,10 @@
                                 <tr>
                                   <th>FPS</th>
                                   <td class="Selectable">{{ Effective_Fps }}</td>
+                                </tr>
+                                <tr>
+                                  <th>Range</th>
+                                  <td class="Selectable">{{ Clip_Range }}</td>
                                 </tr>
                                 <tr>
                                   <th>Engine</th>
@@ -432,7 +487,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
-  <script src="../../Asset/Javascript/VideoEditor.js?v=1.0"></script>
+  <script src="../../Asset/Javascript/VideoEditor.js?v=1.1"></script>
 
   <script>
     // 動画の標準解像度。大きい順に並べて、アップスケールしない範囲で最も近いものを選ぶ
@@ -458,6 +513,12 @@
         Duration: 0,
         Current_Time: 0,
         Scrubbing: false,
+        Trim_Enabled: false,
+        Trim_Start: 0,
+        Trim_End: 0,
+        Trim_Start_Text: '0.00',
+        Trim_End_Text: '0.00',
+        Editing_Input: null,
         Volume: 1,
         Muted: false,
         Loop: false,
@@ -573,14 +634,15 @@
         },
         Estimated_Size() {
           const total = this.Bitrate * 1000 + (this.Audio === 'remove' ? 0 : this.Audio_Bitrate);
-          return (total * this.Duration) / 8;
+          return (total * this.Clip_Duration) / 8;
         },
         Reduction_Ratio() {
           if (!this.Current_Video.size || !this.Estimated_Size) return 0;
           return Math.round((1 - this.Estimated_Size / this.Current_Video.size) * 100);
         },
         Can_Export() {
-          return !!this.Current_Video && !!this.Current_Video.width && this.Duration > 0;
+          return !!this.Current_Video && !!this.Current_Video.width && this.Duration > 0
+            && (!this.Trim_Enabled || this.Trim_Duration >= 0.05);
         },
         Aspect_Ratio() {
           const video = this.Current_Video;
@@ -598,6 +660,37 @@
             }
           }
           return `${_width}:${_height} (Free)`;
+        },
+        Trim_Duration() {
+          return Math.max(0, (this.Trim_End || 0) - (this.Trim_Start || 0));
+        },
+        // 書き出しとシークに実際に使う長さ
+        Clip_Duration() {
+          if (this.Trim_Enabled && this.Duration) return this.Trim_Duration;
+          return this.Duration;
+        },
+        Clip_Range() {
+          if (!this.Duration) return '-';
+          if (!this.Trim_Enabled) return `Full length (${this.Format_Time(this.Duration)})`;
+          return `${this.Format_Time(this.Trim_Start)} - ${this.Format_Time(this.Trim_End)}`;
+        },
+        Seek_Min() {
+          return this.Trim_Enabled && this.Duration ? this.Trim_Start : 0;
+        },
+        Seek_Max() {
+          return this.Trim_Enabled && this.Duration ? this.Trim_End : (this.Duration || 1);
+        }
+      },
+      watch: {
+        Trim_Start(value) {
+          if (this.Editing_Input !== 'Trim_Start') this.Trim_Start_Text = (value || 0).toFixed(2);
+        },
+        Trim_End(value) {
+          if (this.Editing_Input !== 'Trim_End') this.Trim_End_Text = (value || 0).toFixed(2);
+        },
+        Trim_Enabled() {
+          this.Apply_Loop();
+          this.Clamp_Time(this.Current_Time);
         }
       },
       methods: {
@@ -674,6 +767,9 @@
           this.Playing = false;
           this.Failed_Playing = false;
           this.Scrubbing = false;
+          this.Trim_Enabled = false;
+          this.Trim_Start = 0;
+          this.Trim_End = 0;
           this.Result = null;
           this.Export_Error = '';
 
@@ -732,8 +828,83 @@
           this.Current_Time = 0;
           this.Playing = false;
           this.Failed_Playing = false;
+          this.Trim_Enabled = false;
+          this.Trim_Start = 0;
+          this.Trim_End = 0;
           this.Result = null;
           this.Export_Error = '';
+        },
+
+        ////// Trim
+
+        Reset_Trim() {
+          this.Trim_Start = 0;
+          this.Trim_End = this.Duration;
+          this.Trim_Start_Text = '0.00';
+          this.Trim_End_Text = this.Duration.toFixed(2);
+        },
+
+        Focus_Trim_Input(key, event) {
+          this.Editing_Input = key;
+          event.target.select();
+        },
+
+        Commit_Trim_Start() {
+          this.Editing_Input = null;
+          const value = parseFloat(this.Trim_Start_Text);
+          if (!isNaN(value)) {
+            const clamped = Math.max(0, Math.min(this.Trim_End, value));
+            if (clamped !== this.Trim_Start) {
+              this.Trim_Start = clamped;
+              this.Normalize_Trim();
+            }
+          }
+          this.Trim_Start_Text = this.Trim_Start.toFixed(2);
+        },
+
+        Commit_Trim_End() {
+          this.Editing_Input = null;
+          const value = parseFloat(this.Trim_End_Text);
+          if (!isNaN(value)) {
+            const clamped = Math.max(this.Trim_Start, Math.min(this.Duration, value));
+            if (clamped !== this.Trim_End) {
+              this.Trim_End = clamped;
+              this.Normalize_Trim();
+            }
+          }
+          this.Trim_End_Text = this.Trim_End.toFixed(2);
+        },
+
+        // トリム幅が潰れたら、拡張できる側を少し広げて補正する
+        Normalize_Trim() {
+          if (this.Trim_Duration < 0.05) {
+            if (this.Trim_End + 0.05 <= this.Duration) {
+              this.Trim_End = Math.min(this.Duration, this.Trim_End + 0.05);
+            } else {
+              this.Trim_Start = Math.max(0, this.Trim_Start - 0.05);
+            }
+          }
+          this.Apply_Loop();
+          this.Clamp_Time(this.Current_Time);
+        },
+
+        Set_Trim_Start() {
+          this.Trim_Start = Math.max(0, Math.min(this.Trim_End - 0.05, this.Current_Time));
+          this.Normalize_Trim();
+        },
+
+        Set_Trim_End() {
+          this.Trim_End = Math.min(this.Duration, Math.max(this.Trim_Start + 0.05, this.Current_Time));
+          this.Normalize_Trim();
+        },
+
+        // 再生位置を選択範囲内に保つ
+        Clamp_Time(time) {
+          const video = this.$refs.Video;
+          if (!video || !this.Trim_Enabled) return;
+          const clamped = Math.max(this.Trim_Start, Math.min(this.Trim_End, time));
+          if (video.currentTime !== clamped) video.currentTime = clamped;
+          this.Current_Time = clamped;
         },
 
         ////// Player
@@ -753,6 +924,7 @@
             }
           }
           this.Duration = isFinite(video.duration) ? video.duration : 0;
+          this.Reset_Trim();
           this.Apply_Loop();
           this.Apply_Volume();
           this.Apply_Speed();
@@ -768,6 +940,18 @@
           const video = this.$refs.Video;
           if (!video || this.Scrubbing) return;
           this.Current_Time = video.currentTime;
+          if (!this.Trim_Enabled || !this.Duration) return;
+
+          // 選択範囲の終端で止める。ループ時は範囲の先頭へ戻す
+          if (video.currentTime < this.Trim_End - 0.02) return;
+          if (this.Loop) {
+            video.currentTime = this.Trim_Start;
+            this.Current_Time = this.Trim_Start;
+          } else {
+            video.pause();
+            video.currentTime = this.Trim_End;
+            this.Current_Time = this.Trim_End;
+          }
         },
 
         Ended() {
@@ -779,6 +963,10 @@
           const video = this.$refs.Video;
           if (!video || this.Failed_Playing) return;
           if (video.paused) {
+            // 選択範囲の終端で止まっている場合は先頭から再生する
+            if (this.Trim_Enabled && video.currentTime >= this.Trim_End - 0.02) {
+              video.currentTime = this.Trim_Start;
+            }
             video.play();
           } else {
             video.pause();
@@ -788,15 +976,16 @@
         Seek_End(value) {
           const video = this.$refs.Video;
           if (!video) return;
-          video.currentTime = value;
-          this.Current_Time = value;
+          const clamped = Math.max(this.Seek_Min, Math.min(this.Seek_Max, value));
+          video.currentTime = clamped;
+          this.Current_Time = clamped;
           this.Scrubbing = false;
         },
 
         Skip(seconds) {
           const video = this.$refs.Video;
           if (!video || !this.Duration) return;
-          video.currentTime = Math.min(Math.max(video.currentTime + seconds, 0), this.Duration);
+          video.currentTime = Math.min(Math.max(video.currentTime + seconds, this.Seek_Min), this.Seek_Max);
         },
 
         Toggle_Mute() {
@@ -820,7 +1009,8 @@
 
         Apply_Loop() {
           const video = this.$refs.Video;
-          if (video) video.loop = this.Loop;
+          // トリム有効時はループを選択範囲内に閉じるため、要素のループは使わない
+          if (video) video.loop = this.Loop && !this.Trim_Enabled;
         },
 
         Toggle_Fullscreen() {
@@ -1035,7 +1225,9 @@
             bitrate: this.Bitrate * 1000,
             audio: this.Audio !== 'remove' && this.Has_Audio,
             audioBitrate: this.Audio_Bitrate || 128000,
-            engine: this.Engine
+            engine: this.Engine,
+            start: this.Trim_Enabled ? this.Trim_Start : 0,
+            duration: this.Clip_Duration
           };
 
           window.VideoEditor.Transcode(options, (event) => {
@@ -1073,7 +1265,8 @@
 
         Output_Name() {
           const base = (this.Current_Video.name || 'video').replace(/\.[^.]+$/, '');
-          return `${base}_${this.Output_Width}x${this.Output_Height}.mp4`;
+          const suffix = this.Trim_Enabled ? '_clip' : '';
+          return `${base}_${this.Output_Width}x${this.Output_Height}${suffix}.mp4`;
         },
 
         Download_Result() {
@@ -1286,6 +1479,40 @@
     .Screenshot_Hint {
       font-size: 0.75em;
       color: #90a4ae;
+    }
+
+    /* //// Trim */
+
+    .Trim_Num_Input {
+      width: 78px;
+      padding: 4px 8px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 6px;
+      font-size: 13px;
+      text-align: right;
+      font-family: 'Space Mono', monospace;
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    .Trim_Num_Input:focus {
+      outline: none;
+      border-color: #1976D2;
+      background: #fff;
+    }
+
+    .Trim_Num_Input::-webkit-outer-spin-button,
+    .Trim_Num_Input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .Trim_Num_Input {
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    .Seek_Slider:not(.v-input--is-disabled) .v-slider__thumb-label {
+      min-width: 48px;
     }
 
     /* //// Export */

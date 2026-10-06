@@ -282,6 +282,12 @@
         const useAudio = !!(_opt.audio && source.audio && source.audioSamples.length);
         const duration = source.video.duration / (source.video.timescale || 1);
 
+        // 書き出し範囲。duration が 0 なら動画全体
+        const trimming = _opt.duration > 0;
+        const trimStart = trimming ? Math.max(0, _opt.start || 0) : 0;
+        const startUs = Math.round(trimStart * 1e6);
+        const endUs = trimming ? startUs + Math.round(_opt.duration * 1e6) : Infinity;
+
         const target = new global.Mp4Muxer.ArrayBufferTarget();
         const muxer = new global.Mp4Muxer.Muxer({
             target: target,
@@ -321,9 +327,12 @@
         const keyFrame_Interval = Math.max(1, Math.round(effectiveFps * 2));
         const needScale = _opt.width !== source.video.width || _opt.height !== source.video.height;
 
-        // 進捗表示の分母
-        const expected = duration > 0
-            ? Math.max(1, Math.round((duration * 1e6) / (outStep || (1e6 / effectiveFps))))
+        // 進捗表示の分母。書き出し範囲が指定されていればその長さで数える
+        const clipDuration = trimming
+            ? Math.min(_opt.duration, Math.max(0, duration - trimStart))
+            : duration;
+        const expected = clipDuration > 0
+            ? Math.max(1, Math.round((clipDuration * 1e6) / (outStep || (1e6 / effectiveFps))))
             : source.videoSamples.length;
 
         let failure = null;
@@ -361,10 +370,15 @@
             if (encoder.encodeQueueSize > 6) await Once(encoder, 'dequeue');
             if (failure) return;
 
+            // 書き出し開始より前のフレームは捨てる
+            if (trimming && _frame.timestamp < startUs) return;
+
             // FPS を下げる場合は出力グリッドに一致するフレームだけを採用する
             if (outStep > 0 && _frame.timestamp + outStep * 0.25 < grid) return;
 
-            const timestamp = outStep > 0 ? grid : _frame.timestamp;
+            // 出力タイムスタンプはクリップ先頭を 0 にする
+            const shifted = trimming ? Math.max(0, _frame.timestamp - startUs) : _frame.timestamp;
+            const timestamp = outStep > 0 ? grid : shifted;
             if (outStep > 0) grid += outStep;
 
             let output = _frame;
@@ -376,7 +390,8 @@
                 });
             }
 
-            const keyFrame = emitted % keyFrame_Interval === 0;
+// 途中フレームから始まるため、先頭は必ずキーフレームにする
+            const keyFrame = emitted === 0 || emitted % keyFrame_Interval === 0;
             encoder.encode(output, { keyFrame: keyFrame });
 
             if (needScale) output.close();
@@ -400,8 +415,21 @@
         decoder.configure(decoderConfig);
 
         try {
-            for (const sample of source.videoSamples) {
+            // 書き出し開始位置から最も近い手前のキーフレームを復号の起点にする
+            let firstIndex = 0;
+            if (trimming) {
+                for (let i = 0; i < source.videoSamples.length; i++) {
+                    const sample = source.videoSamples[i];
+                    if ((sample.cts * 1e6) / sample.timescale > startUs) break;
+                    if (sample.is_sync) firstIndex = i;
+                }
+            }
+
+            for (let index = firstIndex; index < source.videoSamples.length; index++) {
                 if (failure || _state.cancelled) break;
+
+                const sample = source.videoSamples[index];
+                if (trimming && (sample.cts * 1e6) / sample.timescale > endUs) break;
 
                 decoder.decode(new EncodedVideoChunk({
                     type: sample.is_sync ? 'key' : 'delta',
@@ -497,9 +525,17 @@
             try {
                 for (const sample of source.audioSamples) {
                     if (audioFailure || _state.cancelled) break;
+
+                    const time = (sample.cts * 1e6) / sample.timescale;
+                    if (trimming) {
+                        if (time > endUs) break;
+                        // 書き出し開始より前の音声は落とす (AAC のフレーム長は約 21ms)
+                        if (time < startUs) continue;
+                    }
+
                     audioDecoder.decode(new EncodedAudioChunk({
                         type: 'key',
-                        timestamp: Math.round((sample.cts * 1e6) / sample.timescale),
+                        timestamp: Math.round(time - startUs),
                         duration: Math.round((sample.duration * 1e6) / sample.timescale),
                         data: sample.data
                     }));
@@ -578,21 +614,29 @@
         const filters = [`scale=${_opt.width}:${_opt.height}`];
         if (_opt.fps > 0) filters.push(`fps=${_opt.fps}`);
 
-        const args = [
-            '-i', input,
+        const trimming = _opt.duration > 0;
+        const start = trimming ? Math.max(0, _opt.start || 0) : 0;
+
+        const args = [];
+        // 入力前にシークすると音と映像が同時に切れず、ずれが出にくいため
+        if (trimming) args.push('-ss', start.toFixed(3));
+        args.push('-i', input);
+        if (trimming) args.push('-t', _opt.duration.toFixed(3));
+        args.push(
             '-vf', filters.join(','),
             '-c:v', 'libx264',
             '-preset', 'veryfast',
             '-b:v', String(_opt.bitrate),
             '-pix_fmt', 'yuv420p',
             '-movflags', '+faststart'
-        ];
+        );
 
         if (_opt.audio) {
             args.push('-c:a', 'aac', '-b:a', String(_opt.audioBitrate || 128000));
         } else {
             args.push('-an');
         }
+        if (trimming) args.push('-avoid_negative_ts', 'make_zero');
         args.push(output);
 
         try {
@@ -663,7 +707,9 @@
             fps: _options.fps > 0 ? _options.fps : 0,
             bitrate: _options.bitrate,
             audio: !!_options.audio,
-            audioBitrate: _options.audioBitrate
+            audioBitrate: _options.audioBitrate,
+            start: _options.start > 0 ? _options.start : 0,
+            duration: _options.duration > 0 ? _options.duration : 0
         };
 
         const wanted = _options.engine || 'auto';
