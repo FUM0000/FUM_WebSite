@@ -47,9 +47,9 @@
                     <v-icon left>mdi-video</v-icon>
                     Choose Files
                   </v-btn>
-                  <div class="Drop_Subtitle">MP4 / M4V / MOV / WebM</div>
+                  <div class="Drop_Subtitle">MP4 / M4V</div>
                 </div>
-                <input ref="Input_File" type="file" accept=".mp4,.m4v,.mov,.webm,video/*" multiple class="Hidden_Input"
+                <input ref="Input_File" type="file" accept=".mp4,.m4v" multiple class="Hidden_Input"
                   @change="Picked">
                 <v-alert v-if="Message" type="warning" dense text class="mt-3" dismissible @input="Message = ''">
                   {{ Message }}
@@ -286,14 +286,11 @@
                     <v-card-title>
                       Export
                       <v-spacer></v-spacer>
-                      <v-chip x-small label class="mr-1" :color="Engine_Native ? 'success' : 'warning'">
-                        {{ Engine_Native ? 'WebCodecs' : 'FFmpeg.wasm' }}
+                      <v-chip x-small label class="mr-1" :color="Engine_Native ? 'success' : 'error'">
+                        {{ Engine_Native ? 'WebCodecs' : 'WebCodecs unavailable' }}
                       </v-chip>
                     </v-card-title>
                     <v-card-text>
-
-                      <v-select v-model="Engine" :items="Engine_Items" label="Engine" item-text="text" item-value="value"
-                        dense outlined hide-details class="Export_Field mb-4"></v-select>
 
                       <!-- Resolution -->
                       <div class="Export_Label">Resolution</div>
@@ -354,6 +351,7 @@
                         </v-col>
                         <v-col cols="12" sm="7" class="Export_Note">
                           <span v-if="!Has_Audio">This file has no audio track.</span>
+                          <span v-else-if="Audio_Note">{{ Audio_Note }}</span>
                           <span v-else>Audio {{ Format_Bitrate(Audio_Bitrate) }} - AAC</span>
                         </v-col>
                       </v-row>
@@ -487,7 +485,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
-  <script src="../../Asset/Javascript/VideoEditor.js?v=1.1"></script>
+  <script src="../../Asset/Javascript/VideoEditor.js?v=1.4"></script>
 
   <script>
     // 動画の標準解像度。大きい順に並べて、アップスケールしない範囲で最も近いものを選ぶ
@@ -527,7 +525,6 @@
         Shots: [],
         Drag_Active: false,
         Message: '',
-        Engine: 'auto',
         Source_Info: null,
         Resolution_Preset: '1920x1080',
         Target_Width: 1920,
@@ -537,6 +534,7 @@
         Lock_Ratio: true,
         Bitrate: 5500,
         Audio: 'keep',
+        Aac_Encode: null,
         Busy: false,
         Cancel_Flag: false,
         Progress: 0,
@@ -553,15 +551,12 @@
         Engine_Native() {
           return window.VideoEditor.Engine() === 'webcodecs';
         },
-        Engine_Items() {
-          const items = [{ text: 'Automatic (Recommended)', value: 'auto' }];
-          items.push({
-            text: this.Engine_Native ? 'WebCodecs (Native)' : 'WebCodecs (not supported)',
-            value: 'webcodecs',
-            disabled: !this.Engine_Native
-          });
-          items.push({ text: 'FFmpeg.wasm (Slow, 31 MB)', value: 'ffmpeg' });
-          return items;
+        // このブラウザは AAC を再エンコードできないため、その場合だけ案内を出す
+        Audio_Note() {
+          if (!this.Current_Video) return '';
+          if (this.Audio === 'remove') return 'Audio track will be removed.';
+          if (this.Aac_Encode === false) return 'This browser cannot re-encode audio. Choose Remove audio.';
+          return '';
         },
         Output_Width() {
           return window.VideoEditor.To_Even(this.Target_Width || this.Current_Video.width);
@@ -642,6 +637,7 @@
         },
         Can_Export() {
           return !!this.Current_Video && !!this.Current_Video.width && this.Duration > 0
+            && this.Engine_Native
             && (!this.Trim_Enabled || this.Trim_Duration >= 0.05);
         },
         Aspect_Ratio() {
@@ -744,15 +740,15 @@
           });
 
           const notes = [];
-          if (skipped > 0) notes.push(`${skipped} file(s) skipped because they are not a supported video.`);
+          if (skipped > 0) notes.push(`${skipped} file(s) skipped. Only MP4 / M4V files can be used.`);
           if (accepted.length && !this.$refs.Video) {
             const probe = document.createElement('video');
             if (!probe.canPlayType('video/mp4')) {
               notes.push('This browser cannot play MP4 / H.264.');
             }
           }
-          if (accepted.some(file => /\.(webm|mov)$/i.test(file.name)) && this.Engine_Native) {
-            notes.push('WebM / MOV needs FFmpeg.wasm because WebCodecs only demuxes MP4.');
+          if (accepted.some(file => /\.(mp4|m4v)$/i.test(file.name)) && !this.Engine_Native) {
+            notes.push('This browser does not support WebCodecs, so export is unavailable.');
           }
           this.Message = notes.join(' ');
 
@@ -779,6 +775,13 @@
             this.Apply_Speed();
             this.Apply_Loop();
             this.Probe_Source();
+          });
+        },
+
+        // このブラウザで AAC を書き出せるか、一度だけ確認する
+        Probe_Aac() {
+          window.VideoEditor.Can_Encode_Aac(48000, 2).then(ok => {
+            this.Aac_Encode = ok;
           });
         },
 
@@ -1225,7 +1228,7 @@
             bitrate: this.Bitrate * 1000,
             audio: this.Audio !== 'remove' && this.Has_Audio,
             audioBitrate: this.Audio_Bitrate || 128000,
-            engine: this.Engine,
+            engine: 'webcodecs',
             start: this.Trim_Enabled ? this.Trim_Start : 0,
             duration: this.Clip_Duration
           };
@@ -1236,7 +1239,6 @@
             if (event.phase === 'prepare') this.Status = 'Preparing the encoder...';
             if (event.phase === 'video') this.Status = 'Encoding video frames...';
             if (event.phase === 'audio') this.Status = 'Encoding audio...';
-            if (event.phase === 'encode') this.Status = 'Encoding with FFmpeg.wasm...';
           }, () => this.Cancel_Flag).then((result) => {
             this.Busy = false;
 
@@ -1334,6 +1336,7 @@
       },
       mounted() {
         window.addEventListener('keydown', this.On_Key);
+        this.Probe_Aac();
       },
       beforeDestroy() {
         window.removeEventListener('keydown', this.On_Key);

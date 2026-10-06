@@ -5,24 +5,19 @@
     // Video Editor / Transcoder
     // 動画のリサイズ・圧縮・書き出しエンジン
     //
-    // Engine A : WebCodecs + mp4box(demux) + mp4-muxer(mux)
-    //            Chrome / Edge 系。ネイティブ実装で高速。
-    // Engine B : ffmpeg.wasm
-    //            WebCodecs 非対応、または Audio 経路が使えない場合のフォールバック。
+    // Engine : WebCodecs + mp4box(demux) + mp4-muxer(mux)
+    //          Chrome / Edge 系。ネイティブ実装で高速。
+    //          ブラウザの制約で処理できない入力はエラーで通知する。
     //
     // Public API:
-    //   VideoEditor.Engine()        -> 'webcodecs' | 'ffmpeg'
+    //   VideoEditor.Engine()        -> 'webcodecs' | 'unsupported'
     //   VideoEditor.Transcode(opt)  -> { blob, engine, elapsed, cancelled }
     // ============================================================================
 
     const Script_Source = {
         mp4box: 'https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js',
-        muxer: 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.min.js',
-        ffmpeg: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js',
-        ffmpeg_util: 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/umd/index.js'
+        muxer: 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.min.js'
     };
-
-    const FFmpeg_Base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
 
     // 高さ・幅ともに偶数にする必要がある (yuv420p)
     const Quality_Table = {
@@ -121,20 +116,15 @@
         return Math.round(clamped / 1000) * 1000;
     }
 
+    // 書き出せるのは mp4box.js が読める mp4/m4v のみ
     function Is_Supported(_file) {
-        return /\.(mp4|m4v|webm|mov)$/i.test(_file.name) || /^video\//.test(_file.type);
+        return Can_Demux(_file);
     }
 
     // mp4box.js が扱えるのは ISO ベースライン (mp4/m4v) のみ。
-    // MOV / WebM は ffmpeg.wasm に渡す必要がある。
+    // MOV / WebM はこのエンジンでは書き出せない。
     function Can_Demux(_file) {
         return /\.(mp4|m4v)$/i.test(_file && _file.name ? _file.name : '');
-    }
-
-    // 自動モードで ffmpeg に再試行すべき失敗として印を付ける
-    function Mark_Fallback(_error) {
-        if (_error && typeof _error === 'object' && !_error.fallback) _error.fallback = true;
-        return _error;
     }
 
     // ---------------------------------------------------------------------------
@@ -142,12 +132,27 @@
     // ---------------------------------------------------------------------------
 
     function Has_WebCodecs() {
-        return 'VideoEncoder' in global && 'VideoDecoder' in global
-            && 'AudioEncoder' in global && 'AudioDecoder' in global;
+        return 'VideoEncoder' in global && 'VideoDecoder' in global;
     }
 
     function Engine() {
-        return Has_WebCodecs() ? 'webcodecs' : 'ffmpeg';
+        return Has_WebCodecs() ? 'webcodecs' : 'unsupported';
+    }
+
+    // このブラウザが AAC (mp4a.40.2) をエンコードできるか
+    async function Can_Encode_Aac(_sampleRate, _channels) {
+        if (!global.AudioEncoder || typeof global.AudioEncoder.isConfigSupported !== 'function') return false;
+        try {
+            const support = await global.AudioEncoder.isConfigSupported({
+                codec: 'mp4a.40.2',
+                sampleRate: _sampleRate || 48000,
+                numberOfChannels: _channels || 2,
+                bitrate: 128000
+            });
+            return !!(support && support.supported);
+        } catch (_error) {
+            return false;
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -161,13 +166,14 @@
         }
 
         const buffer = await _file.arrayBuffer();
+        if (buffer.fileStart === undefined) buffer.fileStart = 0;
 
         return new Promise((_resolve, _reject) => {
             const box = global.MP4Box.createFile();
             const tracks = { video: null, audio: null };
             const samples = { video: [], audio: [] };
 
-            box.onError = (_error) => _reject(Mark_Fallback(new Error('The file could not be demuxed.')));
+            box.onError = (_error) => _reject(new Error('This file could not be read. It may be damaged or unsupported.'));
 
             box.onReady = (_info) => {
                 const videoInfo = _info.videoTracks && _info.videoTracks[0];
@@ -214,12 +220,12 @@
                 box.appendBuffer(buffer);
                 box.flush();
             } catch (_error) {
-                _reject(Mark_Fallback(_error));
+                _reject(new Error('This file could not be read as an MP4 file. (' + String(_error) + ')'));
                 return;
             }
 
             if (!tracks.video || !samples.video.length) {
-                _reject(Mark_Fallback(new Error('No video track was found in this file.')));
+                _reject(new Error('No video track was found in this file.'));
                 return;
             }
 
@@ -262,6 +268,46 @@
         throw new Error('This browser cannot encode H.264 with the WebCodecs API.');
     }
 
+    function Build_Avc_Description(_entry) {
+        const avcC = _entry && _entry.avcC;
+        if (!avcC || !avcC.SPS) return null;
+
+        const sps = avcC.SPS;
+        const pps = avcC.PPS || [];
+        const chunks = [new Uint8Array([
+            avcC.configurationVersion === undefined ? 1 : avcC.configurationVersion,
+            avcC.AVCProfileIndication,
+            avcC.profile_compatibility,
+            avcC.AVCLevelIndication,
+            0xFC | (avcC.lengthSizeMinusOne & 3),
+            0xE0 | (sps.length & 31)
+        ])];
+
+        const appendNalus = (_list) => {
+            for (const nalu of _list) {
+                const data = nalu.nalu;
+                chunks.push(new Uint8Array([(data.length >> 8) & 0xFF, data.length & 0xFF]));
+                chunks.push(data);
+            }
+        };
+
+        appendNalus(sps);
+        chunks.push(new Uint8Array([pps.length & 0xFF]));
+        appendNalus(pps);
+        if (avcC.ext && avcC.ext.length) chunks.push(avcC.ext);
+
+        let total = 0;
+        for (const chunk of chunks) total += chunk.length;
+
+        const bytes = new Uint8Array(total);
+        let offset = 0;
+        for (const chunk of chunks) {
+            bytes.set(chunk, offset);
+            offset += chunk.length;
+        }
+        return bytes;
+    }
+
     async function Transcode_WebCodecs(_file, _opt, _report, _state) {
         _report({ phase: 'prepare', ratio: 0 });
         await Load_Script(Script_Source.muxer);
@@ -280,6 +326,26 @@
         const effectiveFps = fps > 0 ? fps : 30;
 
         const useAudio = !!(_opt.audio && source.audio && source.audioSamples.length);
+
+        // 動画を書き出す前に音声の対応状況を確認しておく (失敗を早く知らせるため)
+        let audioConfig = null;
+        if (useAudio) {
+            if (!global.AudioEncoder || typeof global.AudioEncoder.isConfigSupported !== 'function') {
+                throw new Error('This browser cannot encode audio. Set Audio to "Remove audio" and export again.');
+            }
+
+            const support = await global.AudioEncoder.isConfigSupported({
+                codec: 'mp4a.40.2',
+                sampleRate: source.audio.sampleRate,
+                numberOfChannels: source.audio.channelCount,
+                bitrate: _opt.audioBitrate || 128000
+            });
+            if (!support || !support.supported) {
+                throw new Error('This browser cannot re-encode AAC audio. Set Audio to "Remove audio" and export again.');
+            }
+            audioConfig = support.config;
+        }
+
         const duration = source.video.duration / (source.video.timescale || 1);
 
         // 書き出し範囲。duration が 0 なら動画全体
@@ -316,7 +382,11 @@
             codedHeight: source.video.height
         };
         const described = source.videoSamples.find(sample => sample.description);
-        if (described) decoderConfig.description = described.description;
+        const description = described ? Build_Avc_Description(described.description) : null;
+        if (!description) {
+            throw new Error('This file cannot be exported: only MP4 video encoded as H.264 (AVC) is supported by this browser. Re-encode the file to H.264 (for example with HandBrake) and try again.');
+        }
+        decoderConfig.description = description;
 
         const canvas = new OffscreenCanvas(_opt.width, _opt.height);
         const context = canvas.getContext('2d', { alpha: false, desynchronized: true });
@@ -350,19 +420,23 @@
         let pumpDone = Promise.resolve();
 
         const pump = async () => {
-            while (queue.length) {
-                if (failure || _state.cancelled) {
-                    while (queue.length) queue.shift().close();
-                    return;
+            try {
+                while (queue.length) {
+                    if (failure || _state.cancelled) {
+                        while (queue.length) queue.shift().close();
+                        return;
+                    }
+                    const frame = queue.shift();
+                    try {
+                        await emit(frame);
+                    } catch (_error) {
+                        failure = _error;
+                    } finally {
+                        frame.close();
+                    }
                 }
-                const frame = queue.shift();
-                try {
-                    await emit(frame);
-                } catch (_error) {
-                    failure = _error;
-                } finally {
-                    frame.close();
-                }
+            } finally {
+                pumping = false;
             }
         };
 
@@ -447,7 +521,8 @@
         }
 
         if (failure) throw failure;
-        await pumpDone;
+        while (pumping || queue.length) await pumpDone;
+        if (failure) throw failure;
 
         if (_state.cancelled) {
             if (encoder.state !== 'closed') encoder.close();
@@ -462,47 +537,36 @@
 
         // ---- Audio -------------------------------------------------------------
         if (useAudio) {
-            const audioEncodeConfig = {
-                codec: 'mp4a.40.2',
-                sampleRate: source.audio.sampleRate,
-                numberOfChannels: source.audio.channelCount,
-                bitrate: _opt.audioBitrate || 128000
-            };
-
-            const support = await global.AudioEncoder.isConfigSupported(audioEncodeConfig);
-            if (!support || !support.supported) {
-                // Safari / Firefox は AudioEncoder が実装されていないため ffmpeg に任せる
-                const error = new Error('This browser cannot encode AAC with the WebCodecs API.');
-                error.fallback = true;
-                throw error;
-            }
-
             let audioFailure = null;
             const audioEncoder = new global.AudioEncoder({
                 output: (_chunk, _meta) => muxer.addAudioChunk(_chunk, _meta),
                 error: (_error) => { audioFailure = _error; }
             });
-            audioEncoder.configure(support.config);
+            audioEncoder.configure(audioConfig);
 
             const audioQueue = [];
             let audioPumping = false;
             let audioDone = Promise.resolve();
 
             const audioPump = async () => {
-                while (audioQueue.length) {
-                    if (audioFailure || _state.cancelled) {
-                        while (audioQueue.length) audioQueue.shift().close();
-                        return;
+                try {
+                    while (audioQueue.length) {
+                        if (audioFailure || _state.cancelled) {
+                            while (audioQueue.length) audioQueue.shift().close();
+                            return;
+                        }
+                        const data = audioQueue.shift();
+                        try {
+                            if (audioEncoder.encodeQueueSize > 24) await Once(audioEncoder, 'dequeue');
+                            audioEncoder.encode(data);
+                            data.close();
+                        } catch (_error) {
+                            audioFailure = _error;
+                            data.close();
+                        }
                     }
-                    const data = audioQueue.shift();
-                    try {
-                        if (audioEncoder.encodeQueueSize > 24) await Once(audioEncoder, 'dequeue');
-                        audioEncoder.encode(data);
-                        data.close();
-                    } catch (_error) {
-                        audioFailure = _error;
-                        data.close();
-                    }
+                } finally {
+                    audioPumping = false;
                 }
             };
 
@@ -548,7 +612,8 @@
             }
 
             if (audioFailure) throw audioFailure;
-            await audioDone;
+            while (audioPumping || audioQueue.length) await audioDone;
+            if (audioFailure) throw audioFailure;
 
             if (_state.cancelled) {
                 if (audioEncoder.state !== 'closed') audioEncoder.close();
@@ -572,92 +637,6 @@
             engine: 'webcodecs',
             fps: effectiveFps
         };
-    }
-
-    // ---------------------------------------------------------------------------
-    // ffmpeg.wasm engine (fallback)
-    // ---------------------------------------------------------------------------
-
-    async function Transcode_FFmpeg(_file, _opt, _report, _state) {
-        _report({ phase: 'prepare', ratio: 0 });
-        await Load_Script(Script_Source.ffmpeg);
-        await Load_Script(Script_Source.ffmpeg_util);
-
-        const Factory = global.FFmpegWASM && global.FFmpegWASM.FFmpeg;
-        const util = global.FFmpegUtil;
-        if (!Factory || !util) throw new Error('ffmpeg.wasm could not be initialised.');
-
-        const ffmpeg = new Factory();
-
-        if (ffmpeg.on) {
-            ffmpeg.on('progress', (_event) => {
-                if (_event && typeof _event.progress === 'number') {
-                    _report({ phase: 'encode', ratio: Math.max(0, Math.min(1, _event.progress)) });
-                }
-            });
-        }
-
-        await ffmpeg.load({
-            coreURL: await util.toBlobURL(`${FFmpeg_Base}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await util.toBlobURL(`${FFmpeg_Base}/ffmpeg-core.wasm`, 'application/wasm')
-        });
-
-        if (_state.cancelled) {
-            ffmpeg.terminate();
-            return null;
-        }
-
-        const extension = (_file.name.split('.').pop() || 'mp4').toLowerCase();
-        const input = `input.${extension}`;
-        const output = 'output.mp4';
-
-        const filters = [`scale=${_opt.width}:${_opt.height}`];
-        if (_opt.fps > 0) filters.push(`fps=${_opt.fps}`);
-
-        const trimming = _opt.duration > 0;
-        const start = trimming ? Math.max(0, _opt.start || 0) : 0;
-
-        const args = [];
-        // 入力前にシークすると音と映像が同時に切れず、ずれが出にくいため
-        if (trimming) args.push('-ss', start.toFixed(3));
-        args.push('-i', input);
-        if (trimming) args.push('-t', _opt.duration.toFixed(3));
-        args.push(
-            '-vf', filters.join(','),
-            '-c:v', 'libx264',
-            '-preset', 'veryfast',
-            '-b:v', String(_opt.bitrate),
-            '-pix_fmt', 'yuv420p',
-            '-movflags', '+faststart'
-        );
-
-        if (_opt.audio) {
-            args.push('-c:a', 'aac', '-b:a', String(_opt.audioBitrate || 128000));
-        } else {
-            args.push('-an');
-        }
-        if (trimming) args.push('-avoid_negative_ts', 'make_zero');
-        args.push(output);
-
-        try {
-            await ffmpeg.writeFile(input, await util.fetchFile(_file));
-            await ffmpeg.exec(args);
-
-            if (_state.cancelled) return null;
-
-            const data = await ffmpeg.readFile(output);
-            const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-
-            _report({ phase: 'finish', ratio: 1 });
-
-            return {
-                blob: new Blob([bytes], { type: 'video/mp4' }),
-                engine: 'ffmpeg',
-                fps: _opt.fps
-            };
-        } finally {
-            try { ffmpeg.terminate(); } catch (_error) { /* noop */ }
-        }
     }
 
     // ---------------------------------------------------------------------------
@@ -712,44 +691,27 @@
             duration: _options.duration > 0 ? _options.duration : 0
         };
 
-        const wanted = _options.engine || 'auto';
-        const available = Engine();
-        let engine = wanted === 'auto' ? available : wanted;
-
-        if (engine === 'webcodecs' && !Has_WebCodecs()) {
-            engine = 'ffmpeg';
+        const wanted = _options.engine || 'webcodecs';
+        if (wanted !== 'auto' && wanted !== 'webcodecs') {
+            throw new Error('This build only exports through the WebCodecs engine. Choose engine "auto" or "webcodecs".');
+        }
+        if (!Has_WebCodecs()) {
+            throw new Error('This browser does not support the WebCodecs API, which is required to export video. Use the latest Chrome or Edge.');
+        }
+        if (!Can_Demux(options.file)) {
+            throw new Error('Only MP4 / M4V files can be exported. Convert MOV, WebM or other formats to MP4 (H.264) first.');
         }
 
-        // mp4box.js は mp4/m4v しか開けないので、それ以外は最初から ffmpeg を使う
-        const canFallback = wanted === 'auto' || wanted === 'ffmpeg';
-        if (engine === 'webcodecs' && canFallback && !Can_Demux(options.file)) {
-            engine = 'ffmpeg';
-        }
+        const result = await Transcode_WebCodecs(options.file, options, report, state);
+        if (!result) return { cancelled: true };
 
-        try {
-            const result = engine === 'webcodecs'
-                ? await Transcode_WebCodecs(options.file, options, report, state)
-                : await Transcode_FFmpeg(options.file, options, report, state);
-
-            if (!result) return { cancelled: true };
-
-            result.elapsed = Date.now() - started;
-            return result;
-        } catch (error) {
-            // WebCodecs は demux / 音声経路などで失敗しうるため ffmpeg で再試行する
-            if (engine === 'webcodecs' && error && error.fallback && canFallback) {
-                report({ phase: 'prepare', ratio: 0 });
-                const result = await Transcode_FFmpeg(options.file, options, report, state);
-                if (!result) return { cancelled: true };
-                result.elapsed = Date.now() - started;
-                return result;
-            }
-            throw error;
-        }
+        result.elapsed = Date.now() - started;
+        return result;
     }
 
     global.VideoEditor = {
         Engine: Engine,
+        Can_Encode_Aac: Can_Encode_Aac,
         Probe: Probe,
         Transcode: Transcode,
         Is_Supported: Is_Supported,
