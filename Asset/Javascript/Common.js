@@ -263,6 +263,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>QR Code</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_VideoEditor.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Video Editor</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Service_Creator_Font.html">
                         <v-list-item-icon />
                         <v-list-item-title>Font</v-list-item-title>

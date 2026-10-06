@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="../../Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="../../Asset/Image/Icon_1_2.jpg">
+
+  <link href="../../Asset/CSS/Common.css?v=1.2" rel="stylesheet" />
+
+  <title>Video Editor</title>
+  <meta name="robots" content="index, follow">
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Video Editor</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid class="pa-5">
+
+            <!-- ▼ Drop Zone ▼ -->
+            <v-row justify="center">
+              <v-col cols="12" md="8">
+                <div class="Drop_Zone" :class="{ 'drop-active': Drag_Active }" @dragenter.prevent="Drag_Enter"
+                  @dragover.prevent @dragleave.prevent="Drag_Leave" @drop.prevent="Dropped">
+                  <v-icon size="56" color="grey">mdi-tray-arrow-down</v-icon>
+                  <div class="Drop_Title">Drop video files here</div>
+                  <div class="Drop_Subtitle">or</div>
+                  <v-btn color="primary" rounded @click="Pick_Files">
+                    <v-icon left>mdi-video</v-icon>
+                    Choose Files
+                  </v-btn>
+                  <div class="Drop_Subtitle">MP4 / M4V / MOV / WebM</div>
+                </div>
+                <input ref="Input_File" type="file" accept=".mp4,.m4v,.mov,.webm,video/*" multiple class="Hidden_Input"
+                  @change="Picked">
+                <v-alert v-if="Message" type="warning" dense text class="mt-3" dismissible @input="Message = ''">
+                  {{ Message }}
+                </v-alert>
+              </v-col>
+            </v-row>
+            <!-- ▲ Drop Zone ▲ -->
+
+
+            <template v-if="Current_Video">
+              <!-- ▼ Player ▼ -->
+              <v-row justify="center" class="mt-4">
+                <v-col cols="12" md="8">
+                  <v-card>
+                    <v-card-text class="pb-2">
+                      <div class="Player_Frame" ref="Player_Frame" @dblclick="Toggle_Fullscreen">
+                        <video ref="Video" :key="Current_Video.url" class="Video_Player" :src="Current_Video.url"
+                          preload="metadata" playsinline @loadedmetadata="Loaded_Metadata"
+                          @timeupdate="Update_Time" @play="Playing = true" @pause="Playing = false"
+                          @ended="Ended" @error="Failed"></video>
+
+                        <div v-if="!Playing" class="Player_Center_Icon" @click="Toggle_Play">
+                          <v-icon size="72" color="rgba(255, 255, 255, 0.85)">mdi-play-circle-outline</v-icon>
+                        </div>
+
+                        <div v-if="Failed_Playing" class="Player_Message">
+                          This browser cannot decode the video codec of this file.
+                        </div>
+                      </div>
+                    </v-card-text>
+
+                    <v-card-text class="pt-0">
+                      <v-slider class="Seek_Slider" :value="Current_Time" :max="Duration || 1" :step="0.01" hide-details
+                        thumb-label="always" :disabled="!Duration" @start="Scrubbing = true"
+                        @change="Seek_End" @end="Scrubbing = false" />
+
+                      <div class="Time_Row">
+                        <v-icon small class="mr-1">mdi-clock-outline</v-icon>
+                        <span class="Selectable">{{ Format_Time(Current_Time) }}</span>
+                        <span class="mx-1">/</span>
+                        <span class="Selectable">{{ Format_Time(Duration) }}</span>
+                        <span class="mx-3">|</span>
+                        <span class="Selectable">{{ Current_Video.width }} x {{ Current_Video.height }}</span>
+                        <v-spacer></v-spacer>
+                        <span class="Selectable">{{ Aspect_Ratio }}</span>
+                      </div>
+
+                      <div class="Control_Row">
+                        <v-btn icon :disabled="!Current_Video" @click="Toggle_Play">
+                          <v-icon v-if="Playing" large>mdi-pause</v-icon>
+                          <v-icon v-else large>mdi-play</v-icon>
+                        </v-btn>
+
+                        <v-btn icon :disabled="Current_Index <= 0" @click="Step_Video(-1)">
+                          <v-icon>mdi-skip-previous</v-icon>
+                        </v-btn>
+                        <v-btn icon :disabled="Current_Index >= Videos.length - 1" @click="Step_Video(1)">
+                          <v-icon>mdi-skip-next</v-icon>
+                        </v-btn>
+
+                        <v-btn icon :color="Muted ? 'error' : ''" @click="Toggle_Mute">
+                          <v-icon v-if="Muted || Volume === 0" large>mdi-volume-off</v-icon>
+                          <v-icon v-else-if="Volume < 0.5" large>mdi-volume-medium</v-icon>
+                          <v-icon v-else large>mdi-volume-high</v-icon>
+                        </v-btn>
+                        <v-slider class="Volume_Slider" v-model="Volume" min="0" max="1" step="0.01" hide-details
+                          @input="Apply_Volume"></v-slider>
+
+                        <v-select v-model="Speed" :items="Speeds" class="Speed_Select mr-2" dense hide-details
+                          @change="Apply_Speed"></v-select>
+
+                        <v-btn icon :color="Loop ? 'primary' : ''" @click="Loop = !Loop; Apply_Loop()">
+                          <v-icon>mdi-repeat</v-icon>
+                        </v-btn>
+
+                        <v-btn icon @click="Toggle_Fullscreen">
+                          <v-icon>mdi-fullscreen</v-icon>
+                        </v-btn>
+                      </div>
+
+                      <div class="Screenshot_Row">
+                        <v-btn color="success" rounded :disabled="!Current_Video.width" @click="Capture_Screenshot">
+                          <v-icon left>mdi-camera</v-icon>
+                          Screenshot
+                        </v-btn>
+                        <span class="Screenshot_Hint ml-3">
+                          Stops on the current frame and saves it as PNG
+                        </span>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                  <canvas ref="Canvas" class="Hidden_Canvas"></canvas>
+                </v-col>
+              </v-row>
+              <!-- ▲ Player ▲ -->
+
+
+              <!-- ▼ Info + Playlist ▼ -->
+              <v-row justify="center">
+                <v-col cols="12" md="4">
+                  <v-card class="fill-height">
+                    <v-card-title>Information</v-card-title>
+                    <v-card-text>
+                      <table class="Info_Table">
+                        <tbody>
+                          <tr>
+                            <th>File</th>
+                            <td class="Selectable">{{ Current_Video.name }}</td>
+                          </tr>
+                          <tr>
+                            <th>Size</th>
+                            <td class="Selectable">{{ Format_Size(Current_Video.size) }}</td>
+                          </tr>
+                          <tr>
+                            <th>Duration</th>
+                            <td class="Selectable">{{ Format_Time(Duration) }}</td>
+                          </tr>
+                          <tr>
+                            <th>Resolution</th>
+                            <td class="Selectable">{{ Current_Video.width }} x {{ Current_Video.height }}</td>
+                          </tr>
+                          <tr>
+                            <th>Ratio</th>
+                            <td class="Selectable">{{ Aspect_Ratio }}</td>
+                          </tr>
+                          <tr>
+                            <th>Rate</th>
+                            <td class="Selectable">{{ Speed }} x</td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      <div class="Info_Keys">
+                        <div><b>Space</b> Play / Pause</div>
+                        <div><b>&larr; &rarr;</b> Seek 5 seconds</div>
+                        <div><b>&uarr; &darr;</b> Volume</div>
+                        <div><b>S</b> Screenshot</div>
+                        <div><b>F</b> Fullscreen</div>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+
+                <v-col cols="12" md="4">
+                  <v-card class="fill-height">
+                    <v-card-title>
+                      Playlist
+                      <v-spacer></v-spacer>
+                      <span class="text-caption grey--text">{{ Videos.length }} file(s)</span>
+                      <v-btn icon small class="ml-1" :disabled="!Videos.length" @click="Clear_Videos">
+                        <v-icon small>mdi-delete-sweep</v-icon>
+                      </v-btn>
+                    </v-card-title>
+                    <v-card-text>
+                      <div v-if="!Videos.length" class="Playlist_Empty">
+                        No videos yet. Drop files above.
+                      </div>
+                      <div class="Playlist_Scroll">
+                        <div v-for="(video, index) in Videos" :key="video.url" class="Playlist_Item"
+                          :class="{ 'playlist-active': index === Current_Index }" @click="Select_Video(index)">
+                          <video class="Playlist_Thumb" :src="video.url" preload="metadata" muted playsinline
+                            @click.stop="Select_Video(index)"></video>
+                          <div class="Playlist_Meta">
+                            <div class="Playlist_Name Selectable">{{ video.name }}</div>
+                            <div class="Playlist_Sub">{{ Format_Size(video.size) }}</div>
+                          </div>
+                          <v-btn icon x-small class="Playlist_Delete" @click.stop="Remove_Video(index)">
+                            <v-icon x-small>mdi-close</v-icon>
+                          </v-btn>
+                        </div>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <!-- ▲ Info + Playlist ▲ -->
+
+
+              <!-- ▼ Export ▼ -->
+              <v-row justify="center" class="mt-4">
+                <v-col cols="12" md="8">
+                  <v-card>
+                    <v-card-title>
+                      Export
+                      <v-spacer></v-spacer>
+                      <v-chip x-small label class="mr-1" :color="Engine_Native ? 'success' : 'warning'">
+                        {{ Engine_Native ? 'WebCodecs' : 'FFmpeg.wasm' }}
+                      </v-chip>
+                    </v-card-title>
+                    <v-card-text>
+
+                      <v-select v-model="Engine" :items="Engine_Items" label="Engine" item-text="text" item-value="value"
+                        dense outlined hide-details class="Export_Field mb-4"></v-select>
+
+                      <!-- Resolution -->
+                      <div class="Export_Label">Resolution</div>
+                      <v-row dense align="center">
+                        <v-col cols="12" sm="6">
+                          <v-select v-model="Resolution_Preset" :items="Resolution_Items" label="Size"
+                            dense outlined hide-details @change="Change_Resolution"></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="4">
+                          <v-text-field v-model.number="Target_Width" label="Width" type="number" dense outlined
+                            hide-details :min="16" :max="7680" :step="2" @change="Sync_Resolution('width')"></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="4">
+                          <v-text-field v-model.number="Target_Height" label="Height" type="number" dense outlined
+                            hide-details :min="16" :max="4320" :step="2" @change="Sync_Resolution('height')"></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="4">
+                          <v-checkbox v-model="Lock_Ratio" label="Keep aspect ratio" dense hide-details
+                            class="Export_Check mt-1" @change="Sync_Resolution('height')"></v-checkbox>
+                        </v-col>
+                      </v-row>
+                      <div class="Export_Hint">
+                        <span>Source {{ Current_Video.width }} x {{ Current_Video.height }}</span>
+                        <v-spacer></v-spacer>
+                        <span>Output {{ Output_Width }} x {{ Output_Height }}
+                          ({{ Scale_Label }})</span>
+                      </div>
+
+                      <!-- Frame rate -->
+                      <div class="Export_Label">Frame rate</div>
+                      <v-select v-model="Target_Fps" :items="Fps_Items" label="FPS" dense outlined hide-details
+                        class="Export_Field"></v-select>
+                      <div class="Export_Hint" v-if="Fps_Note">
+                        <v-icon x-small class="mr-1">mdi-information-outline</v-icon>{{ Fps_Note }}
+                      </div>
+
+                      <!-- Quality -->
+                      <div class="Export_Label">Quality</div>
+                      <v-row dense align="center">
+                        <v-col cols="12" sm="5">
+                          <v-select v-model="Quality" :items="Quality_Items" label="Preset" dense outlined hide-details
+                            @change="Quality = $event; Reset_Bitrate()"></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="7">
+                          <div class="Export_Slider">
+                            <v-slider v-model="Bitrate" :min="150" :max="Bitrate_Max" :step="50" thumb-label="always"
+                              hide-details></v-slider>
+                            <div class="Export_Slider_Label">{{ Format_Bitrate(Bitrate * 1000) }}</div>
+                          </div>
+                        </v-col>
+                      </v-row>
+
+                      <!-- Audio -->
+                      <div class="Export_Label">Audio</div>
+                      <v-row dense align="center">
+                        <v-col cols="12" sm="5">
+                          <v-select v-model="Audio" :items="Audio_Items" label="Track" dense outlined hide-details></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="7" class="Export_Note">
+                          <span v-if="!Has_Audio">This file has no audio track.</span>
+                          <span v-else>Audio {{ Format_Bitrate(Audio_Bitrate) }} - AAC</span>
+                        </v-col>
+                      </v-row>
+
+                      <!-- Estimate + Actions -->
+                      <v-divider class="my-4"></v-divider>
+
+                      <div class="Export_Hint">
+                        <span>Estimated size</span>
+                        <v-spacer></v-spacer>
+                        <span>
+                          <b>{{ Format_Size(Estimated_Size) }}</b>
+                          <span class="grey--text">&nbsp;from {{ Format_Size(Current_Video.size) }}</span>
+                          <v-chip v-if="Reduction_Ratio" x-small label class="ml-2"
+                            :color="Reduction_Ratio > 0 ? 'success' : 'error'">
+                            {{ Reduction_Ratio > 0 ? '-' : '+' }}{{ Math.abs(Reduction_Ratio) }}%
+                          </v-chip>
+                        </span>
+                      </div>
+
+                      <div class="Screenshot_Row">
+                        <v-btn color="primary" rounded :disabled="!Can_Export || Busy" @click="Start_Export">
+                          <v-icon left>mdi-export-video</v-icon>
+                          Export
+                        </v-btn>
+                        <v-btn v-if="Busy" text small class="ml-2" @click="Cancel_Export">
+                          <v-icon left small>mdi-close</v-icon>
+                          Cancel
+                        </v-btn>
+                        <span class="Screenshot_Hint ml-2">
+                          {{ Busy ? Status : 'Re-encode to MP4 and download it' }}
+                        </span>
+                      </div>
+
+                      <v-progress-linear v-if="Busy" :value="Progress * 100" height="8" rounded class="mt-2"
+                        :color="Progress_Phase === 'prepare' ? 'warning' : 'primary'"></v-progress-linear>
+
+                      <!-- Result -->
+                      <template v-if="Result">
+                        <v-divider class="my-4"></v-divider>
+                        <v-row dense align="center">
+                          <v-col cols="12" sm="8">
+                            <table class="Info_Table">
+                              <tbody>
+                                <tr>
+                                  <th>Result</th>
+                                  <td class="Selectable">{{ Format_Size(Result.blob.size) }}</td>
+                                </tr>
+                                <tr>
+                                  <th>Resolution</th>
+                                  <td class="Selectable">{{ Output_Width }} x {{ Output_Height }}</td>
+                                </tr>
+                                <tr>
+                                  <th>FPS</th>
+                                  <td class="Selectable">{{ Effective_Fps }}</td>
+                                </tr>
+                                <tr>
+                                  <th>Engine</th>
+                                  <td class="Selectable">{{ Result.engine }} - {{ Result.elapsed }} ms</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </v-col>
+                          <v-col cols="12" sm="4">
+                            <v-btn color="success" block rounded @click="Download_Result">
+                              <v-icon left>mdi-download</v-icon>
+                              Download
+                            </v-btn>
+                          </v-col>
+                        </v-row>
+                      </template>
+
+                      <v-alert v-if="Export_Error" type="error" dense text class="mt-3">{{ Export_Error }}</v-alert>
+
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <!-- ▲ Export ▲ -->
+
+
+              <!-- ▼ Screenshots ▼ -->
+              <v-row justify="center" class="mt-4">
+                <v-col cols="12" md="8">
+                  <v-card>
+                    <v-card-title>
+                      Screenshots
+                      <v-spacer></v-spacer>
+                      <v-btn text small class="mr-1" :disabled="!Shots.length" @click="Download_All">Save all</v-btn>
+                      <v-btn text small :disabled="!Shots.length" @click="Clear_Shots">Clear</v-btn>
+                    </v-card-title>
+                    <v-card-text>
+                      <div v-if="!Shots.length" class="Playlist_Empty">
+                        Pause anywhere and press Screenshot to keep the frame here.
+                      </div>
+                      <div class="Shot_Grid">
+                        <div v-for="(shot, index) in Shots" :key="shot.url" class="Shot_Item">
+                          <img class="Shot_Image" :src="shot.url" :alt="'Frame at ' + Format_Time(shot.time)"
+                            @click="Download_Shot(shot)">
+                          <div class="Shot_Meta">
+                            <span class="Selectable">{{ Format_Time(shot.time) }}</span>
+                            <span>{{ shot.width }} x {{ shot.height }}</span>
+                          </div>
+                          <v-btn icon x-small class="Shot_Delete" @click="Remove_Shot(index)">
+                            <v-icon x-small>mdi-close</v-icon>
+                          </v-btn>
+                        </div>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <!-- ▲ Screenshots ▲ -->
+
+            </template>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+  <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
+  <script src="../../Asset/Javascript/VideoEditor.js?v=1.0"></script>
+
+  <script>
+    // 動画の標準解像度。大きい順に並べて、アップスケールしない範囲で最も近いものを選ぶ
+    const RESOLUTION_PRESETS = [
+      [3840, 2160], [2560, 1440], [1920, 1080], [1280, 720], [854, 480], [640, 360],
+      [1080, 1920], [720, 1280], [480, 854]
+    ];
+
+    // 既定値の上限。4K 入力でも初期値は 1080p まで落とす
+    const DEFAULT_MAX_WIDTH = 1920;
+    const DEFAULT_MAX_HEIGHT = 1080;
+
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        Files: [],
+        Videos: [],
+        Current_Index: -1,
+        Playing: false,
+        Failed_Playing: false,
+        Duration: 0,
+        Current_Time: 0,
+        Scrubbing: false,
+        Volume: 1,
+        Muted: false,
+        Loop: false,
+        Speed: 1,
+        Speeds: [0.25, 0.5, 1, 1.5, 2, 4],
+        Shots: [],
+        Drag_Active: false,
+        Message: '',
+        Engine: 'auto',
+        Source_Info: null,
+        Resolution_Preset: '1920x1080',
+        Target_Width: 1920,
+        Target_Height: 1080,
+        Target_Fps: 30,
+        Quality: 'standard',
+        Lock_Ratio: true,
+        Bitrate: 5500,
+        Audio: 'keep',
+        Busy: false,
+        Cancel_Flag: false,
+        Progress: 0,
+        Progress_Phase: 'prepare',
+        Status: '',
+        Export_Error: '',
+        Result: null,
+        Result_Name: ''
+      },
+      computed: {
+        Current_Video() {
+          return this.Videos[this.Current_Index] || null;
+        },
+        Engine_Native() {
+          return window.VideoEditor.Engine() === 'webcodecs';
+        },
+        Engine_Items() {
+          const items = [{ text: 'Automatic (Recommended)', value: 'auto' }];
+          items.push({
+            text: this.Engine_Native ? 'WebCodecs (Native)' : 'WebCodecs (not supported)',
+            value: 'webcodecs',
+            disabled: !this.Engine_Native
+          });
+          items.push({ text: 'FFmpeg.wasm (Slow, 31 MB)', value: 'ffmpeg' });
+          return items;
+        },
+        Output_Width() {
+          return window.VideoEditor.To_Even(this.Target_Width || this.Current_Video.width);
+        },
+        Output_Height() {
+          return window.VideoEditor.To_Even(this.Target_Height || this.Current_Video.height);
+        },
+        Scale_Label() {
+          if (!this.Current_Video.width) return '-';
+          const scale = this.Output_Width / this.Current_Video.width;
+          if (Math.abs(scale - 1) < 0.005) return '100%';
+          return `${(scale * 100).toFixed(0)}%`;
+        },
+        Resolution_Items() {
+          const items = [{ text: 'Original', value: 'original' }];
+          RESOLUTION_PRESETS.forEach(([w, h]) => items.push({
+            text: `${w} x ${h}`,
+            value: `${w}x${h}`
+          }));
+          items.push({ text: 'Custom', value: 'custom' });
+          return items;
+        },
+        Fps_Items() {
+          const items = [{ text: 'Original', value: 0 }];
+          [60, 50, 30, 25, 24, 15, 12, 10]
+            .filter(fps => !this.Source_Fps || fps <= this.Source_Fps + 0.01)
+            .forEach(fps => items.push({ text: `${fps} fps`, value: fps }));
+          return items;
+        },
+        Fps_Note() {
+          if (!this.Target_Fps || !this.Source_Fps) return '';
+          if (this.Target_Fps < this.Source_Fps - 0.01) {
+            return `Frames will be dropped from ${this.Source_Fps.toFixed(2)} fps.`;
+          }
+          if (this.Target_Fps > this.Source_Fps + 0.01) {
+            return `Capped at the source rate (${this.Source_Fps.toFixed(2)} fps). Interpolation is not applied.`;
+          }
+          return '';
+        },
+        Quality_Items() {
+          return Object.keys(window.VideoEditor.Quality_Table).map(key => ({
+            text: window.VideoEditor.Quality_Table[key].label,
+            value: key
+          }));
+        },
+        Audio_Items() {
+          return Object.keys(window.VideoEditor.Audio_Table).map(key => ({
+            text: window.VideoEditor.Audio_Table[key].label,
+            value: key
+          }));
+        },
+        Has_Audio() {
+          return this.Source_Info ? this.Source_Info.hasAudio : true;
+        },
+        Audio_Bitrate() {
+          return (window.VideoEditor.Audio_Table[this.Audio] || { bitrate: 0 }).bitrate;
+        },
+        Bitrate_Max() {
+          const sourceBitrate = this.Source_Info ? this.Source_Info.bitrate : 0;
+          return Math.max(8000, Math.ceil((window.VideoEditor.Suggest_Bitrate(
+            this.Output_Width, this.Output_Height, this.Effective_Fps, 'high', sourceBitrate) / 1000) / 1000) * 1000);
+        },
+        Effective_Fps() {
+          if (!this.Target_Fps) return this.Source_Fps ? Number(this.Source_Fps.toFixed(2)) : 30;
+          if (this.Source_Fps && this.Target_Fps > this.Source_Fps) return Number(this.Source_Fps.toFixed(2));
+          return this.Target_Fps;
+        },
+        Source_Fps() {
+          return this.Source_Info ? this.Source_Info.fps : 0;
+        },
+        Estimated_Size() {
+          const total = this.Bitrate * 1000 + (this.Audio === 'remove' ? 0 : this.Audio_Bitrate);
+          return (total * this.Duration) / 8;
+        },
+        Reduction_Ratio() {
+          if (!this.Current_Video.size || !this.Estimated_Size) return 0;
+          return Math.round((1 - this.Estimated_Size / this.Current_Video.size) * 100);
+        },
+        Can_Export() {
+          return !!this.Current_Video && !!this.Current_Video.width && this.Duration > 0;
+        },
+        Aspect_Ratio() {
+          const video = this.Current_Video;
+          if (!video || !video.width || !video.height) return '-';
+          const _width = video.width;
+          const _height = video.height;
+          if (_width === _height) return '1:1 (Square)';
+          const candidates = [
+            { w: 16, h: 9 }, { w: 9, h: 16 }, { w: 4, h: 3 }, { w: 3, h: 4 },
+            { w: 21, h: 9 }, { w: 2, h: 1 }, { w: 1, h: 2 }
+          ];
+          for (const item of candidates) {
+            if (Math.abs(_width / _height - item.w / item.h) < 0.02) {
+              return `${item.w}:${item.h}`;
+            }
+          }
+          return `${_width}:${_height} (Free)`;
+        }
+      },
+      methods: {
+        ////// File
+
+        Pick_Files() {
+          this.$refs.Input_File.click();
+        },
+
+        Drag_Enter() {
+          this.Drag_Active = true;
+        },
+
+        // 子要素へ移動しただけの離脱では Drag_Active を落とさない
+        Drag_Leave(event) {
+          if (event.currentTarget.contains(event.relatedTarget)) return;
+          this.Drag_Active = false;
+        },
+
+        Picked(event) {
+          const files = Array.from(event.target.files || []);
+          this.Add_Files(files);
+          event.target.value = '';
+        },
+
+        Dropped(event) {
+          this.Drag_Active = false;
+          const files = Array.from(event.dataTransfer.files || []);
+          this.Add_Files(files);
+        },
+
+        Is_Supported(file) {
+          return window.VideoEditor.Is_Supported(file);
+        },
+
+        Add_Files(files) {
+          if (!files.length) return;
+
+          const accepted = files.filter(file => this.Is_Supported(file));
+          const skipped = files.length - accepted.length;
+
+          accepted.forEach(file => {
+            this.Videos.push({
+              name: file.name,
+              size: file.size,
+              file: file,
+              url: URL.createObjectURL(file),
+              width: 0,
+              height: 0
+            });
+          });
+
+          const notes = [];
+          if (skipped > 0) notes.push(`${skipped} file(s) skipped because they are not a supported video.`);
+          if (accepted.length && !this.$refs.Video) {
+            const probe = document.createElement('video');
+            if (!probe.canPlayType('video/mp4')) {
+              notes.push('This browser cannot play MP4 / H.264.');
+            }
+          }
+          if (accepted.some(file => /\.(webm|mov)$/i.test(file.name)) && this.Engine_Native) {
+            notes.push('WebM / MOV needs FFmpeg.wasm because WebCodecs only demuxes MP4.');
+          }
+          this.Message = notes.join(' ');
+
+          if (this.Current_Index < 0 && this.Videos.length) this.Select_Video(0);
+        },
+
+        Select_Video(index) {
+          if (index < 0 || index >= this.Videos.length) return;
+          this.Current_Index = index;
+          this.Duration = 0;
+          this.Current_Time = 0;
+          this.Playing = false;
+          this.Failed_Playing = false;
+          this.Scrubbing = false;
+          this.Result = null;
+          this.Export_Error = '';
+
+          // video 要素は :key で作り直されるため、再描画後に設定し直す
+          this.$nextTick(() => {
+            this.Apply_Volume();
+            this.Apply_Speed();
+            this.Apply_Loop();
+            this.Probe_Source();
+          });
+        },
+
+        // moov から FPS と音声の有無を取得する
+        Probe_Source() {
+          const source = this.Videos[this.Current_Index];
+          this.Source_Info = null;
+          if (!source || !source.file) return;
+          const token = source.url;
+
+          window.VideoEditor.Probe(source.file).then(info => {
+            if (this.Videos[this.Current_Index] === undefined) return;
+            if (this.Videos[this.Current_Index].url !== token) return;
+            this.Source_Info = info;
+            this.Reset_Resolution();
+            this.Reset_Fps();
+            this.Reset_Bitrate();
+          });
+        },
+
+        Step_Video(direction) {
+          this.Select_Video(this.Current_Index + direction);
+        },
+
+        Remove_Video(index) {
+          const [removed] = this.Videos.splice(index, 1);
+          if (removed) URL.revokeObjectURL(removed.url);
+
+          if (!this.Videos.length) {
+            this.Current_Index = -1;
+            this.Source_Info = null;
+          } else if (index < this.Current_Index) {
+            this.Select_Video(this.Current_Index - 1);
+          } else if (index === this.Current_Index) {
+            this.Select_Video(Math.min(index, this.Videos.length - 1));
+          } else {
+            this.Source_Info = null;
+          }
+        },
+
+        Clear_Videos() {
+          this.Videos.forEach(video => URL.revokeObjectURL(video.url));
+          this.Videos = [];
+          this.Current_Index = -1;
+          this.Source_Info = null;
+          this.Duration = 0;
+          this.Current_Time = 0;
+          this.Playing = false;
+          this.Failed_Playing = false;
+          this.Result = null;
+          this.Export_Error = '';
+        },
+
+        ////// Player
+
+        Loaded_Metadata() {
+          const video = this.$refs.Video;
+          if (!video) return;
+
+          const current = this.Current_Video;
+          if (current) {
+            this.$set(current, 'width', video.videoWidth);
+            this.$set(current, 'height', video.videoHeight);
+            // moov の情報がまだなら、標準解像度の初期値をここで設定する
+            if (!this.Source_Info) {
+              this.Reset_Resolution();
+              this.Reset_Fps();
+            }
+          }
+          this.Duration = isFinite(video.duration) ? video.duration : 0;
+          this.Apply_Loop();
+          this.Apply_Volume();
+          this.Apply_Speed();
+          this.Reset_Bitrate();
+        },
+
+        Failed() {
+          this.Failed_Playing = true;
+          this.Playing = false;
+        },
+
+        Update_Time() {
+          const video = this.$refs.Video;
+          if (!video || this.Scrubbing) return;
+          this.Current_Time = video.currentTime;
+        },
+
+        Ended() {
+          this.Playing = false;
+          this.Current_Time = this.Duration;
+        },
+
+        Toggle_Play() {
+          const video = this.$refs.Video;
+          if (!video || this.Failed_Playing) return;
+          if (video.paused) {
+            video.play();
+          } else {
+            video.pause();
+          }
+        },
+
+        Seek_End(value) {
+          const video = this.$refs.Video;
+          if (!video) return;
+          video.currentTime = value;
+          this.Current_Time = value;
+          this.Scrubbing = false;
+        },
+
+        Skip(seconds) {
+          const video = this.$refs.Video;
+          if (!video || !this.Duration) return;
+          video.currentTime = Math.min(Math.max(video.currentTime + seconds, 0), this.Duration);
+        },
+
+        Toggle_Mute() {
+          const video = this.$refs.Video;
+          this.Muted = !this.Muted;
+          if (video) video.muted = this.Muted;
+        },
+
+        Apply_Volume() {
+          const video = this.$refs.Video;
+          if (!video) return;
+          video.volume = this.Volume;
+          video.muted = this.Muted || this.Volume === 0;
+        },
+
+        Apply_Speed() {
+          const video = this.$refs.Video;
+          if (!video) return;
+          video.playbackRate = this.Speed;
+        },
+
+        Apply_Loop() {
+          const video = this.$refs.Video;
+          if (video) video.loop = this.Loop;
+        },
+
+        Toggle_Fullscreen() {
+          const frame = this.$refs.Player_Frame;
+          if (!frame) return;
+          if (document.fullscreenElement) {
+            document.exitFullscreen();
+          } else if (frame.requestFullscreen) {
+            frame.requestFullscreen();
+          }
+        },
+
+        ////// Screenshot
+
+        // 再生中だけ requestVideoFrameCallback を使う
+        // 停止中は新しいフレームが提示されないため、呼ばないと発火しない
+        Draw_Frame(callback) {
+          const video = this.$refs.Video;
+          const canvas = this.$refs.Canvas;
+          if (!video || !canvas || !video.videoWidth) return;
+
+          const draw = () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            callback(canvas);
+          };
+
+          if (!video.paused && video.requestVideoFrameCallback) {
+            video.requestVideoFrameCallback(draw);
+          } else {
+            window.requestAnimationFrame(draw);
+          }
+        },
+
+        // 再生を止めて、現在のフレームを 1 枚 PNG として保存する
+        Capture_Screenshot() {
+          const video = this.$refs.Video;
+          if (!video || !video.videoWidth) return;
+          video.pause();
+
+          this.Draw_Frame(canvas => {
+            canvas.toBlob(blob => {
+              if (!blob) {
+                this.Message = 'Could not read the current frame.';
+                return;
+              }
+              const source = this.Current_Video;
+              this.Shots.unshift({
+                url: URL.createObjectURL(blob),
+                time: video.currentTime,
+                width: canvas.width,
+                height: canvas.height,
+                size: blob.size,
+                name: source ? source.name.replace(/\.[^.]+$/, '') : 'frame'
+              });
+            }, 'image/png');
+          });
+        },
+
+        Download_Shot(shot) {
+          const link = document.createElement('a');
+          link.href = shot.url;
+          link.download = `${shot.name}_${shot.time.toFixed(3)}s.png`;
+          link.click();
+        },
+
+        Download_All() {
+          this.Shots.forEach((shot, index) => {
+            window.setTimeout(() => this.Download_Shot(shot), index * 300);
+          });
+        },
+
+        Remove_Shot(index) {
+          const [removed] = this.Shots.splice(index, 1);
+          if (removed) URL.revokeObjectURL(removed.url);
+        },
+
+        Clear_Shots() {
+          this.Shots.forEach(shot => URL.revokeObjectURL(shot.url));
+          this.Shots = [];
+        },
+
+        ////// Export
+
+        // 元解像度を上限に、縦横を合わせた標準解像度のうち最も大きいものを初期値にする
+        Default_Resolution() {
+          const source = this.Current_Video;
+          if (!source || !source.width || !source.height) return 'original';
+
+          const vertical = source.height > source.width;
+          const maxWidth = Math.min(source.width, vertical ? DEFAULT_MAX_HEIGHT : DEFAULT_MAX_WIDTH);
+          const maxHeight = Math.min(source.height, vertical ? DEFAULT_MAX_WIDTH : DEFAULT_MAX_HEIGHT);
+
+          let best = null;
+          RESOLUTION_PRESETS.forEach(([w, h]) => {
+            const [pw, ph] = vertical ? [h, w] : [w, h];
+            if (pw > maxWidth || ph > maxHeight) return;
+            if (!best || pw * ph > best[0] * best[1]) best = [pw, ph];
+          });
+
+          if (!best) return 'original';
+          return `${best[0]}x${best[1]}`;
+        },
+
+        Reset_Resolution() {
+          const preset = this.Default_Resolution();
+          if (preset === 'original') {
+            this.Resolution_Preset = 'original';
+            this.Target_Width = this.Current_Video.width;
+            this.Target_Height = this.Current_Video.height;
+          } else {
+            this.Resolution_Preset = preset;
+            this.Change_Resolution(preset);
+            return;
+          }
+          this.Reset_Bitrate();
+        },
+
+        // 初期値は 30fps。元がそれより低い場合はフレームは作らず元の値を使う
+        Reset_Fps() {
+          const source = this.Source_Fps;
+          if (source && source <= 30) {
+            this.Target_Fps = Math.round(source);
+            return;
+          }
+          this.Target_Fps = 30;
+        },
+
+        Reset_Bitrate() {
+          const sourceBitrate = this.Source_Info ? this.Source_Info.bitrate : 0;
+          this.Bitrate = Math.round(window.VideoEditor.Suggest_Bitrate(
+            this.Output_Width, this.Output_Height, this.Effective_Fps, this.Quality, sourceBitrate) / 1000);
+        },
+
+        // 元サイズ比を保ったまま解像度を落とす
+        Change_Resolution(_preset) {
+          if (_preset === 'original') {
+            this.Reset_Resolution();
+            return;
+          }
+
+          if (_preset === 'custom') {
+            this.Reset_Bitrate();
+            return;
+          }
+
+          const [width, height] = String(_preset).split('x').map(Number);
+          const sourceWidth = this.Current_Video.width;
+          const sourceHeight = this.Current_Video.height;
+
+          // 縦向き動画に横向きプリセットを当てても比率が崩れないようにする
+          const sourceVertical = sourceHeight > sourceWidth;
+          const presetVertical = height > width;
+          if (sourceVertical !== presetVertical) {
+            this.Target_Width = height;
+            this.Target_Height = width;
+          } else {
+            this.Target_Width = width;
+            this.Target_Height = height;
+          }
+
+          if (sourceWidth && sourceHeight) {
+            const scale = this.Target_Width / sourceWidth;
+            this.Target_Height = window.VideoEditor.To_Even(sourceHeight * scale);
+          }
+
+          this.Reset_Bitrate();
+        },
+
+        // 片方を変えたらアスペクト比に合わせてもう片方を決める
+        Sync_Resolution(_changed) {
+          const source = this.Current_Video;
+          if (!source.width || !source.height) return;
+
+          if (this.Lock_Ratio) {
+            const ratio = source.height / source.width;
+            if (_changed === 'width') {
+              this.Target_Height = window.VideoEditor.To_Even(this.Target_Width * ratio);
+            } else {
+              this.Target_Width = window.VideoEditor.To_Even(this.Target_Height / ratio);
+            }
+          }
+
+          this.Target_Width = window.VideoEditor.To_Even(this.Target_Width);
+          this.Target_Height = window.VideoEditor.To_Even(this.Target_Height);
+
+          const preset = `${this.Output_Width}x${this.Output_Height}`;
+          this.Resolution_Preset = this.Resolution_Items.some(item => item.value === preset)
+            ? preset
+            : 'custom';
+          this.Reset_Bitrate();
+        },
+
+        Start_Export() {
+          const video = this.$refs.Video;
+          if (video) video.pause();
+
+          this.Busy = true;
+          this.Cancel_Flag = false;
+          this.Progress = 0;
+          this.Progress_Phase = 'prepare';
+          this.Status = 'Reading the source file...';
+          this.Export_Error = '';
+          this.Result = null;
+
+          const options = {
+            file: this.Current_Video.file,
+            width: this.Output_Width,
+            height: this.Output_Height,
+            fps: this.Target_Fps,
+            bitrate: this.Bitrate * 1000,
+            audio: this.Audio !== 'remove' && this.Has_Audio,
+            audioBitrate: this.Audio_Bitrate || 128000,
+            engine: this.Engine
+          };
+
+          window.VideoEditor.Transcode(options, (event) => {
+            this.Progress = event.ratio;
+            this.Progress_Phase = event.phase;
+            if (event.phase === 'prepare') this.Status = 'Preparing the encoder...';
+            if (event.phase === 'video') this.Status = 'Encoding video frames...';
+            if (event.phase === 'audio') this.Status = 'Encoding audio...';
+            if (event.phase === 'encode') this.Status = 'Encoding with FFmpeg.wasm...';
+          }, () => this.Cancel_Flag).then((result) => {
+            this.Busy = false;
+
+            if (!result || result.cancelled) {
+              this.Status = 'Cancelled.';
+              this.Progress = 0;
+              return;
+            }
+
+            this.Progress = 1;
+            this.Status = 'Done.';
+            this.Result = result;
+            this.Result_Name = this.Output_Name();
+          }).catch((error) => {
+            this.Busy = false;
+            this.Progress = 0;
+            this.Status = '';
+            this.Export_Error = (error && error.message) ? error.message : String(error);
+          });
+        },
+
+        Cancel_Export() {
+          this.Cancel_Flag = true;
+          this.Status = 'Cancelling...';
+        },
+
+        Output_Name() {
+          const base = (this.Current_Video.name || 'video').replace(/\.[^.]+$/, '');
+          return `${base}_${this.Output_Width}x${this.Output_Height}.mp4`;
+        },
+
+        Download_Result() {
+          if (!this.Result) return;
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(this.Result.blob);
+          link.download = this.Result_Name || 'output.mp4';
+          link.click();
+          window.setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+        },
+
+        ////// Format
+
+        Format_Bitrate(_bitrate) {
+          return window.VideoEditor.Format_Bitrate(_bitrate);
+        },
+
+        Format_Size(_bytes) {
+          return window.VideoEditor.Format_Size(_bytes);
+        },
+
+        Format_Time(_seconds) {
+          return window.VideoEditor.Format_Time(_seconds);
+        },
+
+        ////// Keyboard
+
+        On_Key(event) {
+          if (!this.Current_Video) return;
+          const target = event.target;
+          if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+
+          switch (event.code) {
+            case 'Space':
+              event.preventDefault();
+              this.Toggle_Play();
+              break;
+            case 'ArrowLeft':
+              event.preventDefault();
+              this.Skip(-5);
+              break;
+            case 'ArrowRight':
+              event.preventDefault();
+              this.Skip(5);
+              break;
+            case 'ArrowUp':
+              event.preventDefault();
+              this.Volume = Math.min(1, this.Volume + 0.1);
+              this.Muted = false;
+              this.Apply_Volume();
+              break;
+            case 'ArrowDown':
+              event.preventDefault();
+              this.Volume = Math.max(0, this.Volume - 0.1);
+              this.Apply_Volume();
+              break;
+            case 'KeyS':
+              this.Capture_Screenshot();
+              break;
+            case 'KeyF':
+              this.Toggle_Fullscreen();
+              break;
+          }
+        }
+      },
+      mounted() {
+        window.addEventListener('keydown', this.On_Key);
+      },
+      beforeDestroy() {
+        window.removeEventListener('keydown', this.On_Key);
+        this.Clear_Videos();
+        this.Clear_Shots();
+      }
+    });
+  </script>
+
+  <style>
+    .Hidden_Input,
+    .Hidden_Canvas {
+      display: none;
+    }
+
+    /* //// Drop Zone */
+
+    .Drop_Zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      border: 3px dashed #b0bec5;
+      border-radius: 20px;
+      background-color: rgba(255, 255, 255, 0.6);
+      transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.25s ease;
+    }
+
+    .Drop_Zone.drop-active {
+      border-color: #43a047;
+      background-color: rgba(67, 160, 71, 0.12);
+      transform: scale(1.01);
+    }
+
+    .Drop_Title {
+      margin-top: 12px;
+      font-size: 1.15em;
+      font-weight: 700;
+      color: #37474f;
+    }
+
+    .Drop_Subtitle {
+      margin: 6px 0;
+      font-size: 0.85em;
+      color: #78909c;
+    }
+
+    /* //// Player */
+
+    .Player_Frame {
+      position: relative;
+      background-color: #000000;
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .Player_Frame:fullscreen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0;
+    }
+
+    .Video_Player {
+      display: block;
+      width: 100%;
+      max-height: 70vh;
+      background-color: #000000;
+    }
+
+    .Player_Center_Icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.75;
+      transition: opacity 0.2s ease;
+    }
+
+    .Player_Center_Icon:hover {
+      opacity: 1;
+    }
+
+    .Player_Message {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      text-align: center;
+      color: #ffcdd2;
+      background-color: rgba(0, 0, 0, 0.72);
+    }
+
+    .Seek_Slider {
+      margin-top: -14px;
+    }
+
+    .Time_Row {
+      display: flex;
+      align-items: center;
+      font-size: 0.85em;
+      color: #546e7a;
+      padding: 0 4px;
+    }
+
+    .Control_Row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .Volume_Slider {
+      flex: 0 0 auto;
+      max-width: 90px;
+      margin: 0 12px 0 0;
+    }
+
+    .Speed_Select {
+      max-width: 92px;
+      flex: 0 0 auto;
+    }
+
+    .Screenshot_Row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .Screenshot_Hint {
+      font-size: 0.75em;
+      color: #90a4ae;
+    }
+
+    /* //// Export */
+
+.Export_Label {
+  margin: 8px 0 4px;
+  font-size: 0.8em;
+  font-weight: 700;
+  color: #607d8b;
+}
+
+.Export_Hint {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 0.75em;
+  color: #90a4ae;
+}
+
+.Export_Note {
+  display: flex;
+  align-items: center;
+  font-size: 0.8em;
+  color: #78909c;
+}
+
+.Export_Field {
+  max-width: 420px;
+}
+
+.Export_Check .v-input__slot {
+  margin-bottom: 0;
+}
+
+.Export_Slider {
+  display: flex;
+  align-items: center;
+}
+
+.Export_Slider .v-slider {
+  flex: 1 1 auto;
+}
+
+.Export_Slider_Label {
+  flex: 0 0 auto;
+  min-width: 84px;
+  text-align: right;
+  font-size: 0.82em;
+  font-weight: 700;
+  color: #37474f;
+}
+
+/* //// Info */
+
+    .Info_Table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9em;
+    }
+
+    .Info_Table th {
+      width: 96px;
+      text-align: left;
+      font-weight: 700;
+      color: #607d8b;
+      padding: 6px 8px 6px 0;
+      white-space: nowrap;
+      vertical-align: top;
+    }
+
+    .Info_Table td {
+      color: #37474f;
+      padding: 6px 0;
+      word-break: break-all;
+    }
+
+    .Info_Keys {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      font-size: 0.8em;
+      color: #78909c;
+      line-height: 1.9;
+    }
+
+    /* //// Playlist */
+
+    .Playlist_Empty {
+      padding: 24px 8px;
+      text-align: center;
+      font-size: 0.85em;
+      color: #90a4ae;
+    }
+
+    .Playlist_Scroll {
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
+    .Playlist_Item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px;
+      margin-bottom: 6px;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      background-color: #f5f7f8;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .Playlist_Item:hover {
+      background-color: #eceff1;
+    }
+
+    .Playlist_Item.playlist-active {
+      border-color: #43a047;
+      background-color: #e8f5e9;
+    }
+
+    .Playlist_Thumb {
+      flex: 0 0 auto;
+      width: 72px;
+      height: 44px;
+      border-radius: 6px;
+      object-fit: cover;
+      background-color: #263238;
+    }
+
+    .Playlist_Meta {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .Playlist_Name {
+      font-size: 0.85em;
+      font-weight: 700;
+      color: #37474f;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .Playlist_Sub {
+      font-size: 0.72em;
+      color: #78909c;
+    }
+
+    /* //// Screenshots */
+
+    .Shot_Grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .Shot_Item {
+      position: relative;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: #263238;
+    }
+
+    .Shot_Image {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: contain;
+      background-color: #000000;
+      cursor: pointer;
+    }
+
+    .Shot_Meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      font-size: 0.72em;
+      color: #cfd8dc;
+      background-color: #37474f;
+    }
+
+    .Shot_Delete {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    /* //// Mobile */
+
+    @media (max-width: 600px) {
+      .Video_Player {
+        max-height: 45vh;
+      }
+
+      .Speed_Select {
+        max-width: 72px;
+      }
+
+      .Volume_Slider {
+        max-width: 60px;
+        margin-right: 4px;
+      }
+
+      .Screenshot_Hint {
+        display: none;
+      }
+    }
+  </style>
+</body>
+
+</html>
