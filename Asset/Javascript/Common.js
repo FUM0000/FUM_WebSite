@@ -267,10 +267,6 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Video Editor</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_Creator_Font.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Font</v-list-item-title>
-                    </v-list-item>
                 </v-list-group sub-group>
 
                 <v-list-group sub-group :value="false">
