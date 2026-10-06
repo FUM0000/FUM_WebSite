@@ -61,6 +61,9 @@
             <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">About Me > Blog</main-system-bar>
             <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
 
+            <audio ref="NyanBGM" src="../../Asset/Audio/BGM/NyanNyanParty_1.mp3" loop preload="none"
+                style="display: none;"></audio>
+
             <v-main id="Main">
                 <transition name="Fade_Page">
                     <v-container v-show="Ready_Page" fluid class="pa-5">
@@ -76,7 +79,7 @@
                                                     src="../../Asset/Image/Icon_1_1.jpg"
                                                     style="border-radius: 50%; width: 5em; height: 5em;"></v-img>
                                             </v-col>
-                                            <v-col>Hello. I'm FUM. i write articles about the world and Japan.</v-col>
+                                            <v-col>Hello. I'm FUM. I write articles about the world and Japan.</v-col>
                                         </v-row>
                                     </v-card-text>
                                 </v-card>
@@ -85,7 +88,7 @@
                                         @update:picker-date="updatePickerDate" full-width no-title :events="postDates"
                                         event-color="primary" class="custom-date-picker"></v-date-picker>
                                     <v-card-text class="text-center py-0">
-                                        <v-icon small style="color: #1976d2 !important;">mdi-circle</v-icon>
+                                        <v-icon small :style="{ color: (catMode ? 'var(--cat-pink)' : '#1976d2') + ' !important' }">mdi-circle</v-icon>
                                         <span class="ml-1 caption">Dates with posts</span>
                                     </v-card-text>
                                     <v-card-actions>
@@ -105,6 +108,27 @@
                                 </v-card>
                             </v-col>
                             <v-col cols="12" md="8" order="last" order-md="first">
+                                <div v-if="catMode" class="cat-banner">
+                                    <div class="cat-banner__inner">
+                                        <span class="cat-banner__face"><img src="../../Asset/Image/Blog/Zen/Icon_1_1.png" alt="ZEN"></span>
+                                        <div class="cat-banner__text">
+                                            <div class="cat-banner__title">{{ zen.title }}</div>
+                                            <div class="cat-banner__pills">
+                                                <span class="cat-pill"><b>NAME</b>{{ zen.name }}</span>
+                                                <span class="cat-pill"><b>BORN</b>{{ zen.born }}<i class="cat-pill__sep"></i>{{ zenAge }}</span>
+                                                <span class="cat-pill"><b>LOVES</b>{{ zen.likes }}</span>
+                                            </div>
+                                            <div class="cat-banner__motto">{{ zen.motto }}</div>
+                                            <div class="cat-banner__bgm">
+                                                <v-btn class="cat-bgm-btn" @click="toggleNyanBGM">
+                                                    <v-icon left>{{ nyanPlaying ? 'mdi-stop-circle-outline' : 'mdi-play-circle-outline' }}</v-icon>
+                                                    {{ nyanPlaying ? 'Stop Nyan Nyan Party' : 'Play Nyan Nyan Party' }}
+                                                </v-btn>
+                                            </div>
+                                        </div>
+                                        <span class="cat-banner__paws">🐾</span>
+                                    </div>
+                                </div>
                                 <v-card class="all-posts-section">
                                     <v-card-title class="text-h5 mb-4">
                                         {{ pageTitle }}
@@ -255,7 +279,7 @@
         }
 
         .blog-card {
-            transition: all 0.3s;
+            transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s, border-color 0.3s;
             overflow: hidden;
         }
 
@@ -429,6 +453,54 @@
             margin-top: -5px;
         }
 
+        /* Vuetify は日付セルを固定高(32px)で作り、投稿日の印を絶対配置で
+           行の下にはみ出させる。最終行の印はコンテナの外へ飛び出して
+           切れてしまうため、最終行にだけ下 padding を与え、祖先の
+           overflow もvisible のままにして切り詰めを起こさないようにする。
+           通常モード・猫モード共通で、印の出方自体は変えない。 */
+        .custom-date-picker,
+        .custom-date-picker .v-date-picker-table,
+        .custom-date-picker .v-date-picker-table__body,
+        .custom-date-picker .v-date-picker-table__table,
+        .custom-date-picker .v-date-picker-table__day,
+        .custom-date-picker td,
+        .custom-date-picker th {
+            overflow: visible;
+        }
+
+        /* Vuetify がインラインで入れる固定高を打ち消して、
+           行数や印の有無に高さが追従するようにする */
+        .custom-date-picker .v-date-picker-table {
+            height: auto !important;
+        }
+
+        /* 日付セルの中の印だけを相対配置に戻す。
+           (テーブル直下の .v-date-picker-table__events は Vuetify の
+            別物なので触らない) */
+        .custom-date-picker .v-date-picker-table__day .v-date-picker-table__events {
+            position: relative;
+            top: auto;
+            bottom: auto;
+            height: 8px;
+            overflow: visible;
+        }
+
+        .custom-date-picker .v-date-picker-table tbody tr:last-child td {
+            padding-bottom: 8px;
+        }
+
+        /* 下 padding で高さを足したぶん、最終行だけ余白を戻す */
+        .custom-date-picker .v-date-picker-table tbody tr:last-child .v-date-picker-table__events {
+            margin-top: 0;
+        }
+
+        /* 印そのものは Vuetify が生成する 8px の丸ドット */
+        .custom-date-picker .v-date-picker-table__events>div {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+        }
+
         .fade-slide-enter-active,
         .fade-slide-leave-active {
             transition: all 0.5s ease-in-out;
@@ -502,6 +574,445 @@
                 font-size: 1.25rem !important;
             }
         }
+
+        /* ===================== CAT POP MODE ===================== */
+        /* Turned on only while "Cat" is the single selected theme (see catMode computed). */
+        :root {
+            --cat-cream: #FFF6E9;
+            --cat-peach: #FFE7CC;
+            --cat-paper: #FFFDF8;
+            --cat-pink: #FF5C9A;
+            --cat-pink-deep: #D81E63;
+            --cat-mango: #FFB020;
+            --cat-mint: #17C3B2;
+            --cat-sky: #4FB8FF;
+            --cat-lilac: #A98BFF;
+            --cat-ink: #3A2431;
+            --cat-paw: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='108' height='108' viewBox='0 0 108 108'%3E%3Cg fill='%23FF7FB0' fill-opacity='0.20'%3E%3Cellipse cx='54' cy='72' rx='17' ry='13'/%3E%3Cellipse cx='32' cy='47' rx='8' ry='10'/%3E%3Cellipse cx='50' cy='35' rx='8' ry='10.5'/%3E%3Cellipse cx='69' cy='38' rx='8' ry='10'/%3E%3Cellipse cx='83' cy='51' rx='7' ry='9'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+html.cat-mode,
+        body.cat-mode {
+            background-color: var(--cat-cream) !important;
+
+            /* パーティクルは通常モード専用。猫モードでは肉球タイルだけを出す */
+            #interactive-ring {
+                display: none !important;
+            }
+        }
+
+        /* Paw-print tile layered above the canvas, below the app content */
+        html.cat-mode body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: 6;
+            pointer-events: none;
+            background-image: var(--cat-paw);
+            background-repeat: repeat;
+            background-size: 108px 108px;
+        }
+
+        /* ---- Cat banner ---- */
+        .cat-banner {
+            margin-bottom: 16px;
+            padding: 14px 20px;
+            background: linear-gradient(120deg, var(--cat-pink) 0%, var(--cat-mango) 55%, var(--cat-mint) 100%);
+            border: 4px solid var(--cat-ink);
+            border-radius: 30px;
+            box-shadow: 9px 9px 0 var(--cat-ink);
+        }
+
+        .cat-banner__inner {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .cat-banner__face {
+            font-size: 3rem;
+            line-height: 1;
+            animation: cat-wiggle 2.4s ease-in-out infinite;
+        }
+
+        .cat-banner__face img {
+            display: block;
+            width: 4rem;
+            height: 4rem;
+            border-radius: 50%;
+            border: 3px solid var(--cat-ink);
+            object-fit: cover;
+            box-shadow: 4px 4px 0 var(--cat-ink);
+        }
+
+        .cat-banner__text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cat-banner__title {
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 0.08em;
+            color: #FFFFFF;
+            text-shadow: 3px 3px 0 rgba(58, 36, 49, 0.55);
+        }
+
+        .cat-banner__pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .cat-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #FFFFFF;
+            border: 2px solid var(--cat-ink);
+            border-radius: 999px;
+            padding: 2px 10px 2px 2px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--cat-ink);
+        }
+
+        .cat-pill b {
+            background: var(--cat-pink);
+            color: #FFFFFF;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 0.66rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+        }
+
+        /* 同じ枠の中で BORN と年齢を並べる時の仕切り */
+        .cat-pill__sep {
+            display: inline-block;
+            width: 2px;
+            height: 1.1em;
+            margin: 0 2px;
+            background: var(--cat-ink);
+            opacity: 0.35;
+        }
+
+        .cat-banner__motto {
+            margin-top: 8px;
+            font-weight: 800;
+            font-style: italic;
+            color: var(--cat-ink);
+        }
+
+        .cat-banner__paws {
+            font-size: 1.6rem;
+            opacity: 0.9;
+        }
+
+        /* ---- 猫モード専用BGMボタン ---- */
+        .cat-banner__bgm {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .cat-banner__bgm .cat-bgm-btn {
+            background: #FFFFFF;
+            color: var(--cat-ink);
+            border: 3px solid var(--cat-ink);
+            border-radius: 999px;
+            box-shadow: 4px 4px 0 var(--cat-ink);
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cat-banner__bgm .cat-bgm-btn .v-icon,
+        .cat-banner__bgm .cat-bgm-btn .v-btn__content {
+            color: var(--cat-ink);
+        }
+
+        .cat-banner__bgm .cat-bgm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 6px 6px 0 var(--cat-pink-deep);
+        }
+
+        .cat-banner__bgm-note {
+            font-size: 0.74rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            text-shadow: 1px 1px 0 rgba(58, 36, 49, 0.55);
+        }
+
+        @keyframes cat-wiggle {
+
+            0%,
+            100% {
+                transform: rotate(-7deg);
+            }
+
+            50% {
+                transform: rotate(9deg);
+            }
+        }
+
+        /* ---- Sidebar / utility cards ---- */
+        html.cat-mode #Main .v-card:not(.blog-card):not(.all-posts-section) {
+            background: var(--cat-paper) !important;
+            border: 3px solid var(--cat-ink) !important;
+            border-radius: 28px !important;
+            box-shadow: 7px 7px 0 var(--cat-mango) !important;
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .v-card:not(.blog-card) .v-card__title,
+        html.cat-mode #Main .v-card:not(.blog-card) .v-card__text,
+        html.cat-mode #Main .v-card:not(.blog-card) .v-card__subtitle,
+        html.cat-mode #Main .v-card:not(.blog-card) .v-icon,
+        html.cat-mode #Main .v-card:not(.blog-card) .caption,
+        html.cat-mode #Main .v-card:not(.blog-card) .text-h5,
+        html.cat-mode #Main .v-card:not(.blog-card) .text-h6,
+        html.cat-mode #Main .v-card:not(.blog-card) .text-body-1,
+        html.cat-mode #Main .v-card:not(.blog-card) .v-label,
+        html.cat-mode #Main .v-card:not(.blog-card) .v-btn__content {
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .v-card:not(.blog-card) .caption .v-icon,
+        html.cat-mode #Main .v-card:not(.blog-card) .caption {
+            color: var(--cat-pink-deep) !important;
+        }
+
+        html.cat-mode #Main .v-card:not(.blog-card) .v-chip {
+            background: var(--cat-peach) !important;
+            border: 2px solid var(--cat-ink) !important;
+            color: var(--cat-ink) !important;
+            font-weight: 700;
+        }
+
+        html.cat-mode #Main .v-card:not(.blog-card) .v-chip.v-chip--active {
+            background: var(--cat-pink) !important;
+            color: #FFFFFF !important;
+            box-shadow: 3px 3px 0 var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .v-btn.v-btn--text,
+        html.cat-mode #Main .v-btn.v-btn--text .v-btn__content {
+            color: var(--cat-pink-deep) !important;
+            font-weight: 700;
+        }
+
+        /* ---- Calendar ---- */
+        html.cat-mode #Main .v-card:not(.blog-card) .v-date-picker-header,
+        html.cat-mode #Main .v-card:not(.blog-card) .v-date-picker-table,
+        html.cat-mode #Main .v-card:not(.blog-card) .v-picker__body,
+        html.cat-mode #Main .v-card:not(.blog-card) .theme--light.v-picker__body {
+            background: var(--cat-paper) !important;
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .custom-date-picker .primary--text,
+        html.cat-mode #Main .custom-date-picker .accent--text,
+        html.cat-mode #Main .custom-date-picker .v-btn__content,
+        html.cat-mode #Main .custom-date-picker .v-date-picker-header__value button,
+        html.cat-mode #Main .custom-date-picker .v-date-picker-title__date,
+        html.cat-mode #Main .custom-date-picker .v-date-picker-title__year {
+            color: var(--cat-pink-deep) !important;
+            caret-color: var(--cat-pink-deep) !important;
+        }
+
+        html.cat-mode #Main .custom-date-picker .v-date-picker-table .v-btn {
+            color: var(--cat-ink) !important;
+            font-weight: 700;
+        }
+
+        html.cat-mode #Main .custom-date-picker .v-date-picker-table th,
+        html.cat-mode #Main .custom-date-picker .v-date-picker-table-header th,
+        html.cat-mode #Main .custom-date-picker .v-date-picker-header button,
+        html.cat-mode #Main .custom-date-picker .v-btn {
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .custom-date-picker .v-date-picker-table-header th {
+            color: var(--cat-pink-deep) !important;
+        }
+
+        html.cat-mode #Main .custom-date-picker .v-date-picker-table .v-btn.v-btn--active {
+            background-color: var(--cat-mango) !important;
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .custom-date-picker .v-date-picker-table__events>div,
+        html.cat-mode #Main .custom-date-picker .v-date-picker-table__events .v-icon,
+        html.cat-mode #Main .custom-date-picker .v-date-picker-table__events .primary {
+            background-color: var(--cat-pink) !important;
+            color: var(--cat-pink) !important;
+        }
+
+        /* ---- Post list panel ---- */
+        html.cat-mode #Main .all-posts-section {
+            background: rgba(255, 253, 248, 0.88) !important;
+            border: 3px solid var(--cat-ink) !important;
+            border-radius: 30px !important;
+            box-shadow: 9px 9px 0 var(--cat-sky) !important;
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .all-posts-section .v-card-title {
+            color: var(--cat-ink) !important;
+        }
+
+        /* ---- Article cards ---- */
+        html.cat-mode #Main .blog-card {
+            background: var(--cat-paper) !important;
+            border: 3px solid var(--cat-ink) !important;
+            border-radius: 30px !important;
+            box-shadow: 9px 9px 0 var(--cat-pink) !important;
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .blog-card:hover {
+            transform: translateY(-6px) !important;
+            box-shadow: 11px 14px 0 var(--cat-mango) !important;
+        }
+
+        /* ホバーで一度だけ傾いてからまっすぐ戻る。
+           ホバーしたまま読んでも傾いたままにならないよう、
+           最後の状態を forwards で 0deg に固定する。
+           未公開エピソードカードは倾けないので対象外。 */
+        html.cat-mode #Main .blog-card:not(.story-locked-card):hover {
+            animation: cat-card-settle 0.85s ease-out forwards !important;
+        }
+
+        @keyframes cat-card-settle {
+
+            0% {
+                transform: translateY(-6px) rotate(-2.4deg);
+            }
+
+            55% {
+                transform: translateY(-6px) rotate(-0.6deg);
+            }
+
+            100% {
+                transform: translateY(-6px) rotate(0deg);
+            }
+        }
+
+        html.cat-mode #Main .blog-card .v-card__title,
+        html.cat-mode #Main .blog-card .v-card__subtitle,
+        html.cat-mode #Main .blog-card .v-card__text,
+        html.cat-mode #Main .blog-card .text-body-1,
+        html.cat-mode #Main .blog-card p,
+        html.cat-mode #Main .blog-card li,
+        html.cat-mode #Main .blog-card h3 {
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .blog-card a,
+        html.cat-mode #Main .blog-card li b {
+            color: var(--cat-pink-deep) !important;
+        }
+
+        html.cat-mode #Main .blog-card h3 {
+            /* 小見出しは既定どおり block。記事の本文は <h3> の直後に素のテキスト
+               として置かれているため、block のままだと次の行から始まる。
+               inline-block にすると本文が同じ行に乗ってしまう。
+               pill の幅だけ内容に合わせるため width: fit-content を使う。 */
+            display: block;
+            width: fit-content;
+            max-width: 100%;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            color: #FFFFFF !important;
+            background: var(--cat-pink) !important;
+            border: 3px solid var(--cat-ink);
+            border-radius: 999px;
+            padding: 8px 18px;
+            box-shadow: 4px 4px 0 var(--cat-mango);
+        }
+
+        html.cat-mode #Main .blog-card .v-chip {
+            background: var(--cat-peach) !important;
+            border: 2px solid var(--cat-ink) !important;
+            color: var(--cat-ink) !important;
+            font-weight: 700;
+        }
+
+        html.cat-mode #Main .blog-card .v-chip.primary {
+            background: var(--cat-sky) !important;
+            border-color: var(--cat-ink) !important;
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode #Main .blog-card .v-card__actions .v-btn .v-btn__content {
+            color: var(--cat-pink-deep) !important;
+            font-weight: 800;
+        }
+
+        html.cat-mode #Main .blog-card>.v-image {
+            border: 3px solid var(--cat-ink);
+            border-radius: 20px;
+        }
+
+        /* ---- Locked story cards ---- */
+        html.cat-mode #Main .blog-card.story-locked-card {
+            background: var(--cat-peach) !important;
+            border: 3px dashed var(--cat-ink) !important;
+            box-shadow: 9px 9px 0 var(--cat-lilac) !important;
+        }
+
+        html.cat-mode #Main .blog-card.story-locked-card .v-card__title,
+        html.cat-mode #Main .blog-card.story-locked-card .v-card__subtitle,
+        html.cat-mode #Main .blog-card.story-locked-card .v-card__text {
+            color: var(--cat-ink) !important;
+        }
+
+        /* ---- System bar / footer / navigation drawer ---- */
+        html.cat-mode .v-system-bar,
+        html.cat-mode .v-footer {
+            background: rgba(255, 255, 255, 0.85) !important;
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode .v-footer .v-icon {
+            color: var(--cat-pink-deep) !important;
+        }
+
+        html.cat-mode .v-navigation-drawer {
+            background: #FFF1F6 !important;
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode .v-navigation-drawer .v-list-item,
+        html.cat-mode .v-navigation-drawer .v-list-item__title,
+        html.cat-mode .v-navigation-drawer .v-list-group__header {
+            color: var(--cat-ink) !important;
+        }
+
+        html.cat-mode .v-navigation-drawer .v-list-group--active>.v-list-group__header,
+        html.cat-mode .v-navigation-drawer .v-list-group--active .v-list-group__items .v-list-item,
+        html.cat-mode .v-navigation-drawer .v-list-group--active .v-list-group__items .v-list-group__header {
+            color: var(--cat-pink-deep) !important;
+        }
+
+        html.cat-mode .v-navigation-drawer .v-list-group--active .v-list-group__items .v-icon,
+        html.cat-mode .v-navigation-drawer .v-list-group--active>.v-list-group__header .v-icon {
+            color: var(--cat-pink-deep) !important;
+        }
+
+        html.cat-mode .v-navigation-drawer .v-navigation-drawer__content>.v-btn {
+            background: var(--cat-mango) !important;
+            color: var(--cat-ink) !important;
+            border-bottom: 3px solid var(--cat-ink) !important;
+        }
+
+        html.cat-mode .v-navigation-drawer .v-navigation-drawer__content>.v-btn .v-icon {
+            color: var(--cat-ink) !important;
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -527,7 +1038,17 @@
                 pickerDate: new Date(),
                 expandedPosts: [],
                 selectedThemes: [],
+                nyanPlaying: false,
+                zen: {
+                    title: 'ZEN NIKKI',
+                    name: 'ZEN(禅)',
+                    born: '2026-07',
+                    bornDate: '2026-07-15',
+                    likes: 'Bouncing toy and Spinning toy',
+                    motto: 'Play, Sleep, Eat, and Get petted. That is my SHINTO.',
+                },
                 themes: [
+                    'Cat',
                     'Cooking',
                     'Culture',
                     'Food',
@@ -542,51 +1063,51 @@
                 storyFiles: [
                     {
                         episode: 1,
-                        title: '第1話「輪郭」',
+                        title: 'Episode 1 "Contour"',
                         date: '2026-09-19',
-                        file: '../../Asset/Data/Story/七日目の円/第1話_輪郭.md',
+                        file: '../../Asset/Data/Story/The_Seventh_Day_Circle/Episode1_Contour.md',
                         excerpt: '　Day 1 of the series — a boy who draws a circle every morning, and the quiet oddness of a perfectly managed city.',
                     },
                     {
                         episode: 2,
-                        title: '第2話「満たされる」',
+                        title: 'Episode 2 "Filled"',
                         date: '2026-09-20',
-                        file: '../../Asset/Data/Story/七日目の円/第2話_満たされる.md',
+                        file: '../../Asset/Data/Story/The_Seventh_Day_Circle/Episode2_Filled.md',
                         excerpt: '　Day 2 — the sweetness of a full life begins to reveal a small poison.',
                     },
                     {
                         episode: 3,
-                        title: '第3話「反響」',
+                        title: 'Episode 3 "Echo"',
                         date: '2026-09-21',
-                        file: '../../Asset/Data/Story/七日目の円/第3話_反響.md',
+                        file: '../../Asset/Data/Story/The_Seventh_Day_Circle/Episode3_Echo.md',
                         excerpt: '　Day 3 — a voice comes from the bridge at dawn, carrying a strange question about the circle.',
                     },
                     {
                         episode: 4,
-                        title: '第4話「八分目という名の鎖」',
+                        title: 'Episode 4 "A Chain Named Eight-Tenths"',
                         date: '2026-09-22',
-                        file: '../../Asset/Data/Story/七日目の円/第4話_八分目という名の鎖.md',
-                        excerpt: '　Day 4 — the rule of "eight-part fullness" turns out to be shaped like a chain.',
+                        file: '../../Asset/Data/Story/The_Seventh_Day_Circle/Episode4_A_Chain_Named_Eight_Tenths.md',
+                        excerpt: '　Day 4 — the rule of "eight-tenths" turns out to be shaped like a chain.',
                     },
                     {
                         episode: 5,
-                        title: '第5話「臨童」',
+                        title: 'Episode 5 "Rindō"',
                         date: '2026-09-23',
-                        file: '../../Asset/Data/Story/七日目の円/第5話_臨童.md',
+                        file: '../../Asset/Data/Story/The_Seventh_Day_Circle/Episode5_Rindo.md',
                         excerpt: '　Day 5 — the sphere calls the boy inside. A sea of memories spreads out before him.',
                     },
                     {
                         episode: 6,
-                        title: '第6話「満ちる」',
+                        title: 'Episode 6 "Fullness"',
                         date: '2026-09-24',
-                        file: '../../Asset/Data/Story/七日目の円/第6話_満ちる.md',
+                        file: '../../Asset/Data/Story/The_Seventh_Day_Circle/Episode6_Fullness.md',
                         excerpt: '　Day 6 — on the wall, the boy draws a circle that is complete.',
                     },
                     {
                         episode: 7,
-                        title: '第7話「満ちない円」',
+                        title: 'Episode 7 "The Unfilled Circle"',
                         date: '2026-09-25',
-                        file: '../../Asset/Data/Story/七日目の円/第7話_満ちない円.md',
+                        file: '../../Asset/Data/Story/The_Seventh_Day_Circle/Episode7_The_Unfilled_Circle.md',
                         excerpt: '　Day 7 — outside the ring. A rain-filled morning, and an unfinished circle.',
                     },
                 ],
@@ -599,6 +1120,7 @@
                     '../../Asset/Data/Blog/2026-01.json',
                     '../../Asset/Data/Blog/2026-02.json',
                     '../../Asset/Data/Blog/2026-03.json',
+                    '../../Asset/Data/Blog/2026-09.json',
                     '../../Asset/Data/Blog/2026-10.json',
                     '../../Asset/Data/Blog/2026-11.json',
                     '../../Asset/Data/Blog/2026-12.json',
@@ -719,15 +1241,18 @@
                 postDates() {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
+                    // テーマ未選択時は全ての投稿日、選択時は選択テーマの記事の日のみ印を付ける
+                    const themeGate = (post) => this.selectedThemes.length === 0 ||
+                        this.selectedThemes.some(theme => post.themes.includes(theme));
                     const blog = this.blogPosts
                         .filter(post => {
                             const postDate = new Date(post.date);
                             postDate.setHours(0, 0, 0, 0);
-                            return postDate <= today;
+                            return postDate <= today && themeGate(post);
                         })
                         .map(post => post.date);
                     const stories = this.storyPosts
-                        .filter(post => !post.locked)
+                        .filter(post => !post.locked && themeGate(post))
                         .map(post => post.date);
                     return [...blog, ...stories];
                 },
@@ -737,8 +1262,58 @@
                     if (count === 1) return '1 Theme Selected';
                     return `${count} Themes Selected`;
                 },
+                catMode() {
+                    // 猫ポップ演出は "Cat" 単独選択時のみ (他のテーマを選ぶと解除)
+                    return this.selectedThemes.length === 1 && this.selectedThemes[0] === 'Cat';
+                },
+                zenAge() {
+                    // 産まれ日からの経過月数 (週ではなく月で数える)
+                    // 表記は born(年月) 、計算は bornDate(2026/07/15) を基準にする
+                    const born = new Date(this.zen.bornDate || this.zen.born);
+                    if (isNaN(born.getTime())) return '';
+                    const today = new Date();
+                    let months = (today.getFullYear() - born.getFullYear()) * 12 +
+                        (today.getMonth() - born.getMonth());
+                    // 迎える前の月なら数えない
+                    if (today.getDate() < born.getDate()) months -= 1;
+                    months = Math.max(0, months);
+                    if (months === 0) return 'Less than 1 month old';
+                    return months + ' month' + (months === 1 ? '' : 's') + ' old';
+                },
+            },
+            watch: {
+                catMode: {
+                    immediate: true,
+                    handler(on) {
+                        // 1つのフラグでページ全体(背景/カード/ナビ/キャンバス)を切り替え
+                        document.documentElement.classList.toggle('cat-mode', on);
+                        document.body.classList.toggle('cat-mode', on);
+                        // 猫モードを抜けたら猫専用BGMも止める
+                        if (!on) this.stopNyanBGM();
+                    },
+                },
             },
             methods: {
+                // 猫モード専用の「Nyan Nyan Party」再生ボタン (10%音量・無限ループ)
+                toggleNyanBGM() {
+                    const audio = this.$refs.NyanBGM;
+                    if (!audio) return;
+                    if (this.nyanPlaying) {
+                        this.stopNyanBGM();
+                        return;
+                    }
+                    audio.volume = 0.1;
+                    audio.loop = true;
+                    const promise = audio.play();
+                    // 自動再生が弾かれた場合は状態だけ戻す
+                    if (promise && promise.catch) promise.catch(() => { this.nyanPlaying = false; });
+                },
+                stopNyanBGM() {
+                    const audio = this.$refs.NyanBGM;
+                    if (!audio) return;
+                    audio.pause();
+                    this.nyanPlaying = false;
+                },
                 dateSelected(date) {
                     this.selectedDate = date;
                     this.showCurrentMonth = false;
@@ -845,6 +1420,21 @@
             mounted() {
                 this.loadBlog();
                 this.loadStory();
+
+                // 猫専用BGMの状態を実際の再生状況に追従させる
+                const audio = this.$refs.NyanBGM;
+                if (audio) {
+                    audio.volume = 0.1;
+                    audio.addEventListener('play', () => { this.nyanPlaying = true; });
+                    audio.addEventListener('pause', () => { this.nyanPlaying = false; });
+                    audio.addEventListener('ended', () => { this.nyanPlaying = false; });
+                    audio.addEventListener('error', () => { this.nyanPlaying = false; });
+                }
+            },
+            beforeDestroy() {
+                document.documentElement.classList.remove('cat-mode');
+                document.body.classList.remove('cat-mode');
+                this.stopNyanBGM();
             },
         })
     </script>
@@ -858,6 +1448,14 @@
             let width = 0;
             let height = 0;
             const particles = [];
+
+            // 猫モードは CSS 側の catMode class と同じフラグを見る (パーティクルは通常モード専用)
+            const Palette_Normal = { base: '#020617', trail: 'rgba(2, 8, 20, 0.22)', blend: 'screen' };
+            let wasCatMode = false;
+
+            function Is_Cat_Mode() {
+                return document.documentElement.classList.contains('cat-mode');
+            }
 
             function randomParticle() {
                 return {
@@ -900,7 +1498,8 @@
                 width = canvas.width = window.innerWidth;
                 height = canvas.height = window.innerHeight;
                 createScene();
-                ctx.fillStyle = '#020617';
+                wasCatMode = Is_Cat_Mode();
+                ctx.fillStyle = Palette_Normal.base;
                 ctx.fillRect(0, 0, width, height);
             }
 
@@ -937,11 +1536,27 @@
 
             function animate(now) {
                 requestAnimationFrame(animate);
+
+                // 猫モードではパーティクルを出さない (肉球タイルが背景を擔う)
+                if (Is_Cat_Mode()) {
+                    wasCatMode = true;
+                    return;
+                }
+
+                // 通常モードに戻ったら、止まったままの古いトレイルを塗り直す
+                if (wasCatMode) {
+                    wasCatMode = false;
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = Palette_Normal.base;
+                    ctx.fillRect(0, 0, width, height);
+                }
+
                 const t = now * 0.001;
 
-                ctx.fillStyle = 'rgba(2, 8, 20, 0.22)';
+                ctx.fillStyle = Palette_Normal.trail;
                 ctx.fillRect(0, 0, width, height);
-                ctx.globalCompositeOperation = 'screen';
+                ctx.globalCompositeOperation = Palette_Normal.blend;
 
                 const phasePulse = 0.55 + Math.sin(t * 0.42) * 0.45;
                 for (let i = 0; i < particles.length; i++) {
