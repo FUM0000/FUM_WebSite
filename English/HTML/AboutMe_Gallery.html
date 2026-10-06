@@ -2461,7 +2461,7 @@
 
                 const GOLD = 0xffe0b8;
                 const BLUE = 0xaee3ff;
-                const TOP_Y = 33.4;
+                const TOP_Y = 35.5;
                 const R_OUT = 8;
                 const N_COL = 16;
                 const COL_H = 29.2;
@@ -2639,7 +2639,30 @@
                     metalness: 0.5,
                     fog: false
                 });
-                const shaftGeo = new THREE.CylinderGeometry(0.16, 0.18, COL_H, 8);
+                // Shaft shaped after ancient Roman columns: 24 vertical flutes
+                // (sharp arrises, rounded grooves) + entasis — the subtle swell
+                // that peaks about a third of the way up before easing into the taper.
+                const FLUTES = 24;
+                const FLUTE_DEPTH = 0.09;
+                const ENTASIS = 0.012;
+                const shaftGeo = new THREE.CylinderGeometry(0.16, 0.18, COL_H, FLUTES * 6, 16, true);
+                {
+                    const pos = shaftGeo.attributes.position;
+                    for (let i = 0; i < pos.count; i++) {
+                        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+                        const r0 = Math.hypot(x, z);
+                        if (r0 < 1e-6) continue;
+                        const t = (y + COL_H * 0.5) / COL_H;
+                        const theta = Math.atan2(z, x);
+                        const taper = 0.18 + (0.16 - 0.18) * t;
+                        const swell = ENTASIS * Math.sin(Math.PI * Math.pow(t, 0.72));
+                        const groove = Math.abs(Math.sin(FLUTES * 0.5 * theta));
+                        const s = ((taper + swell) * (1.0 - FLUTE_DEPTH * groove)) / r0;
+                        pos.setXYZ(i, x * s, y, z * s);
+                    }
+                    pos.needsUpdate = true;
+                    shaftGeo.computeVertexNormals();
+                }
                 shaftGeo.translate(0, COL_H * 0.5, 0);
                 // Base: a squared pedestal (a cube slightly narrower at the top),
                 // 4 segments -> the blunt block used at construction sites.
@@ -2662,6 +2685,35 @@
                     this._group.add(cg);
                     this._cols.push({ group: cg, delay: delayOf(a, 0) });
                 }
+
+                // ============ Architrave beam resting on the capitals ============
+                const BEAM_Y = COL_H + 0.55;
+                const BEAM_H = 0.42;
+                const BEAM_R_IN = 7.68;
+                const BEAM_R_OUT = 8.34;
+                {
+                    const beamGroup = new THREE.Group();
+                    const beamMat = columnMat.clone();
+                    beamMat.side = THREE.DoubleSide;
+                    const mkShell = (r, segs) => new THREE.CylinderGeometry(r, r, BEAM_H, segs, 1, true);
+                    const outerShell = new THREE.Mesh(mkShell(BEAM_R_OUT, 96), beamMat);
+                    const innerShell = new THREE.Mesh(mkShell(BEAM_R_IN, 96), beamMat);
+                    const topCap = new THREE.Mesh(
+                        new THREE.RingGeometry(BEAM_R_IN, BEAM_R_OUT, 96), beamMat);
+                    topCap.rotation.x = -Math.PI / 2;
+                    topCap.position.y = BEAM_H * 0.5;
+                    const botCap = new THREE.Mesh(
+                        new THREE.RingGeometry(BEAM_R_IN, BEAM_R_OUT, 96), beamMat);
+                    botCap.rotation.x = Math.PI / 2;
+                    botCap.position.y = -BEAM_H * 0.5;
+                    beamGroup.add(outerShell, innerShell, topCap, botCap);
+                    beamGroup.position.y = BEAM_Y + BEAM_H * 0.5;
+                    beamGroup.scale.set(0.001, 0.001, 0.001);
+                    this._group.add(beamGroup);
+                    this._cols.push({ group: beamGroup, delay: delayOf(this._buildOriginAng, BEAM_Y) });
+                }
+                addRing(BEAM_R_OUT, BEAM_Y + 0.02, GOLD, 0.7, this._buildOriginAng, 96);
+                addRing(BEAM_R_OUT, BEAM_Y + BEAM_H - 0.02, GOLD, 0.7, this._buildOriginAng, 96);
 
                 // ============ Plinth steps spreading from the button ============
                 for (let s = 0; s < 3; s++) {
@@ -2787,32 +2839,24 @@
                     addLine(va, BLUE, 0.45, this._buildOriginAng, fy);
                 });
 
-                // ============ Ribbed lantern dome rising into the fish lane ============
-                const domeLevels = [
-                    { r: 6.0, y: 29.8, n: 24 },
-                    { r: 4.9, y: 30.6, n: 20 },
-                    { r: 3.8, y: 31.4, n: 16 },
-                    { r: 2.7, y: 32.2, n: 12 },
-                    { r: 1.6, y: 33.0, n: 10 }
-                ];
-                const RIB_COUNT = 12;
-                for (let j = 0; j < RIB_COUNT; j++) {
-                    const va = [];
-                    let prev = pRing((j / RIB_COUNT) * Math.PI * 2, 6.4);
-                    let prevY = 29.6;
-                    for (let k = 0; k < domeLevels.length; k++) {
-                        const L = domeLevels[k];
-                        const p = pRing((j / L.n) * Math.PI * 2, L.r);
-                        pushLine(va, prev[0], prevY, prev[1], p[0], L.y, p[1]);
-                        prev = p;
-                        prevY = L.y;
-                    }
-                    pushLine(va, prev[0], prevY, prev[1], 0, TOP_Y, 0);
-                    addLine(va, BLUE, 0.55, (j / RIB_COUNT) * Math.PI * 2, 29.6);
+                // ============ Ring-only dome springing from the beam ============
+                // A spherical cap whose whole surface is described purely by
+                // horizontal rings (no ribs), so the curved silhouette reads
+                // cleanly against the sky.
+                const DOME_Y0 = BEAM_Y + BEAM_H;
+                const DOME_R0 = R_OUT;
+                const DOME_RISE = TOP_Y - DOME_Y0;
+                const DOME_RC = (DOME_R0 * DOME_R0 + DOME_RISE * DOME_RISE) / (2 * DOME_RISE);
+                const DOME_CY = DOME_Y0 + DOME_RISE - DOME_RC;
+                const DOME_BMAX = Math.asin(DOME_R0 / DOME_RC);
+                const DOME_RINGS = 14;
+                for (let i = 0; i < DOME_RINGS; i++) {
+                    const b = DOME_BMAX * (1 - i / DOME_RINGS);
+                    const r = DOME_RC * Math.sin(b);
+                    const y = DOME_CY + DOME_RC * Math.cos(b);
+                    if (r < 1.3) continue;
+                    addRing(r, y, BLUE, 0.6, this._buildOriginAng, Math.max(48, Math.ceil(r * 12)));
                 }
-                domeLevels.forEach((L, k) => {
-                    addRing(L.r, L.y, BLUE, 0.55, this._buildOriginAng, Math.max(32, L.n * 3));
-                });
 
                 // ============ Crown finial & rosette (fractal circles) ============
                 addRing(0.72, TOP_Y - 0.12, BLUE, 0.7, 0, 32);
