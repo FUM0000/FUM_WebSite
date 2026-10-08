@@ -174,7 +174,7 @@
         return /\.(mp4|m4v)$/i.test(_file && _file.name ? _file.name : '');
     }
 
-    // クリップ矩形をソースの範囲内へ丸めて収める。
+    // クリップ矩形をフレーム (回転後の表示領域) の範囲内へ丸めて収める。
     // 引数が不正 / 範囲外の場合はフルフレームを返す
     function Clamp_Crop(_crop, _width, _height) {
         if (!_crop || !(_width > 0) || !(_height > 0)) return null;
@@ -467,21 +467,48 @@
         context.imageSmoothingQuality = 'high';
 
         // ---- Crop / Rotate ---------------------------------------------------
-        // angle === 0 はソース矩形を出力へ直描きする高速パス。
-        // 回転時は「出力四隅が必ずソース内に入る」倍率で等倍拡大して描画するため
-        // 黒帯も歪みも生じない ( = 標準的な編集ソフトの傾き調整と同じ挙動 )
+        // 切り抜き枠は回転後の表示フレーム上の座標 (画面上で水平固定)。
+        // angle === 0 はフレーム == ソースなので矩形を出力へ直描きする高速パス。
+        // 回転時は「フレームが必ずソース内に入る」倍率を掛けたアフィン変換を一度だけ
+        // 設定して描画するため、黒帯も歪みも生じない
+        // ( = 標準的な編集ソフトの傾き調整と同じ挙動 )
         const crop = _job.crop;
+        const frame = _job.frame;
+        const frameWidth = frame.width;
+        const frameHeight = frame.height;
+        const sourceWidth = _video.videoWidth;
+        const sourceHeight = _video.videoHeight;
         const sourceX = crop ? crop.x : 0;
         const sourceY = crop ? crop.y : 0;
-        const cropW = crop ? crop.w : _video.videoWidth;
-        const cropH = crop ? crop.h : _video.videoHeight;
+        const cropW = crop ? crop.w : frameWidth;
+        const cropH = crop ? crop.h : frameHeight;
         const angle = _job.rotate || 0;
         const radians = (angle * Math.PI) / 180;
-        const cos = Math.abs(Math.cos(radians));
-        const sin = Math.abs(Math.sin(radians));
-        const coverW = _job.width * cos + _job.height * sin;
-        const coverH = _job.width * sin + _job.height * cos;
-        const cover = Math.max(coverW / cropW, coverH / cropH);
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        const absCos = Math.abs(cos);
+        const absSin = Math.abs(sin);
+        const quarterFrame = frameWidth === sourceHeight && frameWidth !== sourceWidth;
+        const stageRatio = frameHeight / frameWidth;
+        const innerWidth = quarterFrame ? stageRatio : 1;
+        const innerHeight = quarterFrame ? 1 : stageRatio;
+        const cover = Math.max(1,
+            (absCos + stageRatio * absSin) / innerWidth,
+            (absSin + stageRatio * absCos) / innerHeight);
+
+        // 出力 = S・cover・R(θ)・(ソース - 中心) + オフセット
+        const scaleX = (_job.width / cropW) * cover;
+        const scaleY = (_job.height / cropH) * cover;
+        const matrix = {
+            a: scaleX * cos,
+            b: scaleY * sin,
+            c: -scaleX * sin,
+            d: scaleY * cos,
+            e: (frameWidth / 2 - sourceX) * (_job.width / cropW) -
+                (scaleX * cos * sourceWidth / 2 - scaleX * sin * sourceHeight / 2),
+            f: (frameHeight / 2 - sourceY) * (_job.height / cropH) -
+                (scaleY * sin * sourceWidth / 2 + scaleY * cos * sourceHeight / 2)
+        };
 
         const step = 1e6 / _job.fps;
         const frameCount = Math.max(1, Math.round(_job.clip * _job.fps));
@@ -506,10 +533,8 @@
                 if (angle) {
                     context.fillStyle = '#000000';
                     context.fillRect(0, 0, _job.width, _job.height);
-                    context.translate(_job.width / 2, _job.height / 2);
-                    context.rotate(radians);
-                    context.drawImage(_video, sourceX, sourceY, cropW, cropH,
-                        (-cropW * cover) / 2, (-cropH * cover) / 2, cropW * cover, cropH * cover);
+                    context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
+                    context.drawImage(_video, 0, 0);
                     context.setTransform(1, 0, 0, 1, 0, 0);
                 } else {
                     context.drawImage(_video, sourceX, sourceY, cropW, cropH, 0, 0, _job.width, _job.height);
@@ -651,9 +676,15 @@
             const wantedFps = _opt.fps > 0 ? _opt.fps : (_opt.sourceFps > 0 ? _opt.sourceFps : 0);
             const effectiveFps = wantedFps > 0 ? wantedFps : 30;
 
-            // ---- Crop / Rotate ------------------------------------------------
-            const crop = Clamp_Crop(_opt.crop, video.videoWidth, video.videoHeight);
-            const rotate = Normalize_Rotate(_opt.rotate);
+        // ---- Crop / Rotate ------------------------------------------------
+        // 切り抜き矩形は「回転を加えた表示フレーム」上の座標 (画面上で水平固定)。
+        // 90度回転ではフレームの縦横が入れ替わるため、フレーム寸法を先に確定する
+        const rotate = Normalize_Rotate(_opt.rotate);
+        const wrap = ((rotate % 360) + 360) % 360;
+        const quarter = (wrap > 45 && wrap < 135) || (wrap > 225 && wrap < 315);
+        const frameWidth = quarter ? video.videoHeight : video.videoWidth;
+        const frameHeight = quarter ? video.videoWidth : video.videoHeight;
+        const crop = Clamp_Crop(_opt.crop, frameWidth, frameHeight);
 
             _report({ phase: 'prepare', ratio: 0.35 });
 
@@ -700,7 +731,8 @@
                 mediaDuration: mediaDuration,
                 fps: effectiveFps,
                 crop: crop,
-                rotate: rotate
+                rotate: rotate,
+                frame: { width: frameWidth, height: frameHeight }
             }, _report, _state);
             if (!done) return null;
 

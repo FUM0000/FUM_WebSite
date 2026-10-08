@@ -66,21 +66,22 @@
                   <v-card>
                     <v-card-text class="pb-2">
                       <div class="Player_Frame" ref="Player_Frame" @dblclick="Toggle_Fullscreen">
-                        <div class="Stage" :style="Stage_Style">
+                        <div class="Stage" ref="Stage" :style="Stage_Style">
                           <div class="Stage_Inner" ref="Stage_Inner" :style="Inner_Style">
                             <video ref="Video" :key="Current_Video.url" class="Stage_Video" :src="Current_Video.url"
                               preload="metadata" playsinline @loadedmetadata="Loaded_Metadata"
                               @timeupdate="Update_Time" @play="Playing = true" @pause="Playing = false"
                               @ended="Ended" @error="Failed"></video>
+                          </div>
 
-                            <div v-if="Crop_Enabled" class="Crop_Overlay">
-                              <div class="Crop_Box" :style="Crop_Box_Style" @pointerdown="Crop_Drag('move', $event)"
-                                @dblclick.stop="">
-                                <span class="Crop_Handle Crop_NW" @pointerdown.stop="Crop_Drag('nw', $event)"></span>
-                                <span class="Crop_Handle Crop_NE" @pointerdown.stop="Crop_Drag('ne', $event)"></span>
-                                <span class="Crop_Handle Crop_SW" @pointerdown.stop="Crop_Drag('sw', $event)"></span>
-                                <span class="Crop_Handle Crop_SE" @pointerdown.stop="Crop_Drag('se', $event)"></span>
-                              </div>
+                          <!-- 切り抜き枠は画面上で水平固定。回転は動画側だけが受ける -->
+                          <div v-if="Crop_Enabled" class="Crop_Overlay">
+                            <div class="Crop_Box" :style="Crop_Box_Style" @pointerdown="Crop_Drag('move', $event)"
+                              @dblclick.stop="">
+                              <span class="Crop_Handle Crop_NW" @pointerdown.stop="Crop_Drag('nw', $event)"></span>
+                              <span class="Crop_Handle Crop_NE" @pointerdown.stop="Crop_Drag('ne', $event)"></span>
+                              <span class="Crop_Handle Crop_SW" @pointerdown.stop="Crop_Drag('sw', $event)"></span>
+                              <span class="Crop_Handle Crop_SE" @pointerdown.stop="Crop_Drag('se', $event)"></span>
                             </div>
                           </div>
 
@@ -197,9 +198,12 @@
                         </v-col>
                       </v-row>
 
+                      <v-checkbox v-model="Crop_Lock_Ratio" label="Keep aspect ratio" dense hide-details
+                        class="mt-1 mb-0" :disabled="!Crop_Enabled || Busy" @change="Crop_Ratio_Changed"></v-checkbox>
+
                       <div class="Export_Hint">
                         <v-icon x-small class="mr-1">mdi-information-outline</v-icon>
-                        Drag the corners of the frame in the preview. The output size follows the crop ratio.
+                        Drag the corners of the frame in the preview. The frame stays put while the video tilts.
                       </div>
 
                       <!-- Rotate -->
@@ -585,7 +589,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
-  <script src="../../Asset/Javascript/VideoEditor.js?v=2.1"></script>
+  <script src="../../Asset/Javascript/VideoEditor.js?v=2.2"></script>
 
   <script>
     // 動画の標準解像度。大きい順に並べて、アップスケールしない範囲で最も近いものを選ぶ
@@ -649,7 +653,9 @@
         Crop_W: 0,
         Crop_H: 0,
         Rotate_Step: 0,
-        Rotate_Angle: 0
+        Rotate_Angle: 0,
+        Crop_Lock_Ratio: false,
+        Crop_Ratio: 0
       },
       computed: {
         Current_Video() {
@@ -688,24 +694,22 @@
           if (value > 180) value -= 360;
           return value;
         },
-        // 切り抜きと回転を反映した後のコンテンツ解像度
-        Content_Dims() {
+        // 回転を反映した後に画面上へ表示されるフレームの解像度 (90度回転で縦横が入替)
+        Frame_Dims() {
           const width = this.Source_W;
           const height = this.Source_H;
           if (!width || !height) return { w: 0, h: 0 };
-
-          let contentWidth = width;
-          let contentHeight = height;
+          return this.Odd_Quarter ? { w: height, h: width } : { w: width, h: height };
+        },
+        // 切り抜きと回転を反映した後のコンテンツ解像度。
+        // 切り抜き矩形はフレーム (画面上固定) の座標なので、そのまま出力比になる
+        Content_Dims() {
+          const frame = this.Frame_Dims;
+          if (!frame.w || !frame.h) return { w: 0, h: 0 };
           if (this.Crop_Enabled && this.Crop_W > 0 && this.Crop_H > 0) {
-            contentWidth = this.Crop_W;
-            contentHeight = this.Crop_H;
+            return { w: Math.max(2, Math.round(this.Crop_W)), h: Math.max(2, Math.round(this.Crop_H)) };
           }
-          if (this.Odd_Quarter) {
-            const swap = contentWidth;
-            contentWidth = contentHeight;
-            contentHeight = swap;
-          }
-          return { w: Math.max(2, Math.round(contentWidth)), h: Math.max(2, Math.round(contentHeight)) };
+          return frame;
         },
         // ステージの縦横比は常にソース基準。切り抜きはオーバーレイで表現する
         Stage_AR() {
@@ -745,14 +749,13 @@
           };
         },
         Crop_Box_Style() {
-          const width = this.Source_W;
-          const height = this.Source_H;
-          if (!width || !height) return {};
+          const frame = this.Frame_Dims;
+          if (!frame.w || !frame.h) return {};
           return {
-            left: `${(this.Crop_X / width) * 100}%`,
-            top: `${(this.Crop_Y / height) * 100}%`,
-            width: `${(this.Crop_W / width) * 100}%`,
-            height: `${(this.Crop_H / height) * 100}%`
+            left: `${(this.Crop_X / frame.w) * 100}%`,
+            top: `${(this.Crop_Y / frame.h) * 100}%`,
+            width: `${(this.Crop_W / frame.w) * 100}%`,
+            height: `${(this.Crop_H / frame.h) * 100}%`
           };
         },
         Crop_Label() {
@@ -1303,21 +1306,23 @@
 
         ////// Crop & Rotate
 
-        // 切り抜きと回転をソースの初期状態へ戻す
+        // 切り抜きと回転をフレームの初期状態へ戻す
         Reset_Crop_State() {
           this.Crop_Enabled = false;
           this.Rotate_Step = 0;
           this.Rotate_Angle = 0;
+          const frame = this.Frame_Dims;
           this.Crop_X = 0;
           this.Crop_Y = 0;
-          this.Crop_W = this.Source_W;
-          this.Crop_H = this.Source_H;
+          this.Crop_W = frame.w;
+          this.Crop_H = frame.h;
+          this.Crop_Ratio = this.Crop_Lock_Ratio && frame.h > 0 ? frame.w / frame.h : 0;
         },
 
-        // 切り抜き矩形をソースの範囲内へ丸めて収める
+        // 切り抜き矩形をフレーム (画面上固定) の範囲内へ丸めて収める
         Normalize_Crop() {
-          const width = this.Source_W;
-          const height = this.Source_H;
+          const width = this.Frame_Dims.w;
+          const height = this.Frame_Dims.h;
           if (!width || !height) return;
 
           let x = Math.round(Number(this.Crop_X));
@@ -1347,7 +1352,41 @@
 
         Crop_Changed() {
           this.Normalize_Crop();
+          this.Enforce_Crop_Ratio();
           if (this.Follow_Content()) this.Sync_To_Content();
+        },
+
+        // 比率ロック切替時、今の枠の比率を保持する
+        Crop_Ratio_Changed() {
+          this.Crop_Ratio = (this.Crop_Lock_Ratio && this.Crop_H > 0)
+            ? this.Crop_W / this.Crop_H
+            : 0;
+          if (this.Crop_Enabled) this.Crop_Changed();
+        },
+
+        // 比率ロック中は幅を基準に高さを合わせ、フレーム内へ収める
+        Enforce_Crop_Ratio() {
+          if (!this.Crop_Lock_Ratio || !(this.Crop_Ratio > 0)) return;
+          const frame = this.Frame_Dims;
+          if (!frame.w || !frame.h) return;
+
+          let width = this.Crop_W;
+          let height = Math.round(width / this.Crop_Ratio);
+          if (height > frame.h) {
+            height = frame.h;
+            width = Math.min(width, Math.max(16, Math.round(height * this.Crop_Ratio)));
+          }
+          if (width > frame.w) {
+            width = frame.w;
+            height = Math.min(height, Math.max(16, Math.round(width / this.Crop_Ratio)));
+          }
+          width = Math.max(16, Math.min(frame.w, width));
+          height = Math.max(16, Math.min(frame.h, height));
+
+          this.Crop_W = width;
+          this.Crop_H = height;
+          this.Crop_X = Math.max(0, Math.min(frame.w - width, this.Crop_X));
+          this.Crop_Y = Math.max(0, Math.min(frame.h - height, this.Crop_Y));
         },
 
         Content_Changed() {
@@ -1380,8 +1419,49 @@
         },
 
         // 90度単位の回転。縦横を入れ替えてから出力サイズを合わせる
+        // 90度単位の回転。フレーム (表示座標系) が入れ替わるので、
+        // 固定した切り抜き枠を同じ内容が収まる位置へ写像してから出力サイズを合わせる
         Rotate_By(_delta) {
+          const oldFrame = this.Frame_Dims;
+          const oldTotal = this.Total_Rotate;
+          const oldCover = this.Stage_K;
+
           this.Rotate_Step = (this.Rotate_Step + _delta + 360) % 360;
+
+          const newFrame = this.Frame_Dims;
+          const newTotal = this.Total_Rotate;
+          const newCover = this.Stage_K;
+
+          if (this.Crop_Enabled && oldFrame.w && newFrame.w) {
+            // 同じソース点が新しいフレームのどこへ現れるかで4隅を写像する
+            const radians = ((newTotal - oldTotal) * Math.PI) / 180;
+            const cos = Math.cos(radians);
+            const sin = Math.sin(radians);
+            const scale = oldCover > 0 ? newCover / oldCover : 1;
+            const centerX = oldFrame.w / 2;
+            const centerY = oldFrame.h / 2;
+            const offsetX = this.Frame_Dims.w / 2;
+            const offsetY = this.Frame_Dims.h / 2;
+            const points = [
+              [this.Crop_X, this.Crop_Y],
+              [this.Crop_X + this.Crop_W, this.Crop_Y],
+              [this.Crop_X, this.Crop_Y + this.Crop_H],
+              [this.Crop_X + this.Crop_W, this.Crop_Y + this.Crop_H]
+            ].map(([px, py]) => {
+              const vx = (px - centerX) * scale;
+              const vy = (py - centerY) * scale;
+              return [offsetX + cos * vx - sin * vy, offsetY + sin * vx + cos * vy];
+            });
+            const xs = points.map((point) => point[0]);
+            const ys = points.map((point) => point[1]);
+            this.Crop_X = Math.round(Math.min(...xs));
+            this.Crop_Y = Math.round(Math.min(...ys));
+            this.Crop_W = Math.round(Math.max(...xs) - Math.min(...xs));
+            this.Crop_H = Math.round(Math.max(...ys) - Math.min(...ys));
+            this.Normalize_Crop();
+            if (this.Crop_Lock_Ratio && this.Crop_H > 0) this.Crop_Ratio = this.Crop_W / this.Crop_H;
+          }
+
           const width = this.Target_Width;
           this.Target_Width = this.Target_Height;
           this.Target_Height = width;
@@ -1393,30 +1473,27 @@
           this.Reset_Resolution();
         },
 
-        // プレビュー上の切り抜き枠をドラッグする
+        // プレビュー上の切り抜き枠をドラッグする。枠は画面上で水平固定なので
+        // 画面差分をフレーム解像度へ換算するだけでよく、回転補正は不要
         Crop_Drag(_mode, _event) {
           if (!this.Crop_Enabled || this.Busy) return;
-          const inner = this.$refs.Stage_Inner;
-          if (!inner || !inner.offsetWidth || !inner.offsetHeight) return;
+          const stage = this.$refs.Stage;
+          if (!stage) return;
+          const bounds = stage.getBoundingClientRect();
+          const frame = this.Frame_Dims;
+          if (!bounds.width || !bounds.height || !frame.w || !frame.h) return;
           _event.preventDefault();
 
-          const sourcePerLayoutX = this.Source_W / inner.offsetWidth;
-          const sourcePerLayoutY = this.Source_H / inner.offsetHeight;
-          const theta = this.Total_Rotate * Math.PI / 180;
-          const cos = Math.cos(theta);
-          const sin = Math.sin(theta);
-          const scale = this.Stage_K;
+          const unitX = frame.w / bounds.width;
+          const unitY = frame.h / bounds.height;
           const base = { x: this.Crop_X, y: this.Crop_Y, w: this.Crop_W, h: this.Crop_H };
           const startX = _event.clientX;
           const startY = _event.clientY;
 
           const onMove = (event) => {
-            // 画面差分を逆回転してスケール戻し、レイアウト座標からソース座標へ変換する
-            const deltaX = (event.clientX - startX);
-            const deltaY = (event.clientY - startY);
-            const layoutX = (deltaX * cos + deltaY * sin) / scale;
-            const layoutY = (-deltaX * sin + deltaY * cos) / scale;
-            this.Apply_Crop_Drag(_mode, base, layoutX * sourcePerLayoutX, layoutY * sourcePerLayoutY);
+            const deltaX = (event.clientX - startX) * unitX;
+            const deltaY = (event.clientY - startY) * unitY;
+            this.Apply_Crop_Drag(_mode, base, deltaX, deltaY);
           };
 
           const onUp = () => {
@@ -1432,9 +1509,16 @@
         },
 
         Apply_Crop_Drag(_mode, _base, _deltaX, _deltaY) {
-          const width = this.Source_W;
-          const height = this.Source_H;
+          const width = this.Frame_Dims.w;
+          const height = this.Frame_Dims.h;
+          if (!width || !height) return;
           const min = 16;
+          const east = _mode.indexOf('e') >= 0;
+          const west = _mode.indexOf('w') >= 0;
+          const north = _mode.indexOf('n') >= 0;
+          const south = _mode.indexOf('s') >= 0;
+          const right = _base.x + _base.w;
+          const bottom = _base.y + _base.h;
           let x = _base.x;
           let y = _base.y;
           let cropWidth = _base.w;
@@ -1443,21 +1527,41 @@
           if (_mode === 'move') {
             x = Math.max(0, Math.min(width - _base.w, _base.x + _deltaX));
             y = Math.max(0, Math.min(height - _base.h, _base.y + _deltaY));
+          } else if (this.Crop_Lock_Ratio && this.Crop_Ratio > 0) {
+            // 比率ロック中は幅か高さの変化率を比べ、大きい側を基準に拡大縮小する
+            const rawWidth = east ? _base.w + _deltaX : (west ? _base.w - _deltaX : _base.w);
+            const rawHeight = south ? _base.h + _deltaY : (north ? _base.h - _deltaY : _base.h);
+            const changeX = Math.abs(rawWidth / _base.w - 1);
+            const changeY = Math.abs(rawHeight / _base.h - 1);
+            const singleAxis = (east || west) !== (north || south);
+            let scale = singleAxis
+              ? ((east || west) ? rawWidth / _base.w : rawHeight / _base.h)
+              : (changeX >= changeY ? rawWidth / _base.w : rawHeight / _base.h);
+
+            // 動かない側の辺を基準に、はみ出さない上限・最小サイズで挟む
+            const anchorWidth = west && !east ? right : width - _base.x;
+            const anchorHeight = north && !south ? bottom : height - _base.y;
+            const scaleMax = Math.min(anchorWidth / _base.w, anchorHeight / _base.h);
+            const scaleMin = Math.max(min / _base.w, min / _base.h);
+            scale = Math.max(scaleMin, Math.min(scaleMax, scale));
+
+            cropWidth = Math.round(_base.w * scale);
+            cropHeight = Math.round(_base.h * scale);
+            x = west ? right - cropWidth : _base.x;
+            y = north ? bottom - cropHeight : _base.y;
           } else {
-            if (_mode.indexOf('n') >= 0) {
-              const bottom = _base.y + _base.h;
+            if (north) {
               y = Math.max(0, Math.min(bottom - min, _base.y + _deltaY));
               cropHeight = bottom - y;
             }
-            if (_mode.indexOf('s') >= 0) {
+            if (south) {
               cropHeight = Math.max(min, Math.min(height - _base.y, _base.h + _deltaY));
             }
-            if (_mode.indexOf('w') >= 0) {
-              const right = _base.x + _base.w;
+            if (west) {
               x = Math.max(0, Math.min(right - min, _base.x + _deltaX));
               cropWidth = right - x;
             }
-            if (_mode.indexOf('e') >= 0) {
+            if (east) {
               cropWidth = Math.max(min, Math.min(width - _base.x, _base.w + _deltaX));
             }
           }
