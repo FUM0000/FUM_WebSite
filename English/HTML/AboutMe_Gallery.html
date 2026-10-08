@@ -2467,10 +2467,14 @@
                 const COL_H = 29.2;
                 const LINE_WIDTH = 0.035;
 
-                this._cols = [];
+                this._colSlots = [];
+                this._colInst = [];
+                this._scaleParts = [];
+                this._ringItems = [];
                 this._lineParts = [];
                 this._BoundaryRadius = R_OUT;
-                this._lineSeg = null;
+                this._glowSets = [];
+                this._colMat4 = new THREE.Matrix4();
                 const _lPos = [];
                 const _lCol = [];
                 const _lOp = [];
@@ -2503,65 +2507,60 @@
                     fractalArch(va, pA[0], baseY, pA[1], pM[0], apexY, pM[1], sh, depth);
                     fractalArch(va, pM[0], apexY, pM[1], pB[0], baseY, pB[1], sh, depth);
                 };
-                const createGlowMat = (color, baseOp) => new THREE.ShaderMaterial({
-                    uniforms: {
-                        uTime: { value: 0 },
-                        uOpacity: { value: 0 },
-                        uBaseOp: { value: baseOp },
-                        uColor: { value: new THREE.Color(color) },
-                    },
-                    vertexShader: `
-                        varying vec3 vNormal;
-                        varying vec3 vViewPos;
-                        varying vec3 vWorldPos;
-                        void main() {
-                            vNormal = normalize(normalMatrix * normal);
-                            vec4 wp = modelMatrix * vec4(position, 1.0);
-                            vWorldPos = wp.xyz;
-                            vec4 mv = modelViewMatrix * vec4(position, 1.0);
-                            vViewPos = -mv.xyz;
-                            gl_Position = projectionMatrix * mv;
+                const mergeGeos = (items) => {
+                    let vTotal = 0, iTotal = 0;
+                    for (const it of items) {
+                        vTotal += it.geo.attributes.position.count;
+                        iTotal += it.geo.index.count;
+                    }
+                    const pos = new Float32Array(vTotal * 3);
+                    const nor = new Float32Array(vTotal * 3);
+                    const idx = vTotal > 65535 ? new Uint32Array(iTotal) : new Uint16Array(iTotal);
+                    const withColor = items[0].color !== undefined;
+                    const col = withColor ? new Float32Array(vTotal * 3) : null;
+                    const bop = withColor ? new Float32Array(vTotal) : null;
+                    const dly = withColor ? new Float32Array(vTotal) : null;
+                    const c = new THREE.Color();
+                    let vOff = 0, iOff = 0;
+                    for (const it of items) {
+                        const g = it.geo;
+                        const n = g.attributes.position.count;
+                        pos.set(g.attributes.position.array, vOff * 3);
+                        nor.set(g.attributes.normal.array, vOff * 3);
+                        if (withColor) {
+                            c.set(it.color);
+                            for (let i = 0; i < n; i++) {
+                                const k = (vOff + i) * 3;
+                                col[k] = c.r; col[k + 1] = c.g; col[k + 2] = c.b;
+                                bop[vOff + i] = it.baseOp;
+                                dly[vOff + i] = it.delay;
+                            }
                         }
-                    `,
-                    fragmentShader: `
-                        uniform float uTime;
-                        uniform float uOpacity;
-                        uniform float uBaseOp;
-                        uniform vec3 uColor;
-                        varying vec3 vNormal;
-                        varying vec3 vViewPos;
-                        varying vec3 vWorldPos;
-                        void main() {
-                            vec3 V = normalize(vViewPos);
-                            vec3 N = normalize(vNormal);
-                            float NdotV = abs(dot(V, N));
-                            float fresnel = pow(1.0 - NdotV, 2.8);
-                            float core = pow(NdotV, 0.6);
-                            float breathe = 0.85 + 0.15 * sin(uTime * 1.4 + vWorldPos.y * 0.3 + vWorldPos.x * 0.2);
-                            vec3 baseCol = uColor * (0.5 + core * 0.5);
-                            vec3 rimCol = vec3(0.3, 0.5, 0.9) * fresnel * 0.7;
-                            vec3 col = (baseCol + rimCol) * breathe;
-                            float a = (core * 0.4 + fresnel * 0.7 + 0.2) * uBaseOp * uOpacity * breathe;
-                            gl_FragColor = vec4(col * 1.2, a);
-                        }
-                    `,
-                    transparent: true,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false,
-                    depthTest: true,
-                    fog: false,
-                });
+                        const gi = g.index.array;
+                        for (let i = 0; i < gi.length; i++) idx[iOff + i] = gi[i] + vOff;
+                        vOff += n;
+                        iOff += gi.length;
+                        g.dispose();
+                    }
+                    const geo = new THREE.BufferGeometry();
+                    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                    geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+                    if (withColor) {
+                        geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+                        geo.setAttribute('aBaseOp', new THREE.BufferAttribute(bop, 1));
+                        geo.setAttribute('aDelay', new THREE.BufferAttribute(dly, 1));
+                    }
+                    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+                    geo.computeBoundingSphere();
+                    return geo;
+                };
 
                 const addRing = (radius, y, color, baseOp, ang, segs) => {
                     const segCount = segs || Math.max(32, Math.ceil(radius * 10));
                     const geo = new THREE.TorusGeometry(radius, LINE_WIDTH * 0.5, 8, segCount);
                     geo.rotateX(Math.PI / 2);
-                    const mat = createGlowMat(color, baseOp);
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.y = y;
-                    mesh.layers.set(BLOOM_LAYER);
-                    this._group.add(mesh);
-                    this._lineParts.push({ obj: mesh, mat, base: baseOp, delay: delayOf(ang, y) });
+                    geo.translate(0, y, 0);
+                    this._ringItems.push({ geo, color, baseOp, delay: delayOf(ang, y) });
                 };
 
                 // Smooth ring drawn with the same analytic method as the floor rings
@@ -2705,15 +2704,16 @@
                 for (let i = 0; i < N_COL; i++) {
                     const a = (i / N_COL) * Math.PI * 2;
                     const p = pRing(a, R_OUT);
-                    const cg = new THREE.Group();
-                    cg.add(new THREE.Mesh(shaftGeo, columnMat));
-                    cg.add(new THREE.Mesh(baseGeo, columnMat));
-                    cg.add(new THREE.Mesh(capGeo, columnMat));
-                    cg.position.set(p[0], 0, p[1]);
-                    cg.scale.set(0.001, 0.001, 0.001);
-                    this._group.add(cg);
-                    this._cols.push({ group: cg, delay: delayOf(a, 0) });
+                    this._colSlots.push({ x: p[0], z: p[1], delay: delayOf(a, 0), sx: 0.001, sy: 0.001 });
                 }
+                for (const g of [shaftGeo, baseGeo, capGeo]) {
+                    const im = new THREE.InstancedMesh(g, columnMat, N_COL);
+                    im.frustumCulled = false;
+                    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                    this._colInst.push(im);
+                    this._group.add(im);
+                }
+                this._writeCols();
 
                 // ============ Architrave beam resting on the capitals ============
                 const BEAM_Y = COL_H + 0.55;
@@ -2721,26 +2721,23 @@
                 const BEAM_R_IN = 7.68;
                 const BEAM_R_OUT = 8.34;
                 {
-                    const beamGroup = new THREE.Group();
                     const beamMat = columnMat.clone();
                     beamMat.side = THREE.DoubleSide;
                     addRoofLight(beamMat);
                     const mkShell = (r, segs) => new THREE.CylinderGeometry(r, r, BEAM_H, segs, 1, true);
-                    const outerShell = new THREE.Mesh(mkShell(BEAM_R_OUT, 96), beamMat);
-                    const innerShell = new THREE.Mesh(mkShell(BEAM_R_IN, 96), beamMat);
-                    const topCap = new THREE.Mesh(
-                        new THREE.RingGeometry(BEAM_R_IN, BEAM_R_OUT, 96), beamMat);
-                    topCap.rotation.x = -Math.PI / 2;
-                    topCap.position.y = BEAM_H * 0.5;
-                    const botCap = new THREE.Mesh(
-                        new THREE.RingGeometry(BEAM_R_IN, BEAM_R_OUT, 96), beamMat);
-                    botCap.rotation.x = Math.PI / 2;
-                    botCap.position.y = -BEAM_H * 0.5;
-                    beamGroup.add(outerShell, innerShell, topCap, botCap);
-                    beamGroup.position.y = BEAM_Y + BEAM_H * 0.5;
-                    beamGroup.scale.set(0.001, 0.001, 0.001);
-                    this._group.add(beamGroup);
-                    this._cols.push({ group: beamGroup, delay: delayOf(this._buildOriginAng, BEAM_Y) });
+                    const topCap = new THREE.RingGeometry(BEAM_R_IN, BEAM_R_OUT, 96);
+                    topCap.rotateX(-Math.PI / 2);
+                    topCap.translate(0, BEAM_H * 0.5, 0);
+                    const botCap = new THREE.RingGeometry(BEAM_R_IN, BEAM_R_OUT, 96);
+                    botCap.rotateX(Math.PI / 2);
+                    botCap.translate(0, -BEAM_H * 0.5, 0);
+                    const beamParts = [mkShell(BEAM_R_OUT, 96), mkShell(BEAM_R_IN, 96), topCap, botCap];
+                    const beamMesh = new THREE.Mesh(
+                        mergeGeos(beamParts.map((g) => ({ geo: g }))), beamMat);
+                    beamMesh.position.y = BEAM_Y + BEAM_H * 0.5;
+                    beamMesh.scale.set(0.001, 0.001, 0.001);
+                    this._group.add(beamMesh);
+                    this._scaleParts.push({ obj: beamMesh, delay: delayOf(this._buildOriginAng, BEAM_Y) });
                 }
                 addRing(BEAM_R_OUT, BEAM_Y + 0.02, GOLD, 0.7, this._buildOriginAng, 96);
                 addRing(BEAM_R_OUT, BEAM_Y + BEAM_H - 0.02, GOLD, 0.7, this._buildOriginAng, 96);
@@ -2969,16 +2966,101 @@
                     lineObj.layers.set(BLOOM_LAYER);
                     lineObj.frustumCulled = false;
                     this._group.add(lineObj);
-                    this._lineSeg = { obj: lineObj, mat: lineMat };
+                    this._glowSets.push({ obj: lineObj, mat: lineMat });
+                }
+
+                if (this._ringItems.length) {
+                    const ringMat = new THREE.ShaderMaterial({
+                        uniforms: {
+                            uTime: { value: 0 },
+                            uBuildTime: { value: 0 },
+                        },
+                        vertexShader: `
+                            attribute vec3 aColor;
+                            attribute float aBaseOp;
+                            attribute float aDelay;
+                            varying vec3 vColor;
+                            varying float vBaseOp;
+                            varying float vDelay;
+                            varying vec3 vNormal;
+                            varying vec3 vViewPos;
+                            varying vec3 vWorldPos;
+                            void main() {
+                                vColor = aColor;
+                                vBaseOp = aBaseOp;
+                                vDelay = aDelay;
+                                vNormal = normalize(normalMatrix * normal);
+                                vec4 wp = modelMatrix * vec4(position, 1.0);
+                                vWorldPos = wp.xyz;
+                                vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                                vViewPos = -mv.xyz;
+                                gl_Position = projectionMatrix * mv;
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform float uTime;
+                            uniform float uBuildTime;
+                            varying vec3 vColor;
+                            varying float vBaseOp;
+                            varying float vDelay;
+                            varying vec3 vNormal;
+                            varying vec3 vViewPos;
+                            varying vec3 vWorldPos;
+                            float sb(float x) {
+                                x = clamp(x, 0.0, 1.0);
+                                return x * x * (3.0 - 2.0 * x);
+                            }
+                            void main() {
+                                float build = sb((uBuildTime - vDelay) / 0.3);
+                                vec3 V = normalize(vViewPos);
+                                vec3 N = normalize(vNormal);
+                                float NdotV = abs(dot(V, N));
+                                float fresnel = pow(1.0 - NdotV, 2.8);
+                                float core = pow(NdotV, 0.6);
+                                float breathe = 0.85 + 0.15 * sin(uTime * 1.4 + vWorldPos.y * 0.3 + vWorldPos.x * 0.2);
+                                vec3 baseCol = vColor * (0.5 + core * 0.5);
+                                vec3 rimCol = vec3(0.3, 0.5, 0.9) * fresnel * 0.7;
+                                vec3 col = (baseCol + rimCol) * breathe;
+                                float a = (core * 0.4 + fresnel * 0.7 + 0.2) * vBaseOp * build * breathe;
+                                gl_FragColor = vec4(col * 1.2, a);
+                            }
+                        `,
+                        transparent: true,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        depthTest: true,
+                        fog: false,
+                    });
+                    const ringMesh = new THREE.Mesh(mergeGeos(this._ringItems), ringMat);
+                    ringMesh.layers.set(BLOOM_LAYER);
+                    this._group.add(ringMesh);
+                    this._glowSets.push({ obj: ringMesh, mat: ringMat });
+                    this._ringItems = [];
                 }
 
                 this._group.visible = false;
+            }
+            _writeCols() {
+                const m = this._colMat4;
+                for (let i = 0; i < this._colSlots.length; i++) {
+                    const s = this._colSlots[i];
+                    m.makeScale(s.sx, s.sy, s.sx);
+                    m.setPosition(s.x, 0, s.z);
+                    for (let k = 0; k < this._colInst.length; k++) {
+                        this._colInst[k].setMatrixAt(i, m);
+                    }
+                }
+                for (let k = 0; k < this._colInst.length; k++) {
+                    this._colInst[k].instanceMatrix.needsUpdate = true;
+                }
             }
             setVisible(v) {
                 this._active = v;
                 this._group.visible = v;
                 if (v) {
-                    for (const c of this._cols) c.group.scale.set(0.001, 0.001, 0.001);
+                    for (const s of this._colSlots) { s.sx = 0.001; s.sy = 0.001; }
+                    this._writeCols();
+                    for (const s of this._scaleParts) s.obj.scale.set(0.001, 0.001, 0.001);
                     for (const p of this._lineParts) p.mat.uniforms.uOpacity.value = 0;
                     this._buildStart = performance.now() / 1000;
                     this._building = true;
@@ -2994,10 +3076,20 @@
                         x = Math.max(0, Math.min(1, x));
                         return x * x * (3 - 2 * x);
                     };
-                    for (const c of this._cols) {
-                        const t = smooth((elapsed - c.delay) / 0.45);
+                    let colsDirty = false;
+                    for (const s of this._colSlots) {
+                        const t = smooth((elapsed - s.delay) / 0.45);
+                        const sx = t <= 0 ? 0.001 : 0.15 + 0.85 * t;
+                        const sy = t <= 0 ? 0.001 : t;
+                        if (sx !== s.sx || sy !== s.sy) {
+                            s.sx = sx; s.sy = sy; colsDirty = true;
+                        }
+                    }
+                    if (colsDirty) this._writeCols();
+                    for (const s of this._scaleParts) {
+                        const t = smooth((elapsed - s.delay) / 0.45);
                         if (t <= 0) continue;
-                        c.group.scale.set(0.15 + 0.85 * t, t, 0.15 + 0.85 * t);
+                        s.obj.scale.set(0.15 + 0.85 * t, t, 0.15 + 0.85 * t);
                     }
                     for (const p of this._lineParts) {
                         const t = smooth((elapsed - p.delay) / 0.3);
@@ -3009,9 +3101,9 @@
                 for (const p of this._lineParts) {
                     p.mat.uniforms.uTime.value = time;
                 }
-                if (this._lineSeg) {
-                    this._lineSeg.mat.uniforms.uTime.value = time;
-                    this._lineSeg.mat.uniforms.uBuildTime.value = time - this._buildStart;
+                for (const g of this._glowSets) {
+                    g.mat.uniforms.uTime.value = time;
+                    g.mat.uniforms.uBuildTime.value = time - this._buildStart;
                 }
             }
         }
