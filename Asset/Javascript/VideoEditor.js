@@ -5,12 +5,23 @@
     // Video Editor / Transcoder
     // 動画のリサイズ・圧縮・書き出しエンジン
     //
-    // Engine : WebCodecs + mp4box(demux) + mp4-muxer(mux)
-    //          Chrome / Edge 系。ネイティブ実装で高速。
-    //          ブラウザの制約で処理できない入力はエラーで通知する。
+    // Engine : <video> + Canvas + WebCodecs (H.264) + mp4-muxer
+    //
+    //   1. 入力 MP4 を <video> に読み込み、ブラウザ内蔵のデコーダで復号する
+    //      MP4 の圧縮方式 (H.264 / HEVC / VP9 / AV1 ...) は
+    //      ブラウザが再生できるものなら何でも扱えるため、
+    //      コーデックごとの分岐や avcC の組み立ては不要になる
+    //   2. タイムスタンプ指定でシークし、1 フレームずつ Canvas に描画する
+    //   3. WebCodecs で H.264 (avc1) に再エンコードする
+    //   4. 音声は Web Audio で PCM にデコードして AAC に再エンコードする
+    //   5. mp4-muxer で 1 本の MP4 にまとめて渡す
+    //
+    // サーバー処理は不要なので GitHub Pages のような静的配信でそのまま動作する
+    // (外部 CDN は mp4box / mp4-muxer の 2 スクリプトのみ)
     //
     // Public API:
     //   VideoEditor.Engine()        -> 'webcodecs' | 'unsupported'
+    //   VideoEditor.Probe(file)     -> { width, height, duration, fps, bitrate, hasAudio, ... } | null
     //   VideoEditor.Transcode(opt)  -> { blob, engine, elapsed, cancelled }
     // ============================================================================
 
@@ -19,7 +30,6 @@
         muxer: 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.min.js'
     };
 
-    // 高さ・幅ともに偶数にする必要がある (yuv420p)
     const Quality_Table = {
         high: { label: 'High', pixels: 0.15 },
         standard: { label: 'Standard', pixels: 0.085 },
@@ -31,6 +41,13 @@
         keep: { label: 'Keep audio', bitrate: 128000 },
         low: { label: 'Low (96 kbps)', bitrate: 96000 },
         remove: { label: 'Remove audio', bitrate: 0 }
+    };
+
+    // 書き出しが止まったときに無限に待たないための上限
+    const Wait_Limit = {
+        open: 30000,
+        seek: 20000,
+        dequeue: 15000
     };
 
     // ---------------------------------------------------------------------------
@@ -63,8 +80,42 @@
         });
     }
 
-    function Once(_target, _name) {
-        return new Promise(_resolve => _target.addEventListener(_name, _resolve, { once: true }));
+    function Once(_target, _name, _timeout) {
+        return new Promise(_resolve => {
+            let timer = 0;
+            const done = () => {
+                if (timer) clearTimeout(timer);
+                _target.removeEventListener(_name, done);
+                _resolve();
+            };
+            _target.addEventListener(_name, done);
+            if (_timeout > 0) timer = setTimeout(done, _timeout);
+        });
+    }
+
+    // イベントの発火を待つ。失敗時は message で拒否する
+    function Wait_Event(_target, _name, _timeout, _message) {
+        return new Promise((_resolve, _reject) => {
+            let timer = 0;
+
+            const cleanup = () => {
+                _target.removeEventListener(_name, onEvent);
+                _target.removeEventListener('error', onError);
+                if (timer) clearTimeout(timer);
+            };
+            const onEvent = () => { cleanup(); _resolve(); };
+            const onError = () => { cleanup(); _reject(new Error(_message)); };
+
+            _target.addEventListener(_name, onEvent);
+            _target.addEventListener('error', onError);
+
+            if (_timeout > 0) {
+                timer = setTimeout(() => {
+                    cleanup();
+                    _reject(new Error(_message));
+                }, _timeout);
+            }
+        });
     }
 
     function To_Even(_value) {
@@ -98,18 +149,15 @@
     }
 
     // 解像度と FPS から推奨ビットレートを算出する。
-// 元のビットレートが分かっている場合は、それを上限にすることで
-// 「ダウングレードしても逆に大きくなる」ケースを防ぐ。
+    // 元のビットレートが判明している場合は、それを上限にすることで
+    // 「ダウングレードしても逆に大きくなる」ケースを防ぐ。
     function Suggest_Bitrate(_width, _height, _fps, _quality, _sourceBitrate) {
         const factor = (Quality_Table[_quality] || Quality_Table.standard).pixels;
         const raw = _width * _height * _fps * factor;
         let clamped = Math.min(60000000, Math.max(150000, raw));
 
-        // 元-filesize が判明している場合、视频として妥当な範囲に収める
         if (_sourceBitrate > 0) {
-            // Extreme high bitrate sources (e.g. ProRes) → cap at 40 Mbps, don't inflate
             clamped = Math.min(clamped, Math.max(_sourceBitrate, 40000000));
-            // Don't let suggestions exceed source rate, use 95% to guarantee smaller
             clamped = Math.min(clamped, Math.floor(_sourceBitrate * 0.95));
         }
 
@@ -121,8 +169,7 @@
         return Can_Demux(_file);
     }
 
-    // mp4box.js が扱えるのは ISO ベースライン (mp4/m4v) のみ。
-    // MOV / WebM はこのエンジンでは書き出せない。
+    // 入力は MP4 / M4V に限定する。中のコーデックは問わない
     function Can_Demux(_file) {
         return /\.(mp4|m4v)$/i.test(_file && _file.name ? _file.name : '');
     }
@@ -139,27 +186,147 @@
         return Has_WebCodecs() ? 'webcodecs' : 'unsupported';
     }
 
-    // このブラウザが AAC (mp4a.40.2) をエンコードできるか
-    async function Can_Encode_Aac(_sampleRate, _channels) {
-        if (!global.AudioEncoder || typeof global.AudioEncoder.isConfigSupported !== 'function') return false;
-        try {
-            const support = await global.AudioEncoder.isConfigSupported({
-                codec: 'mp4a.40.2',
-                sampleRate: _sampleRate || 48000,
-                numberOfChannels: _channels || 2,
-                bitrate: 128000
-            });
-            return !!(support && support.supported);
-        } catch (_error) {
-            return false;
+    function Is_Aac_Supported(_config) {
+        if (!global.AudioEncoder || typeof global.AudioEncoder.isConfigSupported !== 'function') {
+            return Promise.resolve(false);
         }
+        return global.AudioEncoder.isConfigSupported(_config)
+            .then(_support => !!(_support && _support.supported))
+            .catch(() => false);
+    }
+
+    // このブラウザが AAC (mp4a.40.2) をエンコードできるか
+    function Can_Encode_Aac(_sampleRate, _channels, _bitrate) {
+        return Is_Aac_Supported({
+            codec: 'mp4a.40.2',
+            sampleRate: _sampleRate || 48000,
+            numberOfChannels: _channels || 2,
+            bitrate: _bitrate || 128000
+        });
     }
 
     // ---------------------------------------------------------------------------
-    // Demux (mp4box.js)
+    // Media helpers
     // ---------------------------------------------------------------------------
 
-    async function Demux(_file) {
+    // ファイルを開いた <video> を返す。使ったら dispose で URL を解放する
+    async function Open_Video(_file) {
+        const url = URL.createObjectURL(_file);
+        const video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'auto';
+        video.src = url;
+
+        const dispose = () => {
+            try {
+                video.removeAttribute('src');
+                video.load();
+            } catch (_error) {
+                // 解放に失敗しても書き出し結果には影響しない
+            }
+            URL.revokeObjectURL(url);
+        };
+
+        try {
+            if (video.readyState < 2) {
+                await Wait_Event(video, 'loadeddata', Wait_Limit.open,
+                    'This browser cannot decode this video file. Use the latest Chrome / Edge, or convert the file to H.264 first.');
+            }
+            if (!video.videoWidth || !video.videoHeight) {
+                throw new Error('This file has no video track that this browser can decode.');
+            }
+            return { video: video, dispose: dispose };
+        } catch (_error) {
+            dispose();
+            throw _error;
+        }
+    }
+
+    // 指定した時刻へシークし、フレームが用意されるのを待つ
+    async function Seek_To(_video, _time) {
+        const target = Math.max(0, _time);
+        if (Math.abs(_video.currentTime - target) < 0.001 && _video.readyState >= 2) return;
+
+        const waiting = Wait_Event(_video, 'seeked', Wait_Limit.seek,
+            'Could not seek the video. The file may be damaged.');
+        _video.currentTime = target;
+        await waiting;
+    }
+
+    // 音声トラックを PCM にデコードする。無く / 読めない場合は null
+    async function Decode_Audio(_file) {
+        const Context = global.AudioContext || global.webkitAudioContext;
+        if (!Context) return null;
+
+        let context = null;
+        try {
+            const buffer = await _file.arrayBuffer();
+            context = new Context();
+            const audio = await context.decodeAudioData(buffer);
+            if (!audio || !audio.length || !audio.numberOfChannels) return null;
+            return audio;
+        } catch (_error) {
+            return null;
+        } finally {
+            if (context && context.state !== 'closed') {
+                const closing = context.close();
+                if (closing && typeof closing.catch === 'function') closing.catch(() => { });
+            }
+        }
+    }
+
+    // チャンネル数 / サンプルレートを書き出し向けに合わせる
+    async function Conform_Audio(_buffer, _channels, _rate) {
+        if (_buffer.numberOfChannels === _channels && _buffer.sampleRate === _rate) return _buffer;
+        if (!global.OfflineAudioContext) return _buffer;
+
+        const length = Math.max(1, Math.ceil(_buffer.duration * _rate));
+        const context = new global.OfflineAudioContext(_channels, length, _rate);
+        const source = context.createBufferSource();
+        source.buffer = _buffer;
+        source.connect(context.destination);
+        source.start(0);
+        return await context.startRendering();
+    }
+
+    // 書き出し用の AAC 設定を決める。
+    // ブラウザが受け付けるビットレート・チャンネル数・サンプルレートは限定的なので、
+    // 初期値 → 変換済みバッファの順に候補を試し、全部だめなら案内を出して止める
+    async function Pick_Audio(_buffer, _bitrate) {
+        if (!global.AudioEncoder || !global.AudioData) {
+            throw new Error('This browser cannot encode audio. Set Audio to "Remove audio" and export again.');
+        }
+
+        const wanted = _bitrate || 128000;
+        const bitrates = [wanted, 128000, 96000]
+            .filter((_value, _index, _list) => _value > 0 && _list.indexOf(_value) === _index);
+
+        const buffers = [_buffer];
+        const conformed = await Conform_Audio(_buffer, Math.min(2, _buffer.numberOfChannels), 48000);
+        if (conformed && conformed !== _buffer) buffers.push(conformed);
+
+        for (const buffer of buffers) {
+            for (const bitrate of bitrates) {
+                const config = {
+                    codec: 'mp4a.40.2',
+                    sampleRate: buffer.sampleRate,
+                    numberOfChannels: buffer.numberOfChannels,
+                    bitrate: bitrate
+                };
+                if (await Is_Aac_Supported(config)) return { config: config, buffer: buffer };
+            }
+        }
+
+        throw new Error('This browser cannot re-encode AAC audio. Set Audio to "Remove audio" and export again.');
+    }
+
+    // ---------------------------------------------------------------------------
+    // Metadata (mp4box.js)
+    // moov だけを読むのでサンプルの展開はせず、FPS や音声の有無だけ取得する
+    // ---------------------------------------------------------------------------
+
+    async function Read_Info(_file) {
         await Load_Script(Script_Source.mp4box);
         if (!global.MP4Box || !global.MP4Box.createFile) {
             throw new Error('mp4box.js could not be initialised.');
@@ -170,79 +337,70 @@
 
         return new Promise((_resolve, _reject) => {
             const box = global.MP4Box.createFile();
-            const tracks = { video: null, audio: null };
-            const samples = { video: [], audio: [] };
+            let settled = false;
 
-            box.onError = (_error) => _reject(new Error('This file could not be read. It may be damaged or unsupported.'));
-
-            box.onReady = (_info) => {
-                const videoInfo = _info.videoTracks && _info.videoTracks[0];
-                const audioInfo = _info.audioTracks && _info.audioTracks[0];
-
-                if (videoInfo) {
-                    tracks.video = {
-                        id: videoInfo.id,
-                        codec: videoInfo.codec,
-                        width: videoInfo.video.width,
-                        height: videoInfo.video.height,
-                        timescale: videoInfo.timescale || videoInfo.video.timescale,
-                        duration: videoInfo.duration,
-                        bitrate: videoInfo.bitrate
-                    };
-                    box.setExtractionOptions(videoInfo.id, null, { nbSamples: 500 });
-                }
-
-                if (audioInfo) {
-                    tracks.audio = {
-                        id: audioInfo.id,
-                        codec: audioInfo.codec,
-                        sampleRate: audioInfo.audio.sample_rate,
-                        channelCount: audioInfo.audio.channel_count,
-                        timescale: audioInfo.timescale || audioInfo.audio.sample_rate,
-                        duration: audioInfo.duration,
-                        bitrate: audioInfo.bitrate
-                    };
-                    box.setExtractionOptions(audioInfo.id, null, { nbSamples: 500 });
-                }
-
-                box.start();
+            const finish = (_value, _error) => {
+                if (settled) return;
+                settled = true;
+                if (_error) _reject(_error);
+                else _resolve(_value);
             };
 
-            box.onSamples = (_id, _user, _samples) => {
-                const bucket = _id === tracks.video.id ? samples.video
-                    : tracks.audio && _id === tracks.audio.id ? samples.audio
-                        : null;
-                if (!bucket) return;
-                for (const sample of _samples) bucket.push(sample);
+            box.onError = (_error) => finish(null, new Error(String(_error || 'This file could not be read.')));
+
+            box.onReady = (_info) => {
+                try {
+                    const video = _info.videoTracks && _info.videoTracks[0];
+                    if (!video) {
+                        finish(null, new Error('No video track was found in this file.'));
+                        return;
+                    }
+
+                    const audio = _info.audioTracks && _info.audioTracks[0];
+                    const timescale = video.timescale || 1;
+                    const duration = timescale > 0 ? video.duration / timescale : 0;
+                    const samples = video.nb_samples || 0;
+
+                    finish({
+                        width: video.video ? video.video.width : 0,
+                        height: video.video ? video.video.height : 0,
+                        duration: duration,
+                        fps: duration > 0 && samples > 0 ? samples / duration : 0,
+                        codec: video.codec || '',
+                        bitrate: video.bitrate || 0,
+                        hasAudio: !!audio,
+                        audioCodec: audio ? audio.codec : '',
+                        sampleRate: audio && audio.audio ? audio.audio.sample_rate : 0,
+                        channelCount: audio && audio.audio ? audio.audio.channel_count : 0
+                    });
+                } catch (_error) {
+                    finish(null, _error);
+                }
             };
 
             try {
                 box.appendBuffer(buffer);
-                box.flush();
             } catch (_error) {
-                _reject(new Error('This file could not be read as an MP4 file. (' + String(_error) + ')'));
-                return;
+                finish(null, new Error('This file could not be read as an MP4 file. (' + String(_error) + ')'));
             }
-
-            if (!tracks.video || !samples.video.length) {
-                _reject(new Error('No video track was found in this file.'));
-                return;
-            }
-
-            _resolve({
-                video: tracks.video,
-                audio: tracks.audio,
-                videoSamples: samples.video,
-                audioSamples: samples.audio
-            });
         });
     }
 
+    async function Probe(_file) {
+        if (!Can_Demux(_file)) return null;
+
+        try {
+            return await Read_Info(_file);
+        } catch (_error) {
+            return null;
+        }
+    }
+
     // ---------------------------------------------------------------------------
-    // WebCodecs engine
+    // Encoder config
     // ---------------------------------------------------------------------------
 
-    // 出力解像度に合う H.264  LEVEL  を isConfigSupported で選ぶ
+    // 出力解像度に合う H.264 LEVEL を isConfigSupported で選ぶ
     async function Pick_Video_Codec(_config) {
         const levels = ['34', '33', '32', '2A', '29', '28', '1F'];
         const profiles = ['6400', '4D40', '4200'];
@@ -259,7 +417,11 @@
             const config = Object.assign({}, _config, { codec: codec });
             try {
                 const support = await global.VideoEncoder.isConfigSupported(config);
-                if (support && support.supported) return support.config;
+                if (support && support.supported) {
+                    // 返却された設定をそのまま使うと avc 形式が欠ける場合があるため、
+                    // mp4-muxer が要求する長さプレフィックス形式を必ず指定する
+                    return Object.assign({}, config, support.config, { codec: codec, avc: { format: 'avc' } });
+                }
             } catch (_error) {
                 // 次の候補へ進む
             }
@@ -268,404 +430,239 @@
         throw new Error('This browser cannot encode H.264 with the WebCodecs API.');
     }
 
-    function Build_Avc_Description(_entry) {
-        const avcC = _entry && _entry.avcC;
-        if (!avcC || !avcC.SPS) return null;
+    // ---------------------------------------------------------------------------
+    // Frame loop
+    // ---------------------------------------------------------------------------
 
-        const sps = avcC.SPS;
-        const pps = avcC.PPS || [];
-        const chunks = [new Uint8Array([
-            avcC.configurationVersion === undefined ? 1 : avcC.configurationVersion,
-            avcC.AVCProfileIndication,
-            avcC.profile_compatibility,
-            avcC.AVCLevelIndication,
-            0xFC | (avcC.lengthSizeMinusOne & 3),
-            0xE0 | (sps.length & 31)
-        ])];
+    async function Encode_Frames(_video, _job, _report, _state) {
+        const canvas = new OffscreenCanvas(_job.width, _job.height);
+        const context = canvas.getContext('2d', { alpha: false });
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
 
-        const appendNalus = (_list) => {
-            for (const nalu of _list) {
-                const data = nalu.nalu;
-                chunks.push(new Uint8Array([(data.length >> 8) & 0xFF, data.length & 0xFF]));
-                chunks.push(data);
+        const step = 1e6 / _job.fps;
+        const frameCount = Math.max(1, Math.round(_job.clip * _job.fps));
+        const keyFrame_Interval = Math.max(1, Math.round(_job.fps * 2));
+        const lastTime = _job.mediaDuration > 0 ? Math.max(0, _job.mediaDuration - 0.001) : Infinity;
+
+        let failure = null;
+        const encoder = new global.VideoEncoder({
+            output: (_chunk, _meta) => _job.muxer.addVideoChunk(_chunk, _meta),
+            error: (_error) => { failure = _error; }
+        });
+
+        try {
+            encoder.configure(_job.encodeConfig);
+
+            for (let index = 0; index < frameCount; index++) {
+                if (failure) break;
+                if (_state.cancelled) return null;
+
+                await Seek_To(_video, Math.min(_job.start + index / _job.fps, lastTime));
+
+                context.drawImage(_video, 0, 0, _job.width, _job.height);
+                const frame = new VideoFrame(canvas, {
+                    timestamp: Math.round(index * step),
+                    duration: Math.round(step)
+                });
+
+                if (encoder.encodeQueueSize > 6) await Once(encoder, 'dequeue', Wait_Limit.dequeue);
+                try {
+                    encoder.encode(frame, { keyFrame: index % keyFrame_Interval === 0 });
+                } finally {
+                    frame.close();
+                }
+
+                if (index % 2 === 0 || index === frameCount - 1) {
+                    _report({ phase: 'video', ratio: Math.min(1, (index + 1) / frameCount) });
+                }
             }
-        };
 
-        appendNalus(sps);
-        chunks.push(new Uint8Array([pps.length & 0xFF]));
-        appendNalus(pps);
-        if (avcC.ext && avcC.ext.length) chunks.push(avcC.ext);
+            if (failure) throw failure;
+            if (_state.cancelled) return null;
 
-        let total = 0;
-        for (const chunk of chunks) total += chunk.length;
-
-        const bytes = new Uint8Array(total);
-        let offset = 0;
-        for (const chunk of chunks) {
-            bytes.set(chunk, offset);
-            offset += chunk.length;
+            await encoder.flush();
+        } catch (_error) {
+            failure = failure || _error;
+        } finally {
+            if (encoder.state !== 'closed') encoder.close();
         }
-        return bytes;
+
+        if (failure) throw failure;
+        return true;
     }
 
-    async function Transcode_WebCodecs(_file, _opt, _report, _state) {
+    // ---------------------------------------------------------------------------
+    // Audio loop
+    // ---------------------------------------------------------------------------
+
+    async function Encode_Audio(_audio, _start, _clip, _muxer, _report, _state) {
+        const buffer = _audio.buffer;
+        const rate = buffer.sampleRate;
+        const channels = buffer.numberOfChannels;
+        const first = Math.max(0, Math.min(buffer.length, Math.round(_start * rate)));
+        const last = Math.max(first, Math.min(buffer.length, Math.round((_start + _clip) * rate)));
+        if (last <= first) return true;
+
+        const total = last - first;
+        const block = 4096;
+        let failure = null;
+        let reported = -1;
+
+        const encoder = new global.AudioEncoder({
+            output: (_chunk, _meta) => _muxer.addAudioChunk(_chunk, _meta),
+            error: (_error) => { failure = _error; }
+        });
+        encoder.configure(_audio.config);
+
+        try {
+            for (let position = first; position < last; position += block) {
+                if (failure) break;
+                if (_state.cancelled) return null;
+
+                const frames = Math.min(block, last - position);
+                const data = new Float32Array(frames * channels);
+                for (let channel = 0; channel < channels; channel++) {
+                    data.set(buffer.getChannelData(channel).subarray(position, position + frames), channel * frames);
+                }
+
+                const chunk = new AudioData({
+                    format: 'f32-planar',
+                    sampleRate: rate,
+                    numberOfFrames: frames,
+                    numberOfChannels: channels,
+                    timestamp: Math.round(((position - first) * 1e6) / rate),
+                    data: data
+                });
+
+                if (encoder.encodeQueueSize > 8) await Once(encoder, 'dequeue', Wait_Limit.dequeue);
+                try {
+                    encoder.encode(chunk);
+                } finally {
+                    chunk.close();
+                }
+
+                const percent = Math.floor(((position + frames - first) / total) * 100);
+                if (percent !== reported) {
+                    reported = percent;
+                    _report({ phase: 'audio', ratio: (position + frames - first) / total });
+                }
+            }
+
+            if (failure) throw failure;
+            if (_state.cancelled) return null;
+
+            await encoder.flush();
+            _report({ phase: 'audio', ratio: 1 });
+        } catch (_error) {
+            failure = failure || _error;
+        } finally {
+            if (encoder.state !== 'closed') encoder.close();
+        }
+
+        if (failure) throw failure;
+        return true;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Transcode
+    // ---------------------------------------------------------------------------
+
+    async function Transcode_File(_file, _opt, _report, _state) {
         _report({ phase: 'prepare', ratio: 0 });
+
         await Load_Script(Script_Source.muxer);
         if (!global.Mp4Muxer || !global.Mp4Muxer.Muxer) {
             throw new Error('mp4-muxer could not be initialised.');
         }
-
-        const source = await Demux(_file);
-        if (_state.cancelled) return null;
-
-        const sourceFps = source.video.duration > 0 && source.video.timescale
-            ? source.videoSamples.length / (source.video.duration / source.video.timescale)
-            : 0;
-        const fps = _opt.fps > 0 ? Math.min(_opt.fps, sourceFps || _opt.fps) : sourceFps;
-        // メタデータが壊れている場合に備えて下限を設ける (0 だと全フレームがキーフレームになる)
-        const effectiveFps = fps > 0 ? fps : 30;
-
-        const useAudio = !!(_opt.audio && source.audio && source.audioSamples.length);
-
-        // 動画を書き出す前に音声の対応状況を確認しておく (失敗を早く知らせるため)
-        let audioConfig = null;
-        if (useAudio) {
-            if (!global.AudioEncoder || typeof global.AudioEncoder.isConfigSupported !== 'function') {
-                throw new Error('This browser cannot encode audio. Set Audio to "Remove audio" and export again.');
-            }
-
-            const support = await global.AudioEncoder.isConfigSupported({
-                codec: 'mp4a.40.2',
-                sampleRate: source.audio.sampleRate,
-                numberOfChannels: source.audio.channelCount,
-                bitrate: _opt.audioBitrate || 128000
-            });
-            if (!support || !support.supported) {
-                throw new Error('This browser cannot re-encode AAC audio. Set Audio to "Remove audio" and export again.');
-            }
-            audioConfig = support.config;
+        if (!global.OffscreenCanvas || !global.VideoFrame) {
+            throw new Error('This browser cannot export video. Use the latest Chrome or Edge.');
         }
 
-        const duration = source.video.duration / (source.video.timescale || 1);
-
-        // 書き出し範囲。duration が 0 なら動画全体
-        const trimming = _opt.duration > 0;
-        const trimStart = trimming ? Math.max(0, _opt.start || 0) : 0;
-        const startUs = Math.round(trimStart * 1e6);
-        const endUs = trimming ? startUs + Math.round(_opt.duration * 1e6) : Infinity;
-
-        const target = new global.Mp4Muxer.ArrayBufferTarget();
-        const muxer = new global.Mp4Muxer.Muxer({
-            target: target,
-            fastStart: 'in-memory',
-            video: { codec: 'avc', width: _opt.width, height: _opt.height },
-            audio: useAudio ? {
-                codec: 'aac',
-                sampleRate: source.audio.sampleRate,
-                numberOfChannels: source.audio.channelCount
-            } : undefined
-        });
-
-        // ---- Video -------------------------------------------------------------
-        const encodeConfig = await Pick_Video_Codec({
-            width: _opt.width,
-            height: _opt.height,
-            bitrate: _opt.bitrate,
-            framerate: effectiveFps,
-            avc: { format: 'avc' },
-            latencyMode: 'quality'
-        });
-
-        const decoderConfig = {
-            codec: source.video.codec,
-            codedWidth: source.video.width,
-            codedHeight: source.video.height
-        };
-        const described = source.videoSamples.find(sample => sample.description);
-        const description = described ? Build_Avc_Description(described.description) : null;
-        if (!description) {
-            throw new Error('This file cannot be exported: only MP4 video encoded as H.264 (AVC) is supported by this browser. Re-encode the file to H.264 (for example with HandBrake) and try again.');
-        }
-        decoderConfig.description = description;
-
-        const canvas = new OffscreenCanvas(_opt.width, _opt.height);
-        const context = canvas.getContext('2d', { alpha: false, desynchronized: true });
-        context.imageSmoothingEnabled = true;
-        context.imageSmoothingQuality = 'high';
-
-        const outStep = _opt.fps > 0 ? 1e6 / effectiveFps : 0;
-        const keyFrame_Interval = Math.max(1, Math.round(effectiveFps * 2));
-        const needScale = _opt.width !== source.video.width || _opt.height !== source.video.height;
-
-        // 進捗表示の分母。書き出し範囲が指定されていればその長さで数える
-        const clipDuration = trimming
-            ? Math.min(_opt.duration, Math.max(0, duration - trimStart))
-            : duration;
-        const expected = clipDuration > 0
-            ? Math.max(1, Math.round((clipDuration * 1e6) / (outStep || (1e6 / effectiveFps))))
-            : source.videoSamples.length;
-
-        let failure = null;
-        let grid = 0;
-        let emitted = 0;
-
-        const encoder = new global.VideoEncoder({
-            output: (_chunk, _meta) => muxer.addVideoChunk(_chunk, _meta),
-            error: (_error) => { failure = _error; }
-        });
-        encoder.configure(encodeConfig);
-
-        const queue = [];
-        let pumping = false;
-        let pumpDone = Promise.resolve();
-
-        const pump = async () => {
-            try {
-                while (queue.length) {
-                    if (failure || _state.cancelled) {
-                        while (queue.length) queue.shift().close();
-                        return;
-                    }
-                    const frame = queue.shift();
-                    try {
-                        await emit(frame);
-                    } catch (_error) {
-                        failure = _error;
-                    } finally {
-                        frame.close();
-                    }
-                }
-            } finally {
-                pumping = false;
-            }
-        };
-
-        const emit = async (_frame) => {
-            if (encoder.encodeQueueSize > 6) await Once(encoder, 'dequeue');
-            if (failure) return;
-
-            // 書き出し開始より前のフレームは捨てる
-            if (trimming && _frame.timestamp < startUs) return;
-
-            // FPS を下げる場合は出力グリッドに一致するフレームだけを採用する
-            if (outStep > 0 && _frame.timestamp + outStep * 0.25 < grid) return;
-
-            // 出力タイムスタンプはクリップ先頭を 0 にする
-            const shifted = trimming ? Math.max(0, _frame.timestamp - startUs) : _frame.timestamp;
-            const timestamp = outStep > 0 ? grid : shifted;
-            if (outStep > 0) grid += outStep;
-
-            let output = _frame;
-            if (needScale) {
-                context.drawImage(_frame, 0, 0, _opt.width, _opt.height);
-                output = new VideoFrame(canvas, {
-                    timestamp: timestamp,
-                    duration: outStep > 0 ? Math.round(outStep) : _frame.duration
-                });
-            }
-
-// 途中フレームから始まるため、先頭は必ずキーフレームにする
-            const keyFrame = emitted === 0 || emitted % keyFrame_Interval === 0;
-            encoder.encode(output, { keyFrame: keyFrame });
-
-            if (needScale) output.close();
-            emitted++;
-
-            if (emitted % 3 === 0 || emitted >= expected) {
-                _report({ phase: 'video', ratio: Math.min(1, emitted / expected) });
-            }
-        };
-
-        const decoder = new global.VideoDecoder({
-            output: (_frame) => {
-                queue.push(_frame);
-                if (!pumping) {
-                    pumping = true;
-                    pumpDone = pump();
-                }
-            },
-            error: (_error) => { failure = _error; }
-        });
-        decoder.configure(decoderConfig);
+        const opened = await Open_Video(_file);
+        const video = opened.video;
 
         try {
-            // 書き出し開始位置から最も近い手前のキーフレームを復号の起点にする
-            let firstIndex = 0;
-            if (trimming) {
-                for (let i = 0; i < source.videoSamples.length; i++) {
-                    const sample = source.videoSamples[i];
-                    if ((sample.cts * 1e6) / sample.timescale > startUs) break;
-                    if (sample.is_sync) firstIndex = i;
-                }
+            const mediaDuration = isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+            const start = Math.max(0, _opt.start || 0);
+
+            let clip = _opt.duration > 0
+                ? _opt.duration
+                : (mediaDuration > 0 ? Math.max(0, mediaDuration - start) : 0);
+            if (mediaDuration > 0) clip = Math.min(clip, Math.max(0, mediaDuration - start));
+            if (!(clip > 0)) {
+                throw new Error('The export range is empty. Check the trim settings.');
             }
 
-            for (let index = firstIndex; index < source.videoSamples.length; index++) {
-                if (failure || _state.cancelled) break;
+            const wantedFps = _opt.fps > 0 ? _opt.fps : (_opt.sourceFps > 0 ? _opt.sourceFps : 0);
+            const effectiveFps = wantedFps > 0 ? wantedFps : 30;
 
-                const sample = source.videoSamples[index];
-                if (trimming && (sample.cts * 1e6) / sample.timescale > endUs) break;
+            _report({ phase: 'prepare', ratio: 0.35 });
 
-                decoder.decode(new EncodedVideoChunk({
-                    type: sample.is_sync ? 'key' : 'delta',
-                    timestamp: Math.round((sample.cts * 1e6) / sample.timescale),
-                    duration: Math.round((sample.duration * 1e6) / sample.timescale),
-                    data: sample.data
-                }));
-
-                if (decoder.decodeQueueSize > 8) await Once(decoder, 'dequeue');
+            // ---- Audio ---------------------------------------------------------
+            // ミューサーに音声トラックの情報が必要なため、映像より先に決める
+            let audioBuffer = null;
+            if (_opt.audio) {
+                audioBuffer = await Decode_Audio(_file);
+                _report({ phase: 'prepare', ratio: 0.7 });
             }
+            const audio = audioBuffer ? await Pick_Audio(audioBuffer, _opt.audioBitrate) : null;
+            if (_state.cancelled) return null;
 
-            if (!failure && !_state.cancelled) await decoder.flush();
-        } finally {
-            if (decoder.state !== 'closed') decoder.close();
-        }
-
-        if (failure) throw failure;
-        while (pumping || queue.length) await pumpDone;
-        if (failure) throw failure;
-
-        if (_state.cancelled) {
-            if (encoder.state !== 'closed') encoder.close();
-            return null;
-        }
-
-        try {
-            await encoder.flush();
-        } finally {
-            if (encoder.state !== 'closed') encoder.close();
-        }
-
-        // ---- Audio -------------------------------------------------------------
-        if (useAudio) {
-            let audioFailure = null;
-            const audioEncoder = new global.AudioEncoder({
-                output: (_chunk, _meta) => muxer.addAudioChunk(_chunk, _meta),
-                error: (_error) => { audioFailure = _error; }
-            });
-            audioEncoder.configure(audioConfig);
-
-            const audioQueue = [];
-            let audioPumping = false;
-            let audioDone = Promise.resolve();
-
-            const audioPump = async () => {
-                try {
-                    while (audioQueue.length) {
-                        if (audioFailure || _state.cancelled) {
-                            while (audioQueue.length) audioQueue.shift().close();
-                            return;
-                        }
-                        const data = audioQueue.shift();
-                        try {
-                            if (audioEncoder.encodeQueueSize > 24) await Once(audioEncoder, 'dequeue');
-                            audioEncoder.encode(data);
-                            data.close();
-                        } catch (_error) {
-                            audioFailure = _error;
-                            data.close();
-                        }
-                    }
-                } finally {
-                    audioPumping = false;
-                }
-            };
-
-            const audioDecoder = new global.AudioDecoder({
-                output: (_data) => {
-                    audioQueue.push(_data);
-                    if (!audioPumping) {
-                        audioPumping = true;
-                        audioDone = audioPump();
-                    }
-                },
-                error: (_error) => { audioFailure = _error; }
-            });
-            audioDecoder.configure({
-                codec: source.audio.codec,
-                sampleRate: source.audio.sampleRate,
-                numberOfChannels: source.audio.channelCount
+            // ---- Muxer ---------------------------------------------------------
+            const target = new global.Mp4Muxer.ArrayBufferTarget();
+            const muxer = new global.Mp4Muxer.Muxer({
+                target: target,
+                fastStart: 'in-memory',
+                video: { codec: 'avc', width: _opt.width, height: _opt.height },
+                audio: audio ? {
+                    codec: 'aac',
+                    sampleRate: audio.buffer.sampleRate,
+                    numberOfChannels: audio.buffer.numberOfChannels
+                } : undefined
             });
 
-            try {
-                for (const sample of source.audioSamples) {
-                    if (audioFailure || _state.cancelled) break;
+            const encodeConfig = await Pick_Video_Codec({
+                width: _opt.width,
+                height: _opt.height,
+                bitrate: _opt.bitrate,
+                framerate: effectiveFps,
+                avc: { format: 'avc' },
+                latencyMode: 'quality'
+            });
 
-                    const time = (sample.cts * 1e6) / sample.timescale;
-                    if (trimming) {
-                        if (time > endUs) break;
-                        // 書き出し開始より前の音声は落とす (AAC のフレーム長は約 21ms)
-                        if (time < startUs) continue;
-                    }
+            // ---- Video --------------------------------------------------------
+            const done = await Encode_Frames(video, {
+                muxer: muxer,
+                encodeConfig: encodeConfig,
+                width: _opt.width,
+                height: _opt.height,
+                start: start,
+                clip: clip,
+                mediaDuration: mediaDuration,
+                fps: effectiveFps
+            }, _report, _state);
+            if (!done) return null;
 
-                    audioDecoder.decode(new EncodedAudioChunk({
-                        type: 'key',
-                        timestamp: Math.round(time - startUs),
-                        duration: Math.round((sample.duration * 1e6) / sample.timescale),
-                        data: sample.data
-                    }));
-                    if (audioDecoder.decodeQueueSize > 24) await Once(audioDecoder, 'dequeue');
-                }
-
-                if (!audioFailure && !_state.cancelled) await audioDecoder.flush();
-            } finally {
-                if (audioDecoder.state !== 'closed') audioDecoder.close();
+            // ---- Audio --------------------------------------------------------
+            if (audio) {
+                _report({ phase: 'audio', ratio: 0 });
+                const audioDone = await Encode_Audio(audio, start, clip, muxer, _report, _state);
+                if (!audioDone) return null;
             }
 
-            if (audioFailure) throw audioFailure;
-            while (audioPumping || audioQueue.length) await audioDone;
-            if (audioFailure) throw audioFailure;
+            if (_state.cancelled) return null;
 
-            if (_state.cancelled) {
-                if (audioEncoder.state !== 'closed') audioEncoder.close();
-                return null;
-            }
-
-            try {
-                await audioEncoder.flush();
-            } finally {
-                if (audioEncoder.state !== 'closed') audioEncoder.close();
-            }
-
-            _report({ phase: 'audio', ratio: 1 });
-        }
-
-        _report({ phase: 'finish', ratio: 1 });
-        muxer.finalize();
-
-        return {
-            blob: new Blob([target.buffer], { type: 'video/mp4' }),
-            engine: 'webcodecs',
-            fps: effectiveFps
-        };
-    }
-
-    // ---------------------------------------------------------------------------
-    // Probe
-    // moov アトムだけを読むので軽く、書き出し前に FPS や音声の有無を取得できる
-    // mp4box が読めない形式 (webm など) では null を返す
-    // ---------------------------------------------------------------------------
-
-    async function Probe(_file) {
-        if (!/\.(mp4|m4v)$/i.test(_file.name)) return null;
-
-        try {
-            const source = await Demux(_file);
-            const duration = source.video.duration / (source.video.timescale || 1);
-            const fps = duration > 0 ? source.videoSamples.length / duration : 0;
+            _report({ phase: 'finish', ratio: 1 });
+            muxer.finalize();
 
             return {
-                width: source.video.width,
-                height: source.video.height,
-                duration: duration,
-                fps: fps,
-                codec: source.video.codec,
-                hasAudio: !!(source.audio && source.audioSamples.length),
-                audioCodec: source.audio ? source.audio.codec : '',
-                sampleRate: source.audio ? source.audio.sampleRate : 0,
-                channelCount: source.audio ? source.audio.channelCount : 0
+                blob: new Blob([target.buffer], { type: 'video/mp4' }),
+                engine: 'webcodecs',
+                fps: effectiveFps
             };
-        } catch (_error) {
-            return null;
+        } finally {
+            opened.dispose();
         }
     }
 
@@ -688,7 +685,8 @@
             audio: !!_options.audio,
             audioBitrate: _options.audioBitrate,
             start: _options.start > 0 ? _options.start : 0,
-            duration: _options.duration > 0 ? _options.duration : 0
+            duration: _options.duration > 0 ? _options.duration : 0,
+            sourceFps: _options.sourceFps > 0 ? _options.sourceFps : 0
         };
 
         const wanted = _options.engine || 'webcodecs';
@@ -699,10 +697,13 @@
             throw new Error('This browser does not support the WebCodecs API, which is required to export video. Use the latest Chrome or Edge.');
         }
         if (!Can_Demux(options.file)) {
-            throw new Error('Only MP4 / M4V files can be exported. Convert MOV, WebM or other formats to MP4 (H.264) first.');
+            throw new Error('Only MP4 / M4V files can be exported.');
+        }
+        if (!(options.bitrate > 0)) {
+            throw new Error('The video bitrate could not be determined. Choose a quality preset again.');
         }
 
-        const result = await Transcode_WebCodecs(options.file, options, report, state);
+        const result = await Transcode_File(options.file, options, report, state);
         if (!result) return { cancelled: true };
 
         result.elapsed = Date.now() - started;

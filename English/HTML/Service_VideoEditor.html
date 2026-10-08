@@ -485,7 +485,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
-  <script src="../../Asset/Javascript/VideoEditor.js?v=1.4"></script>
+  <script src="../../Asset/Javascript/VideoEditor.js?v=2.0"></script>
 
   <script>
     // 動画の標準解像度。大きい順に並べて、アップスケールしない範囲で最も近いものを選ぶ
@@ -1225,6 +1225,7 @@
             width: this.Output_Width,
             height: this.Output_Height,
             fps: this.Target_Fps,
+            sourceFps: this.Source_Fps,
             bitrate: this.Bitrate * 1000,
             audio: this.Audio !== 'remove' && this.Has_Audio,
             audioBitrate: this.Audio_Bitrate || 128000,
@@ -1236,9 +1237,10 @@
           window.VideoEditor.Transcode(options, (event) => {
             this.Progress = event.ratio;
             this.Progress_Phase = event.phase;
-            if (event.phase === 'prepare') this.Status = 'Preparing the encoder...';
+            if (event.phase === 'prepare') this.Status = 'Reading the source file...';
             if (event.phase === 'video') this.Status = 'Encoding video frames...';
             if (event.phase === 'audio') this.Status = 'Encoding audio...';
+            if (event.phase === 'finish') this.Status = 'Finalizing the MP4 file...';
           }, () => this.Cancel_Flag).then((result) => {
             this.Busy = false;
 
