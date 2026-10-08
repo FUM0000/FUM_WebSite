@@ -234,7 +234,13 @@
       border-radius: 22px;
       box-shadow: 0 14px 36px rgba(30, 58, 95, 0.06);
       overflow: hidden;
-      transition: box-shadow 0.18s ease, border-color 0.18s ease;
+      transition: box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+    }
+
+    .ex-card:hover {
+      background: rgba(42, 157, 143, 0.05);
+      border-color: rgba(42, 157, 143, 0.35);
+      box-shadow: 0 18px 42px rgba(30, 58, 95, 0.1);
     }
 
     .ex-card.is-open {
@@ -255,10 +261,6 @@
       cursor: pointer;
       font: inherit;
       color: inherit;
-    }
-
-    .ex-card-head:hover {
-      background: rgba(42, 157, 143, 0.05);
     }
 
     .ex-card-head-main {
@@ -386,6 +388,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       gap: 16px;
+      align-items: start;
     }
 
     .ex-menu-card {
@@ -394,6 +397,53 @@
       border-radius: 24px;
       padding: 24px;
       box-shadow: 0 16px 40px rgba(30, 58, 95, 0.07);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .ex-menu-card:hover {
+      background: linear-gradient(180deg, rgba(237, 248, 246, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
+      border-color: rgba(42, 157, 143, 0.35);
+      box-shadow: 0 18px 42px rgba(30, 58, 95, 0.1);
+    }
+
+    .ex-menu-card.is-open {
+      border-color: rgba(42, 157, 143, 0.4);
+      box-shadow: 0 18px 42px rgba(30, 58, 95, 0.1);
+    }
+
+    .ex-menu-head {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 0;
+      margin: -4px -10px 0 0;
+      background: transparent;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+      border-radius: 16px;
+    }
+
+    .ex-menu-head-main {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .ex-menu-head .ex-chevron {
+      margin-top: -6px;
+      margin-right: -4px;
+    }
+
+    .ex-menu-body {
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -732,41 +782,66 @@
                   </div>
                   <p class="section-lead">
                     A set menu is a small program that combines single exercises into a complete session.
-                    Pick the goal that matches what you want most right now. Each menu lists the exercises,
-                    how many sets and reps to perform, how long to rest, and how often to train.
+                    Pick the goal that matches what you want most right now. Cards start closed — open one to see
+                    the exercises, how many sets and reps to perform, how long to rest, and how often to train.
+                    Use “Switch All” to open or close every menu at once.
                   </p>
 
+                  <div class="ex-toolbar">
+                    <div class="filter-count">{{ setMenus.length }} menu(s) shown</div>
+                    <div class="ex-toggle-group">
+                      <button type="button" class="ex-toggle-btn" :class="{ 'is-on': AllMenusExpanded }"
+                              @click="ToggleAllMenus"
+                              :title="AllMenusExpanded ? 'Collapse all' : 'Expand all'"
+                              :aria-pressed="AllMenusExpanded ? 'true' : 'false'">
+                        <span class="ex-toggle-label">Switch All</span>
+                        <span class="ex-toggle-track"><span class="ex-toggle-knob"></span></span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div class="ex-menu-grid">
-                    <article class="ex-menu-card" v-for="menu in setMenus" :key="menu.name">
-                      <span class="ex-menu-goal">{{ menu.goal }}</span>
-                      <h3 class="ex-menu-name">{{ menu.name }}</h3>
-                      <p class="ex-menu-desc">{{ menu.description }}</p>
-                      <div class="ex-menu-facts">
-                        <div class="ex-fact">
-                          <span class="ex-fact-label">Frequency</span>
-                          <span class="ex-fact-value">{{ menu.frequency }}</span>
+                    <article class="ex-menu-card" :class="{ 'is-open': IsMenuExpanded(menu.name) }" v-for="menu in setMenus" :key="menu.name">
+                      <button type="button" class="ex-menu-head" @click="ToggleMenu(menu.name)" :aria-expanded="IsMenuExpanded(menu.name) ? 'true' : 'false'">
+                        <div class="ex-menu-head-main">
+                          <span class="ex-menu-goal">{{ menu.goal }}</span>
+                          <h3 class="ex-menu-name">{{ menu.name }}</h3>
                         </div>
-                        <div class="ex-fact">
-                          <span class="ex-fact-label">Session time</span>
-                          <span class="ex-fact-value">{{ menu.duration }}</span>
+                        <span class="ex-chevron" aria-hidden="true">
+                          <v-icon small>mdi-chevron-down</v-icon>
+                        </span>
+                      </button>
+                      <transition name="ex-expand">
+                        <div class="ex-menu-body" v-show="IsMenuExpanded(menu.name)">
+                          <p class="ex-menu-desc">{{ menu.description }}</p>
+                          <div class="ex-menu-facts">
+                            <div class="ex-fact">
+                              <span class="ex-fact-label">Frequency</span>
+                              <span class="ex-fact-value">{{ menu.frequency }}</span>
+                            </div>
+                            <div class="ex-fact">
+                              <span class="ex-fact-label">Session time</span>
+                              <span class="ex-fact-value">{{ menu.duration }}</span>
+                            </div>
+                            <div class="ex-fact">
+                              <span class="ex-fact-label">Warm-up</span>
+                              <span class="ex-fact-value">{{ menu.warmup }}</span>
+                            </div>
+                            <div class="ex-fact">
+                              <span class="ex-fact-label">Rest between sets</span>
+                              <span class="ex-fact-value">{{ menu.rest }}</span>
+                            </div>
+                          </div>
+                          <h4 class="ex-menu-list-title">Exercise list</h4>
+                          <ul class="ex-menu-list">
+                            <li class="ex-menu-item" v-for="item in menu.items" :key="item.name">
+                              <span class="ex-menu-item-name">{{ item.name }}</span>
+                              <span class="ex-menu-item-prescription">{{ item.prescription }}</span>
+                            </li>
+                          </ul>
+                          <p class="ex-menu-tip">{{ menu.tip }}</p>
                         </div>
-                        <div class="ex-fact">
-                          <span class="ex-fact-label">Warm-up</span>
-                          <span class="ex-fact-value">{{ menu.warmup }}</span>
-                        </div>
-                        <div class="ex-fact">
-                          <span class="ex-fact-label">Rest between sets</span>
-                          <span class="ex-fact-value">{{ menu.rest }}</span>
-                        </div>
-                      </div>
-                      <h4 class="ex-menu-list-title">Exercise list</h4>
-                      <ul class="ex-menu-list">
-                        <li class="ex-menu-item" v-for="item in menu.items" :key="item.name">
-                          <span class="ex-menu-item-name">{{ item.name }}</span>
-                          <span class="ex-menu-item-prescription">{{ item.prescription }}</span>
-                        </li>
-                      </ul>
-                      <p class="ex-menu-tip">{{ menu.tip }}</p>
+                      </transition>
                     </article>
                   </div>
 
@@ -838,6 +913,9 @@
         },
         AllExpanded() {
           return this.FilteredExercises.length > 0 && this.FilteredExercises.every(ex => this.IsExpanded(ex.name));
+        },
+        AllMenusExpanded() {
+          return this.setMenus.length > 0 && this.setMenus.every(menu => this.IsMenuExpanded(menu.name));
         }
       },
       methods: {
@@ -857,6 +935,21 @@
         },
         ToggleAll() {
           if (this.AllExpanded) { this.CollapseAll(); } else { this.ExpandAll(); }
+        },
+        IsMenuExpanded(name) {
+          return !!this.ExpandedMenus[name];
+        },
+        ToggleMenu(name) {
+          this.$set(this.ExpandedMenus, name, !this.ExpandedMenus[name]);
+        },
+        ToggleAllMenus() {
+          if (this.AllMenusExpanded) {
+            this.ExpandedMenus = {};
+          } else {
+            const next = {};
+            this.setMenus.forEach(menu => { next[menu.name] = true; });
+            this.ExpandedMenus = next;
+          }
         }
       },
       data: {
@@ -865,6 +958,7 @@
         SelectedEquipment: 'All',
         SelectedSort: 'Default',
         ExpandedExercises: {},
+        ExpandedMenus: {},
         exercises: [
           // ----- Chest -----
           {
