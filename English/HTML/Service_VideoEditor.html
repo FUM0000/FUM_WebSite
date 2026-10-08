@@ -66,17 +66,31 @@
                   <v-card>
                     <v-card-text class="pb-2">
                       <div class="Player_Frame" ref="Player_Frame" @dblclick="Toggle_Fullscreen">
-                        <video ref="Video" :key="Current_Video.url" class="Video_Player" :src="Current_Video.url"
-                          preload="metadata" playsinline @loadedmetadata="Loaded_Metadata"
-                          @timeupdate="Update_Time" @play="Playing = true" @pause="Playing = false"
-                          @ended="Ended" @error="Failed"></video>
+                        <div class="Stage" :style="Stage_Style">
+                          <div class="Stage_Inner" ref="Stage_Inner" :style="Inner_Style">
+                            <video ref="Video" :key="Current_Video.url" class="Stage_Video" :src="Current_Video.url"
+                              preload="metadata" playsinline @loadedmetadata="Loaded_Metadata"
+                              @timeupdate="Update_Time" @play="Playing = true" @pause="Playing = false"
+                              @ended="Ended" @error="Failed"></video>
 
-                        <div v-if="!Playing" class="Player_Center_Icon" @click="Toggle_Play">
-                          <v-icon size="72" color="rgba(255, 255, 255, 0.85)">mdi-play-circle-outline</v-icon>
-                        </div>
+                            <div v-if="Crop_Enabled" class="Crop_Overlay">
+                              <div class="Crop_Box" :style="Crop_Box_Style" @pointerdown="Crop_Drag('move', $event)"
+                                @dblclick.stop="">
+                                <span class="Crop_Handle Crop_NW" @pointerdown.stop="Crop_Drag('nw', $event)"></span>
+                                <span class="Crop_Handle Crop_NE" @pointerdown.stop="Crop_Drag('ne', $event)"></span>
+                                <span class="Crop_Handle Crop_SW" @pointerdown.stop="Crop_Drag('sw', $event)"></span>
+                                <span class="Crop_Handle Crop_SE" @pointerdown.stop="Crop_Drag('se', $event)"></span>
+                              </div>
+                            </div>
+                          </div>
 
-                        <div v-if="Failed_Playing" class="Player_Message">
-                          This browser cannot decode the video codec of this file.
+                          <div v-if="!Playing" class="Player_Center_Icon" @click="Toggle_Play">
+                            <v-icon size="72" color="rgba(255, 255, 255, 0.85)">mdi-play-circle-outline</v-icon>
+                          </div>
+
+                          <div v-if="Failed_Playing" class="Player_Message">
+                            This browser cannot decode the video codec of this file.
+                          </div>
                         </div>
                       </div>
                     </v-card-text>
@@ -145,6 +159,82 @@
                 </v-col>
               </v-row>
               <!-- ▲ Player ▲ -->
+
+
+              <!-- ▼ Crop & Rotate ▼ -->
+              <v-row justify="center" class="mt-4">
+                <v-col cols="12" md="8">
+                  <v-card>
+                    <v-card-title>
+                      <v-icon small class="mr-1">mdi-crop</v-icon>
+                      Crop &amp; Rotate
+                      <v-spacer></v-spacer>
+                      <v-btn small text :disabled="Busy" @click="Reset_Crop_Rotate">Reset</v-btn>
+                    </v-card-title>
+                    <v-card-text>
+
+                      <!-- Crop -->
+                      <div class="Export_Label">Crop</div>
+                      <v-switch v-model="Crop_Enabled" label="Crop the frame" inset hide-details class="mt-0"
+                        :disabled="Busy" @change="Crop_Changed"></v-switch>
+
+                      <v-row dense class="mt-1">
+                        <v-col cols="6" sm="3">
+                          <v-text-field v-model.number="Crop_X" label="X" type="number" dense outlined hide-details
+                            :min="0" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                          <v-text-field v-model.number="Crop_Y" label="Y" type="number" dense outlined hide-details
+                            :min="0" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                          <v-text-field v-model.number="Crop_W" label="Width" type="number" dense outlined hide-details
+                            :min="16" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                          <v-text-field v-model.number="Crop_H" label="Height" type="number" dense outlined hide-details
+                            :min="16" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
+                        </v-col>
+                      </v-row>
+
+                      <div class="Export_Hint">
+                        <v-icon x-small class="mr-1">mdi-information-outline</v-icon>
+                        Drag the corners of the frame in the preview. The output size follows the crop ratio.
+                      </div>
+
+                      <!-- Rotate -->
+                      <div class="Export_Label">Rotation</div>
+                      <div class="Rotate_Row">
+                        <v-btn icon small :disabled="Busy" @click="Rotate_By(-90)">
+                          <v-icon>mdi-rotate-left</v-icon>
+                        </v-btn>
+                        <span class="Rotate_Readout Selectable">{{ Total_Rotate }}&deg;</span>
+                        <v-btn icon small :disabled="Busy" @click="Rotate_By(90)">
+                          <v-icon>mdi-rotate-right</v-icon>
+                        </v-btn>
+                        <span class="Rotate_Hint ml-2">
+                          Quarter turns
+                        </span>
+                      </div>
+
+                      <v-slider v-model="Rotate_Angle" :min="-15" :max="15" :step="0.5" label="Tilt" thumb-label
+                        hide-details class="Tilt_Slider mt-3" :disabled="Busy" @change="Content_Changed"></v-slider>
+                      <div class="Rotate_Row mt-1">
+                        <v-btn small text :disabled="Busy || !Rotate_Angle"
+                          @click="Rotate_Angle = 0; Content_Changed()">
+                          Level
+                        </v-btn>
+                        <v-spacer></v-spacer>
+                        <span class="Rotate_Hint">
+                          Fine tilt up to &plusmn;15&deg; - black edges are cropped automatically.
+                        </span>
+                      </div>
+
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <!-- ▲ Crop & Rotate ▲ -->
 
 
               <!-- ▼ Trim ▼ -->
@@ -225,6 +315,14 @@
                           <tr>
                             <th>Ratio</th>
                             <td class="Selectable">{{ Aspect_Ratio }}</td>
+                          </tr>
+                          <tr>
+                            <th>Crop</th>
+                            <td class="Selectable">{{ Crop_Label }}</td>
+                          </tr>
+                          <tr>
+                            <th>Rotate</th>
+                            <td class="Selectable">{{ Rotate_Label }}</td>
                           </tr>
                           <tr>
                             <th>Rate</th>
@@ -314,6 +412,8 @@
                       </v-row>
                       <div class="Export_Hint">
                         <span>Source {{ Current_Video.width }} x {{ Current_Video.height }}</span>
+                        <span v-if="Crop_Enabled || Odd_Quarter" class="ml-3">
+                          Content {{ Content_Dims.w }} x {{ Content_Dims.h }}</span>
                         <v-spacer></v-spacer>
                         <span>Output {{ Output_Width }} x {{ Output_Height }}
                           ({{ Scale_Label }})</span>
@@ -485,7 +585,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
   <script src="../../Asset/Javascript/Common.js?v=1.03"></script>
-  <script src="../../Asset/Javascript/VideoEditor.js?v=2.0"></script>
+  <script src="../../Asset/Javascript/VideoEditor.js?v=2.1"></script>
 
   <script>
     // 動画の標準解像度。大きい順に並べて、アップスケールしない範囲で最も近いものを選ぶ
@@ -542,7 +642,14 @@
         Status: '',
         Export_Error: '',
         Result: null,
-        Result_Name: ''
+        Result_Name: '',
+        Crop_Enabled: false,
+        Crop_X: 0,
+        Crop_Y: 0,
+        Crop_W: 0,
+        Crop_H: 0,
+        Rotate_Step: 0,
+        Rotate_Angle: 0
       },
       computed: {
         Current_Video() {
@@ -564,9 +671,103 @@
         Output_Height() {
           return window.VideoEditor.To_Even(this.Target_Height || this.Current_Video.height);
         },
+        Source_W() {
+          return this.Current_Video ? (this.Current_Video.width || 0) : 0;
+        },
+        Source_H() {
+          return this.Current_Video ? (this.Current_Video.height || 0) : 0;
+        },
+        // 90度 / 270度 の回転だけ縦横を入れ替える
+        Odd_Quarter() {
+          return this.Rotate_Step === 90 || this.Rotate_Step === 270;
+        },
+        // プレビュー表示と書き出しが使う実効角度 (-180 〜 180)
+        Total_Rotate() {
+          let value = this.Rotate_Step + (this.Rotate_Angle || 0);
+          value = ((value % 360) + 360) % 360;
+          if (value > 180) value -= 360;
+          return value;
+        },
+        // 切り抜きと回転を反映した後のコンテンツ解像度
+        Content_Dims() {
+          const width = this.Source_W;
+          const height = this.Source_H;
+          if (!width || !height) return { w: 0, h: 0 };
+
+          let contentWidth = width;
+          let contentHeight = height;
+          if (this.Crop_Enabled && this.Crop_W > 0 && this.Crop_H > 0) {
+            contentWidth = this.Crop_W;
+            contentHeight = this.Crop_H;
+          }
+          if (this.Odd_Quarter) {
+            const swap = contentWidth;
+            contentWidth = contentHeight;
+            contentHeight = swap;
+          }
+          return { w: Math.max(2, Math.round(contentWidth)), h: Math.max(2, Math.round(contentHeight)) };
+        },
+        // ステージの縦横比は常にソース基準。切り抜きはオーバーレイで表現する
+        Stage_AR() {
+          const width = this.Source_W;
+          const height = this.Source_H;
+          if (!width || !height) return 16 / 9;
+          return this.Odd_Quarter ? height / width : width / height;
+        },
+        // 回転後のソースがステージを覆う倍率 (四隅が必ずステージ内に入る rect-cover)
+        Stage_K() {
+          const ar = this.Stage_AR;
+          if (!ar) return 1;
+          const theta = Math.abs(this.Total_Rotate) * Math.PI / 180;
+          const cos = Math.abs(Math.cos(theta));
+          const sin = Math.abs(Math.sin(theta));
+          const stageHeight = 1 / ar;
+          const innerWidth = this.Odd_Quarter ? stageHeight : 1;
+          const innerHeight = this.Odd_Quarter ? 1 : stageHeight;
+          const coverWidth = (cos + stageHeight * sin) / innerWidth;
+          const coverHeight = (sin + stageHeight * cos) / innerHeight;
+          return Math.max(1, coverWidth, coverHeight);
+        },
+        Stage_Style() {
+          const ar = this.Stage_AR;
+          return {
+            width: `min(100%, calc(var(--stage-max-h, 70vh) * ${ar}))`,
+            paddingBottom: `min(calc(100% / ${ar}), var(--stage-max-h, 70vh))`
+          };
+        },
+        Inner_Style() {
+          const ar = this.Stage_AR;
+          const odd = this.Odd_Quarter;
+          return {
+            width: odd ? `calc(100% / ${ar})` : '100%',
+            height: odd ? `calc(100% * ${ar})` : '100%',
+            transform: `translate(-50%, -50%) rotate(${this.Total_Rotate}deg) scale(${this.Stage_K})`
+          };
+        },
+        Crop_Box_Style() {
+          const width = this.Source_W;
+          const height = this.Source_H;
+          if (!width || !height) return {};
+          return {
+            left: `${(this.Crop_X / width) * 100}%`,
+            top: `${(this.Crop_Y / height) * 100}%`,
+            width: `${(this.Crop_W / width) * 100}%`,
+            height: `${(this.Crop_H / height) * 100}%`
+          };
+        },
+        Crop_Label() {
+          if (!this.Crop_Enabled) return 'Off';
+          return `${this.Crop_X}, ${this.Crop_Y} - ${this.Crop_W} x ${this.Crop_H}`;
+        },
+        Rotate_Label() {
+          const value = this.Total_Rotate;
+          if (!value) return 'None';
+          return `${value > 0 ? '+' : ''}${value} deg`;
+        },
         Scale_Label() {
-          if (!this.Current_Video.width) return '-';
-          const scale = this.Output_Width / this.Current_Video.width;
+          const content = this.Content_Dims;
+          if (!content.w) return '-';
+          const scale = this.Output_Width / content.w;
           if (Math.abs(scale - 1) < 0.005) return '100%';
           return `${(scale * 100).toFixed(0)}%`;
         },
@@ -768,6 +969,7 @@
           this.Trim_End = 0;
           this.Result = null;
           this.Export_Error = '';
+          this.Reset_Crop_State();
 
           // video 要素は :key で作り直されるため、再描画後に設定し直す
           this.$nextTick(() => {
@@ -836,6 +1038,7 @@
           this.Trim_End = 0;
           this.Result = null;
           this.Export_Error = '';
+          this.Reset_Crop_State();
         },
 
         ////// Trim
@@ -920,11 +1123,12 @@
           if (current) {
             this.$set(current, 'width', video.videoWidth);
             this.$set(current, 'height', video.videoHeight);
-            // moov の情報がまだなら、標準解像度の初期値をここで設定する
-            if (!this.Source_Info) {
-              this.Reset_Resolution();
-              this.Reset_Fps();
-            }
+            // 切り抜きと回転は新しいソースの解像度で作り直す
+            this.Reset_Crop_State();
+            // 出力サイズと FPS をこのソースの初期値へ戻す。
+            // プローブが先に終わって Source_Info が入っていても同じ値になるため二重実行は無害
+            this.Reset_Resolution();
+            this.Reset_Fps();
           }
           this.Duration = isFinite(video.duration) ? video.duration : 0;
           this.Reset_Trim();
@@ -1097,6 +1301,173 @@
           this.Shots = [];
         },
 
+        ////// Crop & Rotate
+
+        // 切り抜きと回転をソースの初期状態へ戻す
+        Reset_Crop_State() {
+          this.Crop_Enabled = false;
+          this.Rotate_Step = 0;
+          this.Rotate_Angle = 0;
+          this.Crop_X = 0;
+          this.Crop_Y = 0;
+          this.Crop_W = this.Source_W;
+          this.Crop_H = this.Source_H;
+        },
+
+        // 切り抜き矩形をソースの範囲内へ丸めて収める
+        Normalize_Crop() {
+          const width = this.Source_W;
+          const height = this.Source_H;
+          if (!width || !height) return;
+
+          let x = Math.round(Number(this.Crop_X));
+          let y = Math.round(Number(this.Crop_Y));
+          let cropWidth = Math.round(Number(this.Crop_W));
+          let cropHeight = Math.round(Number(this.Crop_H));
+          if (!isFinite(x)) x = 0;
+          if (!isFinite(y)) y = 0;
+          if (!isFinite(cropWidth) || cropWidth <= 0) cropWidth = width;
+          if (!isFinite(cropHeight) || cropHeight <= 0) cropHeight = height;
+
+          x = Math.max(0, Math.min(width - 2, x));
+          y = Math.max(0, Math.min(height - 2, y));
+          cropWidth = Math.max(16, Math.min(width - x, cropWidth));
+          cropHeight = Math.max(16, Math.min(height - y, cropHeight));
+
+          this.Crop_X = x;
+          this.Crop_Y = y;
+          this.Crop_W = cropWidth;
+          this.Crop_H = cropHeight;
+        },
+
+        // 出力サイズをコンテンツ比へ合わせるべきか
+        Follow_Content() {
+          return this.Lock_Ratio || this.Crop_Enabled || this.Odd_Quarter;
+        },
+
+        Crop_Changed() {
+          this.Normalize_Crop();
+          if (this.Follow_Content()) this.Sync_To_Content();
+        },
+
+        Content_Changed() {
+          if (this.Follow_Content()) this.Sync_To_Content();
+        },
+
+        // 切り抜きと回転後のコンテンツ解像度に合わせて出力サイズを決める
+        Sync_To_Content() {
+          const content = this.Content_Dims;
+          if (!content.w || !content.h) return;
+
+          let width = window.VideoEditor.To_Even(this.Target_Width || content.w);
+          width = Math.max(16, Math.min(7680, width));
+          let height = window.VideoEditor.To_Even((width * content.h) / content.w);
+          if (height > 4320) {
+            height = 4320;
+            width = window.VideoEditor.To_Even((height * content.w) / content.h);
+            width = Math.max(16, Math.min(7680, width));
+            height = window.VideoEditor.To_Even((width * content.h) / content.w);
+          }
+
+          this.Target_Width = width;
+          this.Target_Height = height;
+
+          const preset = `${this.Output_Width}x${this.Output_Height}`;
+          this.Resolution_Preset = this.Resolution_Items.some(item => item.value === preset)
+            ? preset
+            : 'custom';
+          this.Reset_Bitrate();
+        },
+
+        // 90度単位の回転。縦横を入れ替えてから出力サイズを合わせる
+        Rotate_By(_delta) {
+          this.Rotate_Step = (this.Rotate_Step + _delta + 360) % 360;
+          const width = this.Target_Width;
+          this.Target_Width = this.Target_Height;
+          this.Target_Height = width;
+          this.Sync_To_Content();
+        },
+
+        Reset_Crop_Rotate() {
+          this.Reset_Crop_State();
+          this.Reset_Resolution();
+        },
+
+        // プレビュー上の切り抜き枠をドラッグする
+        Crop_Drag(_mode, _event) {
+          if (!this.Crop_Enabled || this.Busy) return;
+          const inner = this.$refs.Stage_Inner;
+          if (!inner || !inner.offsetWidth || !inner.offsetHeight) return;
+          _event.preventDefault();
+
+          const sourcePerLayoutX = this.Source_W / inner.offsetWidth;
+          const sourcePerLayoutY = this.Source_H / inner.offsetHeight;
+          const theta = this.Total_Rotate * Math.PI / 180;
+          const cos = Math.cos(theta);
+          const sin = Math.sin(theta);
+          const scale = this.Stage_K;
+          const base = { x: this.Crop_X, y: this.Crop_Y, w: this.Crop_W, h: this.Crop_H };
+          const startX = _event.clientX;
+          const startY = _event.clientY;
+
+          const onMove = (event) => {
+            // 画面差分を逆回転してスケール戻し、レイアウト座標からソース座標へ変換する
+            const deltaX = (event.clientX - startX);
+            const deltaY = (event.clientY - startY);
+            const layoutX = (deltaX * cos + deltaY * sin) / scale;
+            const layoutY = (-deltaX * sin + deltaY * cos) / scale;
+            this.Apply_Crop_Drag(_mode, base, layoutX * sourcePerLayoutX, layoutY * sourcePerLayoutY);
+          };
+
+          const onUp = () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            window.removeEventListener('pointercancel', onUp);
+            this.Crop_Changed();
+          };
+
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+          window.addEventListener('pointercancel', onUp);
+        },
+
+        Apply_Crop_Drag(_mode, _base, _deltaX, _deltaY) {
+          const width = this.Source_W;
+          const height = this.Source_H;
+          const min = 16;
+          let x = _base.x;
+          let y = _base.y;
+          let cropWidth = _base.w;
+          let cropHeight = _base.h;
+
+          if (_mode === 'move') {
+            x = Math.max(0, Math.min(width - _base.w, _base.x + _deltaX));
+            y = Math.max(0, Math.min(height - _base.h, _base.y + _deltaY));
+          } else {
+            if (_mode.indexOf('n') >= 0) {
+              const bottom = _base.y + _base.h;
+              y = Math.max(0, Math.min(bottom - min, _base.y + _deltaY));
+              cropHeight = bottom - y;
+            }
+            if (_mode.indexOf('s') >= 0) {
+              cropHeight = Math.max(min, Math.min(height - _base.y, _base.h + _deltaY));
+            }
+            if (_mode.indexOf('w') >= 0) {
+              const right = _base.x + _base.w;
+              x = Math.max(0, Math.min(right - min, _base.x + _deltaX));
+              cropWidth = right - x;
+            }
+            if (_mode.indexOf('e') >= 0) {
+              cropWidth = Math.max(min, Math.min(width - _base.x, _base.w + _deltaX));
+            }
+          }
+
+          this.Crop_X = Math.round(x);
+          this.Crop_Y = Math.round(y);
+          this.Crop_W = Math.round(cropWidth);
+          this.Crop_H = Math.round(cropHeight);
+        },
+
         ////// Export
 
         // 元解像度を上限に、縦横を合わせた標準解像度のうち最も大きいものを初期値にする
@@ -1120,11 +1491,14 @@
         },
 
         Reset_Resolution() {
+          // ソース解像度が未確定のうちは決められない
+          if (!this.Content_Dims.w || !this.Content_Dims.h) return;
           const preset = this.Default_Resolution();
           if (preset === 'original') {
             this.Resolution_Preset = 'original';
-            this.Target_Width = this.Current_Video.width;
-            this.Target_Height = this.Current_Video.height;
+            const content = this.Content_Dims;
+            this.Target_Width = content.w;
+            this.Target_Height = content.h;
           } else {
             this.Resolution_Preset = preset;
             this.Change_Resolution(preset);
@@ -1162,8 +1536,8 @@
           }
 
           const [width, height] = String(_preset).split('x').map(Number);
-          const sourceWidth = this.Current_Video.width;
-          const sourceHeight = this.Current_Video.height;
+          const sourceWidth = this.Content_Dims.w;
+          const sourceHeight = this.Content_Dims.h;
 
           // 縦向き動画に横向きプリセットを当てても比率が崩れないようにする
           const sourceVertical = sourceHeight > sourceWidth;
@@ -1186,11 +1560,11 @@
 
         // 片方を変えたらアスペクト比に合わせてもう片方を決める
         Sync_Resolution(_changed) {
-          const source = this.Current_Video;
-          if (!source.width || !source.height) return;
+          const content = this.Content_Dims;
+          if (!content.w || !content.h) return;
 
-          if (this.Lock_Ratio) {
-            const ratio = source.height / source.width;
+          if (this.Follow_Content()) {
+            const ratio = content.h / content.w;
             if (_changed === 'width') {
               this.Target_Height = window.VideoEditor.To_Even(this.Target_Width * ratio);
             } else {
@@ -1231,7 +1605,11 @@
             audioBitrate: this.Audio_Bitrate || 128000,
             engine: 'webcodecs',
             start: this.Trim_Enabled ? this.Trim_Start : 0,
-            duration: this.Clip_Duration
+            duration: this.Clip_Duration,
+            crop: this.Crop_Enabled
+              ? { x: this.Crop_X, y: this.Crop_Y, w: this.Crop_W, h: this.Crop_H }
+              : null,
+            rotate: this.Total_Rotate
           };
 
           window.VideoEditor.Transcode(options, (event) => {
@@ -1269,7 +1647,11 @@
 
         Output_Name() {
           const base = (this.Current_Video.name || 'video').replace(/\.[^.]+$/, '');
-          const suffix = this.Trim_Enabled ? '_clip' : '';
+          const suffix = [
+            this.Trim_Enabled ? '_clip' : '',
+            this.Crop_Enabled ? '_crop' : '',
+            (this.Rotate_Step || this.Rotate_Angle) ? '_rot' : ''
+          ].join('');
           return `${base}_${this.Output_Width}x${this.Output_Height}${suffix}.mp4`;
         },
 
@@ -1404,11 +1786,89 @@
       border-radius: 0;
     }
 
-    .Video_Player {
+    .Stage {
+      position: relative;
+      margin: 0 auto;
+      overflow: hidden;
+      background-color: #000000;
+      /* 幅と高さは :style で min() 計算する。上限値だけを持つ */
+      --stage-max-h: 70vh;
+    }
+
+    .Player_Frame:fullscreen .Stage {
+      --stage-max-h: 100vh;
+    }
+
+    /* ソースの縦横比を保ったまま回転と拡縮を受ける枠 */
+    .Stage_Inner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-origin: center center;
+    }
+
+    .Stage_Video {
       display: block;
       width: 100%;
-      max-height: 70vh;
+      height: 100%;
+      object-fit: cover;
       background-color: #000000;
+    }
+
+    .Crop_Overlay {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .Crop_Box {
+      position: absolute;
+      box-sizing: border-box;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+      cursor: move;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .Crop_Handle {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #1976D2;
+      border-radius: 50%;
+      background-color: #ffffff;
+      transform: translate(-50%, -50%);
+      touch-action: none;
+    }
+
+    .Crop_NW {
+      top: 0;
+      left: 0;
+      cursor: nwse-resize;
+    }
+
+    .Crop_NE {
+      top: 0;
+      left: 100%;
+      cursor: nesw-resize;
+    }
+
+    .Crop_SW {
+      top: 100%;
+      left: 0;
+      cursor: nesw-resize;
+    }
+
+    .Crop_SE {
+      top: 100%;
+      left: 100%;
+      cursor: nwse-resize;
     }
 
     .Player_Center_Icon {
@@ -1421,6 +1881,7 @@
       justify-content: center;
       opacity: 0.75;
       transition: opacity 0.2s ease;
+      z-index: 5;
     }
 
     .Player_Center_Icon:hover {
@@ -1440,6 +1901,7 @@
       text-align: center;
       color: #ffcdd2;
       background-color: rgba(0, 0, 0, 0.72);
+      z-index: 6;
     }
 
     .Seek_Slider {
@@ -1484,6 +1946,30 @@
     .Screenshot_Hint {
       font-size: 0.75em;
       color: #90a4ae;
+    }
+
+    /* //// Crop & Rotate */
+
+    .Rotate_Row {
+      display: flex;
+      align-items: center;
+    }
+
+    .Rotate_Readout {
+      min-width: 64px;
+      text-align: center;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      color: #37474f;
+    }
+
+    .Rotate_Hint {
+      font-size: 0.75em;
+      color: #90a4ae;
+    }
+
+    .Tilt_Slider {
+      max-width: 420px;
     }
 
     /* //// Trim */
@@ -1712,8 +2198,8 @@
     /* //// Mobile */
 
     @media (max-width: 600px) {
-      .Video_Player {
-        max-height: 45vh;
+      .Stage {
+        --stage-max-h: 45vh;
       }
 
       .Speed_Select {
