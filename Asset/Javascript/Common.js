@@ -331,6 +331,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Various Statistics</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Service_Cat.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Cat</v-list-item-title>
+                    </v-list-item>
                 </v-list-group sub-group>
                 
                 <v-list-group sub-group :value="false">
