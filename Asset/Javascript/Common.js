@@ -124,15 +124,36 @@ function Get_Menu_Color() {
     }
     return '#CFD8DC';
 }
+function Get_Menu_Gradient(_color) {
+    const color = (_color || '').trim() || '#CFD8DC';
+    let transparent = 'transparent';
+    let opaque = color;
+    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color)) {
+        let hex = color.slice(1);
+        if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        transparent = 'rgba(' + r + ', ' + g + ', ' + b + ', 0)';
+        opaque = 'rgba(' + r + ', ' + g + ', ' + b + ', 1)';
+    }
+    return 'linear-gradient(to right, ' + transparent + ' 0px, ' + opaque + ' var(--menu-fade, 64px))';
+}
+function Apply_Menu_Background(_element, _color) {
+    if (!_element) return;
+    const color = _color || Get_Menu_Color();
+    _element.style.setProperty('background-color', 'transparent', 'important');
+    _element.style.setProperty('background-image', Get_Menu_Gradient(color), 'important');
+}
 
 
 //// NavigationBar
 Vue.component('main-navigation', {
     template: `
-    <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right temporary>
+    <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right temporary overlay-opacity="0.15">
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
-        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" style="height: 50px; background-color: rgba(0, 0, 0, 0.54); color: white;">
+        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" style="height: 50px; background: linear-gradient(to right, rgba(0, 0, 0, 0) 0px, rgba(0, 0, 0, 0.54) var(--menu-fade, 64px)); color: white;">
             <div style="display: flex; width: 100%; align-items: center;">
                 <span style="flex: 1;"></span>
                 <span>MENU</span>
@@ -1360,10 +1381,7 @@ Vue.component('main-navigation', {
     },
     methods: {
         applyMenuColor() {
-            const color = Get_Menu_Color();
-            if (color && this.$el) {
-                this.$el.style.setProperty('background-color', color, 'important');
-            }
+            Apply_Menu_Background(this.$el, Get_Menu_Color());
         },
         Clear_Search() {
             this.Search_Query = '';
