@@ -85,6 +85,14 @@
                             </div>
                           </div>
 
+                          <!-- 傾きはプレビュー上のグリップをドラッグして調整できる -->
+                          <div class="Rotate_Overlay">
+                            <div class="Rotate_Grip" :class="{ 'Rotate_Grip_Active': Rotate_Angle }"
+                              title="Drag to tilt the video" @pointerdown="Rotate_Drag">
+                              <v-icon small>mdi-rotate-3d-variant</v-icon>
+                            </div>
+                          </div>
+
                           <div v-if="!Playing" class="Player_Center_Icon" @click="Toggle_Play">
                             <v-icon size="72" color="rgba(255, 255, 255, 0.85)">mdi-play-circle-outline</v-icon>
                           </div>
@@ -160,132 +168,6 @@
                 </v-col>
               </v-row>
               <!-- ▲ Player ▲ -->
-
-
-              <!-- ▼ Crop & Rotate ▼ -->
-              <v-row justify="center" class="mt-4">
-                <v-col cols="12" md="8">
-                  <v-card>
-                    <v-card-title>
-                      <v-icon small class="mr-1">mdi-crop</v-icon>
-                      Crop &amp; Rotate
-                      <v-spacer></v-spacer>
-                      <v-btn small text :disabled="Busy" @click="Reset_Crop_Rotate">Reset</v-btn>
-                    </v-card-title>
-                    <v-card-text>
-
-                      <!-- Crop -->
-                      <div class="Export_Label">Crop</div>
-                      <v-switch v-model="Crop_Enabled" label="Crop the frame" inset hide-details class="mt-0"
-                        :disabled="Busy" @change="Crop_Changed"></v-switch>
-
-                      <v-row dense class="mt-1">
-                        <v-col cols="6" sm="3">
-                          <v-text-field v-model.number="Crop_X" label="X" type="number" dense outlined hide-details
-                            :min="0" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
-                        </v-col>
-                        <v-col cols="6" sm="3">
-                          <v-text-field v-model.number="Crop_Y" label="Y" type="number" dense outlined hide-details
-                            :min="0" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
-                        </v-col>
-                        <v-col cols="6" sm="3">
-                          <v-text-field v-model.number="Crop_W" label="Width" type="number" dense outlined hide-details
-                            :min="16" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
-                        </v-col>
-                        <v-col cols="6" sm="3">
-                          <v-text-field v-model.number="Crop_H" label="Height" type="number" dense outlined hide-details
-                            :min="16" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
-                        </v-col>
-                      </v-row>
-
-                      <v-checkbox v-model="Crop_Lock_Ratio" label="Keep aspect ratio" dense hide-details
-                        class="mt-1 mb-0" :disabled="!Crop_Enabled || Busy" @change="Crop_Ratio_Changed"></v-checkbox>
-
-                      <div class="Export_Hint">
-                        <v-icon x-small class="mr-1">mdi-information-outline</v-icon>
-                        Drag the corners of the frame in the preview. The frame stays put while the video tilts.
-                      </div>
-
-                      <!-- Rotate -->
-                      <div class="Export_Label">Rotation</div>
-                      <div class="Rotate_Row">
-                        <v-btn icon small :disabled="Busy" @click="Rotate_By(-90)">
-                          <v-icon>mdi-rotate-left</v-icon>
-                        </v-btn>
-                        <span class="Rotate_Readout Selectable">{{ Total_Rotate }}&deg;</span>
-                        <v-btn icon small :disabled="Busy" @click="Rotate_By(90)">
-                          <v-icon>mdi-rotate-right</v-icon>
-                        </v-btn>
-                        <span class="Rotate_Hint ml-2">
-                          Quarter turns
-                        </span>
-                      </div>
-
-                      <v-slider v-model="Rotate_Angle" :min="-15" :max="15" :step="0.5" label="Tilt" thumb-label
-                        hide-details class="Tilt_Slider mt-3" :disabled="Busy" @change="Content_Changed"></v-slider>
-                      <div class="Rotate_Row mt-1">
-                        <v-btn small text :disabled="Busy || !Rotate_Angle"
-                          @click="Rotate_Angle = 0; Content_Changed()">
-                          Level
-                        </v-btn>
-                        <v-spacer></v-spacer>
-                        <span class="Rotate_Hint">
-                          Fine tilt up to &plusmn;15&deg; - black edges are cropped automatically.
-                        </span>
-                      </div>
-
-                    </v-card-text>
-                  </v-card>
-                </v-col>
-              </v-row>
-              <!-- ▲ Crop & Rotate ▲ -->
-
-
-              <!-- ▼ Trim ▼ -->
-              <v-row justify="center" class="mt-4">
-                <v-col cols="12" md="8">
-                  <v-card>
-                    <v-card-title>
-                      <v-icon small class="mr-1">mdi-content-cut</v-icon>
-                      Trim
-                      <v-spacer></v-spacer>
-                      <v-btn small text class="mr-1" :disabled="!Trim_Enabled || !Duration || Busy" @click="Set_Trim_Start">
-                        Set In
-                      </v-btn>
-                      <v-btn small text class="mr-1" :disabled="!Trim_Enabled || !Duration || Busy" @click="Set_Trim_End">
-                        Set Out
-                      </v-btn>
-                      <v-switch v-model="Trim_Enabled" inset hide-details class="mt-0"></v-switch>
-                    </v-card-title>
-                    <v-card-text>
-                      <v-slider v-model="Trim_Start" :min="0" :max="Trim_End" :step="0.01" label="Trim Start"
-                        color="primary" thumb-label :disabled="!Duration || Busy" @end="Normalize_Trim">
-                        <template v-slot:append>
-                          <input type="number" class="Trim_Num_Input" v-model="Trim_Start_Text" step="0.01" min="0"
-                            :disabled="!Duration" @focus="Focus_Trim_Input('Trim_Start', $event)"
-                            @change="Commit_Trim_Start" @blur="Commit_Trim_Start">
-                        </template>
-                      </v-slider>
-
-                      <v-slider v-model="Trim_End" :min="Trim_Start" :max="Duration" :step="0.01" label="Trim End"
-                        color="primary" thumb-label :disabled="!Duration || Busy" @end="Normalize_Trim">
-                        <template v-slot:append>
-                          <input type="number" class="Trim_Num_Input" v-model="Trim_End_Text" step="0.01" min="0"
-                            :disabled="!Duration" @focus="Focus_Trim_Input('Trim_End', $event)"
-                            @change="Commit_Trim_End" @blur="Commit_Trim_End">
-                        </template>
-                      </v-slider>
-
-                      <div class="Export_Hint">
-                        <span>Only the selected range is played back and exported.</span>
-                        <v-spacer></v-spacer>
-                        <span>Clip <b>{{ Format_Time(Clip_Duration) }}</b></span>
-                      </div>
-                    </v-card-text>
-                  </v-card>
-                </v-col>
-              </v-row>
-              <!-- ▲ Trim ▲ -->
 
 
               <!-- ▼ Info + Playlist ▼ -->
@@ -381,6 +263,132 @@
               <!-- ▲ Info + Playlist ▲ -->
 
 
+              <!-- ▼ Trim ▼ -->
+              <v-row justify="center" class="mt-4">
+                <v-col cols="12" md="8">
+                  <v-card>
+                    <v-card-title>
+                      <v-icon small class="mr-1">mdi-content-cut</v-icon>
+                      Trim
+                      <v-spacer></v-spacer>
+                      <v-btn small text class="mr-1" :disabled="!Trim_Enabled || !Duration || Busy" @click="Set_Trim_Start">
+                        Set In
+                      </v-btn>
+                      <v-btn small text class="mr-1" :disabled="!Trim_Enabled || !Duration || Busy" @click="Set_Trim_End">
+                        Set Out
+                      </v-btn>
+                      <v-switch v-model="Trim_Enabled" inset hide-details class="mt-0"></v-switch>
+                    </v-card-title>
+                    <v-card-text>
+                      <v-slider v-model="Trim_Start" :min="0" :max="Trim_End" :step="0.01" label="Trim Start"
+                        color="primary" thumb-label :disabled="!Duration || Busy" @end="Normalize_Trim">
+                        <template v-slot:append>
+                          <input type="number" class="Trim_Num_Input" v-model="Trim_Start_Text" step="0.01" min="0"
+                            :disabled="!Duration" @focus="Focus_Trim_Input('Trim_Start', $event)"
+                            @change="Commit_Trim_Start" @blur="Commit_Trim_Start">
+                        </template>
+                      </v-slider>
+
+                      <v-slider v-model="Trim_End" :min="Trim_Start" :max="Duration" :step="0.01" label="Trim End"
+                        color="primary" thumb-label :disabled="!Duration || Busy" @end="Normalize_Trim">
+                        <template v-slot:append>
+                          <input type="number" class="Trim_Num_Input" v-model="Trim_End_Text" step="0.01" min="0"
+                            :disabled="!Duration" @focus="Focus_Trim_Input('Trim_End', $event)"
+                            @change="Commit_Trim_End" @blur="Commit_Trim_End">
+                        </template>
+                      </v-slider>
+
+                      <div class="Export_Hint">
+                        <span>Only the selected range is played back and exported.</span>
+                        <v-spacer></v-spacer>
+                        <span>Clip <b>{{ Format_Time(Clip_Duration) }}</b></span>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <!-- ▲ Trim ▲ -->
+
+
+              <!-- ▼ Crop & Rotate ▼ -->
+              <v-row justify="center" class="mt-4">
+                <v-col cols="12" md="8">
+                  <v-card>
+                    <v-card-title>
+                      <v-icon small class="mr-1">mdi-crop</v-icon>
+                      Crop &amp; Rotate
+                      <v-spacer></v-spacer>
+                      <v-btn small text :disabled="Busy" @click="Reset_Crop_Rotate">Reset</v-btn>
+                    </v-card-title>
+                    <v-card-text>
+
+                      <!-- Crop -->
+                      <div class="Export_Label">Crop</div>
+                      <v-switch v-model="Crop_Enabled" label="Crop the frame" inset hide-details class="mt-0"
+                        :disabled="Busy" @change="Crop_Changed"></v-switch>
+
+                      <v-row dense class="mt-1">
+                        <v-col cols="6" sm="3">
+                          <v-text-field v-model.number="Crop_X" label="X" type="number" dense outlined hide-details
+                            :min="0" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                          <v-text-field v-model.number="Crop_Y" label="Y" type="number" dense outlined hide-details
+                            :min="0" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                          <v-text-field v-model.number="Crop_W" label="Width" type="number" dense outlined hide-details
+                            :min="16" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                          <v-text-field v-model.number="Crop_H" label="Height" type="number" dense outlined hide-details
+                            :min="16" :disabled="!Crop_Enabled || Busy" @change="Crop_Changed"></v-text-field>
+                        </v-col>
+                      </v-row>
+
+                      <v-checkbox v-model="Crop_Lock_Ratio" label="Keep aspect ratio" dense hide-details
+                        class="mt-1 mb-0" :disabled="!Crop_Enabled || Busy" @change="Crop_Ratio_Changed"></v-checkbox>
+
+                      <div class="Export_Hint">
+                        <v-icon x-small class="mr-1">mdi-information-outline</v-icon>
+                        Drag the corners of the frame in the preview. The frame stays put while the video tilts.
+                      </div>
+
+                      <!-- Rotate -->
+                      <div class="Export_Label">Rotation</div>
+                      <div class="Rotate_Row">
+                        <v-btn icon small :disabled="Busy" @click="Rotate_By(-90)">
+                          <v-icon>mdi-rotate-left</v-icon>
+                        </v-btn>
+                        <span class="Rotate_Readout Selectable">{{ Total_Rotate }}&deg;</span>
+                        <v-btn icon small :disabled="Busy" @click="Rotate_By(90)">
+                          <v-icon>mdi-rotate-right</v-icon>
+                        </v-btn>
+                        <span class="Rotate_Hint ml-2">
+                          Quarter turns
+                        </span>
+                      </div>
+
+                      <v-slider v-model="Rotate_Angle" :min="-15" :max="15" :step="0.5" label="Tilt" thumb-label
+                        hide-details class="Tilt_Slider mt-3" :disabled="Busy" @change="Content_Changed"></v-slider>
+                      <div class="Rotate_Row mt-1">
+                        <v-btn small text :disabled="Busy || !Rotate_Angle"
+                          @click="Rotate_Angle = 0; Content_Changed()">
+                          Level
+                        </v-btn>
+                        <v-spacer></v-spacer>
+                        <span class="Rotate_Hint">
+                          Fine tilt up to &plusmn;15&deg;. Drag the round grip on the preview or use the slider.
+                        </span>
+                      </div>
+
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <!-- ▲ Crop & Rotate ▲ -->
+
+
               <!-- ▼ Export ▼ -->
               <v-row justify="center" class="mt-4">
                 <v-col cols="12" md="8">
@@ -459,6 +467,16 @@
                           <span v-else>Audio {{ Format_Bitrate(Audio_Bitrate) }} - AAC</span>
                         </v-col>
                       </v-row>
+
+                      <!-- File name -->
+                      <div class="Export_Label">File name</div>
+                      <v-text-field v-model="File_Name" :placeholder="Output_Name()" label="Output file name" dense
+                        outlined hide-details prepend-inner-icon="mdi-file-video" class="Export_Field"
+                        @keydown.enter.prevent></v-text-field>
+                      <div class="Export_Hint">
+                        <v-icon x-small class="mr-1">mdi-information-outline</v-icon>
+                        {{ Resolved_Name }}
+                      </div>
 
                       <!-- Estimate + Actions -->
                       <v-divider class="my-4"></v-divider>
@@ -647,6 +665,7 @@
         Export_Error: '',
         Result: null,
         Result_Name: '',
+        File_Name: '',
         Crop_Enabled: false,
         Crop_X: 0,
         Crop_Y: 0,
@@ -773,6 +792,16 @@
           const scale = this.Output_Width / content.w;
           if (Math.abs(scale - 1) < 0.005) return '100%';
           return `${(scale * 100).toFixed(0)}%`;
+        },
+        // 出力ファイル名。手入力があれば安全な文字へ直して .mp4 を補う
+        Resolved_Name() {
+          let name = (this.File_Name || '').trim()
+            .replace(/[\\/:*?"<>|]+/g, '_')
+            .replace(/\s+/g, ' ')
+            .replace(/^[.\s]+/, '')
+            .replace(/[.\s]+$/, '');
+          if (!name) return this.Output_Name();
+          return /\.mp4$/i.test(name) ? name : `${name}.mp4`;
         },
         Resolution_Items() {
           const items = [{ text: 'Original', value: 'original' }];
@@ -972,6 +1001,7 @@
           this.Trim_End = 0;
           this.Result = null;
           this.Export_Error = '';
+          this.File_Name = '';
           this.Reset_Crop_State();
 
           // video 要素は :key で作り直されるため、再描画後に設定し直す
@@ -1041,6 +1071,7 @@
           this.Trim_End = 0;
           this.Result = null;
           this.Export_Error = '';
+          this.File_Name = '';
           this.Reset_Crop_State();
         },
 
@@ -1473,6 +1504,42 @@
           this.Reset_Resolution();
         },
 
+        // プレビュー上部のグリップを回して傾き (Rotate_Angle) を調整する。
+        // ステージ中心を軸に、掴んだ位置からの回転角をそのまま細かい傾きへ反映する
+        Rotate_Drag(_event) {
+          if (!this.Current_Video || this.Busy) return;
+          const stage = this.$refs.Stage;
+          if (!stage) return;
+          _event.preventDefault();
+
+          const bounds = stage.getBoundingClientRect();
+          const centerX = bounds.left + bounds.width / 2;
+          const centerY = bounds.top + bounds.height / 2;
+          const startAngle = Math.atan2(_event.clientY - centerY, _event.clientX - centerX) * 180 / Math.PI;
+          const startTilt = this.Rotate_Angle || 0;
+
+          const onMove = (event) => {
+            const angle = Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180 / Math.PI;
+            let delta = angle - startAngle;
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
+            // スライダーと同じ ±15 度、0.5 度刻みに合わせる
+            const next = Math.max(-15, Math.min(15, startTilt + delta));
+            this.Rotate_Angle = Math.round(next * 2) / 2;
+            this.Content_Changed();
+          };
+
+          const onEnd = () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onEnd);
+            window.removeEventListener('pointercancel', onEnd);
+          };
+
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onEnd);
+          window.addEventListener('pointercancel', onEnd);
+        },
+
         // プレビュー上の切り抜き枠をドラッグする。枠は画面上で水平固定なので
         // 画面差分をフレーム解像度へ換算するだけでよく、回転補正は不要
         Crop_Drag(_mode, _event) {
@@ -1735,7 +1802,7 @@
             this.Progress = 1;
             this.Status = 'Done.';
             this.Result = result;
-            this.Result_Name = this.Output_Name();
+            this.Result_Name = this.Resolved_Name;
           }).catch((error) => {
             this.Busy = false;
             this.Progress = 0;
@@ -1928,6 +1995,45 @@
       overflow: hidden;
       pointer-events: none;
       z-index: 2;
+    }
+
+    /* 傾き用のグリップ。プレビュー上部で常に操作できる */
+    .Rotate_Overlay {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .Rotate_Grip {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      border-radius: 50%;
+      background-color: rgba(33, 33, 33, 0.7);
+      color: #ffffff;
+      cursor: grab;
+      pointer-events: auto;
+      touch-action: none;
+      transition: background-color 0.15s;
+    }
+
+    .Rotate_Grip:hover {
+      background-color: rgba(25, 118, 210, 0.9);
+    }
+
+    .Rotate_Grip_Active {
+      background-color: rgba(25, 118, 210, 0.95);
     }
 
     .Crop_Box {
