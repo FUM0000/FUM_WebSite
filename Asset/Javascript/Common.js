@@ -124,20 +124,34 @@ function Get_Menu_Color() {
     }
     return '#CFD8DC';
 }
+function Build_Menu_Fade_Stops(_r, _g, _b, _maxAlpha) {
+    const steps = 12;
+    const stops = [];
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const eased = t * t * (3 - 2 * t);
+        const alpha = Math.round(eased * _maxAlpha * 10000) / 10000;
+        let position = '0px';
+        if (i === steps) position = 'var(--menu-fade, 96px)';
+        else if (i > 0) position = 'calc(var(--menu-fade, 96px) * ' + (i / steps).toFixed(6) + ')';
+        stops.push('rgba(' + _r + ', ' + _g + ', ' + _b + ', ' + alpha + ') ' + position);
+    }
+    return stops.join(', ');
+}
 function Get_Menu_Gradient(_color) {
     const color = (_color || '').trim() || '#CFD8DC';
-    let transparent = 'transparent';
-    let opaque = color;
     if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color)) {
         let hex = color.slice(1);
         if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
         const r = parseInt(hex.slice(0, 2), 16);
         const g = parseInt(hex.slice(2, 4), 16);
         const b = parseInt(hex.slice(4, 6), 16);
-        transparent = 'rgba(' + r + ', ' + g + ', ' + b + ', 0)';
-        opaque = 'rgba(' + r + ', ' + g + ', ' + b + ', 1)';
+        return 'linear-gradient(to right, ' + Build_Menu_Fade_Stops(r, g, b, 1) + ')';
     }
-    return 'linear-gradient(to right, ' + transparent + ' 0px, ' + opaque + ' var(--menu-fade, 64px))';
+    return 'linear-gradient(to right, transparent 0px, ' + color + ' var(--menu-fade, 96px))';
+}
+function Get_Menu_Title_Gradient() {
+    return 'linear-gradient(to right, ' + Build_Menu_Fade_Stops(0, 0, 0, 0.54) + ')';
 }
 function Apply_Menu_Background(_element, _color) {
     if (!_element) return;
@@ -153,7 +167,7 @@ Vue.component('main-navigation', {
     <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right temporary overlay-opacity="0.15">
 
         <!-- ▼ Title ▼ ------------------------------------------------------------------------------------>
-        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" style="height: 50px; background: linear-gradient(to right, rgba(0, 0, 0, 0) 0px, rgba(0, 0, 0, 0.54) var(--menu-fade, 64px)); color: white;">
+        <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" :style="{ background: Title_Gradient }" style="height: 50px; color: white;">
             <div style="display: flex; width: 100%; align-items: center;">
                 <span style="flex: 1;"></span>
                 <span>MENU</span>
@@ -1354,6 +1368,9 @@ Vue.component('main-navigation', {
         };
     },
     computed: {
+        Title_Gradient() {
+            return Get_Menu_Title_Gradient();
+        },
         Drawer_Local: {
             get() { return this.drawer; },
             set(_value) { this.$emit("change-drawer", _value); }
