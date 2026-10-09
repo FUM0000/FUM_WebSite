@@ -170,7 +170,7 @@ Vue.component('main-navigation', {
         <v-btn :ripple="false" class="Not_Selectable font-weight-black non-underline" block tile @click.stop="Drawer_Local = false;" :style="{ background: Title_Gradient }" style="height: 50px; color: white;">
             <div style="display: flex; width: 100%; align-items: center;">
                 <span style="flex: 1;"></span>
-                <span>MENU</span>
+                <span style="display: inline-block; transform: translateX(2em);">MENU</span>
                 <span style="flex: 1; text-align: right; white-space: nowrap;"><v-icon small style="color: white;">mdi-chevron-right</v-icon><v-icon small style="color: white; margin-left: -10px;">mdi-chevron-right</v-icon></span>
             </div>
         </v-btn>
