@@ -2705,10 +2705,8 @@
                     { geo: new THREE.BoxGeometry(0.50, 0.17, 0.50).translate(0, 0.465, 0) },
                 ]);
                 // Capital: Tuscan-Roman — necking fillets and an astragal,
-                // a convex echinus (ovolo) swelling outward, crowned by a
-                // square abacus slab. Shares the column's radial rotation,
-                // so every abacus face aligns toward the centre like the plinth.
-                const CAP_H = 0.55;
+                // a convex echinus (ovolo) swelling outward to a round top.
+                // Shares the column's radial rotation.
                 const capLatheProf = [
                     new THREE.Vector2(0.165, 0), new THREE.Vector2(0.165, 0),
                     new THREE.Vector2(0.185, 0), new THREE.Vector2(0.185, 0),
@@ -2734,9 +2732,7 @@
                     new THREE.Vector2(0.165, 0));
                 const capEchinus = new THREE.LatheGeometry(capLatheProf, 48);
                 capEchinus.computeVertexNormals();
-                const capAbacus = new THREE.BoxGeometry(0.84, 0.13, 0.84)
-                    .translate(0, CAP_H - 0.065, 0);
-                const capGeo = mergeGeos([{ geo: capEchinus }, { geo: capAbacus }]);
+                const capGeo = capEchinus;
                 capGeo.translate(0, COL_H, 0);
                 for (let i = 0; i < N_COL; i++) {
                     const a = (i / N_COL) * Math.PI * 2;
@@ -2758,7 +2754,7 @@
                 // triple-grooved triglyphs over every column with raised metope
                 // panels between them, a dentil course, and a strong projecting
                 // cornice with cyma overhang.
-                const BEAM_Y = COL_H + 0.55;
+                const BEAM_Y = COL_H + 0.44;
                 const ARCH_H = 0.34;
                 const FRIEZE_H = 0.42;
                 const CORNICE_H = 0.34;
@@ -2795,7 +2791,28 @@
                         VP(BEAM_R_IN, BEAM_H), VP(BEAM_R_IN, BEAM_H),
                         VP(BEAM_R_IN, 0),
                     ];
-                    const lathe = new THREE.LatheGeometry(prof, 128);
+                    const lathe = new THREE.LatheGeometry(prof, 384);
+                    // A little ingenuity instead of ornament: the INNER side of
+                    // the round band carries fine vertical grooves, while the
+                    // outer side stays a smooth ring. Inner-wall vertices are
+                    // pushed outward (deeper into the stone) by a gentle
+                    // angular wave, carving the grooves.
+                    {
+                        const pos = lathe.attributes.position;
+                        const FLUTES = 64;
+                        const GROOVE_DEPTH = 0.06;
+                        for (let i = 0; i < pos.count; i++) {
+                            const x = pos.getX(i), z = pos.getZ(i);
+                            const r = Math.hypot(x, z);
+                            if (r > BEAM_R_IN + 0.2 || r < 1e-6) continue;
+                            const theta = Math.atan2(z, x);
+                            const g = 0.5 - 0.5 * Math.cos(FLUTES * theta);
+                            const s = (r + GROOVE_DEPTH * g) / r;
+                            pos.setX(i, x * s);
+                            pos.setZ(i, z * s);
+                        }
+                        pos.needsUpdate = true;
+                    }
                     lathe.computeVertexNormals();
                     const placeRadial = (g, ang) => {
                         g.rotateY(-ang);
@@ -2838,8 +2855,6 @@
                     this._group.add(beamMesh);
                     this._scaleParts.push({ obj: beamMesh, delay: delayOf(this._buildOriginAng, BEAM_Y) });
                 }
-                addRing(F1 + 0.02, BEAM_Y + 0.015, GOLD, 0.7, this._buildOriginAng, 96);
-                addRing(F2 + 0.01, BEAM_Y + 0.165, GOLD, 0.5, this._buildOriginAng, 96);
                 addRing(FR + 0.01, BEAM_Y + ARCH_H + FRIEZE_H * 0.5, GOLD, 0.55, this._buildOriginAng, 96);
                 addRing(DB + 0.01, BEAM_Y + ARCH_H + FRIEZE_H + 0.01, GOLD, 0.6, this._buildOriginAng, 96);
                 addRing(BEAM_R_OUT, BEAM_Y + BEAM_H - 0.025, GOLD, 0.7, this._buildOriginAng, 96);
