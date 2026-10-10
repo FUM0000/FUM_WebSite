@@ -1328,6 +1328,9 @@ html.cat-mode,
                         if (!on) this.stopNyanBGM();
                     },
                 },
+                selectedThemes() {
+                    this.syncZenHash();
+                },
             },
             methods: {
                 // 猫モード専用の「Nyan Nyan Party」再生ボタン (10%音量・無限ループ)
@@ -1403,7 +1406,7 @@ html.cat-mode,
                 },
 
                 loadBlog() {
-                    Promise.all(
+                    return Promise.all(
                         this.blogFiles.map(file =>
                             fetch(file)
                                 .then(res => {
@@ -1417,7 +1420,41 @@ html.cat-mode,
                         )
                     ).then(lists => {
                         this.blogPosts = [].concat(...lists);
+                        this.applyDeepLink();
                     });
+                },
+                // 禅ブログ専用の拡張URL (#zen)。Catのみ選択の禅ブログ状態で開く
+                zenPostId() {
+                    const byTitle = this.blogPosts.find(post => (post.title || '').indexOf('キティー') !== -1);
+                    if (byTitle) return byTitle.id;
+                    const byId = this.blogPosts.find(post => post.id === 38);
+                    return byId ? byId.id : null;
+                },
+                applyDeepLink() {
+                    if ((location.hash || '').toLowerCase() !== '#ZEN') return;
+                    this.selectedThemes = ['Cat'];
+                    this.selectedDate = null;
+                    this.showCurrentMonth = false;
+                    this.$nextTick(() => {
+                        const id = this.zenPostId();
+                        if (id == null) return;
+                        if (!this.expandedPosts.includes(id)) this.expandedPosts.push(id);
+                        this.$nextTick(() => this.scrollToCardTop(id));
+                    });
+                },
+                // Catのみ選択 (=禅ブログ) のときURLを #zen に拡張する
+                syncZenHash() {
+                    const isZen = this.selectedThemes.length === 1 && this.selectedThemes[0] === 'Cat';
+                    const hasZenHash = location.hash === '#ZEN';
+                    try {
+                        if (isZen && !hasZenHash) {
+                            history.replaceState(null, '', location.pathname + location.search + '#ZEN');
+                        } else if (!isZen && hasZenHash) {
+                            history.replaceState(null, '', location.pathname + location.search);
+                        }
+                    } catch (err) {
+                        console.error('Failed to update URL hash: ' + err);
+                    }
                 },
                 loadStory() {
                     const today = new Date();
@@ -1456,6 +1493,7 @@ html.cat-mode,
             mounted() {
                 this.loadBlog();
                 this.loadStory();
+                window.addEventListener('hashchange', this.applyDeepLink);
 
                 // 猫専用BGMの状態を実際の再生状況に追従させる
                 const audio = this.$refs.NyanBGM;
@@ -1468,6 +1506,7 @@ html.cat-mode,
                 }
             },
             beforeDestroy() {
+                window.removeEventListener('hashchange', this.applyDeepLink);
                 document.documentElement.classList.remove('cat-mode');
                 document.body.classList.remove('cat-mode');
                 this.stopNyanBGM();
