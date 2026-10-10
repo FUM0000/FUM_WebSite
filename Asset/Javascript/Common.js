@@ -334,6 +334,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-toolbox</v-icon></v-list-item-icon>
                     </template>
 
+                    <v-list-item href="./Service_Learning_Cat.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Cat</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Service_Learning_Constellation.html">
                         <v-list-item-icon />
                         <v-list-item-title>Constellation</v-list-item-title>
@@ -365,10 +369,6 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Service_Learning_VariousStatistics.html">
                         <v-list-item-icon />
                         <v-list-item-title>Various Statistics</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_Cat.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Cat</v-list-item-title>
                     </v-list-item>
                 </v-list-group sub-group>
                 
