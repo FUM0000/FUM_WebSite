@@ -44,11 +44,10 @@
                 class="orbit-letter"></span>
         </div>
         <svg class="progress-ring" width="280" height="280" viewBox="0 0 280 280">
-            <circle class="progress-ring-bg" cx="140" cy="140" r="130" fill="none" stroke="rgba(255,255,255,0.05)"
-                stroke-width="2.5" />
-            <circle class="progress-ring-fill" id="loadingRing" cx="140" cy="140" r="130" fill="none" stroke="#00ffcc"
-                stroke-width="2.5" stroke-linecap="round" stroke-dasharray="816.81" stroke-dashoffset="816.81"
-                transform="rotate(-90 140 140)" />
+            <path class="progress-ring-bg" id="loadingRingBg" fill="none" stroke="rgba(255,255,255,0.05)"
+                stroke-width="2.5" transform="rotate(-90 140 140)" />
+            <path class="progress-ring-fill" id="loadingRing" fill="none" stroke="#00ffcc"
+                stroke-width="2.5" stroke-linecap="round" transform="rotate(-90 140 140)" />
         </svg>
         <div class="loading-text">
             <span class="loading-label">Loading</span>
@@ -1984,7 +1983,27 @@
                 });
             }
             if (overlay && loadingRing) {
-                const circumference = 816.81;
+                // ── ローディングリング：円に沿って正弦波状に波打つパスを生成 ──
+                const RING_CENTER = 140;
+                const RING_RADIUS = 130;
+                const WAVE_COUNT = 8;
+                const WAVE_AMPLITUDE = 8;
+                const WAVE_STEPS = 720;
+                let ringPathData = '';
+                for (let i = 0; i <= WAVE_STEPS; i++) {
+                    const t = (i / WAVE_STEPS) * Math.PI * 2;
+                    const r = RING_RADIUS + WAVE_AMPLITUDE * Math.sin(WAVE_COUNT * t);
+                    const x = RING_CENTER + r * Math.cos(t);
+                    const y = RING_CENTER + r * Math.sin(t);
+                    ringPathData += (i === 0 ? 'M' : 'L') + x.toFixed(2) + ' ' + y.toFixed(2);
+                    if (i !== WAVE_STEPS) ringPathData += ' ';
+                }
+                loadingRing.setAttribute('d', ringPathData);
+                const loadingRingBg = document.getElementById('loadingRingBg');
+                if (loadingRingBg) loadingRingBg.setAttribute('d', ringPathData);
+                const circumference = loadingRing.getTotalLength();
+                loadingRing.style.strokeDasharray = circumference;
+                loadingRing.style.strokeDashoffset = circumference;
                 const MIN_DURATION = 2000;
                 const MAX_DURATION = 15000;
                 const ORBIT_SPEED = 2;
