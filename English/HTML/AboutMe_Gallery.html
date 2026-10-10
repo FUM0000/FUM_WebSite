@@ -3002,28 +3002,136 @@
                     addRing(r, y, BLUE, 0.6, this._buildOriginAng, Math.max(48, Math.ceil(r * 12)));
                 }
 
-                // ============ Crown finial & rosette (fractal circles) ============
-                addRing(0.72, TOP_Y - 0.12, BLUE, 0.7, 0, 32);
-                addRing(0.45, TOP_Y - 0.08, BLUE, 0.7, 0, 24);
-                const apexRadials = [];
-                for (let k = 0; k < 8; k++) {
-                    const ak = (k / 8) * Math.PI * 2;
-                    const p = pRing(ak, 0.55);
-                    pushLine(apexRadials, 0, TOP_Y - 0.1, 0, p[0], TOP_Y - 0.1, p[1]);
-                }
-                for (let c = 0; c < 6; c++) {
-                    const ca = (c / 6) * Math.PI * 2;
-                    const cc = pRing(ca, 0.42);
-                    for (let s = 0; s < 14; s++) {
-                        const sa = (s / 14) * Math.PI * 2;
-                        const sb = ((s + 1) / 14) * Math.PI * 2;
-                        pushLine(apexRadials, cc[0] + Math.cos(sa) * 0.13, TOP_Y - 0.09, cc[1] + Math.sin(sa) * 0.13,
-                            cc[0] + Math.cos(sb) * 0.13, TOP_Y - 0.09, cc[1] + Math.sin(sb) * 0.13);
+                // ============ Crown: armillary sphere finial ============
+                // In place of the old rosette, the dome is crowned by a slender
+                // golden armillary: its equator, a pair of perpendicular colures
+                // and a gently tilted ecliptic are wound around a central pearl,
+                // seated on a stepped collarette and rising to a fine, ball-tipped
+                // needle. An ordered little cosmos — unity at the axis, the two
+                // colures as duality, the ecliptic as the one tilted path between.
+                const CROWN_Y = TOP_Y;                       // dome apex
+                const CROWN_C = CROWN_Y + 1.04;              // sphere centre
+                const CROWN_R = 0.82;                        // sphere radius
+                const CROWN_TOP = CROWN_C + CROWN_R;         // top of the sphere
+                const CROWN_STEM = CROWN_TOP + 0.10;         // ring above the sphere
+                const CROWN_ORB_Y = CROWN_STEM + 0.40;       // little gilt orb
+                const CROWN_TIP = CROWN_ORB_Y + 0.24;        // needle point
+
+                // Stepped collarette cradling the sphere on the dome.
+                addRing(0.68, CROWN_Y + 0.05, GOLD, 0.7, 0, 40);
+                addRing(0.47, CROWN_Y + 0.16, GOLD, 0.75, 0, 32);
+                addRing(0.29, CROWN_Y + 0.27, BLUE, 0.6, 0, 24);
+
+                // Equator of the armillary.
+                addRing(CROWN_R, CROWN_C, GOLD, 0.6, 0, 72);
+
+                const crownGold = [];
+                const crownBlue = [];
+                // A great circle spanned by two orthonormal in-plane axes.
+                const crownGreatCircle = (out, ux, uy, uz, vx, vy, vz, segs) => {
+                    for (let i = 0; i < segs; i++) {
+                        const t0 = (i / segs) * Math.PI * 2;
+                        const t1 = ((i + 1) / segs) * Math.PI * 2;
+                        const c0 = Math.cos(t0), s0 = Math.sin(t0);
+                        const c1 = Math.cos(t1), s1 = Math.sin(t1);
+                        pushLine(out,
+                            CROWN_R * (c0 * ux + s0 * vx),
+                            CROWN_C + CROWN_R * (c0 * uy + s0 * vy),
+                            CROWN_R * (c0 * uz + s0 * vz),
+                            CROWN_R * (c1 * ux + s1 * vx),
+                            CROWN_C + CROWN_R * (c1 * uy + s1 * vy),
+                            CROWN_R * (c1 * uz + s1 * vz));
                     }
-                    pushLine(apexRadials, 0, TOP_Y - 0.09, 0, cc[0], TOP_Y - 0.09, cc[1]);
-                }
-                addLine(apexRadials, BLUE, 0.7, 0, TOP_Y);
-                addLine([0, TOP_Y - 0.12, 0, 0, TOP_Y + 0.15, 0], GOLD, 0.9, 0, TOP_Y);
+                };
+                // Twin colures, perpendicular to each other and to the equator.
+                crownGreatCircle(crownGold, 1, 0, 0, 0, 1, 0, 64);
+                crownGreatCircle(crownGold, 0, 0, 1, 0, 1, 0, 64);
+                // Ecliptic: the one great circle set at a 23.44° obliquity.
+                const OBLIQ = 23.44 * Math.PI / 180;
+                crownGreatCircle(crownBlue, 1, 0, 0, 0, Math.cos(OBLIQ), Math.sin(OBLIQ), 72);
+
+                // Polar axis, a hair proud of the poles.
+                pushLine(crownGold, 0, CROWN_C - CROWN_R - 0.09, 0, 0, CROWN_C + CROWN_R + 0.09, 0);
+                addLine(crownGold, GOLD, 0.72, 0, CROWN_C);
+                addLine(crownBlue, BLUE, 0.6, 0, CROWN_C);
+
+                // The central pearl and the ball-tipped needle above it.
+                const pearlMat = new THREE.MeshStandardMaterial({
+                    color: 0xfff4d6,
+                    emissive: new THREE.Color(0xffc98a),
+                    emissiveIntensity: 1.0,
+                    roughness: 0.22,
+                    metalness: 0.85,
+                    fog: false,
+                });
+                const corePearl = new THREE.Mesh(new THREE.SphereGeometry(0.11, 20, 14), pearlMat);
+                corePearl.position.set(0, CROWN_C, 0);
+                this._group.add(corePearl);
+                this._scaleParts.push({ obj: corePearl, delay: delayOf(0, CROWN_C) });
+
+                addRing(0.15, CROWN_STEM + 0.02, GOLD, 0.6, 0, 16);
+                addRing(0.09, CROWN_STEM + 0.16, BLUE, 0.6, 0, 12);
+                addLine([0, CROWN_TOP, 0, 0, CROWN_ORB_Y - 0.05, 0], GOLD, 0.85, 0, CROWN_TOP);
+                addLine([0, CROWN_ORB_Y + 0.06, 0, 0, CROWN_TIP, 0], GOLD, 0.8, 0, CROWN_TOP);
+
+                const apexOrb = new THREE.Mesh(new THREE.SphereGeometry(0.08, 18, 12), pearlMat);
+                apexOrb.position.set(0, CROWN_ORB_Y, 0);
+                this._group.add(apexOrb);
+                this._scaleParts.push({ obj: apexOrb, delay: delayOf(0, CROWN_TOP) });
+
+                // ============ Axis continued: an endless pillar of light ============
+                // From the crown's needle the central axis climbs straight up
+                // without end — the same luminous thread of unity carried into the
+                // sky. It is drawn long enough that no terminus is ever seen; the
+                // glow simply thins with height and dissolves into the night.
+                const ROD_BOTTOM = CROWN_TIP - 0.02;
+                const ROD_HEIGHT = 4000;
+                const rodGeo = new THREE.CylinderGeometry(0.055, 0.10, ROD_HEIGHT, 12, 1, true);
+                rodGeo.translate(0, ROD_BOTTOM + ROD_HEIGHT * 0.5, 0);
+                const rodMat = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uOpacity: { value: 0 },
+                        uColor: { value: new THREE.Color(GOLD) },
+                        uBaseY: { value: ROD_BOTTOM },
+                        uFade: { value: 90.0 },
+                    },
+                    vertexShader: `
+                        varying vec3 vW;
+                        void main() {
+                            vec4 wp = modelMatrix * vec4(position, 1.0);
+                            vW = wp.xyz;
+                            gl_Position = projectionMatrix * viewMatrix * wp;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        uniform float uOpacity;
+                        uniform vec3 uColor;
+                        uniform float uBaseY;
+                        uniform float uFade;
+                        varying vec3 vW;
+                        void main() {
+                            float d = max(vW.y - uBaseY, 0.0);
+                            float fade = exp(-d / uFade);
+                            float breathe = 0.85 + 0.15 * sin(uTime * 1.2 + d * 0.05);
+                            float a = fade * uOpacity * breathe;
+                            gl_FragColor = vec4(uColor * 1.6, a);
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    depthTest: true,
+                    side: THREE.DoubleSide,
+                    fog: false,
+                });
+                const rodPillar = new THREE.Mesh(rodGeo, rodMat);
+                rodPillar.layers.set(BLOOM_LAYER);
+                rodPillar.frustumCulled = false;
+                rodPillar.renderOrder = 2;
+                this._group.add(rodPillar);
+                this._lineParts.push({ obj: rodPillar, mat: rodMat, base: 1.0, delay: delayOf(0, CROWN_TIP) });
 
                 if (_lPos.length > 0) {
                     const lineGeo = new THREE.BufferGeometry();
@@ -4779,6 +4887,9 @@
         const Environment = new FC_Environment();
         const Camera = new FC_Camera_Controller(Renderer);
         Camera.Object.fov = CAMERA_FOV;
+        // Extend the far plane so the endless pillar of light rising from the
+        // exhibit can climb far into the sky before it is ever clipped.
+        Camera.Object.far = 400;
         Camera.Object.updateProjectionMatrix();
         const _BloomCamera = Camera.Object.clone();
         _BloomCamera.layers.set(BLOOM_LAYER);
