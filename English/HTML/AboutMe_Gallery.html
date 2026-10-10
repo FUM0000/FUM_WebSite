@@ -4834,7 +4834,15 @@
             }
             updateFrameVisibilityByPlayerFloor() {
                 if (!this.instancedMesh) return;
-                const player_floor = this.getFloorIndexFromY(Player.Position.y);
+                // While the elevator is travelling, summon the DESTINATION floor
+                // straight away instead of the floor under the player's current
+                // height — the ride presents the floor we are headed to.
+                const ridingToFloor = (this._Elevator && this._Elevator.isMoving)
+                    ? this._Elevator.targetFloor
+                    : null;
+                const player_floor = ridingToFloor !== null
+                    ? ridingToFloor
+                    : this.getFloorIndexFromY(Player.Position.y);
                 this.updateFrameVisibilityByFloor(player_floor);
             }
             updateFrameVisibilityByFloor(floor_index) {
