@@ -266,39 +266,39 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-account-group</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Service_AudioEditor.html">
+                    <v-list-item href="./Service_Creator_AudioEditor.html">
                         <v-list-item-icon />
                         <v-list-item-title>Audio Editor</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_BezierCurve.html">
+                    <v-list-item href="./Service_Creator_BezierCurve.html">
                         <v-list-item-icon />
                         <v-list-item-title>Bezier Curve</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_BinaryViewer.html">
+                    <v-list-item href="./Service_Creator_BinaryViewer.html">
                         <v-list-item-icon />
                         <v-list-item-title>Binary Viewer</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_ColorDesign.html">
+                    <v-list-item href="./Service_Creator_ColorDesign.html">
                         <v-list-item-icon />
                         <v-list-item-title>Color Design</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_FontPreview.html">
+                    <v-list-item href="./Service_Creator_FontPreview.html">
                         <v-list-item-icon />
                         <v-list-item-title>Font Preview</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_ImageEditor.html">
+                    <v-list-item href="./Service_Creator_ImageEditor.html">
                         <v-list-item-icon />
                         <v-list-item-title>Image Editor</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_ImageLayout.html">
+                    <v-list-item href="./Service_Creator_ImageLayout.html">
                         <v-list-item-icon />
                         <v-list-item-title>Image Layout</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_QRCode.html">
+                    <v-list-item href="./Service_Creator_QRCode.html">
                         <v-list-item-icon />
                         <v-list-item-title>QR Code</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_VideoEditor.html">
+                    <v-list-item href="./Service_Creator_VideoEditor.html">
                         <v-list-item-icon />
                         <v-list-item-title>Video Editor</v-list-item-title>
                     </v-list-item>
@@ -310,19 +310,19 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-gamepad-left</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Service_RecommendCounterPick.html">
+                    <v-list-item href="./Service_Enjoy_RecommendCounterPick.html">
                         <v-list-item-icon />
                         <v-list-item-title>Counter Pick</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_Journey.html">
+                    <v-list-item href="./Service_Enjoy_Journey.html">
                         <v-list-item-icon />
                         <v-list-item-title>Journey</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_Roulette.html">
+                    <v-list-item href="./Service_Enjoy_Roulette.html">
                         <v-list-item-icon />
                         <v-list-item-title>Roulette</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_ShogiTimer.html">
+                    <v-list-item href="./Service_Enjoy_ShogiTimer.html">
                         <v-list-item-icon />
                         <v-list-item-title>Shogi Timer</v-list-item-title>
                     </v-list-item>
@@ -334,39 +334,39 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-toolbox</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Service_Constellation.html">
+                    <v-list-item href="./Service_Learning_Constellation.html">
                         <v-list-item-icon />
                         <v-list-item-title>Constellation</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_Exercise.html">
+                    <v-list-item href="./Service_Learning_Exercise.html">
                         <v-list-item-icon />
                         <v-list-item-title>Exercise</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_Health.html">
+                    <v-list-item href="./Service_Learning_Health.html">
                         <v-list-item-icon />
                         <v-list-item-title>Health</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_Kampo.html">
+                    <v-list-item href="./Service_Learning_Kampo.html">
                         <v-list-item-icon />
                         <v-list-item-title>Kampo</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_MusicTheory.html">
+                    <v-list-item href="./Service_Learning_MusicTheory.html">
                         <v-list-item-icon />
                         <v-list-item-title>Music Theory</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_TimeTravel.html">
+                    <v-list-item href="./Service_Learning_TimeTravel.html">
                         <v-list-item-icon />
                         <v-list-item-title>Time Travel</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_VariousConverters.html">
+                    <v-list-item href="./Service_Learning_VariousConverters.html">
                         <v-list-item-icon />
                         <v-list-item-title>Various Converters</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_VariousStatistics.html">
+                    <v-list-item href="./Service_Learning_VariousStatistics.html">
                         <v-list-item-icon />
                         <v-list-item-title>Various Statistics</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_Cat.html">
+                    <v-list-item href="./Service_Learning_Cat.html">
                         <v-list-item-icon />
                         <v-list-item-title>Cat</v-list-item-title>
                     </v-list-item>
@@ -378,11 +378,11 @@ Vue.component('main-navigation', {
                         <v-list-item-icon><v-icon>mdi-microsoft-office</v-icon></v-list-item-icon>
                     </template>
 
-                    <v-list-item href="./Service_CalculateSalary.html">
+                    <v-list-item href="./Service_Others_CalculateSalary.html">
                         <v-list-item-icon />
                         <v-list-item-title>Calculate Salary</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Service_Optimization.html">
+                    <v-list-item href="./Service_Others_Optimization.html">
                         <v-list-item-icon />
                         <v-list-item-title>Optimization</v-list-item-title>
                     </v-list-item>
