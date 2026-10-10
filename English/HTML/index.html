@@ -51,8 +51,11 @@
                 transform="rotate(-90 140 140)" />
         </svg>
         <div class="loading-text">
-            <span class="loading-label">Loading</span>
-            <span class="loading-percent" id="loadingPercent">0%</span>
+            <div class="loading-text-row">
+                <span class="loading-label">Loading</span>
+                <span class="loading-percent" id="loadingPercent">0%</span>
+            </div>
+            <span class="loading-stage" id="loadingStage">Initializing</span>
         </div>
     </div>
 
@@ -487,13 +490,30 @@
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            align-items: baseline;
+            flex-direction: column;
+            align-items: center;
             gap: 10px;
             font-family: 'Space Mono', monospace;
             user-select: none;
             z-index: 2;
             opacity: 0;
-            transition: opacity 1.5s ease-out 3.2s;
+            transition: opacity 1.5s ease-out 0.4s;
+        }
+
+        .loading-text-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .loading-stage {
+            font-size: 12px;
+            font-weight: 400;
+            color: rgba(0, 255, 204, 0.72);
+            letter-spacing: 3px;
+            text-align: center;
+            text-transform: uppercase;
+            white-space: nowrap;
         }
 
         #loading-overlay.is-visible .loading-text {
@@ -1320,19 +1340,38 @@
         })
 
         const realLoading = (() => {
-            let loaded = 0;
-            let real = 0;
+            const stages = [
+                { key: 'libraries', weight: 30, label: 'Loading libraries' },
+                { key: 'log', weight: 15, label: 'Loading logs' },
+                { key: 'page', weight: 15, label: 'Loading page data' },
+                { key: 'window', weight: 20, label: 'Loading assets' },
+                { key: 'render', weight: 20, label: 'Rendering scene' }
+            ];
+            const totalWeight = stages.reduce((sum, s) => sum + s.weight, 0);
+            const done = new Set();
             const listeners = [];
-            const total = 100;
-            const bump = (weight) => {
-                loaded += weight;
-                real = Math.min((loaded / total) * 100, 100);
-                listeners.forEach(fn => fn(real));
+            let progress = 0;
+
+            const cumulativeWeight = () =>
+                stages.reduce((sum, s) => (done.has(s.key) ? sum + s.weight : sum), 0);
+
+            const complete = (key) => {
+                if (done.has(key)) return;
+                done.add(key);
+                progress = Math.min((cumulativeWeight() / totalWeight) * 100, 100);
+                listeners.forEach(fn => fn(progress));
             };
+
             return {
-                get value() { return real; },
-                isDone() { return real >= 100; },
-                bump
+                stages,
+                stagePercents: stages.map((s, i) =>
+                    (stages.slice(0, i + 1).reduce((sum, x) => sum + x.weight, 0) / totalWeight) * 100),
+                get value() { return progress; },
+                get doneCount() { return done.size; },
+                isDone() { return done.size >= stages.length; },
+                isComplete(key) { return done.has(key); },
+                complete,
+                onProgress(fn) { listeners.push(fn); }
             };
         })();
 
@@ -1658,27 +1697,35 @@
         }
 
         const deferScripts = document.querySelectorAll('script[defer]');
-        deferScripts.forEach((s) => {
-            const done = () => realLoading.bump(40 / deferScripts.length);
-            s.addEventListener('load', done);
-            s.addEventListener('error', done);
-        });
+        let deferScriptsLeft = deferScripts.length;
+        if (deferScriptsLeft === 0) {
+            realLoading.complete('libraries');
+        } else {
+            const onDeferDone = () => {
+                deferScriptsLeft -= 1;
+                if (deferScriptsLeft <= 0) realLoading.complete('libraries');
+            };
+            deferScripts.forEach((s) => {
+                s.addEventListener('load', onDeferDone, { once: true });
+                s.addEventListener('error', onDeferDone, { once: true });
+            });
+        }
 
-        window.addEventListener('load', () => realLoading.bump(25));
+        window.addEventListener('load', () => realLoading.complete('window'));
 
         fetch('../../Asset/Data/Log.json')
             .then(r => r.json())
-            .then(data => { window.vue.LogEntries = data; realLoading.bump(10); })
-            .catch(() => { realLoading.bump(10); });
+            .then(data => { window.vue.LogEntries = data; realLoading.complete('log'); })
+            .catch(() => { realLoading.complete('log'); });
 
         fetch('../../Asset/Data/Page.json')
             .then(r => r.json())
             .then(data => {
                 window.vue.Page_Data = data;
                 window.vue.Reselect_Recommend();
-                realLoading.bump(10);
+                realLoading.complete('page');
             })
-            .catch(() => { realLoading.bump(10); });
+            .catch(() => { realLoading.complete('page'); });
 
         window.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('loading-overlay');
@@ -1907,14 +1954,11 @@
             // { holeRadius: 0 } にするとロード中の銀河の色付き円盤は中央（ブラックホール付近）まで全て色付きになる
             destroyLoadingGalaxy = setupLoadingGalaxy(loadingGalaxyCanvas, { holeRadius: 0 });
 
-            // 銀河が完全に表示されてからローディングバー／％を開始する
+            // ローディングバー／％は各段階の完了に合わせて即座に進行を開始する
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     if (overlay) overlay.classList.add('is-visible');
-                    // CSSの銀河フェード（delay 1.2s + 2s = 3.2s）完了後にバーを動かす
-                    setTimeout(() => {
-                        if (beginAfterGalaxy) beginAfterGalaxy();
-                    }, 3200);
+                    if (beginAfterGalaxy) beginAfterGalaxy();
                 });
             });
 
@@ -2008,10 +2052,15 @@
                 loadingRing.style.strokeDashoffset = circumference;
                 void loadingRing.getBoundingClientRect();
                 loadingRing.style.transition = '';
-                const MIN_DURATION = 2000;
+                const MIN_DURATION = 3200;
                 const MAX_DURATION = 15000;
+                const STAGE_STEP_MS = 600;
                 const ORBIT_SPEED = 2;
+                const loadingStage = document.getElementById('loadingStage');
+                const totalStages = realLoading.stages.length;
                 let startTime = performance.now();
+                let shownStages = 0;
+                let lastStepTime = 0;
                 let progressTimer = null;
                 let pendingFinish = false;
                 let cleanupDone = false;
@@ -2032,9 +2081,15 @@
                 };
 
                 const tickProgress = () => {
-                    const elapsed = performance.now() - startTime;
-                    const minCurve = Math.min((elapsed / MIN_DURATION) * 100, 100);
-                    progress = Math.max(minCurve, realLoading.value);
+                    const now = performance.now();
+                    const elapsed = now - startTime;
+
+                    // 完了した段階へ、最低間隔を空けながらバーを合わせる
+                    if (shownStages < realLoading.doneCount && (now - lastStepTime >= STAGE_STEP_MS)) {
+                        shownStages += 1;
+                        lastStepTime = now;
+                    }
+                    progress = shownStages > 0 ? realLoading.stagePercents[shownStages - 1] : 0;
                     if (progress >= 100) progress = 100;
 
                     const offset = circumference * (1 - progress / 100);
@@ -2050,6 +2105,10 @@
                         void loadingLabel.offsetWidth;
                         loadingLabel.classList.add('glitch');
                     }
+                    if (loadingStage) {
+                        const current = realLoading.stages[shownStages];
+                        loadingStage.textContent = current ? current.label : 'Ready';
+                    }
                     if (progressRing) {
                         progressRing.classList.remove('glitch');
                         void progressRing.getBoundingClientRect();
@@ -2062,7 +2121,7 @@
                         innerCircle.style.boxShadow = `0 0 ${glow}px rgba(0,100,150,${0.2 + normalized * 0.5})`;
                     }
 
-                    if (realLoading.isDone() && elapsed >= MIN_DURATION) {
+                    if (shownStages >= totalStages && elapsed >= MIN_DURATION) {
                         clearInterval(progressTimer);
                         pendingFinish = true;
                         overlay.classList.add('fade-out');
@@ -2081,6 +2140,8 @@
                 beginAfterGalaxy = () => {
                     startTime = performance.now();
                     progress = 0;
+                    shownStages = 0;
+                    lastStepTime = startTime;
                     progressTimer = setInterval(tickProgress, 50);
                 };
 
@@ -4158,7 +4219,7 @@
             if (!firstRenderDone) {
                 firstRenderDone = true;
                 if (typeof realLoading !== 'undefined') {
-                    realLoading.bump(25);
+                    realLoading.complete('render');
                 }
             }
         }
