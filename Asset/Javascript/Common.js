@@ -18,7 +18,7 @@ Vue.component('main-system-bar', {
         <v-row aline="center">
             <v-col cols="9" align-self="center">
                 <audio id="BGM" src="" paused loop></audio>
-                <v-btn small outlined icon class="mr-2">
+                <v-btn small outlined icon class="mr-2" aria-label="BGM playback">
                     <v-icon id="Speaker" small>mdi-volume-variant-off</v-icon>
                 </v-btn>
                 <slot></slot>
@@ -181,9 +181,9 @@ Vue.component('main-navigation', {
         <div style="padding: 10px 12px 4px; flex-shrink: 0;">
             <div style="position: relative; border-radius: 999px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(120, 140, 160, 0.35); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.10);">
                 <v-icon small style="position:absolute; top:50%; left:13px; transform:translateY(-55%); color: rgba(60, 70, 90, 0.75);">mdi-magnify</v-icon>
-                <input v-model="Search_Query" type="text" placeholder="Search pages..."
+                <input v-model="Search_Query" type="text" placeholder="Search pages..." aria-label="Search pages"
                     style="width:100%; border:none; outline:none; background:transparent; padding:9px 38px; font-size:14px; color:#333; border-radius:999px; box-sizing:border-box;">
-                <div v-if="Search_Query" @click="Clear_Search" style="position:absolute; top:50%; right:11px; transform:translateY(-55%); color: rgba(60, 70, 90, 0.6); cursor:pointer; display:flex;">
+                <div v-if="Search_Query" @click="Clear_Search" role="button" aria-label="Clear search" style="position:absolute; top:50%; right:11px; transform:translateY(-55%); color: rgba(60, 70, 90, 0.6); cursor:pointer; display:flex;">
                     <v-icon small>mdi-close-circle</v-icon>
                 </div>
             </div>
@@ -1448,13 +1448,13 @@ Vue.component('main-navigation', {
 Vue.component('main-footer', {
     template: `
     <v-footer color="#FFFFFF60" class="font-weight-black" app>
-        <v-btn @click="scrollToBottom" text x-small>
+        <v-btn @click="scrollToBottom" text x-small aria-label="Scroll to bottom">
             <v-icon color="blue">mdi-chevron-down</v-icon>
         </v-btn>
         <v-spacer />
         <span style="font-size: 0.8rem;">© 2026 FUM. All rights reserved.</span>
         <v-spacer />
-        <v-btn @click="scrollToTop" text x-small>
+        <v-btn @click="scrollToTop" text x-small aria-label="Scroll to top">
             <v-icon color="red">mdi-chevron-up</v-icon>
         </v-btn>
     </v-footer>
