@@ -42,21 +42,15 @@ window.Mixins_Index = {
     data() {
         return {
             List_BGM: [
-                "Clair_de_Lune.wav",
-                "Gymnopedie_No1.wav",
-                "Prelude_and_Fugue_in_C_major_BWV_846.wav",
                 "An_der_Wiege.wav",
+                "Break_Beats_1.wav",
+                "Clair_de_Lune.wav",
+                "Clock_Tick_1.wav",
+                "Gymnopedie_No1.wav",
                 "Lofi_1.wav",
                 "Lofi_2.wav",
-                "punk_1.wav",
-                "noise_1.wav",
-                "noise_2.wav",
-                "wave_1.wav",
-                "club_1.wav",
-                "hihat_1.wav",
-                "hihat_2.wav",
-                "Clock_Tick_1.wav",
-                "piano_1.wav",
+                "NyanNyanParty_1.mp3",
+                "Prelude_and_Fugue_in_C_major_BWV_846.wav",
             ],
         };
     },
