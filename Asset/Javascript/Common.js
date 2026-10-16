@@ -162,6 +162,75 @@ function Apply_Menu_Background(_element, _color) {
 
 
 //// NavigationBar
+// Page.json (Asset/Data/Page.json) is the single source of truth for the navigation menu.
+// Sections / groups / pages / icons are all read from it, so adding a page only requires a Page.json edit.
+function Get_Page_Json_Path() {
+    const scripts = document.querySelectorAll('script[src]');
+    for (const s of scripts) {
+        const src = s.getAttribute('src') || '';
+        if (src.indexOf('Common.js') !== -1) {
+            return src.replace(/Common\.js.*/, '') + '../Data/Page.json';
+        }
+    }
+    return '../../Asset/Data/Page.json';
+}
+function Build_Flat_Pages(_data) {
+    const flat = [];
+    Object.keys(_data || {}).forEach(_sectionName => {
+        const section = _data[_sectionName] || {};
+        (section.groups || []).forEach(_group => {
+            (_group.items || []).forEach(_item => {
+                flat.push({
+                    title: _item.title,
+                    url: _item.url,
+                    description: _item.description || '',
+                    category: _sectionName,
+                    subcategory: _group.title === 'Top' ? '' : _group.title
+                });
+            });
+        });
+    });
+    return flat;
+}
+function Build_Nav_Model(_data) {
+    const model = [];
+    Object.keys(_data || {}).forEach(_sectionName => {
+        const section = _data[_sectionName] || {};
+        const groups = section.groups || [];
+        if (section.flat) {
+            // 見出しなしセクション (Home / Guide / Setting) はリンクをそのまま並べる
+            groups.forEach(_group => {
+                (_group.items || []).forEach(_item => {
+                    model.push({ kind: 'item', title: _item.title, url: _item.url, icon: _item.icon || section.icon });
+                });
+            });
+            return;
+        }
+        const blocks = [];
+        groups.forEach(_group => {
+            if (_group.title === 'Top') {
+                // グループ見出しなし: セクション直下のリンクとして並べる (Page.json 上の位置を保持)
+                (_group.items || []).forEach(_item => {
+                    blocks.push({ kind: 'item', title: _item.title, url: _item.url, icon: _item.icon });
+                });
+            }
+            else {
+                blocks.push({ kind: 'group', title: _group.title, icon: _group.icon, items: _group.items || [] });
+            }
+        });
+        model.push({ kind: 'section', title: _sectionName, icon: section.icon, blocks: blocks });
+    });
+    return model;
+}
+function Fallback_Nav_Model() {
+    // Page.json が読めない環境 (file:// で開いた場合など) 向けの最小メニュー
+    return [
+        { kind: 'item', title: 'Home', url: './index.html', icon: 'mdi-home' },
+        { kind: 'item', title: 'Guide', url: './Guide.html', icon: 'mdi-compass' },
+        { kind: 'item', title: 'Setting', url: './Setting.html', icon: 'mdi-cog' },
+        { kind: 'item', title: 'Menu unavailable (open via server)', url: '', icon: 'mdi-alert-outline' }
+    ];
+}
 Vue.component('main-navigation', {
     template: `
     <v-navigation-drawer class="blue-grey lighten-5" v-model="Drawer_Local" app right temporary overlay-opacity="0.15">
@@ -181,9 +250,9 @@ Vue.component('main-navigation', {
         <div style="padding: 10px 12px 4px; flex-shrink: 0;">
             <div style="position: relative; border-radius: 999px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(120, 140, 160, 0.35); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.10);">
                 <v-icon small style="position:absolute; top:50%; left:13px; transform:translateY(-55%); color: rgba(60, 70, 90, 0.75);">mdi-magnify</v-icon>
-                <input v-model="Search_Query" type="text" placeholder="Search pages..." aria-label="Search pages"
+                <input v-model="Search_Query" type="text" placeholder="Search pages..."
                     style="width:100%; border:none; outline:none; background:transparent; padding:9px 38px; font-size:14px; color:#333; border-radius:999px; box-sizing:border-box;">
-                <div v-if="Search_Query" @click="Clear_Search" role="button" aria-label="Clear search" style="position:absolute; top:50%; right:11px; transform:translateY(-55%); color: rgba(60, 70, 90, 0.6); cursor:pointer; display:flex;">
+                <div v-if="Search_Query" @click="Clear_Search" style="position:absolute; top:50%; right:11px; transform:translateY(-55%); color: rgba(60, 70, 90, 0.6); cursor:pointer; display:flex;">
                     <v-icon small>mdi-close-circle</v-icon>
                 </div>
             </div>
@@ -207,1156 +276,51 @@ Vue.component('main-navigation', {
         <!-- ▲ Search Results ▲ ---------------------------------------------------------------------------->
 
 
-        <!-- ▼ Navigation ▼ ------------------------------------------------------------------------------->
+        <!-- ▼ Navigation ▼ (built from Page.json) -------------------------------------------------------->
         <v-list nav dense v-show="!Search_Query">
 
+            <template v-for="(node, ni) in Nav_Model">
 
-            <!-- ▼ Home ▼ ------------------------------------------------------------------------------------->
-            <v-list-item href="../../English/HTML/index.html">
-                <v-list-item-icon><v-icon>mdi-home</v-icon></v-list-item-icon>
-                <v-list-item-title>Home</v-list-item-title>
-            </v-list-item>
-            <!-- ▲ Home ▲ ------------------------------------------------------------------------------------->
-
-
-            <!-- ▼ Guide ▼ ------------------------------------------------------------------------------------->
-            <v-list-item href="./Guide.html">
-                <v-list-item-icon><v-icon>mdi-compass</v-icon></v-list-item-icon>
-                <v-list-item-title>Guide</v-list-item-title>
-            </v-list-item>
-            <!-- ▲ Guide ▲ ------------------------------------------------------------------------------------->
-
-
-            <!-- ▼ About me ▼ --------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-stamper">
-                <template v-slot:activator>
-                    <v-list-item-title>About Me</v-list-item-title>
-                </template>
-                
-                <v-list-item href="./AboutMe_Profile.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Profile</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-stamper</v-icon></v-list-item-icon>
+                <!-- セクション見出しなし (Home / Guide / Setting) ------------------------------------------>
+                <v-list-item v-if="node.kind === 'item'" :key="'Node' + ni" :href="node.url || null" :disabled="!node.url">
+                    <v-list-item-icon><v-icon v-if="node.icon">{{ node.icon }}</v-icon></v-list-item-icon>
+                    <v-list-item-title>{{ node.title }}</v-list-item-title>
                 </v-list-item>
 
-                <v-list-item href="./AboutMe_Blog.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Blog</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-post-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-
-                <v-list-item href="./AboutMe_Gallery.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Gallery</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-image</v-icon></v-list-item-icon>
-                </v-list-item>
-            </v-list-group>
-            <!-- ▲ About me ▲ --------------------------------------------------------------------------------->
-
-
-            <!-- ▼ Service ▼ ---------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-hammer-wrench">
-                <template v-slot:activator>
-                    <v-list-item-title>Service</v-list-item-title>
-                </template>
-
-                <v-list-group sub-group :value="false">
+                <!-- セクション ------------------------------------------------------------------------------>
+                <v-list-group v-else :key="'Node' + ni" :value="false" :prepend-icon="node.icon">
                     <template v-slot:activator>
-                        <v-list-item-title>Creator</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-account-group</v-icon></v-list-item-icon>
+                        <v-list-item-title>{{ node.title }}</v-list-item-title>
                     </template>
 
-                    <v-list-item href="./Service_Creator_AudioEditor.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Audio Editor</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_BezierCurve.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Bezier Curve</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_BinaryViewer.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Binary Viewer</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_ColorDesign.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Color Design</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_FontPreview.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Font Preview</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_ImageEditor.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Image Editor</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_ImageLayout.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Image Layout</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_QRCode.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>QR Code</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Creator_VideoEditor.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Video Editor</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
+                    <template v-for="(block, bi) in node.blocks">
 
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Enjoy</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-gamepad-left</v-icon></v-list-item-icon>
+                        <v-list-item v-if="block.kind === 'item'" :key="'Node' + ni + '_Item' + bi" :href="block.url">
+                            <v-list-item-icon />
+                            <v-list-item-title>{{ block.title }}</v-list-item-title>
+                            <v-list-item-icon v-if="block.icon"><v-icon>{{ block.icon }}</v-icon></v-list-item-icon>
+                        </v-list-item>
+
+                        <v-list-group v-else :key="'Node' + ni + '_Group' + bi" sub-group :value="false">
+                            <template v-slot:activator>
+                                <v-list-item-title>{{ block.title }}</v-list-item-title>
+                                <v-list-item-icon v-if="block.icon"><v-icon>{{ block.icon }}</v-icon></v-list-item-icon>
+                            </template>
+
+                            <v-list-item v-for="(item, ii) in block.items" :key="'Node' + ni + '_Group' + bi + '_Item' + ii" :href="item.url">
+                                <v-list-item-icon />
+                                <v-list-item-title>{{ item.title }}</v-list-item-title>
+                                <v-list-item-icon v-if="item.icon"><v-icon>{{ item.icon }}</v-icon></v-list-item-icon>
+                            </v-list-item>
+                        </v-list-group>
+
                     </template>
-
-                    <v-list-item href="./Service_Enjoy_RecommendCounterPick.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Counter Pick</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Enjoy_Journey.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Journey</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Enjoy_Roulette.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Roulette</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Enjoy_ShogiTimer.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Shogi Timer</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Learning</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-toolbox</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Service_Learning_Cat.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Cat</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_Constellation.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Constellation</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_Exercise.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Exercise</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_Health.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Health</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_Kampo.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Kampo</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_MusicTheory.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Music Theory</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_TimeTravel.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Time Travel</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_VariousConverters.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Various Converters</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Learning_VariousStatistics.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Various Statistics</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Others</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-microsoft-office</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Service_Others_CalculateSalary.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Calculate Salary</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Service_Others_Optimization.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Optimization</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-            </v-list-group>
-            <!-- ▲ Service ▲ ---------------------------------------------------------------------------------->
-
-
-            <!-- ▼ Japanese Language ▼ ------------------------------------------------------------------------>
-            <v-list-group :value="false" prepend-icon="mdi-translate-variant">
-                <template v-slot:activator>
-                    <v-list-item-title>Japanese Language</v-list-item-title>
-                </template>
-
-                <!-- ▼ Basic ▼ ------------------------------------------------------------------------------------>
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Basic</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-book-account</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Basic_Memory.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Memory Mechanism</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_LearningPoints.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Learning Points</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_Character.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Character</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_Grammar.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Grammar</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_Asking.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Word - Asking</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_GeneralWord.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Word - General Word</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_Conversation.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Word - Conversation</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_Verb.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Word - Verb</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_Adjective_i.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Word - Adjective - i</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_Adjective_na.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Word - Adjective - na</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Basic_Adverb.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Word - Adverb</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Basic ▲ ------------------------------------------------------------------------------------>
-                
-                <!-- ▼ Food ▼ ------------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Word - Food</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-noodles</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Food_General.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>General</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item href="./Japanese_Food_Chinese.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Chinese</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Food_Italian.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Italian</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Food_Seasoning.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Seasoning</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Food_Sushi.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Sushi</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Food ▲ ------------------------------------------------------------------------------------->
-
-                <!-- ▼ Hobby ▼ ------------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Word - Hobby</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-tennis</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Hobby_Art.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Art</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Game.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Game</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Gym.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Gym</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Math.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Math</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Music.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Music</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Outdoor.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Outdoor</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Reading.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Reading</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Sf.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>SF</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Sport.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Sport</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Hobby_Travel.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Travel</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Hobby ▲ ------------------------------------------------------------------------------------>
-
-                <!-- ▼ JAPALISH ▼ --------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Word - JAPALISH</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-syllabary-katakana</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Japalish_Explanation.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Explanation</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Japalish_Level_1.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Level 1</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Japalish_Level_2.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Level 2</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Japalish_Level_3.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Level 3</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ JAPALISH ▲ --------------------------------------------------------------------------------->
-
-                <!-- ▼ Life ▼ ------------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Word - Life</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-coffee</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Life_Body.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Body</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Life_Company.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Company</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Life_Computer.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Computer</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Life_House.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>House</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Life_Kitchen.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Kitchen</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Life_Positive.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Positive</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Life_Time.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Time</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Life ▲ ------------------------------------------------------------------------------------->
-
-                <!-- ▼ Nature ▼ ----------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Word - Nature</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-nature-people</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Nature_General.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>General</v-list-item-title>
-                    </v-list-item>
-                    
-                    <v-list-item href="./Japanese_Nature_Animal.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Animal</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Nature_Forest.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Forest</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Nature_Plant.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Plant</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Nature_River.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>River</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Nature_Sea.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Sea</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Nature ▲ ----------------------------------------------------------------------------------->
-
-                <!-- ▼ Shop ▼ ------------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Word - Shop</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-cart</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Shop_ClothesStore.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Clothes</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Shop_Supermarket.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Supermarket</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Shop ▲ ------------------------------------------------------------------------------------->
-
-                <!-- ▼ Outside ▼ ---------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Word - Outside</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-beach</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Outside_Cafe.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Cafe</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Direction.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Direction</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Hospital.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Hospital</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Restaurant.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Restaurant</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Park.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Park</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Road.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Road</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_School.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>School</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Vehicle.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Vehicle</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Weather.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Weather</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Outside ▲ ---------------------------------------------------------------------------------->
-
-                <!-- ▼ Verb ▼ ------------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Verb</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-walk</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japanese_Verb_Type.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Type</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Verb ▲ ------------------------------------------------------------------------------------->
-                
-                <!-- ▼ Folk Tales ▼ --------------------------------------------------------------------------------->
-                <v-list-item href="./Japanese_FolkTales.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Folk Tales</v-list-item-title>
-
-                    <v-list-item-icon><v-icon>mdi-book-open-page-variant-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-                <!-- ▲ Folk Tales ▲ --------------------------------------------------------------------------------->
-
-                <!-- ▼ Quiz ▼ ------------------------------------------------------------------------------------->
-                <v-list-item href="./Japanese_Quiz.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Quiz</v-list-item-title>
-
-                    <v-list-item-icon><v-icon>mdi-help-box-multiple-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-                <!-- ▲ Quiz ▲ ------------------------------------------------------------------------------------->
-
-                <!-- ▼ Recommend ▼ -------------------------------------------------------------------------------->
-                <v-list-item href="./Japanese_Recommend_Learning.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Recommend Site</v-list-item-title>
-
-                    <v-list-item-icon><v-icon>mdi-hand-heart-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-                <!-- ▲ Recommend ▲ -------------------------------------------------------------------------------->
-                
-            </v-list-group>
-            <!-- ▲ Japanese Language ▲ ------------------------------------------------------------------------>
-
-            
-
-            <!-- ▼ Japanese Culture ▼ ------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-checkbox-blank-circle">
-                <template v-slot:activator>
-                    <v-list-item-title>Japanese Culture</v-list-item-title>
-                </template>
-
-                <!-- ▼ Shop ▼ --------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Shop</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-store</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_Shop_List.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Overview</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japan_Shop_Daiso.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>DAISO</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Shop ▲ --------------------------------------------------------------------------------->
-
-                <!-- ▼ Food ▼ --------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Food</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-noodles</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_AsianCuisine.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Asian Cuisine</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japan_Food.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Food</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japan_Drink.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Drink</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japan_Snack.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Snack</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Food ▲ --------------------------------------------------------------------------------->
-
-                <!-- ▼ Festival ▼ ----------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Festival</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-balloon</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_Festival_Firework.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Firework</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Festival ▲ ----------------------------------------------------------------------------->
-
-                <!-- ▼ History ▼ ----------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>History</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-history</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_History_Food.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Food &amp; Drink</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ History ▲ ----------------------------------------------------------------------------->
-
-                <!-- ▼ Season ▼ ------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Season</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-cloud-outline</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_Season_Tsuyu.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Tsuyu</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Season ▲ ------------------------------------------------------------------------------->
-
-                <!-- ▼ Tradition ▼ ---------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Tradition</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-palette</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_Art.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Art &amp; Patterns</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Tradition ▲ ---------------------------------------------------------------------------->
-
-                <!-- ▼ Traffic ▼ ------------------------------------------------------------------------------>
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Traffic</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-plane-train</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Japan_Travel.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Travel</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Traffic ▲ ------------------------------------------------------------------------------>
-
-                <v-list-item href="./Japan_Statistics.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Statistics</v-list-item-title>
-
-                    <v-list-item-icon><v-icon>mdi-finance</v-icon></v-list-item-icon>
-                </v-list-item>
-
-            </v-list-group>
-            <!-- ▲ Japanese Culture ▲ ------------------------------------------------------------------------->
-
-
-            <!-- ▼ Cooking ▼ ---------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-chef-hat">
-                <template v-slot:activator>
-                    <v-list-item-title>Cooking</v-list-item-title>
-                </template>
-
-                <!-- ▼ Complexity ▼ --------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Difficulty</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-finance</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Cooking_Simple.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Simple</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Cooking_Normal.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Normal</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Cooking_Complex.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Complex</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Complexity ▲ --------------------------------------------------------------------------->
-                <!-- ▼ Ingredient ▼ --------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Ingredient</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-carrot</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Cooking_Bean.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Bean</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Cooking_SoyMilk.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Soy Milk</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Cooking_Tofu.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Tofu</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Cooking_Tomato.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Tomato</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Cooking_Vinegar.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Vinegar</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Ingredient ▲ --------------------------------------------------------------------------->
-                
-                <v-list-item href="./Cooking_Seasoning.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Seasoning</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-food-variant</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Cooking_Science.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Science</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-flask-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-
-            </v-list-group>
-            <!-- ▲ Cooking ▲ ---------------------------------------------------------------------------------->
-
-
-            <!-- ▼ Plant ▼ ------------------------------------------------------------------------------------>
-            <v-list-group :value="false" prepend-icon="mdi-sprout">
-                <template v-slot:activator>
-                    <v-list-item-title>Plant</v-list-item-title>
-                </template>
-
-                <v-list-item href="./Plant_General.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>General</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-tree</v-icon></v-list-item-icon>
-                </v-list-item>
-
-                <!-- ▼ Flower ▼ ----------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Flower</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-flower</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Plant_Flower_Rose.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Rose</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Flower ▲ ----------------------------------------------------------------------------------->
-
-                <!-- ▼ Herb ▼ ------------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Herb</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-leaf</v-icon></v-list-item-icon>
-                    </template>
-
-
-                    <v-list-item href="./Plant_Herb_Basil.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Basil</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group sub-group>
-                <!-- ▲ Herb ▲ ------------------------------------------------------------------------------------->
-
-                <!-- ▼ Vegetable ▼ -------------------------------------------------------------------------------->
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Vegetable</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-carrot</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Plant_Vegetable_Database.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Database</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item href="./Plant_Vegetable_Burdock.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Burdock</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Plant_Vegetable_Chrysanthemum.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Chrysanthemum</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Plant_Vegetable_Eggplant.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Eggplant</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Plant_Vegetable_Konegi.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Konegi</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Plant_Vegetable_MiniTomato.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Mini Tomato</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Plant_Vegetable_Onion.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Onion</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Plant_Vegetable_Potato.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Potato</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Plant_Vegetable_Spinach.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Spinach</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-                <!-- ▲ Vegetable ▲ -------------------------------------------------------------------------------->
-
-            </v-list-group>
-            <!-- ▲ Plant ▲ ------------------------------------------------------------------------------------>
-
-
-            <!-- ▼ Music ▼ ------------------------------------------------------------------------------------>
-            <v-list-group :value="false" prepend-icon="mdi-music">
-                <template v-slot:activator>
-                    <v-list-item-title>Music</v-list-item-title>
-                </template>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Artist</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-account-music</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Music_Showgo.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Show-Go</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Music_UtadaHikaru.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Utada Hikaru</v-list-item-title>
-                    </v-list-item>
-                </v-list-group sub-group>
-
-                <v-list-item href="./Music_Other.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Other</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-panorama-variant</v-icon></v-list-item-icon>
-                </v-list-item>
-                <v-list-item href="./Music_BackgroundBGM.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>Background BGM</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-bird</v-icon></v-list-item-icon>
-                </v-list-item>
-            </v-list-group>
-            <!-- ▲ Music ▲ ------------------------------------------------------------------------------------>
-            
-
-            <!-- ▼ Game ▼ ------------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-nintendo-game-boy">
-                <template v-slot:activator>
-                    <v-list-item-title>Game</v-list-item-title>
-                </template>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Action</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-sword</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Game_FruitMergeDungeon.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Suika RPG</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-food-apple-outline</v-icon></v-list-item-icon>
-                    </v-list-item>
-                    <v-list-item href="./Game_KittyHopper.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Kitty Hopper</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-cat</v-icon></v-list-item-icon>
-                    </v-list-item>
-                    <v-list-item href="./Game_Ball.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Ping Pong</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-circle-outline</v-icon></v-list-item-icon>
-                    </v-list-item>
-
-                    <v-list-item href="./Game_SpaceShip.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Space Ship</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-space-station</v-icon></v-list-item-icon>
-                    </v-list-item>
-                    <v-list-item href="./Game_Shooting.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Warp Shot</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-target</v-icon></v-list-item-icon>
-                    </v-list-item>
-                </v-list-group sub-group>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Camera</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-camera</v-icon></v-list-item-icon>
-                    </template>
-                    <v-list-item href="./Game_HandRPS.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Hand RPS</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-hand-peace</v-icon></v-list-item-icon>
-                    </v-list-item>
-                    <v-list-item href="./Game_HandShooter.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Hand Shooting</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-fruit-cherries</v-icon></v-list-item-icon>
-                    </v-list-item>
-                </v-list-group sub-group>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Simple</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-puzzle-outline</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Game_Checkbox.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Checkman</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-checkbox-outline</v-icon></v-list-item-icon>
-                    </v-list-item>
-                    <v-list-item href="./Game_RandomQuestion.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Random Question</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-comment-question-outline</v-icon></v-list-item-icon>
-                    </v-list-item>
-                </v-list-group sub-group>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Simulation</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-earth</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Game_Market.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Market</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-cart-outline</v-icon></v-list-item-icon>
-                    </v-list-item>
-                </v-list-group sub-group>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>Training</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-school</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Game_ReflexSpeed.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Reflex Speed</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-speedometer-slow</v-icon></v-list-item-icon>
-                    </v-list-item>
-                    <v-list-item href="./Game_TypeInfinity.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Type Infinity</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-keyboard-outline</v-icon></v-list-item-icon>
-                    </v-list-item>
-                    <v-list-item href="./Game_Kanji.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Kanji</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-ideogram-cjk</v-icon></v-list-item-icon>
-                    </v-list-item>
-                    <v-list-item href="./Game_Geography.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Geography</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-map-marker</v-icon></v-list-item-icon>
-                    </v-list-item>
-                </v-list-group sub-group>
-            </v-list-group>
-            <!-- ▲ Game ▲ ------------------------------------------------------------------------------------->
-
-
-            <!-- ▼ My Notes ▼ --------------------------------------------------------------------------------->
-            <v-list-group :value="false" prepend-icon="mdi-book-open-page-variant">
-                <template v-slot:activator>
-                    <v-list-item-title>My Notes</v-list-item-title>
-                </template>
-
-                <v-list-item href="./Note_Brain.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>思考</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-brain</v-icon></v-list-item-icon>
-                </v-list-item>
-
-                <v-list-item href="./Note_Brain3D.html">
-                    <v-list-item-icon />
-                    <v-list-item-title>思考 3D</v-list-item-title>
-                    <v-list-item-icon><v-icon>mdi-cube-outline</v-icon></v-list-item-icon>
-                </v-list-item>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>コンピュータ</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-laptop</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Note_Computer_Programming.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>プログラミング</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Computer_Quantum.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>量子コンピュータ</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Computer_AI.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>AI</v-list-item-title>
-                    </v-list-item>
-                </v-list-group>
-                
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>サイエンス</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-atom-variant</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Note_Sience_Physics.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>物理</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Sience_Math.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>数学</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Sience_Chemistry.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>化学</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Sience_Chemistry_Simulation.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>化学反応シミュレーション</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Sience_Biology.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>生物</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Computer_Marketing.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>マーケティング</v-list-item-title>
-                    </v-list-item>
                 </v-list-group>
 
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>アート</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-palette</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Note_Art_Image.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>映像</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Art_Music.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>音楽</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Art_Fashion.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>ファッション</v-list-item-title>
-                    </v-list-item>
-                </v-list-group>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>生活</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-heart-pulse</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Note_Life_Health.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>健康</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Life_Culture.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>文化</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Life_Society.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>社会</v-list-item-title>
-                    </v-list-item>
-                </v-list-group>
-
-                <v-list-group sub-group :value="false">
-                    <template v-slot:activator>
-                        <v-list-item-title>資格</v-list-item-title>
-                        <v-list-item-icon><v-icon>mdi-account-tie</v-icon></v-list-item-icon>
-                    </template>
-
-                    <v-list-item href="./Note_Qualification_ColorCoordinator.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>カラーコーディネーター検定</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Qualification_WebDesignTechnician.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Webデザイン技能士</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Qualification_GTest.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>G検定</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Qualification_AppliedInformation.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>応用情報技術者試験</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Qualification_Bookkeeping.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>簿記</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Note_Qualification_Makeup.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>日本化粧品検定</v-list-item-title>
-                    </v-list-item>
-                </v-list-group>
-                
-            </v-list-group>
-            <!-- ▲ My Notes ▲ --------------------------------------------------------------------------------->
-
-            
-            <!-- ▼ Setting ▼ ---------------------------------------------------------------------------------->
-            <v-list-item href="../../English/HTML/Setting.html">
-                <v-list-item-icon><v-icon>mdi-cog</v-icon></v-list-item-icon>
-                <v-list-item-title>Setting</v-list-item-title>
-            </v-list-item>
-            <!-- ▲ Setting ▲ ---------------------------------------------------------------------------------->
-
+            </template>
 
         </v-list>
         <!-- ▲ Navigation ▲ ------------------------------------------------------------------------------->
-
 
     </v-navigation-drawer>
     `,
@@ -1365,6 +329,7 @@ Vue.component('main-navigation', {
         return {
             Search_Query: '',
             All_Pages: [],
+            Nav_Model: [],
         };
     },
     computed: {
@@ -1407,39 +372,15 @@ Vue.component('main-navigation', {
             return (text || '').toLowerCase().replace(/[\s_-]+/g, '');
         },
         Load_Pages() {
-            let jsonPath = '../../Asset/Data/Page.json';
-            const scripts = document.querySelectorAll('script[src]');
-            for (const s of scripts) {
-                const src = s.getAttribute('src') || '';
-                if (src.indexOf('Common.js') !== -1) {
-                    jsonPath = src.replace(/Common\.js.*/, '') + '../Data/Page.json';
-                    break;
-                }
-            }
-            fetch(jsonPath)
+            fetch(Get_Page_Json_Path())
                 .then(res => res.json())
                 .then(data => {
-                    const flat = [];
-                    Object.keys(data).forEach(cat => {
-                        const subs = data[cat];
-                        Object.keys(subs).forEach(sub => {
-                            const pages = subs[sub];
-                            if (Array.isArray(pages)) {
-                                pages.forEach(p => {
-                                    flat.push({
-                                        title: p.title,
-                                        url: p.url,
-                                        description: p.description || '',
-                                        category: cat,
-                                        subcategory: sub === 'Top' ? '' : sub
-                                    });
-                                });
-                            }
-                        });
-                    });
-                    this.All_Pages = flat;
+                    this.All_Pages = Build_Flat_Pages(data);
+                    this.Nav_Model = Build_Nav_Model(data);
                 })
-                .catch(() => { });
+                .catch(() => {
+                    this.Nav_Model = Fallback_Nav_Model();
+                });
         }
     },
 })
@@ -1904,38 +845,22 @@ window.Mixins_Youtube = {
         setTimeout(positionAboveFooter, 1500);
     }
 
-    function getJsonPath() {
-        var scripts = document.querySelectorAll('script[src]');
-        for (var i = 0; i < scripts.length; i++) {
-            var src = scripts[i].getAttribute('src');
-            if (src && src.indexOf('Common.js') !== -1) {
-                var base = src.replace(/Common\.js.*/, '');
-                return base + '../Data/Page.json';
-            }
-        }
-        return '../../Asset/Data/Page.json';
-    }
-
     function normalizeUrl(url) {
         return url.replace('./', '').replace(/^\//, '');
     }
 
     $(function () {
-        var jsonPath = getJsonPath();
-        fetch(jsonPath)
+        fetch(Get_Page_Json_Path())
             .then(function (res) { return res.json(); })
             .then(function (pageData) {
                 var jpSection = pageData['Japanese Language'];
                 if (!jpSection) return;
 
                 var flatList = [];
-                var keys = Object.keys(jpSection);
-                keys.forEach(function (key) {
-                    if (Array.isArray(jpSection[key])) {
-                        jpSection[key].forEach(function (page) {
-                            flatList.push(page);
-                        });
-                    }
+                (jpSection.groups || []).forEach(function (group) {
+                    (group.items || []).forEach(function (page) {
+                        flatList.push(page);
+                    });
                 });
 
                 var currentFile = window.location.pathname.split('/').pop();
