@@ -4055,7 +4055,7 @@
         const PBT_TEXT = "Created by F U M";
         const PBT_GATHER_MS = 3000;   // 収束にかける時間
         const PBT_HOLD_MS = 3000;     // 完成を保持する時間
-        const PBT_SUCK_MS = 5000;     // ブラックホールへ吸い込まれる時間（渦を巻きながらじっくり落ち込む）
+        const PBT_SUCK_MS = 9000;     // ブラックホールへ吸い込まれる時間（渦を巻きながらじっくり落ち込む）
         const PBT_TOTAL_MS = PBT_GATHER_MS + PBT_HOLD_MS + PBT_SUCK_MS;
         const PBT_COUNT = isMobile ? 1800 : 3200;
         const PBT_STAGGER = 0.35;                        // 収束タイミングのばらつき（0〜1）
@@ -4133,6 +4133,12 @@
         const pbtTargetXY = pbtSample.targets;   // 高さ1基準のローカルXY
         const pbtTargetZ = pbtSample.depth;      // ローカルZ（奥行きの厚み）
 
+        // テキスト全体を右へ少しだけずらす（アンカー面ローカルX。+X が画面右方向）
+        const PBT_OFFSET_X = -0.6;
+        for (let i = 0; i < PBT_COUNT; i++) {
+            pbtTargetXY[i * 2] += PBT_OFFSET_X;
+        }
+
         const pbtStart = new Float32Array(PBT_COUNT * 3);   // ワールド固定の初期散布位置
         const pbtSeed = new Float32Array(PBT_COUNT);
         const pbtDelay = new Float32Array(PBT_COUNT);
@@ -4145,7 +4151,7 @@
         for (let i = 0; i < PBT_COUNT; i++) {
             pbtSeed[i] = Math.random();
             pbtDelay[i] = Math.random() * PBT_STAGGER;
-            pbtSwirl[i] = (2.2 + Math.random() * 1.6) * Math.PI;
+            pbtSwirl[i] = (3.2 + Math.random() * 2.4) * Math.PI;
             const white = Math.random() < 0.12;
             const tint = 0.5 + Math.random() * 0.5;
             pbtColors[i * 3]     = white ? 1.0 : 0.30 * tint;
@@ -4363,7 +4369,8 @@
                     // 中心へ寄るほど回旋が長く続くよう、対数螺旋の回転を加算する。
                     const rFactor = Math.max(1 - er, 0.05);          // 半径の縮小率（0.05で下限クランプ）
                     const logSpin = Math.log(1 / rFactor);           // 縮むほど増大（最大 ≈3.0）
-                    const ang = Math.atan2(dy, dx) + pbtSwirl[i] * (ea + logSpin * 0.85);
+                    // 中心に近づくほど回転を強くする：logSpin の一次＋二次項で終盤に一気に巻き込む
+                    const ang = Math.atan2(dy, dx) + pbtSwirl[i] * (ea + logSpin * 1.4 + logSpin * logSpin * 5);
                     const r = Math.sqrt(dx * dx + dy * dy) * rFactor;
                     pbtTmp.set(
                         cx + Math.cos(ang) * r,
