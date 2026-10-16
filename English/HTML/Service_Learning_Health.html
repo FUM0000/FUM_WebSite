@@ -174,6 +174,187 @@
       background: #ef4444;
       color: white;
     }
+
+    /* ===== カテゴリ切替タブ ===== */
+    .category-tabs {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 0 0 1.6rem;
+    }
+
+    .cat-tab {
+      flex: 1;
+      max-width: 260px;
+      padding: 12px 16px;
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: #64748b;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+    }
+
+    .cat-tab:hover {
+      border-color: #93c5fd;
+      color: #1d4ed8;
+    }
+
+    .cat-tab.active {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: white;
+      box-shadow: 0 6px 16px rgba(29, 78, 216, 0.28);
+    }
+
+    .tab-panel[hidden] {
+      display: none;
+    }
+
+    /* ===== 健康チェック（食べ物から見る体のサイン） ===== */
+    .health-intro {
+      text-align: center;
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin: 0 0 1.2rem;
+    }
+
+    .food-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 1.2rem;
+    }
+
+    .food-chip {
+      padding: 12px 8px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #334155;
+      transition: all 0.15s;
+      text-align: center;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+
+    .food-chip .chip-emoji {
+      display: block;
+      font-size: 1.6rem;
+      margin-bottom: 4px;
+    }
+
+    .food-chip:hover {
+      transform: translateY(-2px);
+      border-color: #93c5fd;
+    }
+
+    .food-chip.selected {
+      border-color: #3b82f6;
+      background: #eff6ff;
+      color: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .clear-btn {
+      padding: 8px 24px;
+      border: 2px solid #cbd5e1;
+      background: white;
+      color: #64748b;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .clear-btn:hover:not(:disabled) {
+      border-color: #94a3b8;
+      color: #334155;
+    }
+
+    .clear-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .sign-card {
+      --sign-color: #3b82f6;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 1.1rem 1.2rem;
+      margin: 0 0 0.9rem;
+      border-left: 5px solid var(--sign-color);
+    }
+
+    .sign-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 0.4rem;
+    }
+
+    .sign-emoji {
+      font-size: 1.6rem;
+    }
+
+    .sign-name {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .sign-nutrient {
+      margin-left: auto;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #1d4ed8;
+      background: #dbeafe;
+      padding: 4px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .sign-text {
+      margin: 0.3rem 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.65;
+      color: #334155;
+    }
+
+    .sign-sub {
+      margin: 0.35rem 0 0;
+      font-size: 0.89rem;
+      color: #64748b;
+      line-height: 1.65;
+    }
+
+    .health-empty {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.92rem;
+      padding: 0.8rem 0 0.2rem;
+    }
+
+    .info-box.health {
+      background: #f5f3ff;
+      border-left: 5px solid #8b5cf6;
+    }
   </style>
     <meta name="robots" content="index, follow">
 </head>
@@ -191,6 +372,17 @@
           <v-container v-show="Ready_Page" fluid class="pa-5">
 
             <div class="container">
+              <div class="category-tabs">
+                <button class="cat-tab active" id="catBreathing">
+                  <span>🫁</span> Breathing
+                </button>
+                <button class="cat-tab" id="catHealth">
+                  <span>🍎</span> Health Check
+                </button>
+              </div>
+
+              <!-- ===== カテゴリー1: 呼吸 ===== -->
+              <div id="breathingPanel">
               <div class="method-select">
                 <select id="methodSelect">
                   <optgroup label="Relaxation • Anxiety Relief">
@@ -250,6 +442,69 @@
                   <p id="effect">Activates the parasympathetic nervous system, quickly leading to deep relaxation.
                     Excellent for
                     reducing anxiety, tension, and helping with falling asleep.</p>
+                </div>
+              </div>
+              </div>
+
+              <!-- ===== カテゴリー2: 健康チェック（食べ物から分かる体のサイン） ===== -->
+              <div id="healthPanel" hidden>
+                <div class="card">
+                  <div style="text-align:center; font-size:1.35rem; font-weight:600; color:#1d4ed8; margin-bottom:0.6rem;">
+                    Body Signals Hidden in Your Cravings
+                  </div>
+
+                  <p class="health-intro">
+                    The food you are craving now may be a message from your body.<br>
+                    Select the food you want to eat, and check what your body might be asking for.
+                  </p>
+
+                  <div class="method-select" style="margin-bottom:1rem;">
+                    <select id="foodSelect">
+                      <optgroup label="Sweets • Snacks">
+                        <option value="sweets">Sweets / Sugar</option>
+                        <option value="chocolate">Chocolate</option>
+                        <option value="fried">Greasy / Fried Food</option>
+                      </optgroup>
+                      <optgroup label="Staple Foods">
+                        <option value="meat">Meat</option>
+                        <option value="fish">Fish</option>
+                        <option value="rice">Rice / Bread / Noodles</option>
+                        <option value="dairy">Dairy (Milk / Cheese)</option>
+                        <option value="eggs">Eggs</option>
+                        <option value="soy">Soy (Tofu / Natto)</option>
+                      </optgroup>
+                      <optgroup label="Vegetables • Fruits">
+                        <option value="vegetables">Vegetables</option>
+                        <option value="fruit">Fruit</option>
+                        <option value="seaweed">Seaweed / Salt</option>
+                        <option value="sour">Sour Foods (Vinegar / Lemon)</option>
+                      </optgroup>
+                      <optgroup label="Drinks • Others">
+                        <option value="water">Water</option>
+                        <option value="spicy">Spicy Food</option>
+                        <option value="coffee">Coffee / Caffeine</option>
+                        <option value="umami">Umami / Strong Flavors</option>
+                        <option value="crunchy">Crunchy Things (Ice / Chips)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div id="healthResult"></div>
+
+                  <div class="info-box point">
+                    <h4>How to Read This</h4>
+                    <p>Cravings can come from nutrient needs, but also from stress, habits, and
+                      lack of sleep. Check this as one clue about your condition, not as a
+                      diagnosis. If a craving is unusually strong or lasts long, be sure to
+                      consult a doctor or dietitian.</p>
+                  </div>
+
+                  <div class="info-box health">
+                    <h4>Daily Habits That Help</h4>
+                    <p>Eating three balanced meals, staying hydrated, and getting enough sleep are
+                      the foundations that keep cravings honest. A body that receives protein,
+                      vegetables, and good fats regularly sends out fewer false alarms.</p>
+                  </div>
                 </div>
               </div>
           </v-container>
@@ -509,6 +764,201 @@
 
     updatePhaseInfo();
     updateDisplay(0, methods[currentMethod].phases[0].color);
+
+    /* ===== カテゴリ切替（呼吸 / 健康チェック） ===== */
+    const catBreathingBtn = document.getElementById("catBreathing");
+    const catHealthBtn = document.getElementById("catHealth");
+    const breathingPanel = document.getElementById("breathingPanel");
+    const healthPanel = document.getElementById("healthPanel");
+
+    function switchCategory(category) {
+      const isBreathing = category === "breathing";
+      // 健康チェックに切り替えるときは呼吸トレーニングを停止
+      if (!isBreathing && isRunning) stop();
+
+      catBreathingBtn.classList.toggle("active", isBreathing);
+      catHealthBtn.classList.toggle("active", !isBreathing);
+      breathingPanel.hidden = !isBreathing;
+      healthPanel.hidden = isBreathing;
+    }
+
+    catBreathingBtn.addEventListener("click", () => switchCategory("breathing"));
+    catHealthBtn.addEventListener("click", () => switchCategory("health"));
+
+    /* ===== 健康チェック：求めている食べ物から分かる体のサイン ===== */
+    const foodSignals = {
+      "sweets": {
+        emoji: "🍬", name: "Sweets / Sugar", color: "#f472b6",
+        tag: "Energy • Serotonin",
+        headline: "Your energy dipped, or you are eating away stress.",
+        detail: "When blood sugar drops from skipping meals or overwork, the body asks for quick fuel. Stress also depletes serotonin, and the fastest way to refill it becomes sweets.",
+        advice: "Have protein or yogurt with the sweet to steady blood sugar. If afternoon sleepiness comes with the cravings, review your sleep first."
+      },
+      "chocolate": {
+        emoji: "🍫", name: "Chocolate", color: "#a16207",
+        tag: "Magnesium • Relaxation",
+        headline: "A signal of stress and a shortage of magnesium.",
+        detail: "Chocolate is rich in magnesium and raises serotonin, so it is often craved when you are tense or tired. The stronger the craving for bitter chocolate, the more likely a mineral shortage.",
+        advice: "Choose 70%+ dark chocolate or dark chocolate in small amounts. Nuts, bananas, and leafy greens refill magnesium the same way."
+      },
+      "fried": {
+        emoji: "🍟", name: "Greasy / Fried Food", color: "#f59e0b",
+        tag: "Healthy Fats",
+        headline: "Your body wants dense energy or some fat intake.",
+        detail: "Craving oil can mean your meals are too low in fat, but it often is comfort eating when you are mentally tired or emotionally low.",
+        advice: "Answer with healthy fats instead: nuts, avocado, olive oil, salmon. If cravings follow a stressful day, try the breathing tab first."
+      },
+      "meat": {
+        emoji: "🥩", name: "Meat", color: "#ef4444",
+        tag: "Iron • Protein",
+        headline: "Possible iron or protein shortage.",
+        detail: "Wanting red meat can signal low iron from fatigue, pale skin, or feeling cold, or muscle recovery after exercise. It is also common during growth periods.",
+        advice: "Pair meat with vitamin C (tomatoes, peppers, citrus) to boost iron absorption. If tiredness continues, consider a blood check for anemia."
+      },
+      "fish": {
+        emoji: "🐟", name: "Fish", color: "#0ea5e9",
+        tag: "EPA / DHA",
+        headline: "Your brain is tired, not your body.",
+        detail: "Craving fish often appears during long concentration or eye strain, when the brain wants omega-3 fatty acids. It can also mean a desire for light protein.",
+        advice: "Eat fatty fish (salmon, mackerel, sardines) two to three times a week. Rest your eyes and take short walks to support the brain."
+      },
+      "rice": {
+        emoji: "🍚", name: "Rice / Bread / Noodles", color: "#d97706",
+        tag: "Carbohydrates",
+        headline: "The quickest fuel request from your body.",
+        detail: "Carbohydrates raise serotonin and help you sleep, so strong cravings for staples often appear after poor sleep or long mental effort.",
+        advice: "Keep the staple, but add protein and vegetables to slow the blood sugar spike. Whole grains and sweet potatoes last longer."
+      },
+      "dairy": {
+        emoji: "🥛", name: "Dairy (Milk / Cheese)", color: "#60a5fa",
+        tag: "Calcium",
+        headline: "A calcium request, or a need for comfort.",
+        detail: "Dairy cravings increase with growth, menstruation, and stress. The warm feeling of milk and cheese also works as emotional comfort.",
+        advice: "Milk, yogurt, cheese, and small fish all count. Get some sunlight for vitamin D, which helps calcium absorb."
+      },
+      "eggs": {
+        emoji: "🥚", name: "Eggs", color: "#facc15",
+        tag: "Protein • Choline",
+        headline: "Your muscles and liver want a rebuild.",
+        detail: "Eggs carry high-quality protein and choline, which supports the liver. Craving them often follows fatigue recovery or a protein-poor diet.",
+        advice: "One to three eggs a day is fine for most people. Add vegetables to make it a balanced plate."
+      },
+      "soy": {
+        emoji: "🫘", name: "Soy (Tofu / Natto)", color: "#84cc16",
+        tag: "Plant Protein",
+        headline: "Your body is asking for easy-to-digest protein.",
+        detail: "Soy cravings often appear during dieting or when meat intake is low. Isoflavones also support hormonal balance.",
+        advice: "Tofu, natto, and edamame are gentle on the stomach. Miso soup is an easy way to get them daily."
+      },
+      "vegetables": {
+        emoji: "🥬", name: "Vegetables", color: "#22c55e",
+        tag: "Fiber • Minerals",
+        headline: "Your gut wants fiber, and so do your minerals.",
+        detail: "Wanting vegetables is a good sign of body awareness. It can also mean your recent meals were too oily or low in minerals.",
+        advice: "Fill half the plate with vegetables. Cooked greens are gentler on the stomach than raw ones when you are tired."
+      },
+      "fruit": {
+        emoji: "🍎", name: "Fruit", color: "#fb7185",
+        tag: "Vitamin C",
+        headline: "A request for vitamins and natural sweetness.",
+        detail: "Fruit cravings often rise when you are avoiding sugar but your energy is low, or when your immunity needs support.",
+        advice: "Choose low-sugar fruit such as berries, kiwi, and apples. Whole fruit beats juice because the fiber slows absorption."
+      },
+      "seaweed": {
+        emoji: "🌊", name: "Seaweed / Salt", color: "#14b8a6",
+        tag: "Iodine • Minerals",
+        headline: "Mineral replenishment after sweating or long hours.",
+        detail: "Seaweed craving points to iodine and mineral loss from sweating, and it supports thyroid function. Sometimes it is simply low salt intake.",
+        advice: "Nori, kombu, and wakame are easy in soups and salads. Watch the sodium in heavily seasoned products."
+      },
+      "sour": {
+        emoji: "🍋", name: "Sour Foods (Vinegar / Lemon)", color: "#a3e635",
+        tag: "Vitamin C • Recovery",
+        headline: "Fatigue is building up inside you.",
+        detail: "Craving sourness is a classic sign of accumulated fatigue. Vitamin C supports the adrenal glands and helps you bounce back.",
+        advice: "Lemon water, vinegared dishes, and pickles are easy starts. It also helps digestion, so try it before heavy meals."
+      },
+      "water": {
+        emoji: "💧", name: "Water", color: "#38bdf8",
+        tag: "Hydration",
+        headline: "Probably dehydration, not hunger.",
+        detail: "Even mild dehydration lowers concentration and can cause headaches. The brain often misreads it as a wish for food.",
+        advice: "Drink one to one and a half liters a day, more when exercising or in heat. Start the morning with a glass of water."
+      },
+      "spicy": {
+        emoji: "🌶️", name: "Spicy Food", color: "#f43f5e",
+        tag: "Circulation",
+        headline: "You are looking for stimulation to wake up.",
+        detail: "Capsaicin boosts circulation and releases endorphins. Craving spice often means you feel sluggish or want to break through stress.",
+        advice: "Enjoy it in moderation, but stop if your stomach complains. If spice cravings come with poor sleep, review your rest instead."
+      },
+      "coffee": {
+        emoji: "☕", name: "Coffee / Caffeine", color: "#78350f",
+        tag: "Sleep Debt",
+        headline: "Your body is asking for sleep, not coffee.",
+        detail: "Wanting caffeine means fatigue has piled up. Too much caffeine then damages sleep quality, creating a loop that deepens tiredness.",
+        advice: "Set a caffeine cutoff at least eight hours before bed. Green tea and short walks give a gentler lift."
+      },
+      "umami": {
+        emoji: "🍢", name: "Umami / Strong Flavors", color: "#c084fc",
+        tag: "Protein • Salt",
+        headline: "Low protein or mineral depletion, or just stress.",
+        detail: "When meals lack protein, the brain seeks strong flavors as a substitute. Stress and habit eating also push you toward intense tastes.",
+        advice: "Make protein a priority at each meal, then enjoy strong flavors in smaller amounts."
+      },
+      "crunchy": {
+        emoji: "🧊", name: "Crunchy Things (Ice / Chips)", color: "#94a3b8",
+        tag: "Iron • Stress Relief",
+        headline: "Stress release, or a warning sign from iron.",
+        detail: "Craving ice in particular is a known sign of iron-deficiency anemia. Crunching itself relieves tension, so chips and crackers join in when you are stressed.",
+        advice: "If ice cravings continue, get a blood test. For stress, nuts or crackers are a better crunch than ice."
+      }
+    };
+
+    const foodSelect = document.getElementById("foodSelect");
+    const healthResultEl = document.getElementById("healthResult");
+    let checkedFoods = [];
+
+    function renderHealthResult() {
+      if (checkedFoods.length === 0) {
+        healthResultEl.innerHTML =
+          '<div class="health-empty">Select a food above to read the signal from your body.</div>';
+        return;
+      }
+
+      const cards = checkedFoods.map(function (key) {
+        const f = foodSignals[key];
+        return `
+          <div class="sign-card" style="--sign-color:${f.color}">
+            <div class="sign-head">
+              <span class="sign-emoji">${f.emoji}</span>
+              <h3 class="sign-name">${f.name}</h3>
+              <span class="sign-nutrient">${f.tag}</span>
+            </div>
+            <p class="sign-text">${f.headline}</p>
+            <p class="sign-sub">${f.detail}</p>
+            <p class="sign-sub"><strong>Tip:</strong> ${f.advice}</p>
+          </div>`;
+      }).join("");
+
+      healthResultEl.innerHTML =
+        '<div style="text-align:right; margin-bottom:0.6rem;">' +
+        '<button class="clear-btn" id="clearHealthBtn">CLEAR</button></div>' + cards;
+
+      document.getElementById("clearHealthBtn").addEventListener("click", function () {
+        checkedFoods = [];
+        renderHealthResult();
+      });
+    }
+
+    foodSelect.addEventListener("change", function () {
+      const value = foodSelect.value;
+      // 同じ食べ物は重複させず、最新の選択を先頭に最大5件まで表示
+      checkedFoods = [value].concat(checkedFoods.filter(function (v) { return v !== value; })).slice(0, 5);
+      renderHealthResult();
+    });
+
+    renderHealthResult();
   </script>
 </body>
 
