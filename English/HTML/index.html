@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -36,6 +36,7 @@
 </head>
 
 <body>
+    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">FUM Website</h1>
 
     <!-- ローディング画面 -->
     <div id="loading-overlay">
@@ -1260,7 +1261,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js" integrity="sha384-IufsRL4FQ+k4aWgxYvH6I1RoIrzL8Ynna+E/AavDQE9hD+UBZQLSTX2+7pPQWNsr" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha384-fJU6sGmyn07b+uD1nMk7/iSb4yvaowcueiQhfVgQuD98rfva8mcr1eSvjchfpMrH" crossorigin="anonymous"></script>
-    <script src="../../Asset/Javascript/Common.js?v=1.04"></script>
+    <script src="../../Asset/Javascript/Common.js?v=1.05"></script>
     <script src="../../Asset/Javascript/Index.js?v=1.0"></script>
 
     <script src="https://unpkg.com/three@0.128.0/build/three.min.js" defer integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
@@ -1302,7 +1303,8 @@
                 Reselect_Recommend() {
                     const data = this.Page_Data;
                     if (!data) return;
-                    const categories = Object.keys(data);
+                    // Page.json は「セクション > グループ > ページ」構造。recommend:false のセクションは候補から除外する
+                    const categories = Object.keys(data).filter(c => data[c].recommend !== false);
                     if (!categories.length) return;
 
                     const lastCategory = localStorage.getItem('RECOMMEND_LAST_CATEGORY') || '';
@@ -1310,13 +1312,14 @@
                     if (!categoryPool.length) categoryPool = categories;
                     const category = categoryPool[Math.floor(Math.random() * categoryPool.length)];
 
-                    const subcategories = Object.keys(data[category]);
+                    const groups = (data[category].groups || []).filter(g => Array.isArray(g.items) && g.items.length);
+                    if (!groups.length) return;
                     const lastSubcategory = localStorage.getItem('RECOMMEND_LAST_SUBCATEGORY') || '';
-                    let subPool = subcategories.filter(s => s !== lastSubcategory);
-                    if (!subPool.length) subPool = subcategories;
-                    const subcategory = subPool[Math.floor(Math.random() * subPool.length)];
+                    let subPool = groups.filter(g => g.title !== lastSubcategory);
+                    if (!subPool.length) subPool = groups;
+                    const group = subPool[Math.floor(Math.random() * subPool.length)];
 
-                    const pages = data[category][subcategory];
+                    const pages = group.items;
                     const lastUrl = localStorage.getItem('RECOMMEND_LAST_URL') || '';
                     let index = Math.floor(Math.random() * pages.length);
                     if (pages.length > 1 && pages[index].url === lastUrl) {
@@ -1324,11 +1327,11 @@
                     }
 
                     this.Recommend_Category = category;
-                    this.Recommend_Subcategory = subcategory;
+                    this.Recommend_Subcategory = group.title;
                     this.Recommend = pages[index];
 
                     localStorage.setItem('RECOMMEND_LAST_CATEGORY', category);
-                    localStorage.setItem('RECOMMEND_LAST_SUBCATEGORY', subcategory);
+                    localStorage.setItem('RECOMMEND_LAST_SUBCATEGORY', group.title);
                     localStorage.setItem('RECOMMEND_LAST_URL', pages[index].url);
 
                     this.Freeze_Recommend_Image();
@@ -3531,6 +3534,53 @@
         diskGlow.scale.set(40, 8, 1);
         scene.add(diskGlow);
 
+        // ── 降着円盤の奥側が上下へ折り曲げられて見える部分（ビルボード） ──
+        // 本来は重力レンズで奥側の円盤が影の上下へ回り込んで見えるが、広いアーク帯は
+        // 大きすぎて他の円盤と合わせて二重三重に見えてしまうため、ここでは影の縁に
+        // 沿う細い光のリング（フォトンリング近似）だけをカメラ正面向けスプライト1枚
+        // （ビルボード）で簡易的に再現する。
+        function createDiskLensingTexture() {
+            const size = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const c = size * 0.5;
+            const R_IN = size * 0.166;    // 影の縁（スプライト幅30で世界半径5.0）
+
+            // シャープな層を先に用意し、最後にまとめてぼかす（高速化＆滑らかなぼかし）
+            const layer = document.createElement('canvas');
+            layer.width = layer.height = size;
+            const lctx = layer.getContext('2d');
+            lctx.beginPath();
+            lctx.arc(c, c, R_IN, 0, Math.PI * 2);
+            lctx.lineWidth = 5;
+            lctx.strokeStyle = 'rgba(255,248,224,0.7)';
+            lctx.stroke();
+
+            // 広がりのぼかし1層＋ほぼ無加工の芯を加算合成し、柔らかく芯のある輝きに
+            ctx.filter = 'blur(4px)';
+            ctx.drawImage(layer, 0, 0);
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.filter = 'blur(1px)';
+            ctx.drawImage(layer, 0, 0);
+            ctx.filter = 'none';
+            ctx.globalCompositeOperation = 'source-over';
+            return new THREE.CanvasTexture(canvas);
+        }
+        const bhPhotonRing = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: createDiskLensingTexture(),
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            opacity: 0.9,
+            depthWrite: false,
+            depthTest: true,
+            fog: false
+        }));
+        bhPhotonRing.position.set(0, 0, 0);
+        // スプライト幅30世界単位 → リングは半径5.0（影の半径4.5のすぐ外側を周回）
+        bhPhotonRing.scale.set(30, 30, 1);
+        scene.add(bhPhotonRing);
+
         // 丸パーティクル（銀河中心の古い星が放つ淡い黄〜琥珀の粒）
         const diskParticleCount = isMobile ? 100 : 200;
         const diskPos = new Float32Array(diskParticleCount * 3);
@@ -4337,6 +4387,8 @@
             accretionDisk.rotation.y += delta * 0.6;
             accretionDiskParticles.rotation.y += delta * 0.6;
             bhGlow.material.opacity = 0.5 + Math.sin(time * 0.5) * 0.1;
+            // フォトンリングも僅かに明滅させて、円盤の輝きと呼吸を合わせる
+            bhPhotonRing.material.opacity = 0.85 + Math.sin(time * 0.7) * 0.1;
             // 落ち葉：ブラックホールに近づいても非表示にせず、常に表示したままにする
             updateLeaves(delta, time);
             if (blackholeWarpPass && blackhole && blackhole.geometry) {
