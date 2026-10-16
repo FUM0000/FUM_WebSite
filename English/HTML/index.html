@@ -2350,174 +2350,342 @@
         }
         const particleTexture = createCircleTexture();
         // ── Autumn Falling Leaves (InstancedMesh) ──
-        // Gallery の魚と同じように、自作ジオメトリ（葉の形）を InstancedMesh で
-        // 多数複製し、落ち葉がリアルに舞い落ちる様子を演出する。
-        // 色は紅葉らしい3色（赤・黄・茶）。
-        const LEAF_COUNT = isMobile ? 150 : 340;
+        // Gallery の魚と同じように、自作ジオメトリ＋自作テクスチャの落ち葉を
+        // InstancedMesh で多数複製し、落ち葉がリアルに舞い落ちる様子を演出する。
+        // 色は紅葉らしい3系統（赤・黄・茶）。現れる時（上端）と消える時（下端）はフェードさせる。
+        const LEAF_COUNT = isMobile ? 220 : 520;
 
-        // 落ち葉の色（赤・黄・茶）
-        const LEAF_COLORS = [
-            new THREE.Color(0.84, 0.16, 0.10), // 赤
-            new THREE.Color(0.95, 0.73, 0.15), // 黄
-            new THREE.Color(0.56, 0.34, 0.13), // 茶
+        // 落ち葉の色（赤・黄・茶）※リニア値。系統ごとに複数の濃淡を用意して個体差を出す
+        const LEAF_COLOR_FAMILIES = [
+            // 赤系（紅葉）
+            [[0.62, 0.06, 0.05], [0.72, 0.11, 0.05], [0.52, 0.04, 0.03], [0.66, 0.16, 0.04]],
+            // 黄系（イチョウ・山吹）
+            [[0.86, 0.62, 0.08], [0.80, 0.52, 0.06], [0.93, 0.73, 0.14], [0.76, 0.56, 0.10]],
+            // 茶系（落ち葉）
+            [[0.34, 0.16, 0.06], [0.27, 0.12, 0.05], [0.41, 0.23, 0.09], [0.23, 0.10, 0.045]],
         ];
 
-        // 葉の形（輪郭）を座標で定義する。付け根〜先端がとがり、中央付近が最も広い葉身に、
-        // 主脈へ向けて浅いV字断面と長手方向の反りを加えて、光を受けたとき陰影が出るようにする。
-        function createLeafGeometry(len = 1, halfWidth = 0.46, segs = 18) {
-            const positions = [];
-            const colors = [];
-            const uvs = [];
-            const indices = [];
-            const push = (x, y, z, shade, u, v) => {
-                positions.push(x, y, z);
-                colors.push(shade, shade, shade);
-                uvs.push(u, v);
-                return positions.length / 3 - 1;
+        // 葉のテクスチャ：輪郭＋葉脈＋自然なムラ＋陰影を Canvas に描く。
+        // ほぼ白（明度）で描き、個体ごとの色は頂点インスタンスカラーで掛け合わせる。
+        function createLeafTexture(variant) {
+            const S = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = S;
+            const ctx = canvas.getContext('2d');
+
+            const shapes = [
+                { halfW: 0.33, serr: 11, depth: 0.05, widen: 0.86, tip: 5 }, // 広葉
+                { halfW: 0.25, serr: 15, depth: 0.06, widen: 0.90, tip: 4 }, // 細葉
+                { halfW: 0.39, serr: 8, depth: 0.07, widen: 0.80, tip: 4 },  // 丸葉
+            ];
+            const sh = shapes[variant % shapes.length];
+
+            const cx = S * 0.5;
+            const topY = S * 0.06;
+            const botY = S * 0.96;
+            const len = botY - topY;
+            const N = 72;
+
+            // 右半分の輪郭（t: 0=付け根 → 1=先端）。中央が最も広く、鋸歯と尖った先端を加える。
+            const right = [];
+            for (let i = 0; i <= N; i++) {
+                const t = i / N;
+                const y = botY - t * len;
+                let w = sh.halfW * S * Math.pow(Math.sin(Math.PI * Math.pow(t, sh.widen)), 0.85);
+                w *= 1 + sh.depth * Math.sin(t * sh.serr * Math.PI * 2); // 鋸歯
+                w *= 1 - 0.55 * Math.pow(t, sh.tip);                     // 先端を尖らせる
+                right.push([cx + Math.max(0.5, w), y]);
+            }
+
+            const buildPath = () => {
+                ctx.beginPath();
+                ctx.moveTo(cx, botY);
+                for (const p of right) ctx.lineTo(p[0], p[1]);
+                for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(cx - (right[i][0] - cx), right[i][1]);
+                ctx.closePath();
             };
 
-            const edgeShade = 0.66;   // 縁は少し暗く
-            const veinShade = 1.0;    // 主脈は明るく
+            // 葉身の内側だけをクリップして、陰影・ムラ・葉脈を描く
+            ctx.save();
+            buildPath();
+            ctx.clip();
 
-            // 葉身：主脈を中心に左右の縁を作る
-            const row = [];
-            for (let i = 0; i <= segs; i++) {
-                const t = i / segs;
-                const y = t * len;
-                const w = Math.max(
-                    0.0008,
-                    halfWidth * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.85)), 0.9) *
-                    (1 - 0.22 * Math.pow(t, 6))
-                );
-                const bend = Math.sin(Math.PI * t) * len * 0.07; // 長手方向の反り
-                const li = push(-w, y, bend, edgeShade, 0, t);
-                const ri = push(w, y, bend, edgeShade, 1, t);
-                const ci = push(0, y, bend + w * 0.6, veinShade, 0.5, t); // 断面をV字に
-                row.push({ li, ri, ci });
+            const grad = ctx.createRadialGradient(cx, S * 0.42, S * 0.05, cx, S * 0.5, S * 0.62);
+            grad.addColorStop(0, 'rgb(255,255,255)');
+            grad.addColorStop(0.62, 'rgb(233,233,233)');
+            grad.addColorStop(1, 'rgb(148,148,148)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, S, S);
+
+            // 自然なムラ（まだら）
+            for (let i = 0; i < 28; i++) {
+                const bx = cx + (Math.random() - 0.5) * S * 0.72;
+                const by = topY + Math.random() * len;
+                const r = S * (0.04 + Math.random() * 0.10);
+                const dark = Math.random() < 0.55;
+                const a = 0.04 + Math.random() * 0.06;
+                const g2 = ctx.createRadialGradient(bx, by, 0, bx, by, r);
+                g2.addColorStop(0, dark ? 'rgba(96,84,62,' + a + ')' : 'rgba(255,255,255,' + a + ')');
+                g2.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = g2;
+                ctx.beginPath();
+                ctx.arc(bx, by, r, 0, Math.PI * 2);
+                ctx.fill();
             }
-            for (let i = 0; i < segs; i++) {
-                const a = row[i];
-                const b = row[i + 1];
-                indices.push(a.li, a.ci, b.li, a.ci, b.ci, b.li);
-                indices.push(a.ci, a.ri, b.ci, a.ri, b.ri, b.ci);
+
+            ctx.lineCap = 'round';
+
+            // 主脈
+            ctx.strokeStyle = 'rgba(74,62,46,0.5)';
+            ctx.lineWidth = Math.max(1.5, S * 0.011);
+            ctx.beginPath();
+            ctx.moveTo(cx, botY - 2);
+            ctx.lineTo(cx, topY + S * 0.03);
+            ctx.stroke();
+
+            // 側脈（主脈から縁へ、先端側にカーブ）
+            ctx.strokeStyle = 'rgba(74,62,46,0.34)';
+            ctx.lineWidth = Math.max(1.0, S * 0.006);
+            const pairs = 7 + (variant % 2);
+            for (let i = 1; i <= pairs; i++) {
+                const t = i / (pairs + 1);
+                const y0 = botY - t * len;
+                const wHere = sh.halfW * S * Math.pow(Math.sin(Math.PI * Math.pow(t, sh.widen)), 0.85);
+                for (const dir of [-1, 1]) {
+                    ctx.beginPath();
+                    ctx.moveTo(cx, y0);
+                    ctx.quadraticCurveTo(
+                        cx + dir * wHere * 0.62, y0 - len * 0.03,
+                        cx + dir * wHere * 0.94, y0 - len * 0.11
+                    );
+                    ctx.stroke();
+                }
             }
+            ctx.restore();
 
-            // 葉柄（ステム）：付け根から下へ伸びる細い棒
-            const stemLen = len * 0.16;
-            const sw = len * 0.015;
-            const s0 = push(-sw, -stemLen, 0, edgeShade * 0.9, 0, 0);
-            const s1 = push(sw, -stemLen, 0, edgeShade * 0.9, 1, 0);
-            const s2 = push(sw, 0, 0, edgeShade, 1, 0.05);
-            const s3 = push(-sw, 0, 0, edgeShade, 0, 0.05);
-            indices.push(s0, s1, s2, s0, s2, s3);
+            // 縁を軽く締める
+            ctx.save();
+            buildPath();
+            ctx.strokeStyle = 'rgba(58,48,36,0.22)';
+            ctx.lineWidth = Math.max(1.5, S * 0.01);
+            ctx.stroke();
+            ctx.restore();
 
-            const geo = new THREE.BufferGeometry();
-            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-            geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-            geo.setIndex(indices);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.anisotropy = 4;
+            return tex;
+        }
+
+        // 葉の平面ジオメトリ（主脈に沿ってV字に折り、長手方向に反らせ、わずかにねじる）
+        function createLeafGeometry(variant) {
+            const geo = new THREE.PlaneGeometry(1, 1, 6, 8);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const y = pos.getY(i);
+                const fold = 0.16 * (1 - Math.min(1, Math.abs(x) * 2));           // 主脈を高く
+                const camber = 0.10 * (1 - Math.pow(Math.min(1, Math.abs(y) * 2), 2)); // 長手の反り
+                const z = fold + camber;
+                const twist = (y + 0.5) * 0.3 * (variant === 1 ? 1.3 : 1.0);      // 付け根→先端のねじれ
+                pos.setXYZ(i, x * Math.cos(twist), y, z + x * Math.sin(twist));
+            }
             geo.computeVertexNormals();
-            geo.center();
             return geo;
         }
 
-        // 落ち葉専用の光源（他のパーツはアンリットのため影響を受けない）
-        const leafSun = new THREE.DirectionalLight(0xfff3e2, 1.3);
-        leafSun.position.set(0.6, 1.0, 0.45);
-        scene.add(leafSun);
-        scene.add(leafSun.target);
-        const leafAmbient = new THREE.AmbientLight(0x8a6a55, 0.6);
-        scene.add(leafAmbient);
+        // 落ち葉専用の簡易ライティング（他のパーツはアンリットのため影響を受けない）
+        const leafUniforms = {
+            uOpacity: { value: 1.0 },                                          // カメラ距離による全体フェード
+            uLightDir: { value: new THREE.Vector3(0.45, 0.85, 0.35).normalize() },
+            uLightColor: { value: new THREE.Color(1.0, 0.94, 0.86) },
+            uAmbient: { value: new THREE.Color(0.40, 0.34, 0.32) },
+            uTranslucency: { value: 0.5 }                                       // 葉を透ける光
+        };
 
-        const leafMaterial = new THREE.MeshLambertMaterial({
-            vertexColors: true,
-            side: THREE.DoubleSide,
-            transparent: true
-        });
+        const LEAF_VERT = [
+            'attribute vec3 aColor;',
+            'attribute float aAlpha;',
+            'varying vec2 vUv;',
+            'varying vec3 vColor;',
+            'varying float vAlpha;',
+            'varying vec3 vNormalW;',
+            'varying vec3 vViewDirW;',
+            'void main() {',
+            '    vUv = uv;',
+            '    vColor = aColor;',
+            '    vAlpha = aAlpha;',
+            '    mat3 im = mat3(instanceMatrix);',
+            '    vNormalW = normalize(mat3(modelMatrix) * (im * normal));',
+            '    vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);',
+            '    vViewDirW = normalize(cameraPosition - worldPos.xyz);',
+            '    gl_Position = projectionMatrix * viewMatrix * worldPos;',
+            '}'
+        ].join('\n');
 
-        const leafGeometry = createLeafGeometry(1, 0.46, 18);
-        const leafMesh = new THREE.InstancedMesh(leafGeometry, leafMaterial, LEAF_COUNT);
-        leafMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        leafMesh.frustumCulled = false;
-        scene.add(leafMesh);
+        const LEAF_FRAG = [
+            'uniform sampler2D uMap;',
+            'uniform float uOpacity;',
+            'uniform vec3 uLightDir;',
+            'uniform vec3 uLightColor;',
+            'uniform vec3 uAmbient;',
+            'uniform float uTranslucency;',
+            'varying vec2 vUv;',
+            'varying vec3 vColor;',
+            'varying float vAlpha;',
+            'varying vec3 vNormalW;',
+            'varying vec3 vViewDirW;',
+            'void main() {',
+            '    vec4 tex = texture2D(uMap, vUv);',
+            '    if (tex.a < 0.02) discard;',
+            '    vec3 N = normalize(vNormalW);',
+            '    if (!gl_FrontFacing) N = -N;',
+            '    float diff = max(dot(N, uLightDir), 0.0);',
+            '    float trans = pow(max(dot(vViewDirW, -uLightDir), 0.0), 2.0) * uTranslucency;',
+            '    vec3 lit = uAmbient + uLightColor * (diff + trans);',
+            '    vec3 base = vColor * tex.rgb;',
+            '    gl_FragColor = vec4(base * lit, tex.a * vAlpha * uOpacity);',
+            '    #include <tonemapping_fragment>',
+            '    #include <encodings_fragment>',
+            '}'
+        ].join('\n');
 
         // 舞い落ちる範囲（x,z は原点まわりの円盤、y は上から下へ）
         const LEAF_FIELD = {
-            radius: isMobile ? 130 : 160,
+            radius: isMobile ? 120 : 140,
             topY: 320,
             bottomY: -160
         };
+        const LEAF_FADE = 70; // 上端・下端でフェードする高さ
 
-        const leafData = [];
-        const leafDummy = new THREE.Object3D();
-        const leafColorTmp = new THREE.Color();
+        const leafSmooth = (e0, e1, x) => {
+            const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+            return t * t * (3 - 2 * t);
+        };
 
-        function resetLeaf(i, anywhereInField) {
-            const d = leafData[i];
+        function pickLeafColor(arr, o) {
+            const r = Math.random();
+            const fam = r < 0.42 ? 0 : (r < 0.82 ? 1 : 2); // 赤 42% / 黄 40% / 茶 18%
+            const variants = LEAF_COLOR_FAMILIES[fam];
+            const c = variants[(Math.random() * variants.length) | 0];
+            const b = 0.86 + Math.random() * 0.28;         // 個体差（明度）
+            arr[o] = Math.min(1, c[0] * b);
+            arr[o + 1] = Math.min(1, c[1] * b);
+            arr[o + 2] = Math.min(1, c[2] * b);
+        }
+
+        function resetLeaf(d, anywhereInField) {
             const ang = Math.random() * Math.PI * 2;
             const rad = Math.sqrt(Math.random()) * LEAF_FIELD.radius;
             d.baseX = Math.cos(ang) * rad;
             d.baseZ = Math.sin(ang) * rad;
             d.y = anywhereInField
                 ? LEAF_FIELD.bottomY + Math.random() * (LEAF_FIELD.topY - LEAF_FIELD.bottomY)
-                : LEAF_FIELD.topY + Math.random() * (LEAF_FIELD.topY - LEAF_FIELD.bottomY) * 0.25;
-            d.fall = 8 + Math.random() * 16;                  // 落下速度
-            d.swayAmpX = 5 + Math.random() * 16;              // 横揺れの振幅
-            d.swayAmpZ = 5 + Math.random() * 16;
-            d.swayFreqX = 0.5 + Math.random() * 1.1;          // 横揺れの速さ
-            d.swayFreqZ = 0.5 + Math.random() * 1.1;
+                : LEAF_FIELD.topY + Math.random() * (LEAF_FIELD.topY - LEAF_FIELD.bottomY) * 0.2;
+            d.fall = 6 + Math.random() * 12;                  // 落下速度
+            d.swayAmpX = 4 + Math.random() * 12;              // 横揺れの振幅
+            d.swayAmpZ = 4 + Math.random() * 12;
+            d.swayFreqX = 0.5 + Math.random() * 1.2;          // 横揺れの速さ
+            d.swayFreqZ = 0.5 + Math.random() * 1.2;
             d.phaseX = Math.random() * Math.PI * 2;
             d.phaseZ = Math.random() * Math.PI * 2;
-            d.spinX = (Math.random() - 0.5) * 1.7;            // くるくる回る速さ
-            d.spinY = (Math.random() - 0.5) * 1.7;
-            d.spinZ = (Math.random() - 0.5) * 1.7;
+            d.spinX = (Math.random() - 0.5) * 2.0;            // くるくる回る速さ
+            d.spinY = (Math.random() - 0.5) * 2.0;
+            d.spinZ = (Math.random() - 0.5) * 2.0;
             d.rotX = Math.random() * Math.PI * 2;
             d.rotY = Math.random() * Math.PI * 2;
             d.rotZ = Math.random() * Math.PI * 2;
-            d.scale = 6 + Math.random() * 10;                 // 葉の大きさ
+            d.scale = 2.5 + Math.random() * 3.5;              // 葉の大きさ（小さめ）
             d.windPhase = Math.random() * Math.PI * 2;
         }
 
-        for (let i = 0; i < LEAF_COUNT; i++) {
-            leafData.push({});
-            resetLeaf(i, true);
-            leafColorTmp.copy(LEAF_COLORS[(Math.random() * LEAF_COLORS.length) | 0]);
-            leafColorTmp.multiplyScalar(0.82 + Math.random() * 0.3);   // 個体差
-            leafMesh.setColorAt(i, leafColorTmp);
+        // 葉の形を複数種類混ぜるため、形状ごとに InstancedMesh を作る
+        const leafGroup = new THREE.Group();
+        scene.add(leafGroup);
+        const leafSystems = [];
+        const leafDummy = new THREE.Object3D();
+        const shapeRatios = [0.42, 0.30, 0.28];
+
+        for (let s = 0; s < shapeRatios.length; s++) {
+            let count = Math.round(LEAF_COUNT * shapeRatios[s]);
+            if (s === shapeRatios.length - 1) {
+                count = LEAF_COUNT - leafSystems.reduce((acc, sys) => acc + sys.count, 0);
+            }
+
+            const geometry = createLeafGeometry(s);
+            const colorsArr = new Float32Array(count * 3);
+            const alphasArr = new Float32Array(count);
+            const data = [];
+            for (let i = 0; i < count; i++) {
+                const d = {};
+                resetLeaf(d, true);
+                pickLeafColor(colorsArr, i * 3);
+                data.push(d);
+            }
+            geometry.setAttribute('aColor', new THREE.InstancedBufferAttribute(colorsArr, 3));
+            geometry.setAttribute('aAlpha', new THREE.InstancedBufferAttribute(alphasArr, 1));
+
+            const material = new THREE.ShaderMaterial({
+                uniforms: Object.assign({ uMap: { value: createLeafTexture(s) } }, leafUniforms),
+                vertexShader: LEAF_VERT,
+                fragmentShader: LEAF_FRAG,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+
+            const mesh = new THREE.InstancedMesh(geometry, material, count);
+            mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            mesh.frustumCulled = false;
+            leafGroup.add(mesh);
+
+            leafSystems.push({ mesh, geometry, data, alphasArr, count });
         }
-        if (leafMesh.instanceColor) leafMesh.instanceColor.needsUpdate = true;
+
+        // 毎フレームの更新：落下＋ゆらゆらの横揺れ＋くるくる回転、下まで落ちたら上へ再登場。
+        // 上端で現れる時、下端で消える時は不透明度をフェードさせる。
+        function updateLeaves(delta, time) {
+            for (let s = 0; s < leafSystems.length; s++) {
+                const sys = leafSystems[s];
+                const data = sys.data;
+                const alphas = sys.alphasArr;
+
+                for (let i = 0; i < sys.count; i++) {
+                    const d = data[i];
+                    d.y -= d.fall * delta;
+
+                    // 風によるゆらゆらとした横揺れ（x と z で別位相）
+                    const swayX = Math.sin(time * d.swayFreqX + d.phaseX) * d.swayAmpX;
+                    const swayZ = Math.cos(time * d.swayFreqZ + d.phaseZ) * d.swayAmpZ;
+                    const driftX = Math.sin(time * 0.12 + d.windPhase) * 10; // ゆっくり流れる風
+
+                    // 舞いながらくるくる回る（横揺れに同期して回転を揺らす）
+                    d.rotX += d.spinX * delta + Math.sin(time * 2.0 + d.phaseX) * delta * 0.8;
+                    d.rotY += d.spinY * delta;
+                    d.rotZ += d.spinZ * delta + Math.cos(time * 1.6 + d.phaseZ) * delta * 0.8;
+
+                    if (d.y < LEAF_FIELD.bottomY) {
+                        resetLeaf(d, false);
+                    }
+
+                    // 上端（現れる）と下端（消える）でフェード
+                    const topFade = 1 - leafSmooth(LEAF_FIELD.topY - LEAF_FADE, LEAF_FIELD.topY, d.y);
+                    const botFade = leafSmooth(LEAF_FIELD.bottomY, LEAF_FIELD.bottomY + LEAF_FADE, d.y);
+                    alphas[i] = topFade * botFade;
+
+                    leafDummy.position.set(d.baseX + swayX + driftX, d.y, d.baseZ + swayZ);
+                    leafDummy.rotation.set(d.rotX, d.rotY, d.rotZ);
+                    leafDummy.scale.setScalar(d.scale);
+                    leafDummy.updateMatrix();
+                    sys.mesh.setMatrixAt(i, leafDummy.matrix);
+                }
+
+                sys.geometry.attributes.aAlpha.needsUpdate = true;
+                sys.mesh.instanceMatrix.needsUpdate = true;
+            }
+        }
 
         // 初期配置を確定させる（読み込み中のウォームアップ描画でも破綻しないように）
         updateLeaves(0, 0);
-
-        // 毎フレームの更新：落下＋ゆらゆらの横揺れ＋くるくる回転、下まで落ちたら上へ再登場
-        function updateLeaves(delta, time) {
-            for (let i = 0; i < LEAF_COUNT; i++) {
-                const d = leafData[i];
-                d.y -= d.fall * delta;
-
-                // 風によるゆらゆらとした横揺れ（x と z で別位相）
-                const swayX = Math.sin(time * d.swayFreqX + d.phaseX) * d.swayAmpX;
-                const swayZ = Math.cos(time * d.swayFreqZ + d.phaseZ) * d.swayAmpZ;
-                const driftX = Math.sin(time * 0.12 + d.windPhase) * 10; // ゆっくり流れる風
-
-                // 舞いながらくるくる回る（横揺れに同期して回転を揺らす）
-                d.rotX += d.spinX * delta + Math.sin(time * 2.0 + d.phaseX) * delta * 0.7;
-                d.rotY += d.spinY * delta;
-                d.rotZ += d.spinZ * delta + Math.cos(time * 1.6 + d.phaseZ) * delta * 0.7;
-
-                if (d.y < LEAF_FIELD.bottomY) {
-                    resetLeaf(i, false);
-                }
-
-                leafDummy.position.set(d.baseX + swayX + driftX, d.y, d.baseZ + swayZ);
-                leafDummy.rotation.set(d.rotX, d.rotY, d.rotZ);
-                leafDummy.scale.set(d.scale, d.scale, d.scale);
-                leafDummy.updateMatrix();
-                leafMesh.setMatrixAt(i, leafDummy.matrix);
-            }
-            leafMesh.instanceMatrix.needsUpdate = true;
-        }
 
         function createStarNoiseTexture(size = 1024, density = 0.002) {
             const canvas = document.createElement('canvas');
@@ -4138,9 +4306,9 @@
             // 落ち葉：カメラが近すぎるとき（ブラックホールへの急接近やズームイン）は
             // 落ち葉が画面いっぱいにならないようフェードで退避させる
             const leafCamDist = camera.position.length();
-            leafMaterial.opacity = THREE.MathUtils.clamp((leafCamDist - 40) / 60, 0, 1);
-            leafMesh.visible = leafMaterial.opacity > 0.01;
-            if (leafMesh.visible) {
+            leafUniforms.uOpacity.value = THREE.MathUtils.clamp((leafCamDist - 40) / 60, 0, 1);
+            leafGroup.visible = leafUniforms.uOpacity.value > 0.01;
+            if (leafGroup.visible) {
                 updateLeaves(delta, time);
             }
             if (blackholeWarpPass && blackhole && blackhole.geometry) {
