@@ -4044,6 +4044,350 @@
         setTimeout(triggerGlitch, 2000);
 
 
+        // ── Created by F U M パーティクルテキスト ──
+        // カメラアニメーション序盤の演出。ちりぢりになった粒子がテキストを形成し、
+        // 3秒保持したあと、中央のブラックホールへ吸い込まれていく様子を簡易的に再現する。
+        // ・テキストは3D空間上のビルボード面（カメラ前方）に置かれ、常にカメラを向く。
+        // ・ビルボード面はカメラ移動に追従するため、完成位置は毎フレーム変化し続ける。
+        //   → 形成済みの粒子はその時点の目標座標（＝毎フレーム変化）を追従する。
+        // ・集まる前の散布粒子はワールド原点を中心とした球面方向の遠方に固定し、追従させない。
+        // ・吸い込み時は、中心に近づくほど回転を加速し、進行方向へ引き延ばす（spaghettification）。
+        const PBT_TEXT = "Created by F U M";
+        const PBT_GATHER_MS = 3000;   // 収束にかける時間
+        const PBT_HOLD_MS = 3000;     // 完成を保持する時間
+        const PBT_SUCK_MS = 5000;     // ブラックホールへ吸い込まれる時間（渦を巻きながらじっくり落ち込む）
+        const PBT_TOTAL_MS = PBT_GATHER_MS + PBT_HOLD_MS + PBT_SUCK_MS;
+        const PBT_COUNT = isMobile ? 1800 : 3200;
+        const PBT_STAGGER = 0.35;                        // 収束タイミングのばらつき（0〜1）
+        const PBT_PARTICLE_PX = isMobile ? 2.8 : 2.2;    // 画面上の粒子の大きさ(px)
+        const PBT_STRETCH_MAX = 3.5;                     // 吸い込み時の最大伸長
+
+        // テキストを2Dキャンバスに描き、塗られた画素をサンプリングして、
+        // テキスト平面（高さ1基準・中心原点）のローカル座標を作る
+        function sampleParticleTextTargets(text, count) {
+            const fontSize = 200;
+            const font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+            const measureCanvas = document.createElement('canvas');
+            const measureCtx = measureCanvas.getContext('2d');
+            measureCtx.font = font;
+            const textWidth = Math.max(1, measureCtx.measureText(text).width);
+            const padX = fontSize * 0.5;
+            const padY = fontSize * 0.5;
+            const width = Math.ceil(textWidth + padX * 2);
+            const height = Math.ceil(fontSize + padY * 2);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.font = font;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(text, width / 2, height / 2);
+
+            const data = ctx.getImageData(0, 0, width, height).data;
+            const step = 2;
+            const cx = [];
+            const cy = [];
+            for (let y = 0; y < height; y += step) {
+                for (let x = 0; x < width; x += step) {
+                    if (data[(y * width + x) * 4 + 3] > 128) {
+                        cx.push(x);
+                        cy.push(y);
+                    }
+                }
+            }
+            const found = cx.length;
+            // 画素をランダム順に並べ替えて、偏りなく粒子を割り当てる
+            const order = new Array(found);
+            for (let i = 0; i < found; i++) order[i] = i;
+            for (let i = found - 1; i > 0; i--) {
+                const j = (Math.random() * (i + 1)) | 0;
+                const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+            }
+
+            const targets = new Float32Array(count * 2);
+            const depth = new Float32Array(count);
+            const invHeight = 1 / height;
+            for (let i = 0; i < count; i++) {
+                let px;
+                let py;
+                if (found > 0) {
+                    const c = order[i % found];
+                    const jitter = step * 0.5;
+                    px = cx[c] + (Math.random() - 0.5) * jitter;
+                    py = cy[c] + (Math.random() - 0.5) * jitter;
+                } else {
+                    px = width * 0.5;
+                    py = height * 0.5;
+                }
+                targets[i * 2] = (px - width / 2) * invHeight;
+                targets[i * 2 + 1] = -(py - height / 2) * invHeight;
+                depth[i] = (Math.random() - 0.5) * 0.05;
+            }
+            return { targets, depth, aspect: width / height };
+        }
+
+        const pbtSample = sampleParticleTextTargets(PBT_TEXT, PBT_COUNT);
+        const pbtTargetXY = pbtSample.targets;   // 高さ1基準のローカルXY
+        const pbtTargetZ = pbtSample.depth;      // ローカルZ（奥行きの厚み）
+
+        const pbtStart = new Float32Array(PBT_COUNT * 3);   // ワールド固定の初期散布位置
+        const pbtSeed = new Float32Array(PBT_COUNT);
+        const pbtDelay = new Float32Array(PBT_COUNT);
+        const pbtSwirl = new Float32Array(PBT_COUNT);
+        const pbtPositions = new Float32Array(PBT_COUNT * 3);
+        const pbtColors = new Float32Array(PBT_COUNT * 3);
+        const pbtStretch = new Float32Array(PBT_COUNT);
+        const pbtAngle = new Float32Array(PBT_COUNT);
+        const pbtAlpha = new Float32Array(PBT_COUNT);
+        for (let i = 0; i < PBT_COUNT; i++) {
+            pbtSeed[i] = Math.random();
+            pbtDelay[i] = Math.random() * PBT_STAGGER;
+            pbtSwirl[i] = (2.2 + Math.random() * 1.6) * Math.PI;
+            const white = Math.random() < 0.12;
+            const tint = 0.5 + Math.random() * 0.5;
+            pbtColors[i * 3]     = white ? 1.0 : 0.30 * tint;
+            pbtColors[i * 3 + 1] = white ? 1.0 : 0.92 * tint;
+            pbtColors[i * 3 + 2] = white ? 1.0 : 0.82 * tint;
+        }
+
+        const pbtGeometry = new THREE.BufferGeometry();
+        pbtGeometry.setAttribute('position', new THREE.BufferAttribute(pbtPositions, 3));
+        pbtGeometry.setAttribute('aColor', new THREE.BufferAttribute(pbtColors, 3));
+        pbtGeometry.setAttribute('aStretch', new THREE.BufferAttribute(pbtStretch, 1));
+        pbtGeometry.setAttribute('aAngle', new THREE.BufferAttribute(pbtAngle, 1));
+        pbtGeometry.setAttribute('aAlpha', new THREE.BufferAttribute(pbtAlpha, 1));
+
+        // ポイントスプライトを描画しつつ、吸い込み時に進行方向へ引き延ばすシェーダー。
+        // gl_PointSize はポイントスプライトの一辺なので、伸長分だけ大きくして中の楕円を細長く描く。
+        const pbtMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uSize: { value: 3.0 },
+                uScale: { value: 500.0 },
+                uStretchMax: { value: PBT_STRETCH_MAX }
+            },
+            vertexShader: `
+                attribute vec3 aColor;
+                attribute float aStretch;
+                attribute float aAngle;
+                attribute float aAlpha;
+                uniform float uSize;
+                uniform float uScale;
+                uniform float uStretchMax;
+                varying vec3 vColor;
+                varying float vStretch;
+                varying float vAngle;
+                varying float vAlpha;
+                void main() {
+                    vStretch = clamp(aStretch, 0.0, 1.0) * uStretchMax;
+                    vAngle = aAngle;
+                    vAlpha = aAlpha;
+                    // 引き延ばされるほど青白く光る（相対論的効果のイメージ）
+                    vColor = mix(aColor, vec3(0.80, 0.93, 1.0), clamp(aStretch * 0.8, 0.0, 1.0));
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    float size = uSize * (1.0 + vStretch);
+                    gl_PointSize = size * uScale / max(-mvPosition.z, 40.0);
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vColor;
+                varying float vStretch;
+                varying float vAngle;
+                varying float vAlpha;
+                void main() {
+                    vec2 uv = gl_PointCoord - 0.5;
+                    float ca = cos(vAngle);
+                    float sa = sin(vAngle);
+                    // スプライトを伸長方向に合わせて回転し、進行方向へ潰して楕円にする
+                    vec2 r = vec2(ca * uv.x + sa * uv.y, -sa * uv.x + ca * uv.y);
+                    float cap = 1.0 + vStretch;
+                    float dist = 2.0 * length(vec2(r.x, r.y * cap));
+                    float alpha = 1.0 - smoothstep(0.45, 1.0, dist);
+                    if (alpha <= 0.002) discard;
+                    gl_FragColor = vec4(vColor, alpha * vAlpha);
+                    // 既存の PointsMaterial と同じトーンマッピング／出力エンコードを適用
+                    #include <tonemapping_fragment>
+                    #include <encodings_fragment>
+                }
+            `,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            depthTest: true
+        });
+        const pbtPoints = new THREE.Points(pbtGeometry, pbtMaterial);
+        pbtPoints.frustumCulled = false;
+        pbtPoints.visible = false;
+        scene.add(pbtPoints);
+
+        const pbtAnchor = new THREE.Object3D();   // ビルボード面（カメラ追従）
+        const pbtForward = new THREE.Vector3();
+        const pbtTmp = new THREE.Vector3();
+        const pbtBhLocal = new THREE.Vector3();
+        let pbtPlaneH = 100;
+        let pbtDist = 100;
+        let pbtActive = false;
+        let pbtStartTime = null;
+
+        function startParticleText() {
+            pbtActive = true;
+            pbtStartTime = null;
+        }
+
+        // 0〜1 を滑らかに補間する（three のバージョン差異を避けるため自前で用意）
+        function pbtSmoothstep(x, min, max) {
+            const s = Math.min(1, Math.max(0, (x - min) / (max - min)));
+            return s * s * (3 - 2 * s);
+        }
+
+        // カメラ前方にビルボード面を置く（位置はカメラに追従、向きは常にカメラ側）
+        function updateParticleTextAnchor() {
+            const camDist = Math.max(camera.position.length(), 1);
+            pbtForward.copy(camera.position).multiplyScalar(-1 / camDist);  // 原点方向
+            pbtDist = Math.max(camDist * 0.5, 30);
+            pbtAnchor.position.copy(camera.position).addScaledVector(pbtForward, pbtDist);
+            pbtAnchor.quaternion.copy(camera.quaternion);
+            pbtAnchor.updateMatrixWorld(true);
+            pbtPlaneH = pbtDist * 0.11;              // 見かけの大きさが一定になるよう距離に比例（半分サイズ）
+            // 粒子の画面上サイズを一定に保つ（uScale はデバイスピクセル高さの半分）
+            const uScale = Math.max(renderer.domElement.height * 0.5, 1);
+            pbtMaterial.uniforms.uScale.value = uScale;
+            pbtMaterial.uniforms.uSize.value = PBT_PARTICLE_PX * pbtDist / uScale;
+        }
+
+        // 初期散布位置は「ワールド原点を中心とした球面方向の遠方」に固定する（以後追従させない）
+        function initParticleTextScatter() {
+            updateParticleTextAnchor();
+            const camDist = Math.max(camera.position.length(), 1);
+            const sphereR = Math.max(camDist * 0.8, pbtPlaneH * 4);
+            for (let i = 0; i < PBT_COUNT; i++) {
+                // 球面一様分布
+                const u = Math.random() * 2 - 1;
+                const phi = Math.random() * Math.PI * 2;
+                const s = Math.sqrt(Math.max(0, 1 - u * u));
+                const rr = sphereR * (0.7 + Math.random() * 0.6);
+                pbtStart[i * 3]     = s * Math.cos(phi) * rr;
+                pbtStart[i * 3 + 1] = u * rr;
+                pbtStart[i * 3 + 2] = s * Math.sin(phi) * rr;
+            }
+        }
+
+        function updateParticleText(currentTime) {
+            if (!pbtActive) return;
+            if (pbtStartTime === null) {
+                pbtStartTime = currentTime;
+                pbtPoints.visible = true;
+                initParticleTextScatter();
+            }
+            const t = currentTime - pbtStartTime;
+            if (t >= PBT_TOTAL_MS) {
+                pbtPoints.visible = false;
+                pbtActive = false;
+                return;
+            }
+            updateParticleTextAnchor();
+
+            // ブラックホール中心（ワールド原点）をビルボード面のローカル座標へ
+            pbtBhLocal.set(0, 0, 0);
+            pbtAnchor.worldToLocal(pbtBhLocal);
+
+            const scaleH = pbtPlaneH;
+            if (t < PBT_GATHER_MS) {
+                // ── 収束：球面遠方（ワールド固定）から、毎フレーム変化する完成位置へ ──
+                // easeInOutQuart で「緩 → 急 → 緩」の緩急をつけ、迫力を出す
+                const p = t / PBT_GATHER_MS;
+                for (let i = 0; i < PBT_COUNT; i++) {
+                    let lt = (p - pbtDelay[i]) / (1 - PBT_STAGGER);
+                    lt = lt < 0 ? 0 : (lt > 1 ? 1 : lt);
+                    const e = lt < 0.5
+                        ? 8 * lt * lt * lt * lt
+                        : 1 - 8 * Math.pow(1 - lt, 4);
+                    const i3 = i * 3;
+                    pbtTmp.set(
+                        pbtTargetXY[i * 2] * scaleH,
+                        pbtTargetXY[i * 2 + 1] * scaleH,
+                        pbtTargetZ[i] * scaleH
+                    );
+                    pbtAnchor.localToWorld(pbtTmp);
+                    pbtPositions[i3] = pbtStart[i3] + (pbtTmp.x - pbtStart[i3]) * e;
+                    pbtPositions[i3 + 1] = pbtStart[i3 + 1] + (pbtTmp.y - pbtStart[i3 + 1]) * e;
+                    pbtPositions[i3 + 2] = pbtStart[i3 + 2] + (pbtTmp.z - pbtStart[i3 + 2]) * e;
+                    pbtStretch[i] = 0;
+                    pbtAngle[i] = 0;
+                    // 近づくほど明るくなり、僅かに明滅する
+                    pbtAlpha[i] = (0.20 + 0.80 * e) * (0.75 + 0.25 * Math.sin(t * 0.012 + pbtSeed[i] * 40));
+                }
+            } else if (t < PBT_GATHER_MS + PBT_HOLD_MS) {
+                // ── 保持：完成位置を追従しつつ僅かに揺らぐ ──
+                const tt = t * 0.001;
+                for (let i = 0; i < PBT_COUNT; i++) {
+                    const i3 = i * 3;
+                    const s = pbtSeed[i] * 6.2831853;
+                    const wob = scaleH * 0.006;
+                    pbtTmp.set(
+                        pbtTargetXY[i * 2] * scaleH + Math.sin(tt * 2.1 + s) * wob,
+                        pbtTargetXY[i * 2 + 1] * scaleH + Math.cos(tt * 1.7 + s * 1.3) * wob,
+                        pbtTargetZ[i] * scaleH
+                    );
+                    pbtAnchor.localToWorld(pbtTmp);
+                    pbtPositions[i3] = pbtTmp.x;
+                    pbtPositions[i3 + 1] = pbtTmp.y;
+                    pbtPositions[i3 + 2] = pbtTmp.z;
+                    pbtStretch[i] = 0;
+                    pbtAngle[i] = 0;
+                    pbtAlpha[i] = 1;
+                }
+            } else {
+                // ── 吸い込み：画面中心（ブラックホール）へ、時間をかけて渦を巻きながら収束 ──
+                // 中心に近づくほど回転を加速し、進行方向（接線）へ引き延ばす
+                const p = (t - PBT_GATHER_MS - PBT_HOLD_MS) / PBT_SUCK_MS;
+                const dmax = PBT_STAGGER * 0.6;
+                const cx = pbtBhLocal.x;
+                const cy = pbtBhLocal.y;
+                for (let i = 0; i < PBT_COUNT; i++) {
+                    const i3 = i * 3;
+                    let ps = (p - pbtDelay[i] * 0.6) / (1 - dmax);
+                    ps = ps < 0 ? 0 : (ps > 1 ? 1 : ps);
+                    // 半径は加速しながら縮み、角度はさらに強く加速する（終盤で一気に巻き込まれる）
+                    const er = ps * ps;
+                    const ea = Math.pow(ps, 2.4);
+                    const lx = pbtTargetXY[i * 2] * scaleH;
+                    const ly = pbtTargetXY[i * 2 + 1] * scaleH;
+                    const lz = pbtTargetZ[i] * scaleH;
+                    const dx = lx - cx;
+                    const dy = ly - cy;
+                    // 渦潮：半径が細るほど角速度が上がる（ω ∝ 1/r 相当）。
+                    // 中心へ寄るほど回旋が長く続くよう、対数螺旋の回転を加算する。
+                    const rFactor = Math.max(1 - er, 0.05);          // 半径の縮小率（0.05で下限クランプ）
+                    const logSpin = Math.log(1 / rFactor);           // 縮むほど増大（最大 ≈3.0）
+                    const ang = Math.atan2(dy, dx) + pbtSwirl[i] * (ea + logSpin * 0.85);
+                    const r = Math.sqrt(dx * dx + dy * dy) * rFactor;
+                    pbtTmp.set(
+                        cx + Math.cos(ang) * r,
+                        cy + Math.sin(ang) * r,
+                        lz + (pbtBhLocal.z - lz) * er
+                    );
+                    pbtAnchor.localToWorld(pbtTmp);
+                    pbtPositions[i3] = pbtTmp.x;
+                    pbtPositions[i3 + 1] = pbtTmp.y;
+                    pbtPositions[i3 + 2] = pbtTmp.z;
+                    // 接線方向（gl_PointCoord はY下向きなので符号を合わせる）
+                    pbtAngle[i] = Math.atan2(-Math.cos(ang), -Math.sin(ang));
+                    // 回転が速いほど進行方向へ強く引き延ばす（spaghettification）
+                    pbtStretch[i] = Math.min(1, Math.pow(er, 1.2) * 1.1 + logSpin * 0.16);
+                    // 中心に近づくほど消えていく
+                    pbtAlpha[i] = 1 - pbtSmoothstep(er, 0.72, 1.0);
+                }
+            }
+            pbtGeometry.attributes.position.needsUpdate = true;
+            pbtGeometry.attributes.aStretch.needsUpdate = true;
+            pbtGeometry.attributes.aAngle.needsUpdate = true;
+            pbtGeometry.attributes.aAlpha.needsUpdate = true;
+        }
+
         // アニメーション
         const clock = new THREE.Clock();
         let time = 0.0;
@@ -4065,6 +4409,7 @@
             Time_CameraAnimation_Start = null;
             Position_Trun_Start = null;
             Elapsed = 0;
+            startParticleText();
         };
         function animate() {
             requestAnimationFrame(animate);
@@ -4175,6 +4520,9 @@
                     textMeshTitle.rotation.y = 0;
                 }
             }
+
+            // カメラ確定後にビルボード面を更新するため、ここで呼ぶ
+            updateParticleText(currentTime);
 
             updateJetParticles();
             accretionDisk.rotation.y += delta * 0.6;
