@@ -2495,7 +2495,6 @@
 
         // 落ち葉専用の簡易ライティング（他のパーツはアンリットのため影響を受けない）
         const leafUniforms = {
-            uOpacity: { value: 1.0 },                                          // カメラ距離による全体フェード
             uLightDir: { value: new THREE.Vector3(0.45, 0.85, 0.35).normalize() },
             uLightColor: { value: new THREE.Color(1.0, 0.94, 0.86) },
             uAmbient: { value: new THREE.Color(0.40, 0.34, 0.32) },
@@ -2524,7 +2523,6 @@
 
         const LEAF_FRAG = [
             'uniform sampler2D uMap;',
-            'uniform float uOpacity;',
             'uniform vec3 uLightDir;',
             'uniform vec3 uLightColor;',
             'uniform vec3 uAmbient;',
@@ -2543,7 +2541,7 @@
             '    float trans = pow(max(dot(vViewDirW, -uLightDir), 0.0), 2.0) * uTranslucency;',
             '    vec3 lit = uAmbient + uLightColor * (diff + trans);',
             '    vec3 base = vColor * tex.rgb;',
-            '    gl_FragColor = vec4(base * lit, tex.a * vAlpha * uOpacity);',
+            '    gl_FragColor = vec4(base * lit, tex.a * vAlpha);',
             '    #include <tonemapping_fragment>',
             '    #include <encodings_fragment>',
             '}'
@@ -4303,14 +4301,8 @@
             accretionDisk.rotation.y += delta * 0.6;
             accretionDiskParticles.rotation.y += delta * 0.6;
             bhGlow.material.opacity = 0.5 + Math.sin(time * 0.5) * 0.1;
-            // 落ち葉：カメラが近すぎるとき（ブラックホールへの急接近やズームイン）は
-            // 落ち葉が画面いっぱいにならないようフェードで退避させる
-            const leafCamDist = camera.position.length();
-            leafUniforms.uOpacity.value = THREE.MathUtils.clamp((leafCamDist - 40) / 60, 0, 1);
-            leafGroup.visible = leafUniforms.uOpacity.value > 0.01;
-            if (leafGroup.visible) {
-                updateLeaves(delta, time);
-            }
+            // 落ち葉：ブラックホールに近づいても非表示にせず、常に表示したままにする
+            updateLeaves(delta, time);
             if (blackholeWarpPass && blackhole && blackhole.geometry) {
                 if (!blackhole.geometry.boundingSphere) {
                     blackhole.geometry.computeBoundingSphere();
