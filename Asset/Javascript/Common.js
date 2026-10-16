@@ -497,6 +497,10 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Game</v-list-item-title>
                     </v-list-item>
+                    <v-list-item href="./Japanese_Hobby_Gym.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Gym</v-list-item-title>
+                    </v-list-item>
                     <v-list-item href="./Japanese_Hobby_Math.html">
                         <v-list-item-icon />
                         <v-list-item-title>Math</v-list-item-title>
@@ -564,6 +568,10 @@ Vue.component('main-navigation', {
                     <v-list-item href="./Japanese_Life_Body.html">
                         <v-list-item-icon />
                         <v-list-item-title>Body</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item href="./Japanese_Life_Company.html">
+                        <v-list-item-icon />
+                        <v-list-item-title>Company</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Japanese_Life_Computer.html">
                         <v-list-item-icon />
@@ -652,17 +660,9 @@ Vue.component('main-navigation', {
                         <v-list-item-icon />
                         <v-list-item-title>Cafe</v-list-item-title>
                     </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Company.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Company</v-list-item-title>
-                    </v-list-item>
                     <v-list-item href="./Japanese_Outside_Direction.html">
                         <v-list-item-icon />
                         <v-list-item-title>Direction</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item href="./Japanese_Outside_Gym.html">
-                        <v-list-item-icon />
-                        <v-list-item-title>Gym</v-list-item-title>
                     </v-list-item>
                     <v-list-item href="./Japanese_Outside_Hospital.html">
                         <v-list-item-icon />
