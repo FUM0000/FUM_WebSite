@@ -3350,6 +3350,452 @@
             }
         }
 
+        // A vast neon skyline standing in the central atrium, switched on from
+        // the 2F "3D" floor with the same ON/OFF panel as the other exhibits.
+        // A grid of towers rises out of the ground in a wave sweeping away
+        // from the panel, streets glow underneath, antenna beacons blink and
+        // light streaks (flying vehicles) cross the skyline.
+        class C_CyberCity {
+
+            constructor(Scene, cx, cz, baseY, buildOrigin) {
+                this._group = new THREE.Group();
+                this._group.position.set(cx, baseY, cz);
+                this._active = false;
+                this._building = false;
+                this._buildStart = 0;
+                this._buildOriginAng = Math.atan2(buildOrigin.z, buildOrigin.x);
+                Scene.add(this._group);
+
+                // Real-world scale (1 unit = 1 m): the gallery itself becomes a
+                // small plaza at the foot of a full-size city whose skyline
+                // rises several hundred metres on every side.
+                const R_INNER = 14;      // open plaza holding the gallery
+                const R_OUT = 260;       // city extent
+                const CELL = 22;         // block pitch (streets between towers)
+                this._TotalDuration = 5.6;
+
+                // ============ Block layout ============
+                const buildings = [];
+                for (let gx = -12; gx <= 12; gx++) {
+                    for (let gz = -12; gz <= 12; gz++) {
+                        const x = gx * CELL + (Math.random() - 0.5) * 5;
+                        const z = gz * CELL + (Math.random() - 0.5) * 5;
+                        const r = Math.hypot(x, z);
+                        if (r < R_INNER || r > R_OUT) continue;
+                        // grand avenue facing the exhibit panels
+                        let dAng = Math.atan2(z, x) - this._buildOriginAng;
+                        dAng = Math.atan2(Math.sin(dAng), Math.cos(dAng));
+                        if (Math.abs(dAng) < 0.35) continue;
+                        if (Math.random() < 0.1) continue; // loose skyline, small gaps
+
+                        const edge = (r - R_INNER) / (R_OUT - R_INNER);
+                        const w = 7 + Math.random() * 13;   // 7-20 m footprints
+                        const d = 7 + Math.random() * 13;
+                        let h;
+                        const roll = Math.random();
+                        if (roll < 0.55) h = 10 + Math.random() * 26;        // low rise
+                        else if (roll < 0.88) h = 36 + Math.random() * 62;   // mid rise
+                        else if (roll < 0.98) h = 98 + Math.random() * 92;   // towers
+                        else h = 190 + Math.random() * 120;                  // landmarks
+                        h *= 0.9 + edge * 0.3; // outer ring rises -> readable skyline
+
+                        buildings.push({
+                            x, z, w, d, h,
+                            seed: Math.random() * 100,
+                            delay: (Math.abs(dAng) / Math.PI) * 2.2 + edge * 2.2,
+                            t: 0,
+                        });
+                    }
+                }
+                this._buildings = buildings;
+                const COUNT = buildings.length;
+
+                // ============ Building bodies (lit windows per fragment) ============
+                const bodyGeo = new THREE.BoxGeometry(1, 1, 1);
+                bodyGeo.translate(0, 0.5, 0); // base sits on the ground
+                const sizeArr = new Float32Array(COUNT * 3);
+                const seedArr = new Float32Array(COUNT);
+                buildings.forEach((b, i) => {
+                    sizeArr[i * 3] = b.w; sizeArr[i * 3 + 1] = b.h; sizeArr[i * 3 + 2] = b.d;
+                    seedArr[i] = b.seed;
+                });
+                bodyGeo.setAttribute('aSize', new THREE.InstancedBufferAttribute(sizeArr, 3));
+                bodyGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seedArr, 1));
+
+                this._bodyMat = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 } },
+                    vertexShader: `
+                        attribute vec3 aSize;
+                        attribute float aSeed;
+                        varying vec3 vLocal;
+                        varying vec3 vNrm;
+                        varying vec3 vSize;
+                        varying float vSeed;
+                        varying vec3 vViewPos;
+                        varying float vDist;
+                        void main() {
+                            vLocal = position;
+                            vNrm = normal;
+                            vSize = aSize;
+                            vSeed = aSeed;
+                            vec4 worldPosition = modelMatrix * instanceMatrix * vec4(position, 1.0);
+                            vec4 mvPosition = viewMatrix * worldPosition;
+                            vViewPos = -mvPosition.xyz;
+                            vDist = -mvPosition.z;
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        varying vec3 vLocal;
+                        varying vec3 vNrm;
+                        varying vec3 vSize;
+                        varying float vSeed;
+                        varying vec3 vViewPos;
+                        varying float vDist;
+                        float hash21(vec2 p) {
+                            p = fract(p * vec2(123.34, 456.21));
+                            p += dot(p, p + 45.32);
+                            return fract(p.x * p.y);
+                        }
+                        void main() {
+                            vec3 N = normalize(vNrm);
+                            vec3 V = normalize(vViewPos);
+                            float fres = pow(1.0 - abs(dot(V, N)), 2.5);
+                            float grad = clamp(vLocal.y, 0.0, 1.0);
+                            vec3 base = mix(vec3(0.014, 0.02, 0.042), vec3(0.05, 0.075, 0.13), grad);
+                            base += vec3(0.05, 0.16, 0.22) * fres;
+                            vec3 emissive = vec3(0.0);
+                            if (abs(N.y) < 0.5) {
+                                float u, v;
+                                if (abs(N.x) > 0.5) {
+                                    u = (vLocal.z + 0.5) * vSize.z;
+                                    v = vLocal.y * vSize.y;
+                                } else {
+                                    u = (vLocal.x + 0.5) * vSize.x;
+                                    v = vLocal.y * vSize.y;
+                                }
+                                vec2 cellSize = vec2(1.8, 3.4); // real window pitch (m)
+                                vec2 cellId = floor(vec2(u, v) / cellSize);
+                                vec2 f = fract(vec2(u, v) / cellSize);
+                                float rnd = hash21(cellId + vSeed * 17.31);
+                                float lit = step(0.45, rnd)
+                                    * step(0.14, f.x) * step(f.x, 0.86)
+                                    * step(0.22, f.y) * step(f.y, 0.78);
+                                vec3 winCol = rnd < 0.62 ? vec3(0.25, 0.95, 1.0)
+                                    : (rnd < 0.84 ? vec3(1.0, 0.3, 0.85) : vec3(1.0, 0.72, 0.3));
+                                float flick = 0.72 + 0.28 * sin(uTime * (1.0 + rnd * 3.0) + rnd * 40.0);
+                                float sweep = 0.85 + 0.15 * sin(uTime * 0.6 + vSeed * 6.283 + v * 0.25);
+                                emissive += winCol * lit * flick * sweep * 1.9;
+                            } else if (N.y > 0.5) {
+                                base = vec3(0.03, 0.045, 0.08) + vec3(0.05, 0.16, 0.22) * fres;
+                            } else {
+                                base = vec3(0.004, 0.006, 0.012);
+                            }
+                            // aerial perspective: the skyline sinks into the night
+                            float fogF = smoothstep(60.0, 520.0, vDist);
+                            gl_FragColor = vec4(mix(base + emissive, vec3(0.027, 0.043, 0.078), fogF * 0.92), 1.0);
+                        }
+                    `,
+                    fog: false,
+                });
+                this._bodyInst = new THREE.InstancedMesh(bodyGeo, this._bodyMat, COUNT);
+                this._bodyInst.frustumCulled = false;
+                this._bodyInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this._group.add(this._bodyInst);
+
+                // ============ Neon roof rims (pure bloom) ============
+                const rimGeo = new THREE.BoxGeometry(1, 1, 1);
+                rimGeo.translate(0, 0.5, 0);
+                const rimColorArr = new Float32Array(COUNT * 3);
+                const rimSeedArr = new Float32Array(COUNT);
+                const _rimC = new THREE.Color();
+                buildings.forEach((b, i) => {
+                    _rimC.set(b.seed % 2 < 1 ? 0x26f5ff : 0xff3fd8);
+                    rimColorArr[i * 3] = _rimC.r; rimColorArr[i * 3 + 1] = _rimC.g; rimColorArr[i * 3 + 2] = _rimC.b;
+                    rimSeedArr[i] = b.seed;
+                });
+                rimGeo.setAttribute('aColor', new THREE.InstancedBufferAttribute(rimColorArr, 3));
+                rimGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(rimSeedArr, 1));
+                this._rimMat = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 } },
+                    vertexShader: `
+                        attribute vec3 aColor;
+                        attribute float aSeed;
+                        varying vec3 vColor;
+                        varying float vSeed;
+                        varying float vDist;
+                        void main() {
+                            vColor = aColor;
+                            vSeed = aSeed;
+                            vec4 mvPosition = viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);
+                            vDist = -mvPosition.z;
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        varying vec3 vColor;
+                        varying float vSeed;
+                        varying float vDist;
+                        void main() {
+                            float pulse = 0.8 + 0.25 * sin(uTime * 1.6 + vSeed * 6.283);
+                            float dim = 1.0 - smoothstep(80.0, 500.0, vDist);
+                            gl_FragColor = vec4(vColor * 1.6 * pulse, 0.9 * dim);
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    fog: false,
+                });
+                this._rimInst = new THREE.InstancedMesh(rimGeo, this._rimMat, COUNT);
+                this._rimInst.frustumCulled = false;
+                this._rimInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this._rimInst.layers.set(BLOOM_LAYER);
+                this._group.add(this._rimInst);
+
+                // ============ Antenna beacons on the taller towers ============
+                const antennas = buildings
+                    .filter((b) => b.h > 38) // mid-to-high towers get antennas
+                    .map((b) => ({ b, len: 1.8 + Math.random() * 5.2 }));
+                this._antennas = antennas;
+                const antGeo = new THREE.BoxGeometry(1, 1, 1);
+                antGeo.translate(0, 0.5, 0);
+                const antSeedArr = new Float32Array(antennas.length);
+                antennas.forEach((a, i) => { antSeedArr[i] = a.b.seed; });
+                antGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(antSeedArr, 1));
+                this._antMat = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 } },
+                    vertexShader: `
+                        attribute float aSeed;
+                        varying float vY;
+                        varying float vSeed;
+                        varying float vDist;
+                        void main() {
+                            vY = position.y;
+                            vSeed = aSeed;
+                            vec4 mvPosition = viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);
+                            vDist = -mvPosition.z;
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        varying float vY;
+                        varying float vSeed;
+                        varying float vDist;
+                        void main() {
+                            float tip = smoothstep(0.72, 1.0, vY);
+                            float blink = pow(0.5 + 0.5 * sin(uTime * 2.4 + vSeed * 21.0), 3.0);
+                            vec3 c = mix(vec3(0.15, 0.8, 0.95), vec3(1.0, 0.22, 0.2), tip);
+                            float dim = 1.0 - smoothstep(80.0, 500.0, vDist);
+                            float a = (0.22 + tip * (0.3 + blink * 0.7)) * dim;
+                            gl_FragColor = vec4(c * (0.6 + tip * blink * 1.8), a);
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    fog: false,
+                });
+                this._antInst = new THREE.InstancedMesh(antGeo, this._antMat, antennas.length);
+                this._antInst.frustumCulled = false;
+                this._antInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this._antInst.layers.set(BLOOM_LAYER);
+                this._group.add(this._antInst);
+
+                // ============ Glowing street grid on the ground ============
+                const groundGeo = new THREE.CircleGeometry(R_OUT + 4, 128);
+                groundGeo.rotateX(-Math.PI / 2);
+                this._groundMat = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 }, uOpacity: { value: 0 } },
+                    vertexShader: `
+                        varying vec3 vW;
+                        varying float vDist;
+                        void main() {
+                            vec4 wp = modelMatrix * vec4(position, 1.0);
+                            vW = wp.xyz;
+                            vec4 vp = viewMatrix * wp;
+                            vDist = -vp.z;
+                            gl_Position = projectionMatrix * vp;
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float uTime;
+                        uniform float uOpacity;
+                        varying vec3 vW;
+                        varying float vDist;
+                        void main() {
+                            vec2 p = vW.xz;
+                            float r = length(p);
+                            vec2 g = abs(fract(p * 0.04545) - 0.5); // every 22 m
+                            float minor = 1.0 - smoothstep(0.0, 0.045, min(g.x, g.y));
+                            vec2 g2 = abs(fract(p * 0.01136) - 0.5); // every 88 m
+                            float major = 1.0 - smoothstep(0.0, 0.018, min(g2.x, g2.y));
+                            float plaza = 1.0 - smoothstep(0.0, 1.2, abs(r - 14.0));
+                            float pulse = 0.0;
+                            for (float i = 0.0; i < 3.0; i++) {
+                                float rr = fract(uTime * 0.05 + i * 0.3333) * 260.0;
+                                pulse += (1.0 - smoothstep(0.0, 1.6, abs(r - rr))) * (1.0 - rr / 260.0);
+                            }
+                            float edge = 1.0 - smoothstep(252.0, 264.0, r);
+                            float fogF = smoothstep(60.0, 420.0, vDist);
+                            vec3 col = vec3(0.05, 0.7, 0.9) * (minor * 0.32 + plaza * 0.9)
+                                + vec3(1.0, 0.25, 0.85) * major * 0.4
+                                + vec3(0.2, 0.9, 1.0) * pulse * 0.45;
+                            col = mix(col, vec3(0.027, 0.043, 0.078), fogF * 0.85);
+                            float a = edge * (minor * 0.28 + major * 0.3 + plaza * 0.5 + pulse * 0.3 + 0.045) * (1.0 - fogF * 0.7);
+                            gl_FragColor = vec4(col, a * uOpacity);
+                        }
+                    `,
+                    transparent: true,
+                    depthWrite: false,
+                    fog: false,
+                });
+                const ground = new THREE.Mesh(groundGeo, this._groundMat);
+                ground.position.y = 0.012;
+                this._group.add(ground);
+
+                // ============ Flying vehicle light streaks ============
+                const STREAKS = 26;
+                this._streaks = [];
+                for (let i = 0; i < STREAKS; i++) {
+                    this._streaks.push({
+                        axis: i % 2,
+                        lane: (Math.random() - 0.5) * 380,
+                        y: 45 + Math.random() * 130,               // 45-175 m altitude
+                        speed: (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 110),
+                        offset: Math.random() * 420,
+                        len: 12 + Math.random() * 30,              // 12-42 m light trails
+                        hue: Math.random(),
+                    });
+                }
+                const streakGeo = new THREE.BoxGeometry(1, 1, 1);
+                const streakHueArr = new Float32Array(STREAKS);
+                this._streaks.forEach((s, i) => { streakHueArr[i] = s.hue; });
+                streakGeo.setAttribute('aHue', new THREE.InstancedBufferAttribute(streakHueArr, 1));
+                this._streakMat = new THREE.ShaderMaterial({
+                    uniforms: {},
+                    vertexShader: `
+                        attribute float aHue;
+                        varying float vHue;
+                        varying vec3 vLocal;
+                        varying float vDist;
+                        void main() {
+                            vHue = aHue;
+                            vLocal = position;
+                            vec4 mvPosition = viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);
+                            vDist = -mvPosition.z;
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `,
+                    fragmentShader: `
+                        varying float vHue;
+                        varying vec3 vLocal;
+                        varying float vDist;
+                        void main() {
+                            float t = 1.0 - abs(vLocal.x) * 2.0;
+                            float a = smoothstep(0.0, 0.85, t);
+                            float dim = 1.0 - smoothstep(80.0, 500.0, vDist);
+                            vec3 c = mix(vec3(0.25, 0.95, 1.0), vec3(1.0, 0.45, 0.9), vHue);
+                            gl_FragColor = vec4(c * (0.4 + a * 1.5), a * 0.8 * dim);
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    fog: false,
+                });
+                this._streakInst = new THREE.InstancedMesh(streakGeo, this._streakMat, STREAKS);
+                this._streakInst.frustumCulled = false;
+                this._streakInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this._streakInst.layers.set(BLOOM_LAYER);
+                this._group.add(this._streakInst);
+
+                this._mTmp = new THREE.Matrix4();
+                this._vTmp = new THREE.Vector3();
+                this._writeBuildings(0);
+                this._updateStreaks(0);
+                this._group.visible = false;
+            }
+            _writeBuildings(elapsed) {
+                const smooth = (x) => {
+                    x = Math.max(0, Math.min(1, x));
+                    return x * x * (3 - 2 * x);
+                };
+                const m = this._mTmp;
+                for (let i = 0; i < this._buildings.length; i++) {
+                    const b = this._buildings[i];
+                    const t = smooth((elapsed - b.delay) / 0.9);
+                    b.t = t;
+                    const s = t <= 0 ? 0.001 : 0.15 + 0.85 * t;
+                    m.makeScale(b.w * s, b.h * (t <= 0 ? 0.001 : t), b.d * s);
+                    m.setPosition(b.x, 0, b.z);
+                    this._bodyInst.setMatrixAt(i, m);
+
+                    // neon rim rides the top of the growing tower
+                    m.makeScale((b.w + 1.2) * s, 0.9 * t, (b.d + 1.2) * s);
+                    m.setPosition(b.x, b.h * t, b.z);
+                    this._rimInst.setMatrixAt(i, m);
+                }
+                for (let i = 0; i < this._antennas.length; i++) {
+                    const a = this._antennas[i];
+                    const t = a.b.t;
+                    m.makeScale(0.4, a.len * t, 0.4);
+                    m.setPosition(a.b.x, a.b.h * t, a.b.z);
+                    this._antInst.setMatrixAt(i, m);
+                }
+                this._bodyInst.instanceMatrix.needsUpdate = true;
+                this._rimInst.instanceMatrix.needsUpdate = true;
+                this._antInst.instanceMatrix.needsUpdate = true;
+            }
+            _updateStreaks(time) {
+                const m = this._mTmp;
+                for (let i = 0; i < this._streaks.length; i++) {
+                    const s = this._streaks[i];
+                    const p = ((((time * s.speed + s.offset) % 420) + 420) % 420) - 210;
+                    if (s.axis === 0) {
+                        m.makeTranslation(p, s.y, s.lane);
+                    } else {
+                        m.makeRotationY(Math.PI / 2);
+                        m.setPosition(s.lane, s.y, p);
+                    }
+                    m.scale(this._vTmp.set(s.len, 0.9, 0.9));
+                    this._streakInst.setMatrixAt(i, m);
+                }
+                this._streakInst.instanceMatrix.needsUpdate = true;
+            }
+            setVisible(v) {
+                this._active = v;
+                this._group.visible = v;
+                if (v) {
+                    for (const b of this._buildings) b.t = 0;
+                    this._writeBuildings(0);
+                    this._groundMat.uniforms.uOpacity.value = 0;
+                    this._buildStart = performance.now() / 1000;
+                    this._building = true;
+                } else {
+                    this._building = false;
+                }
+            }
+            Update(time) {
+                if (!this._group.visible) return;
+                if (this._building) {
+                    const elapsed = time - this._buildStart;
+                    this._writeBuildings(elapsed);
+                    const g = Math.min(1, elapsed / 2.2);
+                    this._groundMat.uniforms.uOpacity.value = g * g * (3 - 2 * g);
+                    if (elapsed > this._TotalDuration) this._building = false;
+                }
+                this._updateStreaks(time);
+                this._bodyMat.uniforms.uTime.value = time;
+                this._rimMat.uniforms.uTime.value = time;
+                this._antMat.uniforms.uTime.value = time;
+                this._groundMat.uniforms.uTime.value = time;
+            }
+        }
+
         class C_Aurora {
 
             constructor(scene) {
@@ -3499,10 +3945,13 @@
             _Button_Wind = null;
             _Button_Architecture = null;
             _Button_Sakura = null;
+            _Button_CyberCity = null;
             _Button_Render = null;
             _RenderPanel = null;
             _Architecture = null;
-            _ExhibitModes = { wind: false, architecture: false, sakura: false };
+            _CyberPanel = null;
+            _CyberCity = null;
+            _ExhibitModes = { wind: false, architecture: false, sakura: false, cybercity: false };
             _CollisionBoxes = [];
 
             // _Image_Icon = new FC_ImagePlane(Scene, Camera, "../../Asset/Image/Icon_1_1.jpg", new THREE.Vector2(1, 1));
@@ -4124,6 +4573,9 @@
                 } else if (mode === 'sakura') {
                     if (this._SakuraPanel) this._SakuraPanel.setState(on);
                     this.setSakuraVisibility(on);
+                } else if (mode === 'cybercity') {
+                    if (this._CyberPanel) this._CyberPanel.setState(on);
+                    if (this._CyberCity) this._CyberCity.setVisible(on);
                 }
             }
             _updateBalloon(b, dt, playerX, anchorY, playerZ) {
@@ -4268,8 +4720,10 @@
                 if (this._Wind) this._Wind.syncUniforms(_buttonTime);
                 if (this._ArchitecturePanel) this._ArchitecturePanel.syncTime(_buttonTime);
                 if (this._SakuraPanel) this._SakuraPanel.syncTime(_buttonTime);
+                if (this._CyberPanel) this._CyberPanel.syncTime(_buttonTime);
                 if (this._RenderPanel) this._RenderPanel.syncTime(_buttonTime);
                 if (this._Architecture) this._Architecture.Update(_buttonTime);
+                if (this._CyberCity) this._CyberCity.Update(_buttonTime);
 
                 this._Category_Texts.forEach(_text => {
                     _text.Update();
@@ -4498,6 +4952,7 @@
                 const sakuraPos = exhibitPosition(0);
                 const windPos = exhibitPosition(1);
                 const architecturePos = exhibitPosition(2);
+                const cyberPos = exhibitPosition(3);
 
                 this._Sakura = new THREE.Group();
                 this._SakuraTarget = false;
@@ -4524,6 +4979,24 @@
                     0,
                     0,
                     { x: architecturePos.x, z: architecturePos.z }
+                );
+
+                this._CyberPanel = new C_TogglePanel('都市', 'cybercity');
+                this._Button_CyberCity = this._CyberPanel.button;
+                this._CyberPanel._panelGroup.position.set(cyberPos.x, category_y + 0.8, cyberPos.z);
+                this._CyberPanel._panelGroup.lookAt(subcategory_x, this._CyberPanel._panelGroup.position.y, subcategory_z);
+                this._CyberPanel._panelGroup.visible = false;
+                Scene.add(this._CyberPanel._panelGroup);
+
+                // Like the cathedral, the city itself fills the central atrium
+                // from the ground up; the two never show at once because the
+                // exhibit modes are mutually exclusive.
+                this._CyberCity = new C_CyberCity(
+                    Scene,
+                    0,
+                    0,
+                    0,
+                    { x: cyberPos.x, z: cyberPos.z }
                 );
 
                 this._SakuraPanel = new C_TogglePanel('桜', 'sakura');
@@ -4877,6 +5350,10 @@
                     this._SakuraPanel.setFloorVisible(onArtFloor);
                     if (onArtFloor) this._SakuraPanel.setState(this._ExhibitModes.sakura);
                 }
+                if (this._CyberPanel) {
+                    this._CyberPanel.setFloorVisible(onArtFloor);
+                    if (onArtFloor) this._CyberPanel.setState(this._ExhibitModes.cybercity);
+                }
                 const onGuideFloor = floor_index === 0;
                 if (this._RenderPanel) {
                     this._RenderPanel.setFloorVisible(onGuideFloor);
@@ -4910,8 +5387,9 @@
         const Camera = new FC_Camera_Controller(Renderer);
         Camera.Object.fov = CAMERA_FOV;
         // Extend the far plane so the endless pillar of light rising from the
-        // exhibit can climb far into the sky before it is ever clipped.
-        Camera.Object.far = 400;
+        // exhibit can climb far into the sky before it is ever clipped, and so
+        // the full-scale cyber city (radius ~260 m, towers ~300 m) stays whole.
+        Camera.Object.far = 1500;
         Camera.Object.updateProjectionMatrix();
         const _BloomCamera = Camera.Object.clone();
         _BloomCamera.layers.set(BLOOM_LAYER);
@@ -4980,6 +5458,7 @@
                 Manager._Button_Wind,
                 Manager._Button_Architecture,
                 Manager._Button_Sakura,
+                Manager._Button_CyberCity,
                 Manager._Button_Render
             ].filter(Boolean);
             const hits = raycaster.intersectObjects(targets, false);
@@ -5065,6 +5544,13 @@
                     PressedButtonType = null;
                     if (Manager._SakuraPanel && Manager._SakuraPanel._floorVisible) {
                         Manager.toggleExhibitMode('sakura');
+                    }
+                    return;
+                }
+                if (releasedButtonType === 'cybercity') {
+                    PressedButtonType = null;
+                    if (Manager._CyberPanel && Manager._CyberPanel._floorVisible) {
+                        Manager.toggleExhibitMode('cybercity');
                     }
                     return;
                 }
