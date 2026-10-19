@@ -92,6 +92,7 @@
         import { EffectComposer } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/EffectComposer.js';
         import { RenderPass } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'https://unpkg.com/three@0.126.1/examples/jsm/postprocessing/UnrealBloomPass.js';
+        import { FXAAShader } from 'https://unpkg.com/three@0.126.1/examples/jsm/shaders/FXAAShader.js';
         import {
             Mobile_or_Desktop,
             RandomNumber_Between,
@@ -133,13 +134,25 @@
         _BloomComposer.addPass(_BloomPass);
 
         const _BloomCompositeMaterial = new THREE.ShaderMaterial({
-            uniforms: { tDiffuse: { value: null }, tSceneDepth: { value: null }, tGlowDepth: { value: null } },
+            uniforms: {
+                tDiffuse: { value: null },
+                tSceneDepth: { value: null },
+                tGlowDepth: { value: null },
+                uNear: { value: 0.05 },
+                uFar: { value: 1500 },
+            },
             vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
             fragmentShader: `
                 uniform sampler2D tDiffuse;
                 uniform sampler2D tSceneDepth;
                 uniform sampler2D tGlowDepth;
+                uniform float uNear;
+                uniform float uFar;
                 varying vec2 vUv;
+                float linearDepth(float d) {
+                    float z = d * 2.0 - 1.0;
+                    return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear));
+                }
                 void main() {
                     float glowDepth = texture2D(tGlowDepth, vUv).r;
                     float sceneDepth = texture2D(tSceneDepth, vUv).r;
@@ -151,7 +164,14 @@
                         }
                         return;
                     }
-                    if (sceneDepth + 0.002 < glowDepth) discard;
+                    // Glow objects live only on the bloom layer and are composited
+                    // additively, so they must never shine through what stands in
+                    // front of them. The old test compared the raw depth buffers
+                    // with a fixed 0.002 window - at 200 m that is over a kilometre
+                    // of slack, so roof lights, beacons and vehicle trails of the
+                    // whole skyline were painted over the nearer towers, blinking
+                    // and drifting on top of their windows. Compare metric depth.
+                    if (linearDepth(sceneDepth) + 1.0 < linearDepth(glowDepth)) discard;
                     gl_FragColor = texture2D(tDiffuse, vUv);
                 }
             `,
@@ -169,11 +189,15 @@
         _BloomDepthTarget.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight);
 
         // ===== Monte Carlo path-tracing style sampling pass =====
-        const _MC_SamplesMax = 1;
+        // Grain is only invisible on the dark parts of the frame and very obvious on
+        // bright pixels (lit windows), where it reads as flicker. Keep a light grain,
+        // cut the fireflies, and let the accumulation actually converge while the
+        // camera rests instead of always staying at a single noisy sample.
+        const _MC_SamplesMax = 24;
         let _MC_Enabled = true;
-        const _MC_NoiseBase = 0.1;
+        const _MC_NoiseBase = 0.035;
         const _MC_AdaptGain = 5.0;
-        const _MC_FireflyBase = 0.0015;
+        const _MC_FireflyBase = 0.00025;
         const _UseHalfFloat = Renderer.capabilities.isWebGL2
             || (typeof Renderer.extensions.get('OES_texture_half_float') !== 'undefined');
         const _RTType = _UseHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
@@ -185,6 +209,29 @@
         const _SampledTarget = new THREE.WebGLRenderTarget(_DBW, _DBH, { type: _RTType, minFilter: _RTFilter, magFilter: _RTFilter });
         const _AccumTargetA = new THREE.WebGLRenderTarget(_DBW, _DBH, { type: _RTType, minFilter: _RTFilter, magFilter: _RTFilter });
         const _AccumTargetB = new THREE.WebGLRenderTarget(_DBW, _DBH, { type: _RTType, minFilter: _RTFilter, magFilter: _RTFilter });
+
+        // ===== final FXAA pass =====
+        // The whole scene is drawn into intermediate render targets, and three
+        // r126 cannot do MSAA on them, so every dark silhouette and window edge
+        // stays aliased and "scrapes" across the screen when the view turns.
+        // The final image is therefore filtered once more on its way out.
+        const _FinalTarget = new THREE.WebGLRenderTarget(_DBW, _DBH, { type: _RTType, minFilter: _RTFilter, magFilter: _RTFilter });
+        const _FXAAMaterial = new THREE.ShaderMaterial({
+            uniforms: { tDiffuse: { value: null }, resolution: { value: new THREE.Vector2(1 / _DBW, 1 / _DBH) } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+            fragmentShader: FXAAShader.fragmentShader,
+            depthTest: false, depthWrite: false,
+        });
+        const _FXAQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), _FXAAMaterial);
+        _FXAQuad.frustumCulled = false;
+        const _FXAScene = new THREE.Scene();
+        _FXAScene.add(_FXAQuad);
+        const _RenderFXAA = (sourceTexture) => {
+            _FXAAMaterial.uniforms.tDiffuse.value = sourceTexture;
+            Renderer.setRenderTarget(null);
+            Renderer.clear(true, true, true);
+            Renderer.render(_FXAScene, Camera.Object);
+        };
 
         const _SampledMaterial = new THREE.ShaderMaterial({
             uniforms: {
@@ -3371,15 +3418,16 @@
                 // rises several hundred metres on every side.
                 const R_INNER = 14;      // open plaza holding the gallery
                 const R_OUT = 260;       // city extent
-                const CELL = 22;         // block pitch (streets between towers)
+                const CELL = 40;         // block pitch (streets between towers)
+                const FLOOR_H = 4.0;     // floor-to-floor (m): 1 m divider + 3 m glass
                 this._TotalDuration = 5.6;
 
                 // ============ Block layout ============
                 const buildings = [];
                 for (let gx = -12; gx <= 12; gx++) {
                     for (let gz = -12; gz <= 12; gz++) {
-                        const x = gx * CELL + (Math.random() - 0.5) * 5;
-                        const z = gz * CELL + (Math.random() - 0.5) * 5;
+                        const x = gx * CELL + (Math.random() - 0.5) * 3;
+                        const z = gz * CELL + (Math.random() - 0.5) * 3;
                         const r = Math.hypot(x, z);
                         if (r < R_INNER || r > R_OUT) continue;
                         // grand avenue facing the exhibit panels
@@ -3389,18 +3437,22 @@
                         if (Math.random() < 0.1) continue; // loose skyline, small gaps
 
                         const edge = (r - R_INNER) / (R_OUT - R_INNER);
-                        const w = 7 + Math.random() * 13;   // 7-20 m footprints
-                        const d = 7 + Math.random() * 13;
-                        let h;
-                        const roll = Math.random();
-                        if (roll < 0.55) h = 10 + Math.random() * 26;        // low rise
-                        else if (roll < 0.88) h = 36 + Math.random() * 62;   // mid rise
-                        else if (roll < 0.98) h = 98 + Math.random() * 92;   // towers
-                        else h = 190 + Math.random() * 120;                  // landmarks
-                        h *= 0.9 + edge * 0.3; // outer ring rises -> readable skyline
+                        // Floor count: every tower starts at a 50-story base and grows
+                        // at random up to 200 stories. The weight sits on the base, so
+                        // most blocks land around 50-90 floors while 150-200 story
+                        // towers stay rare enough to read as landmarks.
+                        // 4.0 m floor-to-floor -> 200 m - 800 m.
+                        const floors = 50 + Math.floor(Math.pow(Math.random(), 3.0) * 151);
+                        const h = floors * FLOOR_H;
+                        // The footprint grows with the tower, so a 200-storey landmark
+                        // is a broad slab instead of a needle: about 12:1 for the
+                        // 50-storey stock, capped so every tower still keeps its street.
+                        const foot = Math.max(12, Math.min(CELL - 8, 8 + h * 0.045));
+                        const w = foot * (0.95 + Math.random() * 0.10);
+                        const d = foot * (0.95 + Math.random() * 0.10);
 
                         buildings.push({
-                            x, z, w, d, h,
+                            x, z, w, d, h, floors,
                             seed: Math.random() * 100,
                             delay: (Math.abs(dAng) / Math.PI) * 2.2 + edge * 2.2,
                             t: 0,
@@ -3410,34 +3462,31 @@
                 this._buildings = buildings;
                 const COUNT = buildings.length;
 
-                // ============ Building bodies (lit windows per fragment) ============
+                // ============ Building bodies: black boxes, glass windows ============
+                // Stage 2: the box stays black and now carries a glazed facade.
+                // Everything that is NOT glass - the floor slab of every storey and
+                // the wall strip between bays - is the box itself, and those two
+                // bands are what divide the windows. Nothing is taken from the
+                // camera: the pattern is measured in metres on the wall of the
+                // fragment, so it stays nailed to the tower while it grows.
                 const bodyGeo = new THREE.BoxGeometry(1, 1, 1);
                 bodyGeo.translate(0, 0.5, 0); // base sits on the ground
-                const sizeArr = new Float32Array(COUNT * 3);
-                const seedArr = new Float32Array(COUNT);
-                buildings.forEach((b, i) => {
-                    sizeArr[i * 3] = b.w; sizeArr[i * 3 + 1] = b.h; sizeArr[i * 3 + 2] = b.d;
-                    seedArr[i] = b.seed;
-                });
-                bodyGeo.setAttribute('aSize', new THREE.InstancedBufferAttribute(sizeArr, 3));
-                bodyGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seedArr, 1));
-
                 this._bodyMat = new THREE.ShaderMaterial({
-                    uniforms: { uTime: { value: 0 } },
                     vertexShader: `
-                        attribute vec3 aSize;
-                        attribute float aSeed;
                         varying vec3 vLocal;
                         varying vec3 vNrm;
                         varying vec3 vSize;
-                        varying float vSeed;
                         varying vec3 vViewPos;
                         varying float vDist;
                         void main() {
                             vLocal = position;
                             vNrm = normal;
-                            vSize = aSize;
-                            vSeed = aSeed;
+                            // metres of this instance, read straight from the instance
+                            // matrix: it tracks the growth animation, so the floors rise
+                            // out of the ground one storey at a time as the tower builds
+                            vSize = vec3(length(instanceMatrix[0].xyz),
+                                         length(instanceMatrix[1].xyz),
+                                         length(instanceMatrix[2].xyz));
                             vec4 worldPosition = modelMatrix * instanceMatrix * vec4(position, 1.0);
                             vec4 mvPosition = viewMatrix * worldPosition;
                             vViewPos = -mvPosition.xyz;
@@ -3446,11 +3495,9 @@
                         }
                     `,
                     fragmentShader: `
-                        uniform float uTime;
                         varying vec3 vLocal;
                         varying vec3 vNrm;
                         varying vec3 vSize;
-                        varying float vSeed;
                         varying vec3 vViewPos;
                         varying float vDist;
                         float hash21(vec2 p) {
@@ -3461,40 +3508,87 @@
                         void main() {
                             vec3 N = normalize(vNrm);
                             vec3 V = normalize(vViewPos);
-                            float fres = pow(1.0 - abs(dot(V, N)), 2.5);
-                            float grad = clamp(vLocal.y, 0.0, 1.0);
-                            vec3 base = mix(vec3(0.014, 0.02, 0.042), vec3(0.05, 0.075, 0.13), grad);
-                            base += vec3(0.05, 0.16, 0.22) * fres;
-                            vec3 emissive = vec3(0.0);
+                            float fres = pow(1.0 - abs(dot(V, N)), 3.0);
+
+                            // metres covered by one screen pixel. Edges soften by ~1.6 px,
+                            // which keeps them pinned instead of crawling with the view.
+                            float mpp = max(vDist * 0.0015, 0.0004);
+                            float aa = 1.6 * mpp;
+
+                            // the box itself: every divider below is this colour
+                            vec3 base = vec3(0.004, 0.0045, 0.006);
+                            float win = 0.0;
+                            vec3 glassCol = vec3(0.0);
+
                             if (abs(N.y) < 0.5) {
-                                float u, v;
-                                if (abs(N.x) > 0.5) {
-                                    u = (vLocal.z + 0.5) * vSize.z;
-                                    v = vLocal.y * vSize.y;
-                                } else {
-                                    u = (vLocal.x + 0.5) * vSize.x;
-                                    v = vLocal.y * vSize.y;
-                                }
-                                vec2 cellSize = vec2(1.8, 3.4); // real window pitch (m)
-                                vec2 cellId = floor(vec2(u, v) / cellSize);
-                                vec2 f = fract(vec2(u, v) / cellSize);
-                                float rnd = hash21(cellId + vSeed * 17.31);
-                                float lit = step(0.45, rnd)
-                                    * step(0.14, f.x) * step(f.x, 0.86)
-                                    * step(0.22, f.y) * step(f.y, 0.78);
-                                vec3 winCol = rnd < 0.62 ? vec3(0.25, 0.95, 1.0)
-                                    : (rnd < 0.84 ? vec3(1.0, 0.3, 0.85) : vec3(1.0, 0.72, 0.3));
-                                float flick = 0.72 + 0.28 * sin(uTime * (1.0 + rnd * 3.0) + rnd * 40.0);
-                                float sweep = 0.85 + 0.15 * sin(uTime * 0.6 + vSeed * 6.283 + v * 0.25);
-                                emissive += winCol * lit * flick * sweep * 1.9;
+                                // ---- facade coordinates, in metres ----
+                                float u;                       // across the wall
+                                if (abs(N.x) > 0.5) u = (vLocal.z + 0.5) * vSize.z;
+                                else                u = (vLocal.x + 0.5) * vSize.x;
+                                float v = vLocal.y * vSize.y;  // up the tower
+
+                                // Floor height and floor divider are two separate
+                                // numbers: the glass is exactly the clear height from
+                                // the floor to the ceiling (P - DIV), and the divider
+                                // is the slab / ceiling band that frames it.
+                                float P = 4.00;          // floor-to-floor (FLOOR_H in JS)
+                                float DIV = 1.00;        // floor divider: slab + ceiling void
+                                float GLASS_H = P - DIV; // 3 m of glass, floor to ceiling
+                                float BAY = 3.60;        // column pitch
+                                float WALL = 0.30;       // wall strip between two openings
+
+                                float ym = fract(v / P) * P;      // metres up this storey
+                                float bx = fract(u / BAY) * BAY;  // metres across this bay
+                                float fi = floor(v / P);          // storey index
+                                float ri = floor(u / BAY);        // bay index
+
+                                // horizontal divider: the slab band of this storey
+                                float openY = smoothstep(DIV - aa, DIV + aa, ym);
+                                // vertical divider: the wall strip, which fades to its mean
+                                // coverage once it drops under one pixel (no shimmer)
+                                float openX = smoothstep(WALL * 0.5 - aa, WALL * 0.5 + aa, bx)
+                                            * (1.0 - smoothstep(BAY - WALL * 0.5 - aa,
+                                                                BAY - WALL * 0.5 + aa, bx));
+                                float detWall = 1.0 - smoothstep(0.10, 0.24, mpp);
+                                openX = mix((BAY - WALL) / BAY, openX, detWall);
+                                win = openX * openY;
+
+                                // ---- the glass ----
+                                float pane = hash21(vec2(ri, fi) + 0.37);
+                                float pane2 = hash21(vec2(ri - 3.1, fi + 5.7));
+                                // night sky mirrored in the pane, stronger as it turns away
+                                vec3 sky = mix(vec3(0.030, 0.052, 0.090),
+                                               vec3(0.120, 0.170, 0.270), fres);
+                                // sheen gathering towards the top of each opening
+                                float sheen = 0.70 + 0.60 * smoothstep(0.0, 1.0,
+                                                       (ym - DIV) / GLASS_H);
+                                vec3 tint = mix(vec3(0.014, 0.026, 0.044),
+                                                vec3(0.050, 0.075, 0.110), pane);
+                                glassCol = tint * sheen + sky * (0.45 + 0.55 * pane2);
+                                // per-pane variety settles into the wall average far away
+                                float detPane = 1.0 - smoothstep(3.0, 7.0, BAY / mpp);
+                                glassCol = mix(vec3(0.046, 0.070, 0.110), glassCol, detPane);
+
+                                // the slab edge picks up a thin line of light: it is what
+                                // reads the floors of the tower at a distance
+                                float hl = smoothstep(DIV - aa, DIV, ym)
+                                         * (1.0 - smoothstep(DIV + 0.10 - aa, DIV + 0.10 + aa, ym));
+                                base += vec3(0.035, 0.040, 0.052) * hl;
+                                base += vec3(0.010, 0.012, 0.016) * fres;
                             } else if (N.y > 0.5) {
-                                base = vec3(0.03, 0.045, 0.08) + vec3(0.05, 0.16, 0.22) * fres;
+                                base = vec3(0.010, 0.011, 0.013)
+                                     * (0.8 + 0.4 * hash21(vec2(vLocal.x + vLocal.z, 3.1)));
+                                base += vec3(0.030, 0.035, 0.045) * fres * 0.5;
                             } else {
-                                base = vec3(0.004, 0.006, 0.012);
+                                base = vec3(0.003, 0.003, 0.004);
                             }
-                            // aerial perspective: the skyline sinks into the night
-                            float fogF = smoothstep(60.0, 520.0, vDist);
-                            gl_FragColor = vec4(mix(base + emissive, vec3(0.027, 0.043, 0.078), fogF * 0.92), 1.0);
+
+                            vec3 col = mix(base, glassCol, win);
+                            // aerial perspective: the skyline sinks into the night.
+                            // the range has to reach past the tallest landmark or the
+                            // 200-storey tops simply dissolve into the sky
+                            float fogF = smoothstep(60.0, 1200.0, vDist);
+                            gl_FragColor = vec4(mix(col, vec3(0.027, 0.043, 0.078), fogF * 0.92), 1.0);
                         }
                     `,
                     fog: false,
@@ -3504,14 +3598,18 @@
                 this._bodyInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
                 this._group.add(this._bodyInst);
 
-                // ============ Neon roof rims (pure bloom) ============
+                // ============ Roof outline lighting (muted, only some towers) ============
                 const rimGeo = new THREE.BoxGeometry(1, 1, 1);
                 rimGeo.translate(0, 0.5, 0);
                 const rimColorArr = new Float32Array(COUNT * 3);
                 const rimSeedArr = new Float32Array(COUNT);
                 const _rimC = new THREE.Color();
                 buildings.forEach((b, i) => {
-                    _rimC.set(b.seed % 2 < 1 ? 0x26f5ff : 0xff3fd8);
+                    // only a minority of towers carry roof outline lighting, and in
+                    // real-world hues: warm sodium / pale cyan / cool white
+                    b.rim = Math.random() < 0.42;
+                    const roll = Math.random();
+                    _rimC.set(roll < 0.45 ? 0xffc491 : (roll < 0.8 ? 0x9fd9ec : 0xdfe8f4));
                     rimColorArr[i * 3] = _rimC.r; rimColorArr[i * 3 + 1] = _rimC.g; rimColorArr[i * 3 + 2] = _rimC.b;
                     rimSeedArr[i] = b.seed;
                 });
@@ -3541,7 +3639,7 @@
                         void main() {
                             float pulse = 0.8 + 0.25 * sin(uTime * 1.6 + vSeed * 6.283);
                             float dim = 1.0 - smoothstep(80.0, 500.0, vDist);
-                            gl_FragColor = vec4(vColor * 1.6 * pulse, 0.9 * dim);
+                            gl_FragColor = vec4(vColor * 0.95 * pulse, 0.6 * dim);
                         }
                     `,
                     transparent: true,
@@ -3557,8 +3655,8 @@
 
                 // ============ Antenna beacons on the taller towers ============
                 const antennas = buildings
-                    .filter((b) => b.h > 38) // mid-to-high towers get antennas
-                    .map((b) => ({ b, len: 1.8 + Math.random() * 5.2 }));
+                    .filter((b) => b.h > 520) // only the true towers carry beacons
+                    .map((b) => ({ b, len: 5 + Math.random() * 15 + b.h * 0.02 }));
                 this._antennas = antennas;
                 const antGeo = new THREE.BoxGeometry(1, 1, 1);
                 antGeo.translate(0, 0.5, 0);
@@ -3629,10 +3727,10 @@
                         void main() {
                             vec2 p = vW.xz;
                             float r = length(p);
-                            vec2 g = abs(fract(p * 0.04545) - 0.5); // every 22 m
-                            float minor = 1.0 - smoothstep(0.0, 0.045, min(g.x, g.y));
-                            vec2 g2 = abs(fract(p * 0.01136) - 0.5); // every 88 m
-                            float major = 1.0 - smoothstep(0.0, 0.018, min(g2.x, g2.y));
+                            vec2 g = abs(fract(p * 0.025) - 0.5); // every 40 m (CELL)
+                            float minor = 1.0 - smoothstep(0.0, 0.0275, min(g.x, g.y));
+                            vec2 g2 = abs(fract(p * 0.00625) - 0.5); // every 160 m (4 blocks)
+                            float major = 1.0 - smoothstep(0.0, 0.010, min(g2.x, g2.y));
                             float plaza = 1.0 - smoothstep(0.0, 1.2, abs(r - 14.0));
                             float pulse = 0.0;
                             for (float i = 0.0; i < 3.0; i++) {
@@ -3651,10 +3749,15 @@
                     `,
                     transparent: true,
                     depthWrite: false,
+                    // the street disc lies almost on the gallery floor: without an
+                    // offset the two fight for depth and the whole plaza flickers
+                    polygonOffset: true,
+                    polygonOffsetFactor: -1,
+                    polygonOffsetUnits: -1,
                     fog: false,
                 });
                 const ground = new THREE.Mesh(groundGeo, this._groundMat);
-                ground.position.y = 0.012;
+                ground.position.y = 0.03;
                 this._group.add(ground);
 
                 // ============ Flying vehicle light streaks ============
@@ -3664,7 +3767,7 @@
                     this._streaks.push({
                         axis: i % 2,
                         lane: (Math.random() - 0.5) * 380,
-                        y: 45 + Math.random() * 130,               // 45-175 m altitude
+                        y: 120 + Math.random() * 320,              // 120-440 m altitude (50F-200F towers)
                         speed: (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 110),
                         offset: Math.random() * 420,
                         len: 12 + Math.random() * 30,              // 12-42 m light trails
@@ -3734,16 +3837,21 @@
                     m.setPosition(b.x, 0, b.z);
                     this._bodyInst.setMatrixAt(i, m);
 
-                    // neon rim rides the top of the growing tower
-                    m.makeScale((b.w + 1.2) * s, 0.9 * t, (b.d + 1.2) * s);
-                    m.setPosition(b.x, b.h * t, b.z);
+                    // Roof outline lighting rides the top of the growing tower.
+                    // Its base is sunk 0.35 m into the roof: a bottom face sitting
+                    // exactly on the roof plane is coplanar with it and fights for
+                    // depth, which flickers. The visible top stays where it was.
+                    const rs = b.rim ? 1 : 0;
+                    m.makeScale((b.w + 1.2) * s * rs, 1.25 * t * rs, (b.d + 1.2) * s * rs);
+                    m.setPosition(b.x, b.h * t - 0.35 * t, b.z);
                     this._rimInst.setMatrixAt(i, m);
                 }
                 for (let i = 0; i < this._antennas.length; i++) {
                     const a = this._antennas[i];
                     const t = a.b.t;
-                    m.makeScale(0.4, a.len * t, 0.4);
-                    m.setPosition(a.b.x, a.b.h * t, a.b.z);
+                    // sunk into the roof as well, for the same coplanarity reason
+                    m.makeScale(0.4, (a.len + 0.3) * t, 0.4);
+                    m.setPosition(a.b.x, a.b.h * t - 0.3 * t, a.b.z);
                     this._antInst.setMatrixAt(i, m);
                 }
                 this._bodyInst.instanceMatrix.needsUpdate = true;
@@ -3789,7 +3897,6 @@
                     if (elapsed > this._TotalDuration) this._building = false;
                 }
                 this._updateStreaks(time);
-                this._bodyMat.uniforms.uTime.value = time;
                 this._rimMat.uniforms.uTime.value = time;
                 this._antMat.uniforms.uTime.value = time;
                 this._groundMat.uniforms.uTime.value = time;
@@ -4377,7 +4484,7 @@
 
                     this._UpdateMonteCarloSamplePass();
                 } else {
-                    Renderer.setRenderTarget(null);
+                    Renderer.setRenderTarget(_FinalTarget);
                     Renderer.render(Scene, Camera.Object);
                     _BloomCamera.position.copy(Camera.Object.position);
                     _BloomCamera.quaternion.copy(Camera.Object.quaternion);
@@ -4391,10 +4498,12 @@
                     _BloomCompositeMaterial.uniforms.tDiffuse.value = _BloomComposer.readBuffer.texture;
                     _BloomCompositeMaterial.uniforms.tSceneDepth.value = _SceneTarget.depthTexture;
                     _BloomCompositeMaterial.uniforms.tGlowDepth.value = _BloomDepthTarget.depthTexture;
+                    Renderer.setRenderTarget(_FinalTarget);
                     Renderer.autoClear = false;
                     Renderer.clearDepth();
                     Renderer.render(_BloomCompositeScene, Camera.Object);
                     Renderer.autoClear = true;
+                    _RenderFXAA(_FinalTarget.texture);
                 }
 
                 requestAnimationFrame(this.Update.bind(this));
@@ -4429,9 +4538,16 @@
                 Renderer.clear(true, true, true);
                 Renderer.render(_SampleScene, Camera.Object);
 
+                // filter the accumulated image first, then add the grain on the way to
+                // the screen, so the grain stays crisp while the edges stop crawling
+                _FXAAMaterial.uniforms.tDiffuse.value = writeAccum.texture;
+                Renderer.setRenderTarget(_FinalTarget);
+                Renderer.clear(true, true, true);
+                Renderer.render(_FXAScene, Camera.Object);
+
                 Renderer.setRenderTarget(null);
                 Renderer.clear(true, true, true);
-                _SampledMaterial.uniforms.tStored.value = writeAccum.texture;
+                _SampledMaterial.uniforms.tStored.value = _FinalTarget.texture;
                 _SampledMaterial.uniforms.uOutput.value = 1;
                 Renderer.render(_SampleScene, Camera.Object);
                 Renderer.autoClear = true;
@@ -5390,7 +5506,16 @@
         // exhibit can climb far into the sky before it is ever clipped, and so
         // the full-scale cyber city (radius ~260 m, towers ~300 m) stays whole.
         Camera.Object.far = 1500;
+        // near = 0.01 vs far = 1500 threw almost all depth resolution away at
+        // the near plane: at 30 m one depth step was already ~5 mm, so rooftop
+        // parts, floor slabs and street/floor pairs a few mm apart flickered.
+        // 0.05 keeps everything in front of the eye identical but gives ~5x
+        // finer depth over the whole city.
+        Camera.Object.near = 0.05;
         Camera.Object.updateProjectionMatrix();
+        // the glow composite reconstructs metric depth from the depth buffers
+        _BloomCompositeMaterial.uniforms.uNear.value = Camera.Object.near;
+        _BloomCompositeMaterial.uniforms.uFar.value = Camera.Object.far;
         const _BloomCamera = Camera.Object.clone();
         _BloomCamera.layers.set(BLOOM_LAYER);
         _FishRenderPass.camera = _BloomCamera;
@@ -5413,6 +5538,8 @@
             _SampledTarget.setSize(_dbw, _dbh);
             _AccumTargetA.setSize(_dbw, _dbh);
             _AccumTargetB.setSize(_dbw, _dbh);
+            _FinalTarget.setSize(_dbw, _dbh);
+            _FXAAMaterial.uniforms.resolution.value.set(1 / _dbw, 1 / _dbh);
             if (Manager) Manager._MC_Reset = true;
         }, false);
 
