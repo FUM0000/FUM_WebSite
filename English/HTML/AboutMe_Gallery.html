@@ -3420,6 +3420,7 @@
                 const R_OUT = 260;       // city extent
                 const CELL = 40;         // block pitch (streets between towers)
                 const FLOOR_H = 4.0;     // floor-to-floor (m): 1 m divider + 3 m glass
+                const BAY = 3.6;         // window bay pitch (m) - must match BAY in the facade shader
                 this._TotalDuration = 5.6;
 
                 // ============ Block layout ============
@@ -3448,8 +3449,12 @@
                         // is a broad slab instead of a needle: about 12:1 for the
                         // 50-storey stock, capped so every tower still keeps its street.
                         const foot = Math.max(12, Math.min(CELL - 8, 8 + h * 0.045));
-                        const w = foot * (0.95 + Math.random() * 0.10);
-                        const d = foot * (0.95 + Math.random() * 0.10);
+                        // The side width is laid out in whole window bays, so every
+                        // facade ends flush on a wall strip instead of chopping the
+                        // last window in half. The bay pitch itself is unchanged, so
+                        // the windows keep their 3.3 m glass / 3.6 m pitch.
+                        const w = Math.max(3, Math.round(foot * (0.95 + Math.random() * 0.10) / BAY)) * BAY;
+                        const d = Math.max(3, Math.round(foot * (0.95 + Math.random() * 0.10) / BAY)) * BAY;
 
                         buildings.push({
                             x, z, w, d, h, floors,
@@ -3523,8 +3528,9 @@
                             if (abs(N.y) < 0.5) {
                                 // ---- facade coordinates, in metres ----
                                 float u;                       // across the wall
-                                if (abs(N.x) > 0.5) u = (vLocal.z + 0.5) * vSize.z;
-                                else                u = (vLocal.x + 0.5) * vSize.x;
+                                float wallW;                   // width of this wall
+                                if (abs(N.x) > 0.5) { u = (vLocal.z + 0.5) * vSize.z; wallW = vSize.z; }
+                                else                { u = (vLocal.x + 0.5) * vSize.x; wallW = vSize.x; }
                                 float v = vLocal.y * vSize.y;  // up the tower
 
                                 // Floor height and floor divider are two separate
@@ -3534,23 +3540,30 @@
                                 float P = 4.00;          // floor-to-floor (FLOOR_H in JS)
                                 float DIV = 1.00;        // floor divider: slab + ceiling void
                                 float GLASS_H = P - DIV; // 3 m of glass, floor to ceiling
-                                float BAY = 3.60;        // column pitch
+                                float BAY = 3.60;        // column pitch (BAY in JS)
                                 float WALL = 0.30;       // wall strip between two openings
 
+                                // Side widths are built as whole bays in JS, so at rest
+                                // this resolves to exactly BAY. Snapping the bay count
+                                // here too keeps both corners on a wall strip while the
+                                // tower grows, when its width is still being scaled.
+                                float bays = max(1.0, floor(wallW / BAY + 0.5));
+                                float bay = wallW / bays;
+
                                 float ym = fract(v / P) * P;      // metres up this storey
-                                float bx = fract(u / BAY) * BAY;  // metres across this bay
+                                float bx = fract(u / bay) * bay;  // metres across this bay
                                 float fi = floor(v / P);          // storey index
-                                float ri = floor(u / BAY);        // bay index
+                                float ri = floor(u / bay);        // bay index
 
                                 // horizontal divider: the slab band of this storey
                                 float openY = smoothstep(DIV - aa, DIV + aa, ym);
                                 // vertical divider: the wall strip, which fades to its mean
                                 // coverage once it drops under one pixel (no shimmer)
                                 float openX = smoothstep(WALL * 0.5 - aa, WALL * 0.5 + aa, bx)
-                                            * (1.0 - smoothstep(BAY - WALL * 0.5 - aa,
-                                                                BAY - WALL * 0.5 + aa, bx));
+                                            * (1.0 - smoothstep(bay - WALL * 0.5 - aa,
+                                                                bay - WALL * 0.5 + aa, bx));
                                 float detWall = 1.0 - smoothstep(0.10, 0.24, mpp);
-                                openX = mix((BAY - WALL) / BAY, openX, detWall);
+                                openX = mix((bay - WALL) / bay, openX, detWall);
                                 win = openX * openY;
 
                                 // ---- the glass ----
@@ -3566,7 +3579,7 @@
                                                 vec3(0.050, 0.075, 0.110), pane);
                                 glassCol = tint * sheen + sky * (0.45 + 0.55 * pane2);
                                 // per-pane variety settles into the wall average far away
-                                float detPane = 1.0 - smoothstep(3.0, 7.0, BAY / mpp);
+                                float detPane = 1.0 - smoothstep(3.0, 7.0, bay / mpp);
                                 glassCol = mix(vec3(0.046, 0.070, 0.110), glassCol, detPane);
 
                                 // the slab edge picks up a thin line of light: it is what
