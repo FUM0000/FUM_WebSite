@@ -309,7 +309,7 @@ height: calc(100vh - 120px);
                           <v-icon small class="mr-1">mdi-crop</v-icon>Crop
                         </div>
 
-                        <v-select v-model="cropAspect" :items="cropAspects" label="Aspect ratio" dense hide-details
+                        <v-select v-model="cropAspect" :items="cropAspects" label="Crop" dense hide-details
                           class="mb-2"></v-select>
 
                         <div class="d-flex align-center">
@@ -321,6 +321,27 @@ height: calc(100vh - 120px);
 
                         <v-btn small color="primary" block @click="applyCrop" :disabled="!cropRegion">
                           <v-icon small left>mdi-crop</v-icon>Apply Crop
+                        </v-btn>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Tilt -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-5">
+                          <v-icon small class="mr-1">mdi-rotate-right</v-icon>Tilt
+                          <span class="ml-auto caption grey--text">{{ rotation.toFixed(1) }}&deg;</span>
+                        </div>
+
+                        <div class="d-flex align-center">
+                          <span class="slider-label-text">Angle</span>
+                          <v-slider v-model="rotation" min="-45" max="45" step="0.1" hide-details thumb-label
+                            :disabled="!imagePreview" class="flex-grow-1"></v-slider>
+                        </div>
+                        <div class="caption grey--text mb-2">Rotate to straighten the image. Edges are trimmed automatically.</div>
+
+                        <v-btn text small block color="primary" @click="rotation = 0" :disabled="!rotation">
+                          <v-icon small left>mdi-restore</v-icon>Reset Tilt
                         </v-btn>
                       </v-card-text>
                     </v-card>
@@ -477,9 +498,9 @@ height: calc(100vh - 120px);
           ],
 
           // ---- crop ----
-          cropAspect: 0,
+          cropAspect: 'original',
           cropAspects: [
-            { text: 'Free', value: 0 },
+            { text: 'Original', value: 'original' },
             { text: '1:1', value: 1 },
             { text: '1:2', value: 1 / 2 },
             { text: '2:1', value: 2 },
@@ -494,6 +515,9 @@ height: calc(100vh - 120px);
             { text: '21:9', value: 21 / 9 },
           ],
           imgDisplay: null,
+
+          // ---- tilt ----
+          rotation: 0,
 
           // ---- zoom / drag ----
           zoom: 1,
@@ -541,12 +565,21 @@ height: calc(100vh - 120px);
         },
         previewInnerStyle: function () {
           if (this.showOriginal) return {};
+          var rotate = this.rotation ? ' rotate(' + this.rotation + 'deg)' : '';
           return {
-            transform: 'translate(' + this.panX + 'px,' + this.panY + 'px) scale(' + this.zoom + ')'
+            transform: 'translate(' + this.panX + 'px,' + this.panY + 'px) scale(' +
+              (this.zoom * this.rotationCoverScale) + ')' + rotate
           };
         },
+        // Zoom needed so the rotated image still covers the whole output frame.
+        rotationCoverScale: function () {
+          if (!this.rotation || !this.width || !this.height) return 1;
+          var rad = Math.abs(this.rotation) * Math.PI / 180;
+          var aspect = this.width / this.height;
+          return Math.cos(rad) + Math.max(aspect, 1 / aspect) * Math.sin(rad);
+        },
         showCropBorder: function () {
-          return (this.zoom > 1 || this.cropAspect > 0) && !!this.cropRegion;
+          return !!this.cropRegion;
         },
         // Crop region in normalized image coordinates (0-1), matching what is visible on screen.
         cropRegion: function () {
@@ -574,14 +607,20 @@ height: calc(100vh - 120px);
           if (w <= 0 || h <= 0) return null;
 
           // Fit the requested aspect ratio inside the visible area.
-          if (this.cropAspect > 0) {
-            var tw = Math.min(w, h * this.cropAspect);
-            var th = tw / this.cropAspect;
-            x0 += (w - tw) / 2;
-            y0 += (h - th) / 2;
-            w = tw;
-            h = th;
+          var aspect;
+          if (this.cropAspect === 'original') {
+            aspect = (this.originalAspectRatio && this.originalAspectRatio > 0) ? this.originalAspectRatio : (d.w / d.h);
+          } else if (this.cropAspect && this.cropAspect > 0) {
+            aspect = this.cropAspect;
+          } else {
+            aspect = (this.originalAspectRatio && this.originalAspectRatio > 0) ? this.originalAspectRatio : (d.w / d.h);
           }
+          var tw = Math.min(w, h * aspect);
+          var th = tw / aspect;
+          x0 += (w - tw) / 2;
+          y0 += (h - th) / 2;
+          w = tw;
+          h = th;
 
           return {
             u0: (x0 - d.x) / d.w,
@@ -654,7 +693,9 @@ height: calc(100vh - 120px);
           this.zoom = 1;
           this.panX = 0;
           this.panY = 0;
+          this.rotation = 0;
           this.stitchImages = [];
+          this.cropAspect = 'original';
           this.outputFileName = '';
         },
         stitchLayout: function () { this._autoStitch(); },
@@ -690,6 +731,8 @@ height: calc(100vh - 120px);
               self.originalImage = e.target.result;
               self.previewImage = e.target.result;
               self.imagePreview = e.target.result;
+              self.rotation = 0;
+              self.cropAspect = 'original';
               var img = new Image();
               img.onload = function () {
                 self.originalAspectRatio = img.width / img.height;
@@ -713,6 +756,8 @@ height: calc(100vh - 120px);
             self.previewImage = null;
             self.originalAspectRatio = null;
             self.outputFileName = '';
+            self.rotation = 0;
+            self.cropAspect = 'original';
           }
         },
 
@@ -883,6 +928,8 @@ height: calc(100vh - 120px);
             self.width = canvas.width;
             self.height = canvas.height;
             self.originalAspectRatio = canvas.width / canvas.height;
+            self.rotation = 0;
+            self.cropAspect = 'original';
             if (!self.outputFileName) self.outputFileName = 'stitch_combined';
             self._refreshPreview();
             if (self.threeReady) self._loadTexture(dataUrl);
@@ -1221,6 +1268,39 @@ height: calc(100vh - 120px);
         },
 
         // ========================
+        //  TILT
+        // ========================
+
+        _rotationScaleFor: function (w, h, deg) {
+          if (!deg || !w || !h) return 1;
+          var rad = Math.abs(deg) * Math.PI / 180;
+          var aspect = w / h;
+          return Math.cos(rad) + Math.max(aspect, 1 / aspect) * Math.sin(rad);
+        },
+
+        // Returns a canvas of the same size with the image rotated and scaled to fill it.
+        _rotateCanvas: function (source, deg) {
+          var w = source.naturalWidth || source.width;
+          var h = source.naturalHeight || source.height;
+          if (!deg || !w || !h) return source;
+
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          var rad = deg * Math.PI / 180;
+          var scale = this._rotationScaleFor(w, h, deg);
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate(rad);
+          ctx.scale(scale, scale);
+          ctx.drawImage(source, -w / 2, -h / 2, w, h);
+          return canvas;
+        },
+
+        // ========================
         //  SAVE / EXPORT
         // ========================
 
@@ -1239,7 +1319,8 @@ height: calc(100vh - 120px);
             c.height = self.height;
             ctx.drawImage(img, 0, 0, self.width, self.height);
             self._applyCssFilters(ctx);
-            self._download(c.toDataURL(self.format, self.quality / 100));
+            var out = self._rotateCanvas(c, self.rotation);
+            self._download(out.toDataURL(self.format, self.quality / 100));
           };
           img.src = this.previewImage || this.originalImage;
         },
@@ -1253,7 +1334,8 @@ height: calc(100vh - 120px);
           self._material.uniforms.uResolution.value.set(self.width, self.height);
           self._renderer.setSize(self.width, self.height, false);
           self._renderer.render(self._scene, self._camera);
-          var data = self._renderer.domElement.toDataURL(self.format, self.quality / 100);
+          var out = self.rotation ? self._rotateCanvas(self._renderer.domElement, self.rotation) : self._renderer.domElement;
+          var data = out.toDataURL(self.format, self.quality / 100);
           self._renderer.setSize(curW, curH, false);
           self._refreshPreview();
           self._download(data);
@@ -1276,27 +1358,31 @@ height: calc(100vh - 120px);
           var region = this.cropRegion;
           if (!region) return;
 
-          // Nothing to crop: the region covers the whole image.
-          if (region.u0 <= 0.0005 && region.v0 <= 0.0005 &&
+          // Nothing to crop: the region covers the whole image and there is no tilt to bake.
+          if (!this.rotation && region.u0 <= 0.0005 && region.v0 <= 0.0005 &&
             region.uw >= 0.999 && region.vh >= 0.999) return;
 
           var img = new Image();
           img.onload = function () {
-            var srcX = region.u0 * img.width;
-            var srcY = region.v0 * img.height;
-            var srcW = region.uw * img.width;
-            var srcH = region.vh * img.height;
+            var base = self.rotation ? self._rotateCanvas(img, self.rotation) : img;
+            var baseW = base.naturalWidth || base.width;
+            var baseH = base.naturalHeight || base.height;
 
-            srcX = Math.max(0, Math.min(img.width - 1, srcX));
-            srcY = Math.max(0, Math.min(img.height - 1, srcY));
-            srcW = Math.max(1, Math.min(img.width - srcX, srcW));
-            srcH = Math.max(1, Math.min(img.height - srcY, srcH));
+            var srcX = region.u0 * baseW;
+            var srcY = region.v0 * baseH;
+            var srcW = region.uw * baseW;
+            var srcH = region.vh * baseH;
+
+            srcX = Math.max(0, Math.min(baseW - 1, srcX));
+            srcY = Math.max(0, Math.min(baseH - 1, srcY));
+            srcW = Math.max(1, Math.min(baseW - srcX, srcW));
+            srcH = Math.max(1, Math.min(baseH - srcY, srcH));
 
             var c = document.createElement('canvas');
             c.width = Math.max(1, Math.round(srcW));
             c.height = Math.max(1, Math.round(srcH));
             var ctx = c.getContext('2d');
-            ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, c.width, c.height);
+            ctx.drawImage(base, srcX, srcY, srcW, srcH, 0, 0, c.width, c.height);
 
             var dataUrl = c.toDataURL(self.format, self.quality / 100);
             self.originalImage = dataUrl;
@@ -1308,6 +1394,8 @@ height: calc(100vh - 120px);
             self.zoom = 1;
             self.panX = 0;
             self.panY = 0;
+            self.rotation = 0;
+            self.cropAspect = 'original';
             self._refreshPreview();
             if (self.threeReady) self._loadTexture(dataUrl);
           };
