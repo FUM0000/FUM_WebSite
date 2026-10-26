@@ -600,12 +600,11 @@
             color: var(--ink-dim);
             margin-bottom: 3px;
         }
-        #UI_Action.action-player #UI_Action_Phase { color: #fbbf24; }
+        #UI_Action.action-player #UI_Action_Phase,
+        #UI_Action.action-heal #UI_Action_Phase { color: #38bdf8; }
         #UI_Action.action-enemy #UI_Action_Phase,
-        #UI_Action.action-punish #UI_Action_Phase { color: #f87171; }
-        #UI_Action.action-heal #UI_Action_Phase { color: #34d399; }
-        #UI_Action.action-build #UI_Action_Phase,
-        #UI_Action.action-dodge #UI_Action_Phase { color: #38bdf8; }
+        #UI_Action.action-punish #UI_Action_Phase,
+        #UI_Action.action-build #UI_Action_Phase { color: #f87171; }
         #UI_Action .msg-hint {
             display: block;
             color: var(--ink-dim);
@@ -622,11 +621,12 @@
             visibility: visible;
             animation: hintBounce 1.2s ease-in-out infinite;
         }
-        #UI_Action.action-player b { color: #fbbf24; }
-        #UI_Action.action-enemy b, #UI_Action.action-punish b { color: #f87171; }
-        #UI_Action.action-heal b { color: #34d399; }
-        #UI_Action.action-build b,
-        #UI_Action.action-dodge b { color: #38bdf8; }
+        #UI_Action.action-player b,
+        #UI_Action.action-heal b { color: #38bdf8; }
+        #UI_Action.action-enemy b,
+        #UI_Action.action-punish b,
+        #UI_Action.action-build b { color: #f87171; }
+        #UI_Action.action-player .dmg-mult { color: #38bdf8; }
         #UI_Action .act-sub {
             display: block;
             margin-top: 2px;
@@ -637,11 +637,10 @@
         }
         #UI_Action .dmg-mult {
             font-size: 0.72em;
-            color: var(--ink-dim);
-            font-weight: 600;
+            font-weight: 700;
             margin-left: 6px;
             letter-spacing: 0.05em;
-            opacity: 0.85;
+            opacity: 1;
         }
 
         @keyframes actionSlideIn {
@@ -1598,7 +1597,7 @@
             PlayerHp = Math.min(PlayerMaxHp, PlayerHp + heal);
             AnimatePlayerHeal();
             UpdateUI();
-            ShowAction('Potion +' + heal + ' HP', 'action-heal', () => {
+            ShowAction('Potion <b>+' + heal + ' HP</b>', 'action-heal', () => {
                 State = 'Playing';
             }, 'ITEM');
         });
@@ -2461,7 +2460,7 @@
                     if (roll === 'nullify') {
                         dmg = 0;
                         outText = 'You dodge the punishment! <b>0 damage</b>';
-                        outClass = 'action-dodge';
+                        outClass = 'action-punish action-dodge';
                     } else if (roll === 'reduce') {
                         dmg = Math.max(1, Math.floor(baseDmg * 0.5));
                         outText = 'You brace for the hit <b>-' + dmg + ' HP</b>';
@@ -2504,7 +2503,7 @@
                     if (roll === 'nullify') {
                         dmg = 0;
                         outText = 'You dodge the attack! <b>0 damage</b>';
-                        outClass = 'action-dodge';
+                        outClass = 'action-enemy action-dodge';
                     } else if (roll === 'reduce') {
                         dmg = Math.max(1, Math.floor(baseDmg * 0.5));
                         outText = 'You half-dodge <b>-' + dmg + ' HP</b>';
@@ -2533,8 +2532,8 @@
                 UpdateUI();
                 ShowAction(
                     'Enemy stores ' + FRUITS[addedType].emoji + ' <b>+1</b>' +
-                    '<span class="act-sub">Strongest ' + chargeText + ' · Next attack in ' +
-                    turnsLeft + ' turn' + (turnsLeft === 1 ? '' : 's') + '</span>',
+                    '<span class="act-sub">Strongest ' + chargeText + ' · Next attack in <b>' +
+                    turnsLeft + ' turn' + (turnsLeft === 1 ? '' : 's') + '</b></span>',
                     'action-build',
                     () => { State = 'Playing'; },
                     'ENEMY TURN'
@@ -2775,7 +2774,7 @@
                 if (roll === 'nullify') {
                     dmg = 0;
                     outText = 'Enemy dodges! <b>0 damage</b>';
-                    outClass = 'action-dodge';
+                    outClass = 'action-player action-dodge';
                 } else if (roll === 'reduce') {
                     dmg = Math.max(1, Math.floor(baseDmg * 0.5));
                     outText = 'Enemy deflects <b>-' + dmg + ' HP</b>' + multText;
