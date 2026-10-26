@@ -560,16 +560,18 @@
             position: absolute;
             left: 50%;
             top: 96px;
-            --act-pop: 0px;
-            transform: translateX(calc(-50% + var(--act-pop)));
+            transform: translateX(-50%);
             z-index: 6;
+            box-sizing: border-box;
+            max-width: min(86vw, 560px);
             background: rgba(10, 16, 30, 0.92);
             border: 1px solid rgba(148, 163, 184, 0.25);
             border-radius: 12px;
-            padding: 8px 20px;
+            padding: 8px 20px 10px;
             font-family: "Space Grotesk", "Outfit", sans-serif;
             font-size: 0.9rem;
             font-weight: 600;
+            line-height: 1.35;
             color: var(--ink);
             letter-spacing: 0.04em;
             text-align: center;
@@ -578,11 +580,32 @@
             user-select: none;
             -webkit-user-select: none;
             display: none;
+            pointer-events: none;
+            will-change: transform, opacity;
         }
         #UI_Action.visible {
             display: block;
-            animation: actionPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: auto;
+            animation: actionSlideIn 0.55s cubic-bezier(0.18, 0.86, 0.28, 1) both;
         }
+        #UI_Action.act-leaving {
+            pointer-events: none;
+            animation: actionSlideOut 0.46s cubic-bezier(0.55, 0, 0.82, 0.3) both;
+        }
+        #UI_Action_Phase {
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--ink-dim);
+            margin-bottom: 3px;
+        }
+        #UI_Action.action-player #UI_Action_Phase { color: #fbbf24; }
+        #UI_Action.action-enemy #UI_Action_Phase,
+        #UI_Action.action-punish #UI_Action_Phase { color: #f87171; }
+        #UI_Action.action-heal #UI_Action_Phase { color: #34d399; }
+        #UI_Action.action-build #UI_Action_Phase,
+        #UI_Action.action-dodge #UI_Action_Phase { color: #38bdf8; }
         #UI_Action .msg-hint {
             display: block;
             color: var(--ink-dim);
@@ -590,12 +613,28 @@
             margin-top: 5px;
             font-weight: 500;
             letter-spacing: 0.1em;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.22s ease;
+        }
+        #UI_Action.act-ready .msg-hint {
+            opacity: 1;
+            visibility: visible;
             animation: hintBounce 1.2s ease-in-out infinite;
         }
         #UI_Action.action-player b { color: #fbbf24; }
         #UI_Action.action-enemy b, #UI_Action.action-punish b { color: #f87171; }
         #UI_Action.action-heal b { color: #34d399; }
+        #UI_Action.action-build b,
         #UI_Action.action-dodge b { color: #38bdf8; }
+        #UI_Action .act-sub {
+            display: block;
+            margin-top: 2px;
+            color: var(--ink-dim);
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.06em;
+        }
         #UI_Action .dmg-mult {
             font-size: 0.72em;
             color: var(--ink-dim);
@@ -604,14 +643,16 @@
             letter-spacing: 0.05em;
             opacity: 0.85;
         }
-        #UI_Action.action-player { --act-pop: clamp(40px, 16vw, 150px); }
-        #UI_Action.action-enemy,
-        #UI_Action.action-punish,
-        #UI_Action.action-heal { --act-pop: calc(clamp(40px, 16vw, 150px) * -1); }
 
-        @keyframes actionPop {
-            from { opacity: 0; transform: translateX(calc(-50% + var(--act-pop))) scale(0.85); }
-            to { opacity: 1; transform: translateX(calc(-50% + var(--act-pop))) scale(1); }
+        @keyframes actionSlideIn {
+            0% { opacity: 0; transform: translate(calc(-50% + 110vw), 0) scale(0.94); }
+            70% { opacity: 1; }
+            100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        }
+        @keyframes actionSlideOut {
+            0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+            24% { opacity: 1; transform: translate(calc(-50% + 8px), 0) scale(1.015); }
+            100% { opacity: 0; transform: translate(calc(-50% - 110vw), 0) scale(0.94); }
         }
 
         @keyframes fadeSlideDown {
@@ -1269,7 +1310,7 @@
         window.addEventListener('resize', ResizeCanvas);
         window.addEventListener('resize', () => {
             if (UI_Action.classList.contains('visible')) {
-                RepositionActionPopup(UI_Action.className.replace('visible', '').trim());
+                RepositionActionPopup();
             }
         });
 
@@ -1502,6 +1543,7 @@
         const UI_Action = document.createElement('div');
         UI_Action.id = 'UI_Action';
         UI_Action.innerHTML = `
+            <div id="UI_Action_Phase"></div>
             <div id="UI_Action_Text"></div>
             <div class="msg-hint">▶ Tap to continue</div>
         `;
@@ -1558,7 +1600,7 @@
             UpdateUI();
             ShowAction('Potion +' + heal + ' HP', 'action-heal', () => {
                 State = 'Playing';
-            });
+            }, 'ITEM');
         });
 
         UI_Ending.addEventListener('click', () => {
@@ -1642,6 +1684,13 @@
         let prevStateBeforeInfo = null;
         let prevStateBeforeEnemyInfo = null;
         let actionNext = null;
+        let actionPhase = 'idle';
+        let actionTimer = 0;
+
+        /* Keep these in sync with the actionSlideIn / actionSlideOut CSS durations. */
+        const ACTION_SLIDE_IN_MS = 550;
+        const ACTION_READY_DELAY_MS = 260;
+        const ACTION_SLIDE_OUT_MS = 460;
 
         let EnemyFruitCounts = new Array(FRUITS.length).fill(0);
         let EnemyFruitTimer = 0;
@@ -1774,47 +1823,73 @@
             messageTimer = 0;
         }
 
-        function RepositionActionPopup(className) {
+        function RepositionActionPopup() {
             const tb = UI_TopBar.getBoundingClientRect();
             if (tb.height > 0) {
-                UI_Action.style.top = (tb.bottom + 4) + 'px';
+                UI_Action.style.top = (tb.bottom + 12) + 'px';
             }
-
-            let target = null;
-            if (className && className.indexOf('player') >= 0) {
-                target = UI_EnemyPanel;
-            } else if (className && (className.indexOf('enemy') >= 0 || className.indexOf('punish') >= 0 || className.indexOf('heal') >= 0)) {
-                target = UI_PlayerPanel;
-            }
-
-            const vwCenter = window.innerWidth / 2;
-            let center = vwCenter;
-            if (target) {
-                const r = target.getBoundingClientRect();
-                if (r.width > 0) center = r.left + r.width / 2;
-            }
-            const boxW = UI_Action.offsetWidth || 220;
-            const minC = boxW / 2 + 8;
-            const maxC = Math.max(minC, window.innerWidth - boxW / 2 - 8);
-            center = Math.max(minC, Math.min(maxC, center));
-            UI_Action.style.setProperty('--act-pop', (center - vwCenter) + 'px');
         }
 
-        function ShowAction(text, className, onConfirm) {
-            document.getElementById('UI_Action_Text').innerHTML = text;
-            UI_Action.className = 'visible' + (className ? ' ' + className : '');
-            RepositionActionPopup(className);
+        function ClearActionPopup() {
+            if (actionTimer) {
+                clearTimeout(actionTimer);
+                actionTimer = 0;
+            }
+            actionPhase = 'idle';
+            actionNext = null;
+            UI_Action.className = '';
+        }
+
+        function ShowAction(text, className, onConfirm, phaseLabel) {
+            if (actionTimer) {
+                clearTimeout(actionTimer);
+                actionTimer = 0;
+            }
+
             actionNext = onConfirm;
+            actionPhase = 'entering';
+            document.getElementById('UI_Action_Phase').textContent = phaseLabel || '';
+            document.getElementById('UI_Action_Text').innerHTML = text;
+
+            /* Restart the entrance animation even if a popup was already visible. */
+            UI_Action.className = '';
+            void UI_Action.offsetWidth;
+            UI_Action.className = 'visible' + (className ? ' ' + className : '');
+            RepositionActionPopup();
             State = 'Action';
+
+            /* Do not accept taps until the card has settled in the center. */
+            actionTimer = setTimeout(() => {
+                actionTimer = 0;
+                if (actionPhase !== 'entering') return;
+                actionPhase = 'ready';
+                UI_Action.classList.add('act-ready');
+            }, ACTION_SLIDE_IN_MS + ACTION_READY_DELAY_MS);
         }
 
         function ConfirmAction() {
             if (!UI_Action.classList.contains('visible')) return;
+            if (actionPhase !== 'ready') return;
+
             lastActionTime = performance.now();
-            UI_Action.className = '';
-            const f = actionNext;
-            actionNext = null;
-            if (f) f();
+            actionPhase = 'leaving';
+            if (actionTimer) {
+                clearTimeout(actionTimer);
+                actionTimer = 0;
+            }
+            UI_Action.classList.remove('act-ready');
+            UI_Action.classList.add('act-leaving');
+
+            /* Resolve the next phase only after the card has fully slid out. */
+            actionTimer = setTimeout(() => {
+                actionTimer = 0;
+                const f = actionNext;
+                actionNext = null;
+                actionPhase = 'idle';
+                UI_Action.className = '';
+                lastActionTime = performance.now();
+                if (f) f();
+            }, ACTION_SLIDE_OUT_MS);
         }
 
         function AnimateEnemyPanel() {
@@ -2404,11 +2479,11 @@
                 }
                 ShowAction(outText, outClass, () => {
                     State = 'Playing';
-                });
+                }, 'ENEMY TURN');
                 return;
             }
 
-            EnemyAddRandomFruit();
+            const addedType = EnemyAddRandomFruit();
             EnemyFruitTimer++;
 
             const threshold = GetEnemyAttackCycle();
@@ -2447,11 +2522,23 @@
                 }
                 ShowAction(outText, outClass, () => {
                     State = 'Playing';
-                });
+                }, 'ENEMY TURN');
             } else {
                 lastEnemyAction = 'build';
-                State = 'Playing';
+                const turnsLeft = Math.max(1, threshold - EnemyFruitTimer);
+                const strongest = EnemyStrongestFruit();
+                const chargeText = strongest
+                    ? strongest.emoji + ' <b>' + strongest.damage + ' dmg</b>'
+                    : '<b>—</b>';
                 UpdateUI();
+                ShowAction(
+                    'Enemy stores ' + FRUITS[addedType].emoji + ' <b>+1</b>' +
+                    '<span class="act-sub">Strongest ' + chargeText + ' · Next attack in ' +
+                    turnsLeft + ' turn' + (turnsLeft === 1 ? '' : 's') + '</span>',
+                    'action-build',
+                    () => { State = 'Playing'; },
+                    'ENEMY TURN'
+                );
             }
         }
 
@@ -2727,7 +2814,7 @@
                 } else {
                     EnemyAction();
                 }
-            });
+            }, 'PLAYER TURN');
         }
 
         /* ─── Game Loop ────────────────────────────────────────── */
@@ -3228,8 +3315,7 @@
             shopOnClose = null;
             HideMessage();
             HideOverlays();
-            UI_Action.className = '';
-            actionNext = null;
+            ClearActionPopup();
             UpdateUI();
             UI_Start.style.display = '';
             State = 'WaitingStart';
@@ -3255,8 +3341,7 @@
             playerActionThisTurn = 'drop';
             comboCount = 0;
             prevTurnCombos = 0;
-            UI_Action.className = '';
-            actionNext = null;
+            ClearActionPopup();
             State = 'Playing';
             UpdateUI();
         }
