@@ -35,87 +35,309 @@
   <meta name="twitter:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
 
   <style>
-    .container {
+    [v-cloak] {
+      display: none;
+    }
+
+    #Main {
+      background: radial-gradient(circle at top left, rgba(255, 183, 77, 0.12), transparent 30%),
+        linear-gradient(180deg, #f8f9fb 0%, #f1f5f9 100%);
+    }
+
+    .health-shell {
       max-width: 1120px;
       margin: 0 auto;
     }
 
-    #breathingPanel .card,
-    #healthPanel .card {
-      max-width: 720px;
-      margin: 0 auto;
+    .health-panel {
+      background: rgba(255, 255, 255, 0.98);
+      border: 1px solid rgba(31, 41, 55, 0.08);
+      border-radius: 28px;
+      padding: clamp(24px, 4vw, 42px);
+      box-shadow: 0 22px 60px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(10px);
     }
 
-    .method-select {
-      margin: 0 0 2rem;
-      text-align: center;
+    .hero-shell {
+      position: relative;
+      padding: clamp(18px, 3vw, 30px) 0;
     }
 
-    .method-select.in-card {
-      margin: 0 0 1.5rem;
+    .view-switch {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 4px 0 8px;
+      padding: 8px;
+      border: 1px solid rgba(31, 41, 55, 0.08);
+      border-radius: 20px;
+      background: rgba(243, 244, 246, 0.78);
     }
 
-    #methodSelect {
-      font-size: 1.3rem;
-      font-weight: 600;
-      color: #1d4ed8;
-      text-align: center;
-      text-align-last: center;
-      background-color: #f8fbff;
-      border-color: #bfdbfe;
-      padding: 12px 42px 12px 18px;
-      max-width: 480px;
-    }
-
-    #methodSelect:hover {
-      border-color: #60a5fa;
-      background-color: #eff6ff;
-    }
-
-    select {
-      padding: 10px 20px;
-      font-size: 1.05rem;
-      border: 2px solid #60a5fa;
-      border-radius: 10px;
-      background: white;
-      color: #1e293b;
-      cursor: pointer;
+    .view-switch-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       width: 100%;
-      max-width: 400px;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%233b82f6' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      padding: 14px 18px;
+      border: 0;
+      border-radius: 14px;
+      background: transparent;
+      color: #6b7280;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .view-switch-btn:hover {
+      background: rgba(255, 255, 255, 0.68);
+      color: #374151;
+    }
+
+    .view-switch-btn.is-active {
+      background: #fff;
+      color: #9a3412;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+    }
+
+    .view-switch-btn .v-icon {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: #fff7ed;
+      color: #ea580c;
+      font-size: 20px;
+      transition: background-color 0.18s ease;
+    }
+
+    .view-switch-btn.is-active .v-icon {
+      background: #ffedd5;
+    }
+
+    .view-switch-copy {
+      display: block;
+      min-width: 0;
+    }
+
+    .view-switch-copy strong {
+      display: block;
+      font-size: 0.98rem;
+      line-height: 1.3;
+    }
+
+    .view-switch-copy small {
+      display: block;
+      margin-top: 3px;
+      color: #8b95a5;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .view-panel {
+      padding-top: 12px;
+    }
+
+    .section-header {
+      margin-top: 34px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      margin: 0;
+      color: #1f2937;
+      font-size: clamp(1.35rem, 3vw, 1.95rem);
+    }
+
+    .section-lead {
+      margin: 8px 0 0;
+      max-width: 74ch;
+      color: #6b7280;
+      font-size: 0.94rem;
+      line-height: 1.8;
+    }
+
+    .table-shell {
+      margin-top: 16px;
+      border: 1px solid rgba(31, 41, 55, 0.1);
+      border-radius: 24px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 18px 44px rgba(15, 23, 42, 0.07);
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .health-table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: collapse;
+    }
+
+    .health-table thead th {
+      padding: 16px 20px;
+      text-align: left;
+      background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
+      color: #1f2937;
+      font-size: 0.88rem;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.08);
+    }
+
+    .health-table tbody tr:nth-child(even) {
+      background: rgba(249, 250, 251, 0.6);
+    }
+
+    .health-table tbody tr:hover {
+      background: rgba(243, 244, 246, 0.8);
+    }
+
+    .health-table td {
+      padding: 14px 20px;
+      vertical-align: top;
+      color: #374151;
+      line-height: 1.8;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.06);
+    }
+
+    .health-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .item-name {
+      min-width: 160px;
+      color: #111827;
+      font-weight: 700;
+      font-size: 1rem;
+      white-space: nowrap;
+    }
+
+    .category-cell {
+      min-width: 120px;
+      color: #b45309;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .table-note {
+      padding: 14px 18px 18px;
+      color: #6b7280;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      background: rgba(249, 250, 251, 0.9);
+    }
+
+    .table-note.important {
+      background: rgba(254, 226, 226, 0.5);
+      color: #991b1b;
+      border-top: 1px solid rgba(220, 38, 38, 0.12);
+    }
+
+    .pill-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .pill-tab {
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 7px;
+      padding: 10px 18px;
+      border: 1px solid rgba(31, 41, 55, 0.12);
+      border-radius: 999px;
+      background: #fff;
+      color: #6b7280;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .pill-tab:hover {
+      border-color: rgba(234, 88, 12, 0.32);
+      color: #9a3412;
+    }
+
+    .pill-tab.is-active {
+      border-color: transparent;
+      background: linear-gradient(135deg, #f59e0b, #ea580c);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(234, 88, 12, 0.22);
+    }
+
+    /* --- Breathing --- */
+    .breathing-card {
+      margin-top: 18px;
+      padding: clamp(20px, 3vw, 28px);
+      border: 1px solid rgba(31, 41, 55, 0.09);
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.055);
+    }
+
+    .method-field {
+      max-width: 520px;
+      margin: 0 auto 1.6rem;
+    }
+
+    .method-field label {
+      display: block;
+      margin-bottom: 8px;
+      color: #6b7280;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .method-field select {
+      width: 100%;
+      max-width: none;
+      padding: 13px 42px 13px 16px;
+      border: 1px solid rgba(31, 41, 55, 0.12);
+      border-radius: 14px;
+      background-color: #fff;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ea580c' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 14px center;
-      background-size: 10px;
+      background-position: right 16px center;
+      background-size: 12px 12px;
+      color: #111827;
+      font-size: 0.95rem;
+      box-shadow: none;
     }
 
-    select:focus {
+    .method-field select:focus {
       outline: none;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+      border-color: rgba(234, 88, 12, 0.45);
+      box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.14);
     }
 
-    /* グループ見出し（カテゴリー）と選択肢を区別しやすくする */
-    select option {
-      color: #1e293b;
-      font-weight: 400;
-      background: #ffffff;
+    .method-field select option {
+      color: #111827;
+      background: #fff;
     }
 
-    select optgroup {
-      color: #1d4ed8;
-      background: #eef2f7;
+    .method-field select optgroup {
+      color: #9a3412;
+      background: #fff7ed;
       font-weight: 700;
       font-style: normal;
-      text-transform: uppercase;
       letter-spacing: 0.04em;
       font-size: 0.85em;
-    }
-
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 1.8rem 1.5rem;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
     }
 
     .phase-container {
@@ -129,8 +351,8 @@
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      background: conic-gradient(#60a5fa 0deg,
-          #60a5fa var(--progress, 0%),
+      background: conic-gradient(#f59e0b 0deg,
+          #f59e0b var(--progress, 0%),
           #e5e7eb var(--progress, 0%),
           #e5e7eb 360deg);
       transition: all 0.1s linear;
@@ -139,471 +361,328 @@
     .inner-circle {
       position: absolute;
       inset: 14px;
-      background: white;
-      border-radius: 50%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      border-radius: 50%;
+      background: #fff;
+      color: #7c2d12;
       font-size: 2.6rem;
       font-weight: bold;
-      color: #1e40af;
       box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 
     .phase-text {
+      min-height: 1.6em;
+      margin-top: 0.8rem;
+      color: #374151;
       font-size: 1.25rem;
       font-weight: 600;
-      margin-top: 0.8rem;
-      color: #334155;
       text-align: center;
-      min-height: 1.6em;
-    }
-
-    .info-box {
-      margin: 0.7rem 0;
-      padding: 0.8rem 1.1rem;
-      border-radius: 8px;
-      font-size: 0.95rem;
-    }
-
-    .info-box.point {
-      background: #f0fdfa;
-      border-left: 5px solid #14b8a6;
-    }
-
-    .info-box.effect {
-      background: #fff1f2;
-      border-left: 5px solid #f43f5e;
-    }
-
-    .info-box h4 {
-      margin: 0 0 0.4rem 0;
-      font-size: 1rem;
-      font-weight: 600;
-    }
-
-    .info-box p {
-      margin: 0;
     }
 
     .controls {
-      text-align: center;
-      margin-top: 1.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 1.6rem;
     }
 
     .breathing-control-btn {
-      padding: 10px 28px;
-      font-size: 1.05rem;
-      margin: 0 8px;
-      border: none;
+      padding: 12px 30px;
+      border: 0;
       border-radius: 999px;
       cursor: pointer;
-      transition: all 0.2s;
-      font-weight: 500;
-      letter-spacing: 0.5px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
     }
 
     .breathing-control-btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
     }
 
     .breathing-control-btn:disabled {
-      opacity: 0.6;
+      opacity: 0.55;
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
     }
 
-    /* 固有の色・見た目 */
     .start-btn {
-      background: #10b981;
-      color: white;
+      background: linear-gradient(135deg, #f59e0b, #ea580c);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(234, 88, 12, 0.22);
     }
 
     .stop-btn {
-      background: #ef4444;
-      color: white;
+      border: 1px solid rgba(31, 41, 55, 0.08);
+      background: #f3f4f6;
+      color: #4b5563;
     }
 
-    /* ===== カテゴリ切替タブ ===== */
-    .category-tabs {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      max-width: 720px;
-      margin: 0 auto 1.6rem;
-    }
-
-    .cat-tab {
-      flex: 1;
-      max-width: 260px;
-      padding: 12px 16px;
-      font-size: 1.02rem;
-      font-weight: 600;
-      color: #64748b;
-      background: white;
-      border: 2px solid #e2e8f0;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-family: inherit;
-    }
-
-    .cat-tab:hover {
-      border-color: #93c5fd;
-      color: #1d4ed8;
-    }
-
-    .cat-tab.active {
-      background: #1d4ed8;
-      border-color: #1d4ed8;
-      color: white;
-      box-shadow: 0 6px 16px rgba(29, 78, 216, 0.28);
-    }
-
-    .tab-panel[hidden] {
-      display: none;
-    }
-
-    /* ===== 健康チェック（食べ物から見る体のサイン） ===== */
-    .health-intro {
-      text-align: center;
-      color: #475569;
-      font-size: 0.95rem;
-      line-height: 1.7;
-      margin: 0 0 1.2rem;
-    }
-
-    .health-grid {
+    /* --- Shared notes --- */
+    .info-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      align-items: start;
-      gap: 12px;
-      margin-bottom: 1.4rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 18px;
     }
 
-    .health-item {
-      --sign-color: #3b82f6;
-      border: 2px solid #e2e8f0;
-      border-radius: 12px;
-      background: #ffffff;
-      overflow: hidden;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .health-item.open {
-      border-color: var(--sign-color);
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-    }
-
-    .health-toggle {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-      padding: 14px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.98rem;
-      font-weight: 600;
-      color: #1e293b;
-      text-align: left;
-      line-height: 1.4;
-    }
-
-    .health-toggle:hover {
+    .info-card {
+      padding: 18px 20px;
+      border: 1px solid rgba(31, 41, 55, 0.08);
+      border-radius: 18px;
       background: #f8fafc;
     }
 
-    .health-toggle .sign-emoji {
-      flex: none;
-      font-size: 1.5rem;
+    .info-card.cream {
+      border-color: rgba(180, 83, 9, 0.16);
+      background: rgba(255, 247, 237, 0.82);
     }
 
-    .health-toggle .sign-name {
-      flex: 1;
+    .info-card h3 {
+      margin: 0 0 6px;
+      color: #111827;
+      font-size: 1rem;
+    }
+
+    .info-card.cream h3 {
+      color: #7c2d12;
+    }
+
+    .info-card p {
       margin: 0;
-      font-size: 0.98rem;
-      font-weight: 600;
-      color: #1e293b;
+      color: #4b5563;
+      font-size: 0.9rem;
+      line-height: 1.78;
     }
 
-    .health-caret {
-      flex: none;
+    .info-card.cream p {
+      color: #9a3412;
+    }
+
+    /* --- Health check cards --- */
+    .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .signal-card {
+      overflow: hidden;
+      border: 1px solid rgba(31, 41, 55, 0.09);
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .signal-card.open {
+      border-color: rgba(234, 88, 12, 0.28);
+      box-shadow: 0 16px 36px rgba(234, 88, 12, 0.1);
+    }
+
+    .signal-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 15px 18px;
+      border: 0;
+      background: transparent;
+      color: #111827;
+      text-align: left;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .signal-toggle:hover {
+      background: #fffbeb;
+    }
+
+    .signal-emoji {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #fff7ed, #ffedd5);
+      font-size: 1.35rem;
+    }
+
+    .signal-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.98rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .signal-caret {
+      flex: 0 0 auto;
       width: 12px;
       height: 12px;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%233b82f6' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ea580c' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: center;
       background-size: 12px 12px;
       transition: transform 0.2s;
     }
 
-    .health-item.open .health-caret {
+    .signal-card.open .signal-caret {
       transform: rotate(180deg);
     }
 
-    .health-body {
+    .signal-body {
       display: none;
-      padding: 15px;
-      border-top: 1px solid #eef2f7;
-    }
-
-    .health-item.open .health-body {
-      display: block;
-    }
-
-    .sign-nutrient {
-      display: inline-block;
-      margin-bottom: 0.6rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #1d4ed8;
-      background: #dbeafe;
-      padding: 4px 12px;
-      border-radius: 999px;
-      white-space: nowrap;
-    }
-
-    .sign-text {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 600;
-      line-height: 1.65;
-      color: #334155;
-    }
-
-    .sign-sub {
-      margin: 0.4rem 0 0;
-      font-size: 0.89rem;
-      color: #64748b;
-      line-height: 1.65;
-    }
-
-    /* 不足を補う・改善するためのヒント（視認性を上げる） */
-    .sign-tip {
-      margin-top: 0.75rem;
-      padding: 10px 12px;
-      background: #ecfdf5;
-      border-left: 4px solid #10b981;
-      border-radius: 8px;
-    }
-
-    .sign-tip-label {
-      display: block;
-      margin-bottom: 2px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      color: #047857;
-    }
-
-    .sign-tip-text {
-      display: block;
-      font-size: 0.89rem;
-      line-height: 1.6;
-      color: #334155;
-    }
-
-    .info-box.health {
-      background: #f5f3ff;
-      border-left: 5px solid #8b5cf6;
-    }
-
-    /* ===== カテゴリー3: 漢方（Kampo） ===== */
-    .kampo-card {
-      background:
-        radial-gradient(circle at top left, rgba(198, 167, 122, 0.16), transparent 30%),
-        linear-gradient(180deg, #fdfbf7 0%, #f8f3eb 100%);
-      border: 1px solid rgba(111, 83, 54, 0.12);
-      border-radius: 20px;
-      padding: clamp(20px, 4vw, 42px);
-      box-shadow: 0 18px 44px rgba(84, 66, 46, 0.08);
-    }
-
-    .kampo-hero {
-      max-width: 760px;
-    }
-
-    .kampo-hero h2 {
-      margin: 0 0 0.6rem;
-      color: #3d2f20;
-      font-size: clamp(1.5rem, 3vw, 2rem);
-    }
-
-    .kampo-hero p {
-      margin: 0;
-      color: #6b5a49;
-      line-height: 1.8;
-    }
-
-    .section-header {
-      margin-top: 34px;
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 18px;
-      flex-wrap: wrap;
-    }
-
-    .section-title {
-      margin: 0;
-      color: #3d2f20;
-      font-size: clamp(1.25rem, 3vw, 1.7rem);
-    }
-
-    .filter-wrap {
-      min-width: min(100%, 260px);
-    }
-
-    .filter-label {
-      display: block;
-      margin-bottom: 8px;
-      color: #6b5a49;
-      font-size: 0.86rem;
-      letter-spacing: 0.05em;
-    }
-
-    .filter-select {
-      width: 100%;
-      max-width: none;
-      padding: 12px 42px 12px 16px;
-      border: 1px solid rgba(111, 83, 54, 0.18);
-      border-radius: 14px;
-      background-color: rgba(255, 255, 255, 0.96);
-      color: #3d2f20;
-      font-size: 0.95rem;
-      outline: none;
-      appearance: none;
-      box-shadow: 0 10px 24px rgba(84, 66, 46, 0.06);
-    }
-
-    .table-shell {
-      margin-top: 16px;
-      border: 1px solid rgba(111, 83, 54, 0.12);
-      border-radius: 24px;
-      overflow: hidden;
-      background: rgba(255, 255, 255, 0.96);
-      box-shadow: 0 18px 44px rgba(84, 66, 46, 0.07);
-    }
-
-    .table-scroll {
-      overflow-x: auto;
-      max-width: 100%;
-    }
-
-    .kampo-table {
-      width: 100%;
-      min-width: 860px;
-      border-collapse: collapse;
-    }
-
-    .kampo-table thead th {
-      padding: 18px 20px;
-      text-align: left;
-      background: linear-gradient(180deg, #f4ecdf 0%, #efe4d3 100%);
-      color: #4c3928;
-      font-size: 0.88rem;
-      letter-spacing: 0.06em;
-      white-space: nowrap;
-      border-bottom: 1px solid rgba(111, 83, 54, 0.12);
-    }
-
-    .kampo-table tbody tr {
-      transition: background-color 0.18s ease;
-    }
-
-    .kampo-table tbody tr:nth-child(even) {
-      background: rgba(248, 244, 236, 0.62);
-    }
-
-    .kampo-table tbody tr:hover {
-      background: rgba(239, 226, 208, 0.5);
-    }
-
-    .kampo-table td {
-      padding: 18px 20px;
-      vertical-align: top;
-      border-bottom: 1px solid rgba(111, 83, 54, 0.08);
-      color: #5e4f40;
-      line-height: 1.8;
-    }
-
-    .kampo-table tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    .formula-name {
-      min-width: 140px;
-      color: #3d2f20;
-      font-weight: 700;
-      font-size: 1rem;
-    }
-
-    .category-cell {
-      min-width: 112px;
-      color: #8a5a30;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .table-note {
       padding: 14px 18px 18px;
-      color: #7a6a59;
-      font-size: 0.9rem;
+      border-top: 1px solid rgba(31, 41, 55, 0.06);
+    }
+
+    .signal-card.open .signal-body {
+      display: block;
+    }
+
+    .signal-tag {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #fff7ed;
+      color: #b45309;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .signal-text {
+      margin: 0;
+      color: #1f2937;
+      font-size: 0.94rem;
+      font-weight: 600;
+      line-height: 1.65;
+    }
+
+    .signal-sub {
+      margin: 6px 0 0;
+      color: #6b7280;
+      font-size: 0.88rem;
       line-height: 1.7;
-      border-top: 1px solid rgba(111, 83, 54, 0.08);
-      background: rgba(250, 247, 241, 0.92);
+    }
+
+    .signal-tip {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border: 1px solid rgba(234, 88, 12, 0.14);
+      border-radius: 12px;
+      background: #fffbeb;
+    }
+
+    .signal-tip-label {
+      display: block;
+      margin-bottom: 3px;
+      color: #b45309;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+
+    .signal-tip-text {
+      display: block;
+      color: #4b5563;
+      font-size: 0.87rem;
+      line-height: 1.65;
+    }
+
+    @media (max-width: 900px) {
+      .signal-grid,
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 600px) {
-      .category-tabs {
-        gap: 6px;
-      }
-
-      .cat-tab {
-        padding: 10px 8px;
-        font-size: 0.9rem;
-        gap: 4px;
-      }
-
-      .kampo-card {
-        border-radius: 16px;
+      .health-panel {
+        border-radius: 22px;
         padding: 20px;
       }
 
-      .filter-wrap {
-        min-width: 100%;
+      .view-switch {
+        grid-template-columns: 1fr;
+        gap: 6px;
+        padding: 6px;
+        border-radius: 16px;
       }
 
-      .table-shell {
-        border-radius: 18px;
+      .view-switch-btn {
+        padding: 12px 14px;
       }
 
-      .kampo-table {
+      .view-switch-copy small {
+        font-size: 0.74rem;
+      }
+
+      .section-header {
+        margin-top: 26px;
+      }
+
+      .health-table {
         min-width: 0;
         table-layout: fixed;
       }
 
-      .kampo-table thead th,
-      .kampo-table td {
-        padding: 14px 16px;
+      .health-table thead th,
+      .health-table td {
+        padding: 12px 14px;
         white-space: normal;
         overflow-wrap: anywhere;
         word-break: break-word;
       }
 
-      .formula-name,
+      .item-name,
       .category-cell {
         min-width: 0;
+        white-space: normal;
+      }
+
+      .breathing-card {
+        padding: 18px;
+      }
+
+      .phase-container {
+        width: 190px;
+        height: 190px;
+      }
+
+      .inner-circle {
+        font-size: 2.2rem;
+      }
+
+      .signal-toggle {
+        padding: 14px;
+      }
+
+      .signal-body {
+        padding: 14px;
+      }
+
+      .info-card {
+        padding: 16px;
+      }
+
+      .pill-tab {
+        padding: 9px 13px;
       }
     }
   </style>
@@ -611,141 +690,166 @@
 </head>
 
 <body>
-    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Health</h1>
-
-  <v-app id="App">
+  <v-app id="App" v-cloak>
     <template>
 
       <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Health</main-system-bar>
 
-
       <v-main id="Main">
         <transition name="Fade_Page">
           <v-container v-show="Ready_Page" fluid class="pa-5">
-
-            <div class="container">
-              <div class="category-tabs">
-                <button type="button" class="cat-tab active" id="catBreathing">
-                  <span>🌬️</span> Breathing
-                </button>
-                <button type="button" class="cat-tab" id="catHealth">
-                  <span>🍎</span> Health Check
-                </button>
-                <button type="button" class="cat-tab" id="catKampo">
-                  <span>🌿</span> Kampo
-                </button>
-              </div>
-
-              <!-- ===== カテゴリー1: 呼吸 ===== -->
-              <div id="breathingPanel">
-              <div class="card">
-                <div class="method-select in-card">
-                  <select id="methodSelect">
-                    <optgroup label="Relaxation • Anxiety Relief">
-                      <option value="478" selected>4-7-8 Breathing</option>
-                      <option value="box">Box Breathing</option>
-                      <option value="equal">Equal Breathing</option>
-                      <option value="resonant">Resonant Breathing</option>
-                      <option value="diaphragm">Diaphragmatic Breathing</option>
-                    </optgroup>
-                    <optgroup label="Sleep Induction • Deep Rest">
-                      <option value="478sleep">4-7-8 Breathing (Sleep Version)</option>
-                      <option value="pursed">Pursed-lip Breathing</option>
-                      <option value="478mod">4-4-8 Breathing</option>
-                    </optgroup>
-                    <optgroup label="Focus • Calm Clarity">
-                      <option value="boxfocus">Box Breathing (Focus Version)</option>
-                      <option value="alternate">Alternate Nostril Breathing</option>
-                    </optgroup>
-                    <optgroup label="Stress Release • Energy Refresh">
-                      <option value="lion">Lion's Breath</option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                <div class="phase-container">
-                  <div class="circle" id="progressCircle"></div>
-                  <div class="inner-circle" id="count">Ready</div>
-                </div>
-
-                <div class="phase-text" id="phaseText">Press START to begin</div>
-
-                <div class="controls">
-                  <button class="start-btn breathing-control-btn" id="startBtn">START</button>
-                  <button class="stop-btn breathing-control-btn" id="stopBtn" disabled>STOP</button>
-                </div>
-
-                <div class="info-box effect">
-                  <h4>Benefits</h4>
-                  <p id="effect">Activates the parasympathetic nervous system, quickly leading to deep relaxation.
-                    Excellent for
-                    reducing anxiety, tension, and helping with falling asleep.</p>
-                </div>
-
-                <div class="info-box point">
-                  <h4>Key Points</h4>
-                  <p id="point">Inhale quietly through the nose, exhale slowly through the mouth making a "whoosh"
-                    sound. Lightly
-                    touch the tip of your tongue to the back of your upper front teeth.</p>
-                </div>
-              </div>
-              </div>
-
-              <!-- ===== カテゴリー2: 健康チェック（食べ物から分かる体のサイン） ===== -->
-              <div id="healthPanel" hidden>
-                <div class="card">
-                  <div style="text-align:center; font-size:1.35rem; font-weight:600; color:#1d4ed8; margin-bottom:0.6rem;">
-                    Body Signals Hidden in Your Cravings
-                  </div>
-
-                  <p class="health-intro">
-                    The food you are craving now may be a message from your body.<br>
-                    Tap a food card to open it and read the signal.
-                  </p>
-
-                  <div class="health-grid" id="healthGrid"></div>
-
-                  <div class="info-box point">
-                    <h4>How to Read This</h4>
-                    <p>Cravings can come from nutrient needs, but also from stress, habits, and
-                      lack of sleep. Check this as one clue about your condition, not as a
-                      diagnosis. If a craving is unusually strong or lasts long, be sure to
-                      consult a doctor or dietitian.</p>
-                  </div>
-
-                  <div class="info-box health">
-                    <h4>Daily Habits That Help</h4>
-                    <p>Eating three balanced meals, staying hydrated, and getting enough sleep are
-                      the foundations that keep cravings honest. A body that receives protein,
-                      vegetables, and good fats regularly sends out fewer false alarms.</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- ===== カテゴリー3: 漢方（Kampo） ===== -->
-              <div id="kampoPanel" hidden>
-                <div class="card kampo-card">
-                  <section class="kampo-hero">
-                    <h2>Kampo</h2>
-                    <p>
-                      Kampo uses carefully balanced herbal formulas chosen with the whole body in mind, including patterns such as coldness, low energy, and digestive weakness.
+            <div class="health-shell">
+              <section class="health-panel">
+                <section class="hero-shell">
+                  <div class="hero-copy">
+                    <h1>Health</h1>
+                    <p class="hero-lead">
+                      Breathing practices, everyday body signals, and a simple Kampo reference—brought together in one calm place. Use this page as a general guide, not as a substitute for medical advice.
                     </p>
+                  </div>
+                </section>
+
+                <div class="view-switch" role="tablist" aria-label="Health topics">
+                  <button type="button" class="view-switch-btn" :class="{ 'is-active': Active_Section === 'breathing' }"
+                    role="tab" :aria-selected="Active_Section === 'breathing'" aria-controls="Breathing_Panel"
+                    @click="selectSection('breathing')">
+                    <v-icon aria-hidden="true">mdi-weather-windy</v-icon>
+                    <span class="view-switch-copy">
+                      <strong>Breathing</strong>
+                      <small>Guided breathing &amp; relaxation</small>
+                    </span>
+                  </button>
+                  <button type="button" class="view-switch-btn" :class="{ 'is-active': Active_Section === 'health' }"
+                    role="tab" :aria-selected="Active_Section === 'health'" aria-controls="Health_Panel"
+                    @click="selectSection('health')">
+                    <v-icon aria-hidden="true">mdi-food-apple-outline</v-icon>
+                    <span class="view-switch-copy">
+                      <strong>Health Check</strong>
+                      <small>Cravings &amp; body signals</small>
+                    </span>
+                  </button>
+                  <button type="button" class="view-switch-btn" :class="{ 'is-active': Active_Section === 'kampo' }"
+                    role="tab" :aria-selected="Active_Section === 'kampo'" aria-controls="Kampo_Panel"
+                    @click="selectSection('kampo')">
+                    <v-icon aria-hidden="true">mdi-leaf</v-icon>
+                    <span class="view-switch-copy">
+                      <strong>Kampo</strong>
+                      <small>Common formulas &amp; uses</small>
+                    </span>
+                  </button>
+                </div>
+
+                <div v-show="Active_Section === 'breathing'" id="Breathing_Panel" class="view-panel" role="tabpanel"
+                  aria-label="Breathing exercises">
+                  <section class="section-header">
+                    <div>
+                      <h2 class="section-title">Breathing Exercise</h2>
+                      <p class="section-lead">
+                        Choose a pattern, then press START and follow the circle. A quiet exhale is the key to most of these methods.
+                      </p>
+                    </div>
                   </section>
 
-                  <div class="section-header">
-                    <h3 class="section-title">Kampo List</h3>
-                    <div class="filter-wrap">
-                      <label class="filter-label" for="kampoCategoryFilter">Filter by category</label>
-                      <select id="kampoCategoryFilter" class="filter-select" v-model="SelectedCategory">
-                        <option value="All">All</option>
-                        <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
+                  <div class="breathing-card">
+                    <div class="method-field">
+                      <label for="methodSelect">Method</label>
+                      <select id="methodSelect">
+                        <optgroup label="Relaxation • Anxiety Relief">
+                          <option value="478" selected>4-7-8 Breathing</option>
+                          <option value="box">Box Breathing</option>
+                          <option value="equal">Equal Breathing</option>
+                          <option value="resonant">Resonant Breathing</option>
+                          <option value="diaphragm">Diaphragmatic Breathing</option>
+                        </optgroup>
+                        <optgroup label="Sleep Induction • Deep Rest">
+                          <option value="478sleep">4-7-8 Breathing (Sleep Version)</option>
+                          <option value="pursed">Pursed-lip Breathing</option>
+                          <option value="478mod">4-4-8 Breathing</option>
+                        </optgroup>
+                        <optgroup label="Focus • Calm Clarity">
+                          <option value="boxfocus">Box Breathing (Focus Version)</option>
+                          <option value="alternate">Alternate Nostril Breathing</option>
+                        </optgroup>
+                        <optgroup label="Stress Release • Energy Refresh">
+                          <option value="lion">Lion's Breath</option>
+                        </optgroup>
                       </select>
                     </div>
+
+                    <div class="phase-container">
+                      <div class="circle" id="progressCircle"></div>
+                      <div class="inner-circle" id="count">Ready</div>
+                    </div>
+
+                    <div class="phase-text" id="phaseText">Press START to begin</div>
+
+                    <div class="controls">
+                      <button class="start-btn breathing-control-btn" id="startBtn">START</button>
+                      <button class="stop-btn breathing-control-btn" id="stopBtn" disabled>STOP</button>
+                    </div>
+                  </div>
+
+                  <div class="info-grid">
+                    <article class="info-card cream">
+                      <h3>Benefits</h3>
+                      <p id="effect">Activates the parasympathetic nervous system, quickly leading to deep relaxation.
+                        Excellent for reducing anxiety, tension, and helping with falling asleep.</p>
+                    </article>
+                    <article class="info-card">
+                      <h3>Key Points</h3>
+                      <p id="point">Inhale quietly through the nose, exhale slowly through the mouth making a "whoosh"
+                        sound. Lightly touch the tip of your tongue to the back of your upper front teeth.</p>
+                    </article>
+                  </div>
+                </div>
+
+                <div v-show="Active_Section === 'health'" id="Health_Panel" class="view-panel" role="tabpanel"
+                  aria-label="Health check">
+                  <section class="section-header">
+                    <div>
+                      <h2 class="section-title">Body Signals Hidden in Your Cravings</h2>
+                      <p class="section-lead">
+                        The food you are craving now may be a message from your body. Tap a food card to open it and read the signal.
+                      </p>
+                    </div>
+                  </section>
+
+                  <div class="signal-grid" id="healthGrid"></div>
+
+                  <div class="info-grid">
+                    <article class="info-card">
+                      <h3>How to Read This</h3>
+                      <p>Cravings can come from nutrient needs, but also from stress, habits, and lack of sleep. Check this as one clue about your condition, not as a diagnosis. If a craving is unusually strong or lasts long, be sure to consult a doctor or dietitian.</p>
+                    </article>
+                    <article class="info-card cream">
+                      <h3>Daily Habits That Help</h3>
+                      <p>Eating three balanced meals, staying hydrated, and getting enough sleep are the foundations that keep cravings honest. A body that receives protein, vegetables, and good fats regularly sends out fewer false alarms.</p>
+                    </article>
+                  </div>
+                </div>
+
+                <div v-show="Active_Section === 'kampo'" id="Kampo_Panel" class="view-panel" role="tabpanel"
+                  aria-label="Kampo formulas">
+                  <section class="section-header">
+                    <div>
+                      <h2 class="section-title">Kampo Formula Guide</h2>
+                      <p class="section-lead">
+                        Kampo uses carefully balanced herbal formulas chosen with the whole body in mind, including patterns such as coldness, low energy, and digestive weakness.
+                      </p>
+                    </div>
+                  </section>
+
+                  <div class="pill-switch" role="group" aria-label="Filter Kampo formulas by category">
+                    <button type="button" class="pill-tab" :class="{ 'is-active': SelectedCategory === 'All' }"
+                      :aria-pressed="SelectedCategory === 'All'" @click="SelectedCategory = 'All'">All</button>
+                    <button type="button" class="pill-tab" v-for="category in categories" :key="category"
+                      :class="{ 'is-active': SelectedCategory === category }"
+                      :aria-pressed="SelectedCategory === category" @click="SelectedCategory = category">{{ category }}</button>
                   </div>
 
                   <div class="table-shell">
                     <div class="table-scroll">
-                      <table class="kampo-table">
+                      <table class="health-table">
                         <thead>
                           <tr>
                             <th>Category</th>
@@ -757,7 +861,7 @@
                         <tbody>
                           <tr v-for="formula in FilteredFormulas" :key="formula.name">
                             <td class="category-cell">{{ formula.category }}</td>
-                            <td class="formula-name">{{ formula.name }}</td>
+                            <td class="item-name">{{ formula.name }}</td>
                             <td>{{ formula.summary }}</td>
                             <td>{{ formula.effect }}</td>
                           </tr>
@@ -769,7 +873,9 @@
                     </div>
                   </div>
                 </div>
-              </div>
+
+              </section>
+            </div>
           </v-container>
         </transition>
       </v-main>
@@ -792,6 +898,7 @@
       mixins: [window.Mixins_Common],
       data: {
         Ready_Page: true,
+        Active_Section: 'breathing',
         SelectedCategory: 'All',
         formulas: [
           {
@@ -932,6 +1039,12 @@
           }
           return this.formulas.filter(formula => formula.category === this.SelectedCategory);
         }
+      },
+      methods: {
+        selectSection(section) {
+          if (section !== 'breathing' && isRunning) stop();
+          this.Active_Section = section;
+        }
       }
     })
 
@@ -939,9 +1052,9 @@
       "478": {
         name: "4-7-8 Breathing",
         phases: [
-          { name: "Inhale", duration: 4, color: "#60a5fa" },
-          { name: "Hold", duration: 7, color: "#a5b4fc" },
-          { name: "Exhale", duration: 8, color: "#34d399" }
+          { name: "Inhale", duration: 4, color: "#f59e0b" },
+          { name: "Hold", duration: 7, color: "#fdba74" },
+          { name: "Exhale", duration: 8, color: "#ea580c" }
         ],
         point: "Inhale quietly through the nose, exhale slowly through the mouth with a 'whoosh' sound. Lightly touch the tip of your tongue to the back of your upper front teeth.",
         effect: "Activates the parasympathetic nervous system, quickly inducing deep relaxation. Great for anxiety relief and sleep onset."
@@ -949,10 +1062,10 @@
       "box": {
         name: "Box Breathing",
         phases: [
-          { name: "Inhale", duration: 4, color: "#60a5fa" },
-          { name: "Hold", duration: 4, color: "#a5b4fc" },
-          { name: "Exhale", duration: 4, color: "#34d399" },
-          { name: "Hold", duration: 4, color: "#fbbf24" }
+          { name: "Inhale", duration: 4, color: "#f59e0b" },
+          { name: "Hold", duration: 4, color: "#fdba74" },
+          { name: "Exhale", duration: 4, color: "#ea580c" },
+          { name: "Hold", duration: 4, color: "#fb923c" }
         ],
         point: "Keep each phase exactly the same length, like drawing a perfect square.",
         effect: "Calms the mind and boosts focus. Excellent for regaining composure under stress."
@@ -960,8 +1073,8 @@
       "equal": {
         name: "Equal Breathing",
         phases: [
-          { name: "Inhale", duration: 5, color: "#60a5fa" },
-          { name: "Exhale", duration: 5, color: "#34d399" }
+          { name: "Inhale", duration: 5, color: "#f59e0b" },
+          { name: "Exhale", duration: 5, color: "#ea580c" }
         ],
         point: "Make inhale and exhale perfectly equal. Focus on nasal breathing.",
         effect: "Balances mind and body, maintains a calm and relaxed state."
@@ -969,8 +1082,8 @@
       "resonant": {
         name: "Resonant Breathing",
         phases: [
-          { name: "Inhale", duration: 5.5, color: "#60a5fa" },
-          { name: "Exhale", duration: 5.5, color: "#34d399" }
+          { name: "Inhale", duration: 5.5, color: "#f59e0b" },
+          { name: "Exhale", duration: 5.5, color: "#ea580c" }
         ],
         point: "Aim for about 5.5 breaths per minute. Focus on deep belly breathing.",
         effect: "Optimizes heart rate variability, improves stress resilience, and promotes deep relaxation."
@@ -978,8 +1091,8 @@
       "diaphragm": {
         name: "Diaphragmatic Breathing",
         phases: [
-          { name: "Inhale", duration: 6, color: "#60a5fa" },
-          { name: "Exhale", duration: 6, color: "#34d399" }
+          { name: "Inhale", duration: 6, color: "#f59e0b" },
+          { name: "Exhale", duration: 6, color: "#ea580c" }
         ],
         point: "Expand your belly significantly on inhale, draw it in on exhale. Move the belly, not the chest.",
         effect: "Provides deep oxygenation, relaxes the whole body, and releases tension."
@@ -987,9 +1100,9 @@
       "478sleep": {
         name: "4-7-8 Breathing (Sleep Version)",
         phases: [
-          { name: "Inhale", duration: 4, color: "#60a5fa" },
-          { name: "Hold", duration: 7, color: "#a5b4fc" },
-          { name: "Exhale", duration: 8, color: "#34d399" }
+          { name: "Inhale", duration: 4, color: "#f59e0b" },
+          { name: "Hold", duration: 7, color: "#fdba74" },
+          { name: "Exhale", duration: 8, color: "#ea580c" }
         ],
         point: "Practice lying down right before sleep. Close your eyes and focus on the darkness.",
         effect: "Quickly shifts to parasympathetic dominance. Promotes fast sleep onset and high-quality sleep."
@@ -997,8 +1110,8 @@
       "pursed": {
         name: "Pursed-lip Breathing",
         phases: [
-          { name: "Inhale", duration: 2, color: "#60a5fa" },
-          { name: "Exhale", duration: 6, color: "#34d399" }
+          { name: "Inhale", duration: 2, color: "#f59e0b" },
+          { name: "Exhale", duration: 6, color: "#ea580c" }
         ],
         point: "Pucker your lips and exhale slowly and controlled with a 'whoosh' sound.",
         effect: "Slow exhalation calms the mind and guides you into deep rest."
@@ -1006,9 +1119,9 @@
       "478mod": {
         name: "4-4-8 Breathing",
         phases: [
-          { name: "Inhale", duration: 4, color: "#60a5fa" },
-          { name: "Hold", duration: 4, color: "#a5b4fc" },
-          { name: "Exhale", duration: 8, color: "#34d399" }
+          { name: "Inhale", duration: 4, color: "#f59e0b" },
+          { name: "Hold", duration: 4, color: "#fdba74" },
+          { name: "Exhale", duration: 8, color: "#ea580c" }
         ],
         point: "Emphasizes relaxation with a longer exhale phase.",
         effect: "Quickly releases tension. Ideal for deep relaxation before sleep."
@@ -1016,10 +1129,10 @@
       "boxfocus": {
         name: "Box Breathing (Focus Version)",
         phases: [
-          { name: "Inhale", duration: 4, color: "#60a5fa" },
-          { name: "Hold", duration: 4, color: "#a5b4fc" },
-          { name: "Exhale", duration: 4, color: "#34d399" },
-          { name: "Hold", duration: 4, color: "#fbbf24" }
+          { name: "Inhale", duration: 4, color: "#f59e0b" },
+          { name: "Hold", duration: 4, color: "#fdba74" },
+          { name: "Exhale", duration: 4, color: "#ea580c" },
+          { name: "Hold", duration: 4, color: "#fb923c" }
         ],
         point: "Strictly 4 seconds each. When stray thoughts arise, refocus on the count.",
         effect: "Clears the mind and significantly enhances focus and calm clarity."
@@ -1027,10 +1140,10 @@
       "alternate": {
         name: "Alternate Nostril Breathing",
         phases: [
-          { name: "Inhale (left)", duration: 4, color: "#60a5fa" },
-          { name: "Exhale (right)", duration: 4, color: "#34d399" },
-          { name: "Inhale (right)", duration: 4, color: "#60a5fa" },
-          { name: "Exhale (left)", duration: 4, color: "#34d399" }
+          { name: "Inhale (left)", duration: 4, color: "#f59e0b" },
+          { name: "Exhale (right)", duration: 4, color: "#ea580c" },
+          { name: "Inhale (right)", duration: 4, color: "#f59e0b" },
+          { name: "Exhale (left)", duration: 4, color: "#ea580c" }
         ],
         point: "Use thumb and ring finger to alternately close nostrils. Keep breathing slow and even.",
         effect: "Balances left and right brain hemispheres, improves focus and emotional calm."
@@ -1038,8 +1151,8 @@
       "lion": {
         name: "Lion's Breath",
         phases: [
-          { name: "Inhale", duration: 4, color: "#60a5fa" },
-          { name: "Exhale (powerful)", duration: 6, color: "#ef4444" }
+          { name: "Inhale", duration: 4, color: "#f59e0b" },
+          { name: "Exhale (powerful)", duration: 6, color: "#dc2626" }
         ],
         point: "On exhale, fully release all facial muscles. It's okay (and encouraged) to make a loud 'ha' sound.",
         effect: "Instantly releases built-up stress and tension. Refreshes energy with a powerful reset."
@@ -1132,9 +1245,9 @@
       startBtn.disabled = false;
       stopBtn.disabled = true;
 
+      updateDisplay(0, "#f59e0b");
       countEl.textContent = "Stopped";
       phaseEl.textContent = "Press START to begin";
-      updateDisplay(0, "#60a5fa");
     }
 
     function changeMethod() {
@@ -1152,32 +1265,6 @@
 
     updatePhaseInfo();
     updateDisplay(0, methods[currentMethod].phases[0].color);
-
-    /* ===== カテゴリ切替（呼吸 / 健康チェック / 漢方） ===== */
-    const categoryButtons = {
-      breathing: document.getElementById("catBreathing"),
-      health: document.getElementById("catHealth"),
-      kampo: document.getElementById("catKampo")
-    };
-    const categoryPanels = {
-      breathing: document.getElementById("breathingPanel"),
-      health: document.getElementById("healthPanel"),
-      kampo: document.getElementById("kampoPanel")
-    };
-
-    function switchCategory(category) {
-      // 呼吸トレーニング以外に切り替えるときは呼吸トレーニングを停止
-      if (category !== "breathing" && isRunning) stop();
-
-      Object.keys(categoryButtons).forEach(function (key) {
-        categoryButtons[key].classList.toggle("active", key === category);
-        categoryPanels[key].hidden = key !== category;
-      });
-    }
-
-    Object.keys(categoryButtons).forEach(function (key) {
-      categoryButtons[key].addEventListener("click", function () { switchCategory(key); });
-    });
 
     /* ===== 健康チェック：求めている食べ物から分かる体のサイン ===== */
     const foodSignals = {
@@ -1203,7 +1290,7 @@
         advice: "Answer with healthy fats instead: nuts, avocado, olive oil, salmon. If cravings follow a stressful day, try the breathing tab first."
       },
       "meat": {
-        emoji: "🥩", name: "Meat", color: "#ef4444",
+        emoji: "🥩", name: "Meat", color: "#dc2626",
         tag: "Iron • Protein",
         headline: "Possible iron or protein shortage.",
         detail: "Wanting red meat can signal low iron from fatigue, pale skin, or feeling cold, or muscle recovery after exercise. It is also common during growth periods.",
@@ -1224,7 +1311,7 @@
         advice: "Keep the staple, but add protein and vegetables to slow the blood sugar spike. Whole grains and sweet potatoes last longer."
       },
       "dairy": {
-        emoji: "🥛", name: "Dairy (Milk / Cheese)", color: "#60a5fa",
+        emoji: "🥛", name: "Dairy (Milk / Cheese)", color: "#f59e0b",
         tag: "Calcium",
         headline: "A calcium request, or a need for comfort.",
         detail: "Dairy cravings increase with growth, menstruation, and stress. The warm feeling of milk and cheese also works as emotional comfort.",
@@ -1315,19 +1402,19 @@
       healthGridEl.innerHTML = Object.keys(foodSignals).map(function (key) {
         const f = foodSignals[key];
         return `
-          <div class="health-item" style="--sign-color:${f.color}">
-            <button type="button" class="health-toggle" aria-expanded="false">
-              <span class="sign-emoji">${f.emoji}</span>
-              <span class="sign-name">${f.name}</span>
-              <span class="health-caret" aria-hidden="true"></span>
+          <div class="signal-card">
+            <button type="button" class="signal-toggle" aria-expanded="false">
+              <span class="signal-emoji">${f.emoji}</span>
+              <span class="signal-name">${f.name}</span>
+              <span class="signal-caret" aria-hidden="true"></span>
             </button>
-            <div class="health-body">
-              <span class="sign-nutrient">${f.tag}</span>
-              <p class="sign-text">${f.headline}</p>
-              <p class="sign-sub">${f.detail}</p>
-              <div class="sign-tip">
-                <span class="sign-tip-label">💡 TIP — WHAT MIGHT HELP</span>
-                <span class="sign-tip-text">${f.advice}</span>
+            <div class="signal-body">
+              <span class="signal-tag">${f.tag}</span>
+              <p class="signal-text">${f.headline}</p>
+              <p class="signal-sub">${f.detail}</p>
+              <div class="signal-tip">
+                <span class="signal-tip-label">💡 TIP — WHAT MIGHT HELP</span>
+                <span class="signal-tip-text">${f.advice}</span>
               </div>
             </div>
           </div>`;
@@ -1336,10 +1423,10 @@
 
     // カードのヘッダーをタップして開閉する
     healthGridEl.addEventListener("click", function (event) {
-      const toggle = event.target.closest(".health-toggle");
+      const toggle = event.target.closest(".signal-toggle");
       if (!toggle) return;
 
-      const item = toggle.closest(".health-item");
+      const item = toggle.closest(".signal-card");
       const isOpen = item.classList.toggle("open");
       toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
     });
