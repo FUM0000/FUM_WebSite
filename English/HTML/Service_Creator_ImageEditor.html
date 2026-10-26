@@ -169,7 +169,7 @@ height: calc(100vh - 120px);
       padding: 0;
     }
     .v-slider { margin-top: 2px; }
-    .adjust-sliders .slider-label-text {
+    .slider-label-text {
       width: 100px;
       min-width: 100px;
       flex-shrink: 0;
@@ -221,8 +221,8 @@ height: calc(100vh - 120px);
                           @touchmove.prevent="onTouchMove"
                           @touchend="onTouchEnd">
                           <div ref="previewInner" class="preview-inner" :style="previewInnerStyle">
-                            <img :src="showOriginal ? originalImage : previewImage"
-                              :style="stdFilterStyle" class="preview-img" draggable="false">
+                            <img ref="previewImg" :src="showOriginal ? originalImage : previewImage"
+                              :style="stdFilterStyle" class="preview-img" draggable="false" @load="measureContainer">
                             <canvas ref="shaderCanvas" class="shader-canvas" style="display:none"></canvas>
                           </div>
                           <div class="crop-border" v-if="showCropBorder" :style="cropBorderStyle"></div>
@@ -302,6 +302,29 @@ height: calc(100vh - 120px);
                       </v-card-text>
                     </v-card>
 
+                    <!-- Crop -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-5">
+                          <v-icon small class="mr-1">mdi-crop</v-icon>Crop
+                        </div>
+
+                        <v-select v-model="cropAspect" :items="cropAspects" label="Aspect ratio" dense hide-details
+                          class="mb-2"></v-select>
+
+                        <div class="d-flex align-center">
+                          <span class="slider-label-text">Zoom</span>
+                          <v-slider v-model="zoom" min="1" max="10" step="0.1" hide-details thumb-label
+                            class="flex-grow-1"></v-slider>
+                        </div>
+                        <div class="caption grey--text mb-2">Scroll or pinch to zoom, drag to pan, then crop.</div>
+
+                        <v-btn small color="primary" block @click="applyCrop" :disabled="!cropRegion">
+                          <v-icon small left>mdi-crop</v-icon>Apply Crop
+                        </v-btn>
+                      </v-card-text>
+                    </v-card>
+
                     <!-- Effects -->
                     <v-card class="mb-3 section-card">
                       <v-card-text class="pa-3">
@@ -349,19 +372,6 @@ height: calc(100vh - 120px);
                         <template v-if="selectedEffect === 'mosaic'">
                           <v-slider v-model="mosaicIntensity" min="0" max="1" step="0.01" label="Mosaic Intensity" thumb-label></v-slider>
                           <v-slider v-model="mosaicSize" min="2" max="64" step="1" label="Block Size" thumb-label></v-slider>
-                        </template>
-
-                        <template v-if="selectedEffect === 'zoomCrop'">
-                          <div class="mb-2">
-                            <div class="d-flex align-center mb-2">
-                              <span class="slider-label-text">Zoom</span>
-                              <v-slider v-model="zoom" min="1" max="10" step="0.1" hide-details thumb-label class="flex-grow-1"></v-slider>
-                            </div>
-                            <div class="caption grey--text mb-2">Scroll or pinch to zoom. Drag to pan. Then crop to visible area.</div>
-                            <v-btn small color="primary" block @click="applyCrop" :disabled="zoom <= 1">
-                              <v-icon small left>mdi-crop</v-icon>Crop to Visible Area
-                            </v-btn>
-                          </div>
                         </template>
                       </v-card-text>
                     </v-card>
@@ -464,8 +474,26 @@ height: calc(100vh - 120px);
             { text: 'Edge', value: 'edge' },
             { text: 'Blur', value: 'blur' },
             { text: 'Mosaic', value: 'mosaic' },
-            { text: 'Crop', value: 'zoomCrop' },
           ],
+
+          // ---- crop ----
+          cropAspect: 0,
+          cropAspects: [
+            { text: 'Free', value: 0 },
+            { text: '1:1', value: 1 },
+            { text: '1:2', value: 1 / 2 },
+            { text: '2:1', value: 2 },
+            { text: '2:3', value: 2 / 3 },
+            { text: '3:2', value: 3 / 2 },
+            { text: '3:4', value: 3 / 4 },
+            { text: '4:3', value: 4 / 3 },
+            { text: '4:5', value: 4 / 5 },
+            { text: '5:4', value: 5 / 4 },
+            { text: '9:16', value: 9 / 16 },
+            { text: '16:9', value: 16 / 9 },
+            { text: '21:9', value: 21 / 9 },
+          ],
+          imgDisplay: null,
 
           // ---- zoom / drag ----
           zoom: 1,
@@ -480,11 +508,6 @@ height: calc(100vh - 120px);
           pinchZoomStart: 1,
           containerW: 0,
           containerH: 0,
-
-          // ---- zoom & crop ----
-          cropMode: false,
-          cropRect: { x: 0, y: 0, width: 0, height: 0 },
-          cropOverlay: false,
 
           // ---- three.js ----
           threeReady: false,
@@ -502,7 +525,7 @@ height: calc(100vh - 120px);
 
       computed: {
         enableShader: function () {
-          return this.selectedEffect !== 'none' && this.selectedEffect !== 'zoomCrop';
+          return this.selectedEffect !== 'none';
         },
         useThreePreview: function () {
           return this.enableShader && this.threeReady;
@@ -523,35 +546,64 @@ height: calc(100vh - 120px);
           };
         },
         showCropBorder: function () {
-          return this.cropMode && this.zoom > 1;
+          return (this.zoom > 1 || this.cropAspect > 0) && !!this.cropRegion;
         },
-        cropFrameRect: function () {
-          if (!this.originalAspectRatio || !this.containerW || !this.containerH) return null;
-          var imgAspect = this.originalAspectRatio; // w/h
-          var containerAspect = this.containerW / this.containerH;
-          var displayW, displayH;
-          if (imgAspect > containerAspect) {
-            displayW = this.containerW;
-            displayH = this.containerW / imgAspect;
-          } else {
-            displayH = this.containerH;
-            displayW = this.containerH * imgAspect;
+        // Crop region in normalized image coordinates (0-1), matching what is visible on screen.
+        cropRegion: function () {
+          var d = this.imgDisplay;
+          var W = this.containerW;
+          var H = this.containerH;
+          if (!d || !d.w || !d.h || !W || !H) return null;
+
+          var z = this.zoom;
+          var cx = d.x + d.w / 2;
+          var cy = d.y + d.h / 2;
+
+          // Visible window in unzoomed (layout) coordinates.
+          var visX = cx + (0 - cx - this.panX) / z;
+          var visY = cy + (0 - cy - this.panY) / z;
+          var visW = W / z;
+          var visH = H / z;
+
+          var x0 = Math.max(d.x, visX);
+          var y0 = Math.max(d.y, visY);
+          var x1 = Math.min(d.x + d.w, visX + visW);
+          var y1 = Math.min(d.y + d.h, visY + visH);
+          var w = x1 - x0;
+          var h = y1 - y0;
+          if (w <= 0 || h <= 0) return null;
+
+          // Fit the requested aspect ratio inside the visible area.
+          if (this.cropAspect > 0) {
+            var tw = Math.min(w, h * this.cropAspect);
+            var th = tw / this.cropAspect;
+            x0 += (w - tw) / 2;
+            y0 += (h - th) / 2;
+            w = tw;
+            h = th;
           }
+
           return {
-            x: (this.containerW - displayW) / 2,
-            y: (this.containerH - displayH) / 2,
-            w: displayW,
-            h: displayH
+            u0: (x0 - d.x) / d.w,
+            v0: (y0 - d.y) / d.h,
+            uw: w / d.w,
+            vh: h / d.h
           };
         },
         cropBorderStyle: function () {
-          var rect = this.cropFrameRect;
-          if (!rect) return {};
+          var d = this.imgDisplay;
+          var r = this.cropRegion;
+          if (!d || !r) return { display: 'none' };
+
+          var z = this.zoom;
+          var cx = d.x + d.w / 2;
+          var cy = d.y + d.h / 2;
+
           return {
-            left: rect.x + 'px',
-            top: rect.y + 'px',
-            width: rect.w + 'px',
-            height: rect.h + 'px'
+            left: (cx + this.panX + z * ((d.x + r.u0 * d.w) - cx)) + 'px',
+            top: (cy + this.panY + z * ((d.y + r.v0 * d.h) - cy)) + 'px',
+            width: (z * r.uw * d.w) + 'px',
+            height: (z * r.vh * d.h) + 'px'
           };
         },
       },
@@ -586,8 +638,7 @@ height: calc(100vh - 120px);
           this.edgeIntensity = 0;
           this.blurIntensity = 0;
           this.mosaicIntensity = 0;
-          this.cropMode = (v === 'zoomCrop');
-          if (v !== 'none' && v !== 'zoomCrop' && !this.threeInitialized) {
+          if (v !== 'none' && !this.threeInitialized) {
             var self = this;
             this.$nextTick(function () {
               self.initThreeJS();
@@ -1042,6 +1093,39 @@ height: calc(100vh - 120px);
           var ch = wrap.clientHeight;
           if (cw > 0) this.containerW = cw;
           if (ch > 0) this.containerH = ch;
+
+          var img = this.$refs.previewImg;
+          if (!img || !img.offsetWidth || !img.offsetHeight) {
+            this.imgDisplay = null;
+            return;
+          }
+
+          // Layout position of the image relative to the preview wrap (transforms ignored).
+          var x = 0;
+          var y = 0;
+          var node = img;
+          while (node && node !== wrap) {
+            x += node.offsetLeft;
+            y += node.offsetTop;
+            node = node.offsetParent;
+          }
+
+          var boxW = img.offsetWidth;
+          var boxH = img.offsetHeight;
+          var natW = img.naturalWidth || this.width || boxW;
+          var natH = img.naturalHeight || this.height || boxH;
+
+          // Account for object-fit: contain letterboxing inside the img box.
+          var scale = Math.min(boxW / natW, boxH / natH);
+          var disW = natW * scale;
+          var disH = natH * scale;
+
+          this.imgDisplay = {
+            x: x + (boxW - disW) / 2,
+            y: y + (boxH - disH) / 2,
+            w: disW,
+            h: disH
+          };
         },
 
         onResize: function () {
@@ -1187,45 +1271,30 @@ height: calc(100vh - 120px);
         // ========================
 
         applyCrop: function () {
-          if (this.zoom <= 1 || !this.originalImage) return;
+          if (!this.originalImage) return;
           var self = this;
+          var region = this.cropRegion;
+          if (!region) return;
+
+          // Nothing to crop: the region covers the whole image.
+          if (region.u0 <= 0.0005 && region.v0 <= 0.0005 &&
+            region.uw >= 0.999 && region.vh >= 0.999) return;
+
           var img = new Image();
           img.onload = function () {
-            var container = self.$refs.previewInner.parentElement;
-            var containerW = container.clientWidth;
-            var containerH = container.clientHeight;
+            var srcX = region.u0 * img.width;
+            var srcY = region.v0 * img.height;
+            var srcW = region.uw * img.width;
+            var srcH = region.vh * img.height;
 
-            var imgAspect = img.width / img.height;
-            var containerAspect = containerW / containerH;
-
-            var displayW, displayH;
-            if (imgAspect > containerAspect) {
-              displayW = containerW;
-              displayH = containerW / imgAspect;
-            } else {
-              displayH = containerH;
-              displayW = containerH * imgAspect;
-            }
-
-            var visibleW = displayW / self.zoom;
-            var visibleH = displayH / self.zoom;
-
-            var offsetX = (displayW - visibleW) / 2 - self.panX / self.zoom;
-            var offsetY = (displayH - visibleH) / 2 - self.panY / self.zoom;
-
-            var srcX = (offsetX / displayW) * img.width;
-            var srcY = (offsetY / displayH) * img.height;
-            var srcW = (visibleW / displayW) * img.width;
-            var srcH = (visibleH / displayH) * img.height;
-
-            srcX = Math.max(0, Math.min(img.width, srcX));
-            srcY = Math.max(0, Math.min(img.height, srcY));
+            srcX = Math.max(0, Math.min(img.width - 1, srcX));
+            srcY = Math.max(0, Math.min(img.height - 1, srcY));
             srcW = Math.max(1, Math.min(img.width - srcX, srcW));
             srcH = Math.max(1, Math.min(img.height - srcY, srcH));
 
             var c = document.createElement('canvas');
-            c.width = Math.round(srcW);
-            c.height = Math.round(srcH);
+            c.width = Math.max(1, Math.round(srcW));
+            c.height = Math.max(1, Math.round(srcH));
             var ctx = c.getContext('2d');
             ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, c.width, c.height);
 
