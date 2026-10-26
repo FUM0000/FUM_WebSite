@@ -252,13 +252,43 @@
         #UI_Enemy_Hp_Fill.hp-flash {
             animation: hpFlash 0.35s ease;
         }
+        .hp-text-line {
+            position: relative;
+            margin-top: 2px;
+            text-align: right;
+        }
         #UI_Enemy_Hp_Text {
             font-family: "Space Grotesk", "Outfit", sans-serif;
             font-size: 0.66rem;
             font-weight: 600;
             color: var(--ink-dim);
-            margin-top: 2px;
             text-align: right;
+        }
+        .hp-damage-fx {
+            position: absolute;
+            right: 0;
+            bottom: calc(100% + 1px);
+            z-index: 2;
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: 0.95rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            will-change: transform, opacity;
+        }
+        .hp-damage-fx.to-enemy {
+            color: #38bdf8;
+            text-shadow: 0 0 8px rgba(56, 189, 248, 0.5), 0 2px 4px rgba(0, 0, 0, 0.65);
+        }
+        .hp-damage-fx.to-player {
+            color: #f87171;
+            text-shadow: 0 0 8px rgba(248, 113, 113, 0.5), 0 2px 4px rgba(0, 0, 0, 0.65);
+        }
+        .hp-damage-fx.show {
+            animation: hpDamageFloat 2s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
         }
         #UI_Enemy_Fruit_Bar {
             width: 100%;
@@ -345,7 +375,6 @@
             font-size: 0.66rem;
             font-weight: 600;
             color: var(--ink-dim);
-            margin-top: 2px;
             text-align: right;
         }
         #UI_Player_Exp_Bar {
@@ -627,14 +656,6 @@
         #UI_Action.action-punish b,
         #UI_Action.action-build b { color: #f87171; }
         #UI_Action.action-player .dmg-mult { color: #38bdf8; }
-        #UI_Action .act-sub {
-            display: block;
-            margin-top: 2px;
-            color: var(--ink-dim);
-            font-size: 0.7rem;
-            font-weight: 500;
-            letter-spacing: 0.06em;
-        }
         #UI_Action .dmg-mult {
             font-size: 0.72em;
             font-weight: 700;
@@ -711,6 +732,12 @@
             0% { filter: brightness(1); }
             30% { filter: brightness(2) saturate(1.5); }
             100% { filter: brightness(1); }
+        }
+        @keyframes hpDamageFloat {
+            0% { opacity: 0; transform: translateY(7px) scale(0.82); }
+            18% { opacity: 1; transform: translateY(0) scale(1.06); }
+            45% { opacity: 1; transform: translateY(-4px) scale(1); }
+            100% { opacity: 0; transform: translateY(-18px) scale(1.02); }
         }
 
         #UI_Item_Panel, #UI_Dialog, #UI_Shop, #UI_ChapterTitle, #UI_Ending {
@@ -1143,6 +1170,9 @@
             #UI_Player_Hp_Text, #UI_Enemy_Hp_Text {
                 font-size: 0.56rem;
             }
+            .hp-damage-fx {
+                font-size: 0.8rem;
+            }
             #UI_Action {
                 top: 140px;
                 padding: 6px 14px;
@@ -1357,7 +1387,7 @@
         UI_PlayerPanel.innerHTML = `
             <div id="UI_Player_Label">Lv.1</div>
             <div id="UI_Player_Hp_Bar"><div id="UI_Player_Hp_Fill"></div></div>
-            <div id="UI_Player_Hp_Text">200 / 200</div>
+            <div class="hp-text-line"><div id="UI_Player_Hp_Text">200 / 200</div></div>
             <div id="UI_Player_Exp_Bar"><div id="UI_Player_Exp_Fill"></div></div>
         `;
         UI_TopBar.appendChild(UI_PlayerPanel);
@@ -1386,7 +1416,7 @@
         UI_EnemyPanel.innerHTML = `
             <div id="UI_Enemy_Name">Slime</div>
             <div id="UI_Enemy_Hp_Bar"><div id="UI_Enemy_Hp_Fill"></div></div>
-            <div id="UI_Enemy_Hp_Text">80 / 80</div>
+            <div class="hp-text-line"><div id="UI_Enemy_Hp_Text">80 / 80</div></div>
             <div id="UI_Enemy_Fruit_Bar"><div id="UI_Enemy_Fruit_Fill"></div></div>
             <div id="UI_Enemy_Fruit_Text">—</div>
         `;
@@ -1820,6 +1850,24 @@
         function HideMessage() {
             UI_Message.className = '';
             messageTimer = 0;
+        }
+
+        function ShowHpDamage(side, amount) {
+            if (!(amount > 0)) return;
+            const text = document.getElementById(side === 'enemy' ? 'UI_Enemy_Hp_Text' : 'UI_Player_Hp_Text');
+            if (!text || !text.parentElement) return;
+
+            const fx = document.createElement('span');
+            fx.className = 'hp-damage-fx to-' + side;
+            fx.textContent = '-' + Math.round(amount);
+            text.parentElement.appendChild(fx);
+
+            void fx.offsetWidth;
+            fx.classList.add('show');
+
+            const remove = () => fx.remove();
+            fx.addEventListener('animationend', remove, { once: true });
+            setTimeout(remove, 1200);
         }
 
         function RepositionActionPopup() {
@@ -2361,6 +2409,7 @@
 
         function DealDamageToEnemy(dmg) {
             EnemyHp -= dmg;
+            if (dmg > 0) ShowHpDamage('enemy', dmg);
             if (EnemyHp <= 0) {
                 EnemyHp = 0;
                 OnEnemyDefeated();
@@ -2468,6 +2517,7 @@
                 }
 
                 PlayerHp -= dmg;
+                if (dmg > 0) ShowHpDamage('player', dmg);
                 AnimatePlayerPanel();
                 UpdateUI();
                 if (PlayerHp <= 0) {
@@ -2511,6 +2561,7 @@
                 }
 
                 PlayerHp -= dmg;
+                if (dmg > 0) ShowHpDamage('player', dmg);
                 AnimatePlayerPanel();
                 UpdateUI();
                 if (PlayerHp <= 0) {
@@ -2524,16 +2575,9 @@
                 }, 'ENEMY TURN');
             } else {
                 lastEnemyAction = 'build';
-                const turnsLeft = Math.max(1, threshold - EnemyFruitTimer);
-                const strongest = EnemyStrongestFruit();
-                const chargeText = strongest
-                    ? strongest.emoji + ' <b>' + strongest.damage + ' dmg</b>'
-                    : '<b>—</b>';
                 UpdateUI();
                 ShowAction(
-                    'Enemy stores ' + FRUITS[addedType].emoji + ' <b>+1</b>' +
-                    '<span class="act-sub">Strongest ' + chargeText + ' · Next attack in <b>' +
-                    turnsLeft + ' turn' + (turnsLeft === 1 ? '' : 's') + '</b></span>',
+                    'Enemy stores ' + FRUITS[addedType].emoji + ' <b>+1</b>',
                     'action-build',
                     () => { State = 'Playing'; },
                     'ENEMY TURN'
@@ -2780,15 +2824,6 @@
                     outText = 'Enemy deflects <b>-' + dmg + ' HP</b>' + multText;
                 }
             }
-
-            DamageNumbers.push({
-                x: fruit.x, y: fruit.y,
-                text: '-' + dmg + (dmg > 0 && mult > 1 ? ' ×' + parseFloat(mult.toFixed(2)) : ''),
-                color: dmg === 0 ? '#38bdf8' : '#ff6b6b',
-                alpha: 1,
-                vy: -2.5,
-                life: 1.5
-            });
 
             MergeEffects.push({
                 x: fruit.x, y: fruit.y,
