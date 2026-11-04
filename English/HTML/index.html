@@ -3756,13 +3756,16 @@
             const heat = Math.max(0, 1 - (radius - 7) / 15);
             sprite.material.color.setHSL(0.08 + heat * 0.04, 0.85, 0.55 + heat * 0.25);
             const size = 7 + Math.random() * 8; // 7 .. 15
-            const thickness = 0.4 + radius * 0.06; // 円盤の厚み：XZ面上に薄く広がる
+            // 中心付近ほど Y 方向にふくらませる（外側は薄い円盤に戻す）
+            const innerY = Math.max(0, 1 - (radius - 7) / 8); // r=7 で 1、r≧15 で 0
+            const thickness = 0.8 + Math.pow(innerY, 0.7) * 10; // 内側 約10.8、外側 約0.8
+            const spriteSize = size * (1 + innerY * 0.6); // 内側最大約24まで拡大
             sprite.position.set(
                 Math.cos(angle) * radius,
                 (Math.random() - 0.5) * thickness,
                 Math.sin(angle) * radius
             );
-            sprite.scale.set(size, size, 1);
+            sprite.scale.set(spriteSize, spriteSize, 1);
             accretionDisk.add(sprite);
             accretionSpins.push({ sprite, omega });
         }
@@ -3835,7 +3838,10 @@
         for (let i = 0; i < diskParticleCount; i++) {
             const r = 4.5 + Math.pow(Math.random(), 0.7) * 18;
             const a = Math.random() * Math.PI * 2;
-            const h = (Math.random() - 0.5) * (0.5 + r * 0.04);
+            // 中心付近ほど Y 方向にふくらませる（外側は薄い円盤に戻す）
+            const innerY = Math.max(0, 1 - (r - 4.5) / 9); // r=4.5 で 1、r≧13.5 で 0
+            const scaleH = 1.2 + Math.pow(innerY, 0.7) * 8; // 内側 約9.2、外側 約1.2
+            const h = (Math.random() - 0.5) * scaleH;
             diskPos[i * 3] = Math.cos(a) * r;
             diskPos[i * 3 + 1] = h;
             diskPos[i * 3 + 2] = Math.sin(a) * r;
