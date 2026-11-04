@@ -1840,7 +1840,7 @@
             }
         }
 
-        // 暗黒ガス（黒い星雲）を銀河外周付近に配置
+        // 暗黒ガス（赤みのある宇宙塵）を銀河外周付近に配置
         // 散光星雲と同じ生成方法だが、加算合成ではなく通常合成にして光を遮る
         const darkNebulaConfig = {
             minR: 100,
@@ -1851,8 +1851,21 @@
             opacityVar: 0.35,
             uniformRatio: 0.4
         };
-        function createDarkNebulaSprites(parent, textures, armConfig, diskSpread, count) {
-            const cfg = darkNebulaConfig;
+        // 赤いガスのさらに外側を覆う、より黒いガスの帯
+        const outerBlackNebulaConfig = {
+            minR: 130,
+            maxR: 220,
+            sizeMin: 50,
+            sizeMax: 100,
+            opacityBase: 0.4,
+            opacityVar: 0.3,
+            uniformRatio: 0.55,
+            color: 0x000000,
+            renderOrder: 7,
+            ySpread: 0
+        };
+        function createDarkNebulaSprites(parent, textures, armConfig, diskSpread, count, config) {
+            const cfg = config || darkNebulaConfig;
             const minR = cfg.minR;
             const maxR = cfg.maxR;
             const sizeMin = cfg.sizeMin;
@@ -1884,6 +1897,7 @@
                     map: tex,
                     transparent: true,
                     opacity: opacityBase + Math.random() * opacityVar,
+                    color: cfg.color !== undefined ? cfg.color : 0xffffff,
                     blending: THREE.NormalBlending,
                     depthWrite: false,
                     fog: false
@@ -1896,7 +1910,7 @@
                 );
                 sprite.scale.set(size, size, 1);
                 // 星や円盤グローの上に描画して、黒いガスが光を遮るように見せる
-                sprite.renderOrder = 6;
+                sprite.renderOrder = cfg.renderOrder !== undefined ? cfg.renderOrder : 6;
                 parent.add(sprite);
             }
         }
@@ -3109,6 +3123,21 @@
                 createDarkNebulaTexture(173)
             ];
             createDarkNebulaSprites(scene, darkNebulaTextures, armConfig, diskSpread, isMobile ? 26 : 64);
+
+            // 赤いガスより少し外側に漂う黒いガス（銀河円盤の縁を覆う）
+            const outerBlackNebulaTextures = [
+                createDarkNebulaTexture(211),
+                createDarkNebulaTexture(251),
+                createDarkNebulaTexture(293)
+            ];
+            createDarkNebulaSprites(
+                scene,
+                outerBlackNebulaTextures,
+                armConfig,
+                diskSpread,
+                isMobile ? 18 : 60,
+                outerBlackNebulaConfig
+            );
 
             // 銀河全体を覆う円盤（xz平面の1枚板）
             createGalaxyDiskMesh(scene, {
