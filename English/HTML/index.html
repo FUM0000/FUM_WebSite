@@ -1849,17 +1849,23 @@
             sizeMax: 46,
             opacityBase: 0.45,
             opacityVar: 0.35,
-            uniformRatio: 0.4
+            // 光のガス（散光星雲）の腕と重ならないよう、半腕分ずらして螺旋状に配置する
+            uniformRatio: 0.12,
+            armOffset: 0.5,
+            scatterScale: 0.35
         };
         // 赤いガスのさらに外側を覆う、より黒いガスの帯
         const outerBlackNebulaConfig = {
             minR: 130,
-            maxR: 230,
-            sizeMin: 40,
-            sizeMax: 50,
+            maxR: 220,
+            sizeMin: 30,
+            sizeMax: 60,
             opacityBase: 0.4,
             opacityVar: 0.3,
-            uniformRatio: 0.55,
+            // 光のガスの隙間を縫うように、赤いガスと同じく螺旋状に配置する
+            uniformRatio: 0.12,
+            armOffset: 0.5,
+            scatterScale: 0.3,
             color: 0x000000,
             renderOrder: 7,
             ySpread: 0
@@ -1873,6 +1879,8 @@
             const opacityBase = cfg.opacityBase;
             const opacityVar = cfg.opacityVar;
             const uniformRatio = cfg.uniformRatio;
+            const armOffset = cfg.armOffset !== undefined ? cfg.armOffset : 0;
+            const scatterScale = cfg.scatterScale !== undefined ? cfg.scatterScale : 0.6;
             const ySpread = cfg.ySpread !== undefined ? cfg.ySpread : diskSpread * 0.14;
             for (let i = 0; i < count; i++) {
                 let radius, angle;
@@ -1886,11 +1894,13 @@
                     const armCfg = isMain ? armConfig[0] : armConfig[1];
                     const armIdx = Math.floor(Math.random() * armCfg.armCount);
                     const baseAngle = (Math.PI * 2 * armIdx) / armCfg.armCount;
+                    // 腕と腕の中間（光のガスが薄い部分）へずらす
+                    const armPhase = (Math.PI * 2 / armCfg.armCount) * armOffset;
                     // 外側ほど密度が高くなるようバイアス
                     radius = minR + Math.pow(Math.random(), 0.5) * (maxR - minR);
                     const armAngle = radius * armCfg.twist;
-                    const scatter = (armCfg.scatterBase + armCfg.scatterGrowth * radius) * 0.6;
-                    angle = baseAngle + armAngle + (Math.random() - 0.5) * scatter;
+                    const scatter = (armCfg.scatterBase + armCfg.scatterGrowth * radius) * scatterScale;
+                    angle = baseAngle + armPhase + armAngle + (Math.random() - 0.5) * scatter;
                 }
                 const tex = textures[Math.floor(Math.random() * textures.length)];
 
@@ -3136,7 +3146,7 @@
                 outerBlackNebulaTextures,
                 armConfig,
                 diskSpread,
-                isMobile ? 18 : 60,
+                isMobile ? 30 : 120,
                 outerBlackNebulaConfig
             );
 
