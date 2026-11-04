@@ -3731,11 +3731,18 @@
             createAccretionNoiseTexture(83),
             createAccretionNoiseTexture(101)
         ];
+        // ケプラー回転（r^-1.5）：内側ほど角速度が速く、外側ほど遅い
+        // 実際の降着円盤（ニュートン重力場の円軌道）では v ∝ r^-0.5、角速度 Ω = v/r ∝ r^-1.5。
+        // したがって内側の軌道は速く、外側の軌道はゆっくり回る。スプライト・パーティクル
+        // ともに全粒子を個別に回転させ、差速回転（シフト）を再現する。
+        // Group を一括で回転させてはいけない（単一角速度になり差が生じなくなる）。
+        const accretionSpins = []; // { sprite, omega }
         const accretionSpriteCount = isMobile ? 18 : 28;
         for (let i = 0; i < accretionSpriteCount; i++) {
             const angle = Math.random() * Math.PI * 2;
             // 影（半径4.5）の外側から円盤外縁（従来の平面幅50相当）までを環状に配置
             const radius = 7 + Math.pow(Math.random(), 0.7) * 15; // 7 .. 22
+            const omega = 2.2 * Math.pow(7 / radius, 1.5); // r=7 で約2.2 rad/s、r=22 で約0.4 rad/s
             const tex = accretionClumpTextures[Math.floor(Math.random() * accretionClumpTextures.length)];
             const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
                 map: tex,
@@ -3757,6 +3764,21 @@
             );
             sprite.scale.set(size, size, 1);
             accretionDisk.add(sprite);
+            accretionSpins.push({ sprite, omega });
+        }
+        function updateAccretionDisk(delta) {
+            for (const { sprite, omega } of accretionSpins) {
+                const p = sprite.position;
+                const r = Math.hypot(p.x, p.z);
+                if (r < 1e-4) continue;
+                const dTheta = omega * delta;
+                const cos = Math.cos(dTheta);
+                const sin = Math.sin(dTheta);
+                const x = p.x * cos - p.z * sin;
+                const z = p.x * sin + p.z * cos;
+                p.x = x;
+                p.z = z;
+            }
         }
 
         // ── 降着円盤の奥側が上下へ折り曲げられて見える部分（ビルボード） ──
@@ -3840,6 +3862,26 @@
         });
         const accretionDiskParticles = new THREE.Points(diskGeo, diskMat);
         scene.add(accretionDiskParticles);
+        // パーティクル用ケプラー角速度（内側ほど速い）
+        const diskOmega = new Float32Array(diskParticleCount);
+        for (let i = 0; i < diskParticleCount; i++) {
+            const r = Math.hypot(diskPos[i * 3], diskPos[i * 3 + 2]);
+            diskOmega[i] = 2.2 * Math.pow(7 / Math.max(r, 0.5), 1.5);
+        }
+        function updateAccretionParticles(delta) {
+            const pos = diskGeo.attributes.position.array;
+            for (let i = 0; i < diskParticleCount; i++) {
+                const i3 = i * 3;
+                const x = pos[i3];
+                const z = pos[i3 + 2];
+                const dTheta = diskOmega[i] * delta;
+                const cos = Math.cos(dTheta);
+                const sin = Math.sin(dTheta);
+                pos[i3] = x * cos - z * sin;
+                pos[i3 + 2] = x * sin + z * cos;
+            }
+            diskGeo.attributes.position.needsUpdate = true;
+        }
 
 
         const jetLength = 200;
@@ -4609,8 +4651,10 @@
             updateParticleText(currentTime);
 
             updateJetParticles();
-            accretionDisk.rotation.y += delta * 0.6;
-            accretionDiskParticles.rotation.y += delta * 0.6;
+            updateAccretionDisk(delta);
+            // パーティクルも粒子ごと個別にケプラー回転させる（Points を一括回転させると単一角速度になる）
+            accretionDiskParticles.rotation.y = 0;
+            updateAccretionParticles(delta);
             bhGlow.material.opacity = 0.5 + Math.sin(time * 0.5) * 0.1;
             // フォトンリングも僅かに明滅させて、円盤の輝きと呼吸を合わせる
             bhPhotonRing.material.opacity = 0.85 + Math.sin(time * 0.7) * 0.1;
