@@ -1540,6 +1540,106 @@
             return new THREE.CanvasTexture(canvas);
         }
 
+        // 暗黒星雲（黒いガス）用テクスチャ生成（散光星雲と同じ fBm 値ノイズ手法）
+        // 色はほぼ黒だが、わずかに茶色を混ぜて宇宙塵らしい濃淡を出す
+        function createDarkNebulaTexture(seed) {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.createImageData(size, size);
+            const data = imageData.data;
+
+            let s = seed || 1;
+            function rand() {
+                s |= 0; s = (s + 0x6D2B79F5) | 0;
+                let t = Math.imul(s ^ (s >>> 15), 1 | s);
+                t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            }
+
+            const perm = new Uint8Array(512);
+            const p = new Uint8Array(256);
+            for (let i = 0; i < 256; i++) p[i] = i;
+            for (let i = 255; i > 0; i--) {
+                const j = Math.floor(rand() * (i + 1));
+                const tmp = p[i]; p[i] = p[j]; p[j] = tmp;
+            }
+            for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+
+            function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+            function lerp(a, b, t) { return a + (b - a) * t; }
+            function grad(h, x, y) {
+                const hh = h & 7;
+                const u = hh < 4 ? x : y;
+                const v = hh < 4 ? y : x;
+                return ((hh & 1) ? -u : u) + ((hh & 2) ? -2 * v : 2 * v);
+            }
+            function noise(x, y) {
+                const X = Math.floor(x) & 255;
+                const Y = Math.floor(y) & 255;
+                x -= Math.floor(x);
+                y -= Math.floor(y);
+                const u = fade(x);
+                const v = fade(y);
+                const A = perm[X] + Y;
+                const B = perm[X + 1] + Y;
+                return lerp(
+                    lerp(grad(perm[A], x, y), grad(perm[B], x - 1, y), u),
+                    lerp(grad(perm[A + 1], x, y - 1), grad(perm[B + 1], x - 1, y - 1), u),
+                    v
+                );
+            }
+            function fbm(x, y) {
+                let value = 0;
+                let amp = 0.5;
+                let freq = 1;
+                for (let o = 0; o < 4; o++) {
+                    value += amp * noise(x * freq, y * freq);
+                    amp *= 0.5;
+                    freq *= 2;
+                }
+                return value;
+            }
+
+            const offX = rand() * 100;
+            const offY = rand() * 100;
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const nx = (x / size) * 2 - 1;
+                    const ny = (y / size) * 2 - 1;
+                    const dist = Math.sqrt(nx * nx + ny * ny);
+                    const falloff = Math.max(0, 1 - Math.max(0, (dist - 0.12) / 0.88));
+                    const falloffSoft = falloff * falloff * (3 - 2 * falloff);
+
+                    const n = fbm(nx * 1.8 + offX, ny * 1.8 + offY);
+                    const n2 = fbm(nx * 4.4 + offX * 2, ny * 4.4 + offY * 2);
+                    const n3 = fbm(nx * 8.8 - offX, ny * 8.8 - offY);
+
+                    // フィラメント状に濃淡をつけ、塊ごとに濃い黒を作る
+                    const filament = Math.max(0, n * 0.8 + n2 * 0.4 + 0.18);
+                    let alpha = Math.pow(filament, 1.7) * falloffSoft * 1.45;
+                    alpha = Math.min(1, alpha);
+
+                    const mixT = Math.max(0, Math.min(1, (n3 + n2) * 0.4 + 0.4));
+
+                    // 黒に近い茶褐色（宇宙塵）。濃い部分ほど僅かに明るい茶色になる
+                    const r = lerp(7, 30, mixT);
+                    const g = lerp(6, 19, mixT);
+                    const b = lerp(7, 15, mixT);
+
+                    const idx = (y * size + x) * 4;
+                    data[idx] = r;
+                    data[idx + 1] = g;
+                    data[idx + 2] = b;
+                    data[idx + 3] = alpha * 255;
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+            return new THREE.CanvasTexture(canvas);
+        }
+
         // 銀河全体を覆う円盤用テクスチャ生成（低周波ノイズで滑らかなベースグロー）
         // ── 共有：銀河円盤テクスチャ生成（ローディング中とメイン画面の両方で使用）
             // ロード中の星雲の中心幅（ブラックホール領域）を holeRadiusParam で指定
@@ -1736,6 +1836,67 @@
                     Math.sin(angle) * radius + (Math.random() - 0.5) * (diskSpread * 0.4)
                 );
                 sprite.scale.set(size, size, 1);
+                parent.add(sprite);
+            }
+        }
+
+        // 暗黒ガス（黒い星雲）を銀河外周付近に配置
+        // 散光星雲と同じ生成方法だが、加算合成ではなく通常合成にして光を遮る
+        const darkNebulaConfig = {
+            minR: 100,
+            maxR: 200,
+            sizeMin: 16,
+            sizeMax: 46,
+            opacityBase: 0.45,
+            opacityVar: 0.35,
+            uniformRatio: 0.4
+        };
+        function createDarkNebulaSprites(parent, textures, armConfig, diskSpread, count) {
+            const cfg = darkNebulaConfig;
+            const minR = cfg.minR;
+            const maxR = cfg.maxR;
+            const sizeMin = cfg.sizeMin;
+            const sizeMax = cfg.sizeMax;
+            const opacityBase = cfg.opacityBase;
+            const opacityVar = cfg.opacityVar;
+            const uniformRatio = cfg.uniformRatio;
+            for (let i = 0; i < count; i++) {
+                let radius, angle;
+                if (Math.random() < uniformRatio) {
+                    // 外周リング状に均等配置
+                    radius = minR + (maxR - minR) * Math.random();
+                    angle = Math.random() * Math.PI * 2;
+                } else {
+                    // 渦巻腕の流れに沿って外周へ配置
+                    const isMain = Math.random() < armConfig[0].weight;
+                    const armCfg = isMain ? armConfig[0] : armConfig[1];
+                    const armIdx = Math.floor(Math.random() * armCfg.armCount);
+                    const baseAngle = (Math.PI * 2 * armIdx) / armCfg.armCount;
+                    // 外側ほど密度が高くなるようバイアス
+                    radius = minR + Math.pow(Math.random(), 0.5) * (maxR - minR);
+                    const armAngle = radius * armCfg.twist;
+                    const scatter = (armCfg.scatterBase + armCfg.scatterGrowth * radius) * 0.6;
+                    angle = baseAngle + armAngle + (Math.random() - 0.5) * scatter;
+                }
+                const tex = textures[Math.floor(Math.random() * textures.length)];
+
+                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: tex,
+                    transparent: true,
+                    opacity: opacityBase + Math.random() * opacityVar,
+                    blending: THREE.NormalBlending,
+                    depthWrite: false,
+                    fog: false
+                }));
+                const size = sizeMin + Math.random() * (sizeMax - sizeMin);
+                sprite.position.set(
+                    Math.cos(angle) * radius + (Math.random() - 0.5) * (diskSpread * 0.4),
+                    (Math.random() - 0.5) * (diskSpread * 0.14),
+                    Math.sin(angle) * radius + (Math.random() - 0.5) * (diskSpread * 0.4)
+                );
+                sprite.scale.set(size, size, 1);
+                // 星や円盤グローの上に描画して、黒いガスが光を遮るように見せる
+                sprite.renderOrder = 6;
                 parent.add(sprite);
             }
         }
@@ -2940,6 +3101,14 @@
                 createEmissionNebulaTexture(63)
             ];
             createEmissionNebulaSprites(scene, emissionTextures, armConfig, diskSpread, isMobile ? 100 : 200);
+
+            // 暗黒ガス（メイン銀河の外周付近に漂う黒い星雲）
+            const darkNebulaTextures = [
+                createDarkNebulaTexture(101),
+                createDarkNebulaTexture(137),
+                createDarkNebulaTexture(173)
+            ];
+            createDarkNebulaSprites(scene, darkNebulaTextures, armConfig, diskSpread, isMobile ? 26 : 64);
 
             // 銀河全体を覆う円盤（xz平面の1枚板）
             createGalaxyDiskMesh(scene, {
