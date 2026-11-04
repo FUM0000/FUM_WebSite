@@ -3716,32 +3716,48 @@
         bhGlow.scale.set(70, 70, 1);
         scene.add(bhGlow);
 
-        const diskClumpGeo = new THREE.PlaneGeometry(50, 50);
-        const diskClumpMat = new THREE.MeshBasicMaterial({
-            map: createAccretionNoiseTexture(31),
-            transparent: true,
-            opacity: 0.55,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            fog: false,
-            side: THREE.DoubleSide
-        });
-        const accretionDisk = new THREE.Mesh(diskClumpGeo, diskClumpMat);
-        accretionDisk.rotation.order = 'YXZ';
-        accretionDisk.rotation.x = -Math.PI / 2;
+        // XZ平面に寝かせた1枚板の降着円盤（PlaneGeometry、オレンジ）は廃止する。
+        // 銀河のガス（createEmissionNebulaSprites）と同じく、ノイズテクスチャを持つ
+        // THREE.Sprite（ビルボード）を円盤形状に並べた集合で表現し直す。スプライトは
+        // 常にカメラを向くため、真上・横・斜めのどの角度からでも扁平な板のように
+        // 途切れたり裏面が消えたりしにくい。中心は影領域を空け、熱い内側ほど
+        // 白寄りの黄〜オレンジにする。
+        const accretionDisk = new THREE.Group();
+        accretionDisk.position.set(0, 0, 0);
         scene.add(accretionDisk);
-        const diskGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-            map: bhGlowTex,
-            blending: THREE.AdditiveBlending,
-            transparent: true,
-            opacity: 0.15,
-            depthWrite: false,
-            fog: false,
-            color: 0xff8800
-        }));
-        diskGlow.position.set(0, 0, 0);
-        diskGlow.scale.set(40, 8, 1);
-        scene.add(diskGlow);
+        const accretionClumpTextures = [
+            createAccretionNoiseTexture(31),
+            createAccretionNoiseTexture(57),
+            createAccretionNoiseTexture(83),
+            createAccretionNoiseTexture(101)
+        ];
+        const accretionSpriteCount = isMobile ? 18 : 28;
+        for (let i = 0; i < accretionSpriteCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            // 影（半径4.5）の外側から円盤外縁（従来の平面幅50相当）までを環状に配置
+            const radius = 7 + Math.pow(Math.random(), 0.7) * 15; // 7 .. 22
+            const tex = accretionClumpTextures[Math.floor(Math.random() * accretionClumpTextures.length)];
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: tex,
+                transparent: true,
+                opacity: 0.22 + Math.random() * 0.28,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                fog: false
+            }));
+            // ガスと同様に正方形のビルボード。内側ほど熱く、白〜黄寄りに明るくする
+            const heat = Math.max(0, 1 - (radius - 7) / 15);
+            sprite.material.color.setHSL(0.08 + heat * 0.04, 0.85, 0.55 + heat * 0.25);
+            const size = 7 + Math.random() * 8; // 7 .. 15
+            const thickness = 0.4 + radius * 0.06; // 円盤の厚み：XZ面上に薄く広がる
+            sprite.position.set(
+                Math.cos(angle) * radius,
+                (Math.random() - 0.5) * thickness,
+                Math.sin(angle) * radius
+            );
+            sprite.scale.set(size, size, 1);
+            accretionDisk.add(sprite);
+        }
 
         // ── 降着円盤の奥側が上下へ折り曲げられて見える部分（ビルボード） ──
         // 本来は重力レンズで奥側の円盤が影の上下へ回り込んで見えるが、広いアーク帯は
