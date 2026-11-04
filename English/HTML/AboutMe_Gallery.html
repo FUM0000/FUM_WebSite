@@ -3407,6 +3407,7 @@
                 const bodyGeo = new THREE.BoxGeometry(1, 1, 1);
                 bodyGeo.translate(0, 0.5, 0); // base sits on the ground
                 this._bodyMat = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 } },
                     vertexShader: `
                         varying vec3 vLocal;
                         varying vec3 vNrm;
@@ -3430,6 +3431,7 @@
                         }
                     `,
                     fragmentShader: `
+                        uniform float uTime;
                         varying vec3 vLocal;
                         varying vec3 vNrm;
                         varying vec3 vSize;
@@ -3507,10 +3509,52 @@
                                                        (ym - DIV) / GLASS_H);
                                 vec3 tint = mix(vec3(0.014, 0.026, 0.044),
                                                 vec3(0.050, 0.075, 0.110), pane);
-                                glassCol = tint * sheen + sky * (0.45 + 0.55 * pane2);
-                                // per-pane variety settles into the wall average far away
-                                float detPane = 1.0 - smoothstep(3.0, 7.0, bay / mpp);
-                                glassCol = mix(vec3(0.046, 0.070, 0.110), glassCol, detPane);
+                                vec3 darkGlass = tint * sheen + sky * (0.45 + 0.55 * pane2);
+
+                                // ---- lit interiors: what makes the city feel alive ----
+                                // Whole storeys switch on together (offices / shops), the
+                                // rest are occupied pane by pane, so the facades read as a
+                                // living skyline instead of a regular LED grid.
+                                float floorKind = hash21(vec2(fi * 1.37, 17.3));
+                                float floorLit = step(0.70, floorKind); // ~30% of storeys fully on
+                                float paneLit = hash21(vec2(ri * 3.71 + 1.9, fi * 5.13 + 8.7));
+                                float litRate = mix(0.34, 0.94, floorLit);
+                                float lit = step(1.0 - litRate, paneLit);
+
+                                // palette: real interior lighting only. Most windows
+                                // are warm white / incandescent, offices are neutral
+                                // white, and only a few are cool daylight.
+                                float hue = hash21(vec2(ri * 7.1 + 3.3, fi * 9.7 + 1.1));
+                                vec3 litCol = mix(vec3(1.00, 0.92, 0.80),
+                                                  vec3(1.00, 0.85, 0.66),
+                                                  step(0.50, hue));
+                                litCol = mix(litCol, vec3(0.94, 0.96, 1.00),
+                                             step(0.78, hue));
+                                litCol = mix(litCol, vec3(0.88, 0.93, 1.00),
+                                             step(0.94, hue));
+
+                                // every window burns a little differently, and a few
+                                // television screens shimmer as if someone is watching.
+                                // Keep the panes dim enough that the bloom reads as a
+                                // soft halo instead of headlights: you can still make
+                                // out the rooms behind the glass.
+                                float bright = 0.46 + 0.26 * hash21(vec2(ri * 2.3 + 5.1,
+                                                                         fi * 4.7 + 2.9));
+                                float tv = step(0.93, hash21(vec2(ri * 6.1 + 9.4,
+                                                                  fi * 1.7 + 4.2)));
+                                float flick = 0.88 + 0.12 * sin(uTime * (1.7 + hue * 2.6)
+                                                                + paneLit * 43.0);
+                                litCol *= bright * mix(1.0, flick, tv);
+                                // the lit pane still catches a touch of the night sky
+                                vec3 litGlass = litCol * (0.44 + 0.10 * sheen) + sky * 0.08;
+
+                                glassCol = mix(darkGlass, litGlass, lit);
+                                // per-pane variety stays resolved up close and settles
+                                // into the wall average once a bay drops under a few
+                                // pixels, so the skyline glows warmly instead of
+                                // turning into a dead blue slab
+                                float detPane = smoothstep(3.0, 7.0, bay / mpp);
+                                glassCol = mix(vec3(0.20, 0.18, 0.145), glassCol, detPane);
 
                                 // the slab edge picks up a thin line of light: it is what
                                 // reads the floors of the tower at a distance
@@ -3539,6 +3583,10 @@
                 this._bodyInst = new THREE.InstancedMesh(bodyGeo, this._bodyMat, COUNT);
                 this._bodyInst.frustumCulled = false;
                 this._bodyInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                // The lit windows live in the facade shader, so the towers join the
+                // bloom layer: the near-black walls sit below the bloom threshold
+                // and only the warm windows bleed their light into the night.
+                this._bodyInst.layers.enable(BLOOM_LAYER);
                 this._group.add(this._bodyInst);
 
                 // ============ Roof outline lighting (muted, only some towers) ============
@@ -3840,6 +3888,7 @@
                     if (elapsed > this._TotalDuration) this._building = false;
                 }
                 this._updateStreaks(time);
+                this._bodyMat.uniforms.uTime.value = time;
                 this._rimMat.uniforms.uTime.value = time;
                 this._antMat.uniforms.uTime.value = time;
                 this._groundMat.uniforms.uTime.value = time;
