@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="Asset/Image/Icon_1_2.png">
+  
+  <link href="Asset/CSS/Common.css?v=1.5" rel="stylesheet" />
+
+  <title>Journey</title>
+  <meta name="description" content="Travel the world through street view - pick spots or go on a random journey.">
+  <link rel="canonical" href="https://fum0000.github.io/FUM_WebSite/Service_Enjoy_Journey.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="FUM Website">
+  <meta property="og:title" content="Journey">
+  <meta property="og:description" content="Travel the world through street view - pick spots or go on a random journey.">
+  <meta property="og:url" content="https://fum0000.github.io/FUM_WebSite/Service_Enjoy_Journey.html">
+  <meta property="og:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Journey">
+  <meta name="twitter:description" content="Travel the world through street view - pick spots or go on a random journey.">
+  <meta name="twitter:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+
+  <style>
+    #Main {
+      background-color: #f0f2f5;
+    }
+
+    .card-title-icon {
+      margin-right: 12px;
+      color: #4285F4;
+    }
+
+    .placeholder-sheet {
+      border: 2px dashed #dcdcdc;
+      background-color: #f5f5f5 !important;
+      border-radius: 16px;
+    }
+
+    .placeholder-text {
+      color: #757575;
+      font-weight: 500;
+    }
+
+    .street-view-frame {
+      border-radius: 16px;
+    }
+  </style>
+    <meta name="robots" content="index, follow">
+</head>
+
+<body>
+    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Journey</h1>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Journey</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" class="pa-4" fluid fill-height style="display: flex; align-content: center;">
+            <v-row justify="center">
+              <v-col cols="12" md="6">
+
+                <v-card class="mx-auto" rounded="xl" elevation="2">
+                  <v-card-title class="font-weight-bold text-h5 pb-0">
+                    <v-icon class="card-title-icon" size="32">mdi-map-marker-path</v-icon>
+                    World Journey
+                  </v-card-title>
+
+                  <v-card-text class="pt-4">
+                    <v-select v-model="selectedCategory" :items="categories" label="Category" item-text="text"
+                      item-value="value" outlined rounded color="primary" prepend-inner-icon="mdi-google-earth"
+                      class="mt-4">
+                    </v-select>
+
+                    <v-responsive :aspect-ratio="16/9" class="mt-0">
+                      <v-select v-model="selectedLocation" :items="currentLocations" label="Location" item-text="name"
+                        return-object clearable outlined rounded color="primary"
+                        prepend-inner-icon="mdi-map-marker-outline" :disabled="!selectedCategory"></v-select>
+
+                      <v-row class="mb-4" dense>
+                        <v-col cols="6">
+                          <v-btn @click="jumpToNextLocation" :disabled="!selectedCategory" block rounded color="primary"
+                            outlined>
+                            <v-icon left>mdi-arrow-right-circle-outline</v-icon>
+                            Next
+                          </v-btn>
+                        </v-col>
+                        <v-col cols="6">
+                          <v-btn @click="jumpToRandomLocation" :disabled="!selectedCategory" block rounded
+                            color="primary" outlined>
+                            <v-icon left>mdi-shuffle-variant</v-icon>
+                            Random
+                          </v-btn>
+                        </v-col>
+                      </v-row>
+
+                      <v-responsive :aspect-ratio="16/9" class="mt-0">
+                        <iframe v-if="selectedLocation" :src="streetViewUrl" width="100%" height="100%"
+                          style="border:0;" allowfullscreen=""
+                          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; vr"
+                          loading="lazy" class="street-view-frame">
+                        </iframe>
+                        <v-sheet v-else class="fill-height placeholder-sheet">
+                          <v-row align="center" justify="center" class="fill-height text-center">
+                            <v-col>
+                              <v-icon size="64" color="grey lighten-1">mdi-map-search-outline</v-icon>
+                              <div class="mt-4 text-h6 placeholder-text">Please select a location</div>
+                            </v-col>
+                          </v-row>
+                        </v-sheet>
+                      </v-responsive>
+                  </v-card-text>
+                </v-card>
+
+              </v-col>
+            </v-row>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js" integrity="sha384-smVS78N63G0uFpVH9bKdb+2YIW7Q9eFrle79imo+AWW6YLluQxAEK7kxLOt1bNex" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js" integrity="sha384-IufsRL4FQ+k4aWgxYvH6I1RoIrzL8Ynna+E/AavDQE9hD+UBZQLSTX2+7pPQWNsr" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha384-fJU6sGmyn07b+uD1nMk7/iSb4yvaowcueiQhfVgQuD98rfva8mcr1eSvjchfpMrH" crossorigin="anonymous"></script>
+  <script src="Asset/Javascript/Common.js?v=1.05"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify({
+        theme: {
+          themes: {
+            light: {
+              primary: '#4285F4',
+            },
+          },
+        },
+      }),
+      mixins: [window.Mixins_Common],
+      data: {
+        apiKey: 'AIzaSyC9AshiL5BlN8mF_LAKh_rGxvHMPdK3Mw0',
+
+        selectedCategory: 'world_heritage',
+        categories: [
+          { text: 'World Heritage', value: 'world_heritage' },
+          { text: 'Unique Landscapes', value: 'unique_landscapes' },
+          { text: 'Beautiful Mountain', value: 'beautiful_mountain' },
+          { text: 'Iconic Cities', value: 'iconic_cities' },
+          { text: 'Street Cat', value: 'cat_view' },
+
+        ],
+        selectedLocation: null,
+        locations: {
+          world_heritage: [
+            { name: 'Machu Picchu, Peru', lat: -13.1651289, lng: -72.5444159, heading: 345.02, pitch: 1.72, fov: 90 },
+            { name: 'Colosseum, Italy', lat: 41.8903726, lng: 12.4917122, heading: 112, pitch: 10, fov: 90 },
+            { name: 'Pyramids of Giza, Egypt', lat: 29.9690313, lng: 31.1340379, heading: 335, pitch: 15, fov: 90 },
+            { name: 'Great Wall of China (Mutianyu)', lat: 40.4547217, lng: 116.5363533, heading: 251, pitch: -10, fov: 90 },
+            { name: 'Taj Mahal, India', lat: 27.1746035, lng: 78.0410262, heading: 60, pitch: 15, fov: 90 },
+            { name: 'Petra, Jordan', lat: 30.3284851, lng: 35.4449991, heading: 260, pitch: 15, fov: 90 },
+            { name: 'Angkor Wat, Cambodia', lat: 13.4124196, lng: 103.8681012, heading: 269, pitch: 15, fov: 90 },
+            { name: 'Acropolis of Athens, Greece', lat: 37.9719925, lng: 23.7279491, heading: 235, pitch: 25, fov: 90 },
+            { name: 'Stonehenge, UK', lat: 51.1789477, lng: -1.8265635, heading: 105, pitch: 7.5, fov: 90 },
+            { name: 'Mont Saint-Michel, France', lat: 48.631535, lng: -1.5115067, heading: 359, pitch: 0, fov: 90 },
+            { name: 'Itsukushima Shrine, Japan', lat: 34.2959, lng: 132.3197, heading: 320, pitch: 0, fov: 90 },
+            { name: 'Serengeti National Park, Tanzania', lat: -2.3285085, lng: 34.7692613, heading: 120, pitch: 15, fov: 90 },
+            { name: 'Yosemite National Park, USA', lat: 37.7460416, lng: -119.5331208, heading: 337.58, pitch: 0.81, fov: 90 },
+            { name: 'Yellowstone National Park, USA', lat: 44.7181757, lng: -110.4963354, heading: 120, pitch: -15, fov: 90 },
+            { name: 'Kiyomizu-dera, Kyoto, Japan', lat: 34.9938925, lng: 135.7853075, heading: 320, pitch: 0, fov: 90 },
+            { name: 'The Historic Centre of Prague, Czech Republic', lat: 50.0870507, lng: 14.4211941, heading: 30, pitch: 12.87, fov: 90 },
+            { name: 'Rapa Nui (Easter Island), Chile', lat: -27.1258934, lng: -109.2773022, heading: 160, pitch: 9.52, fov: 90 },
+            { name: 'Grand Canyon, USA', lat: 36.0997631, lng: -112.1124846, heading: 12.62, pitch: -1.09, fov: 90 },
+            { name: 'Cappadocia, Turkey', lat: 38.6644502, lng: 34.8502643, heading: 343.69, pitch: -6.29, fov: 90 },
+            { name: 'Zhangjiajie National Forest Park, China', lat: 29.315305, lng: 110.434767, heading: 337.33, pitch: 7.31, fov: 90 },
+            { name: 'Ha Long Bay, Vietnam', lat: 20.8922574, lng: 107.2048035, heading: 145, pitch: 15.92, fov: 90 },
+            { name: 'Geirangerfjord, Norway', lat: 62.3263262, lng: 7.0080859, heading: 177.55, pitch: 17.24, fov: 90 },
+            { name: 'Mount Fuji from Lake Kawaguchi, Japan', lat: 35.5204833, lng: 138.75703, heading: 198.02, pitch: 0.34, fov: 90 },
+            { name: 'Pamukkale, Turkey', lat: 37.9214887, lng: 29.1234396, heading: 293.75, pitch: 5.79, fov: 90 },
+            { name: 'Perito Moreno Glacier, Argentina', lat: -50.4693121, lng: -73.0349234, heading: 350.67, pitch: 15.29, fov: 90 }
+          ],
+          unique_landscapes: [
+            { name: 'Avenue of the Baobabs, Madagascar', lat: -20.2508331, lng: 44.4197128, heading: 90.76, pitch: 10, fov: 90 },
+            { name: 'Salar de Uyuni, Bolivia (Wet Season)', lat: -20.3997708, lng: -67.5906562, heading: 121.54, pitch: 0.01, fov: 90 },
+            { name: 'Cliffs of Moher, Ireland', lat: 52.9793812, lng: -9.4268251, heading: 225, pitch: 5, fov: 90 },
+            { name: 'Santorini (Oia), Greece', lat: 36.459705, lng: 25.3754451, heading: 318.47, pitch: 0, fov: 90 },
+            { name: 'Socotra Island, Yemen', lat: 12.4916016, lng: 54.0205733, heading: 31.23, pitch: 7.05, fov: 90 },
+            { name: 'Moraine Lake, Canada', lat: 51.3233317, lng: -116.1849119, heading: 233.71, pitch: 15.47, fov: 85 },
+            { name: 'The Twelve Apostles, Australia', lat: -38.6660323, lng: 143.1043296, heading: 0.64, pitch: 3.61, fov: 90 },
+            { name: 'Antelope Canyon, USA', lat: 36.8612404, lng: -111.3741608, heading: 288.05, pitch: 89, fov: 75 },
+            { name: 'Lençóis Maranhenses, Brazil', lat: -2.5282195, lng: -43.026021, heading: 1.56, pitch: 4.16, fov: 90 },
+            { name: 'Trolltunga, Norway', lat: 60.1279048, lng: 6.7489465, heading: 341.46, pitch: 2.17, fov: 90 }
+          ],
+          beautiful_mountain: [
+            { name: 'K2, Pakistan', lat: 35.8359641, lng: 76.5140449, heading: 12.26, pitch: 36.84, fov: 90 },
+            { name: 'Fuji, Japan', lat: 35.3437522, lng: 138.7521925, heading: 150.24, pitch: 16.82, fov: 90 },
+            { name: 'Everest, Nepal', lat: 27.8919867, lng: 86.9285033, heading: 15, pitch: 26.93, fov: 90 },
+            { name: 'Kilimanjaro, Tanzania', lat: -3.0987848, lng: 37.3370401, heading: 34.98, pitch: 32.92, fov: 90 },
+            { name: 'Aconcagua, Argentina', lat: -32.6366642, lng: -70.0186271, heading: 157.1, pitch: 22.77, fov: 90 },
+            { name: 'Denali, USA', lat: 63.0760669, lng: -151.1358428, heading: 103.04, pitch: 29.30, fov: 90 },
+            { name: 'Cook, New Zealand', lat: -43.5971334, lng: 170.1436862, heading: 349.35, pitch: -15.82, fov: 90 },
+            { name: 'Elbrus, Russia', lat: 43.3157463, lng: 42.4616127, heading: 340.09, pitch: 16.55, fov: 90 },
+          ],
+          iconic_cities: [
+            { name: 'Times Square, New York, USA', lat: 40.7586305, lng: -73.9850802, heading: 348.51, pitch: 15.44, fov: 90 },
+            { name: 'Eiffel Tower, Paris, France', lat: 48.856006, lng: 2.298072, heading: 320.02, pitch: 17.48, fov: 90 },
+            { name: 'Shibuya Crossing, Tokyo, Japan', lat: 35.6595765, lng: 139.7004503, heading: 270, pitch: 27.07, fov: 90 },
+            { name: 'Burj Khalifa, Dubai, UAE', lat: 25.1939602, lng: 55.2751312, heading: 1.08, pitch: 39.07, fov: 90 },
+            { name: 'Red Square, Moscow, Russia', lat: 55.7540317, lng: 37.6202691, heading: 39.34, pitch: 22.84, fov: 90 },
+            { name: 'Christ the Redeemer, Rio de Janeiro, Brazil', lat: -22.951795, lng: -43.2095583, heading: 1.86, pitch: -27.06, fov: 90 },
+            { name: 'St. Peter\'s Basilica, Vatican City', lat: 41.9022003, lng: 12.4546645, heading: 271, pitch: 22.21, fov: 90 },
+            { name: 'Brandenburg Gate, Berlin, Germany', lat: 52.5163888, lng: 13.3782472, heading: 252.56, pitch: 23.11, fov: 90 },
+            { name: 'Sagrada Família, Barcelona, Spain', lat: 41.4042324, lng: 2.1749919, heading: 285, pitch: 15, fov: 90 },
+            { name: 'Golden Gate Bridge, San Francisco, USA', lat: 37.8090439, lng: -122.4729346, heading: 300, pitch: 18.03, fov: 90 },
+            { name: 'Neuschwanstein Castle, Germany', lat: 47.5548692, lng: 10.7493488, heading: 357.31, pitch: 11.94, fov: 90 },
+            { name: 'The Grand Canal, Venice, Italy', lat: 45.4366259, lng: 12.3327688, heading: 226.71, pitch: 13.96, fov: 90 },
+            { name: 'Fushimi Inari-taisha, Kyoto, Japan', lat: 34.9682155, lng: 135.7784937, heading: 0.28, pitch: 6.89, fov: 90 },
+            { name: 'CN Tower, Toronto, Canada', lat: 43.6410158, lng: -79.3893711, heading: 30, pitch: 39.95, fov: 90 },
+            { name: 'The Bund, Shanghai, China', lat: 31.2412419, lng: 121.4910322, heading: 100, pitch: 17.28, fov: 90 },
+            { name: 'Marina Bay Sands, Singapore', lat: 1.2833364, lng: 103.8562827, heading: 355.69, pitch: 15.18, fov: 90 },
+            { name: 'Gyeongbokgung Palace, Seoul, South Korea', lat: 37.5798079, lng: 126.9767445, heading: 330, pitch: 12.5, fov: 90 },
+          ],
+          cat_view: [
+            { name: 'Acropolis Cat, Greece', lat: 37.9726601, lng: 23.7246611, heading: 290.21, pitch: -34.16, fov: 90 },
+          ]
+        }
+      },
+      computed: {
+        currentLocations() {
+          return this.locations[this.selectedCategory] || [];
+        },
+        streetViewUrl() {
+          if (!this.selectedLocation) return '';
+
+          const loc = this.selectedLocation;
+          const base = 'https://www.google.com/maps/embed/v1/streetview';
+
+          return `${base}?key=${this.apiKey}&location=${loc.lat},${loc.lng}&heading=${loc.heading}&pitch=${loc.pitch}&fov=${loc.fov}`;
+        }
+      },
+      watch: {
+        selectedCategory() {
+          this.selectedLocation = null;
+        }
+      },
+      methods: {
+        jumpToNextLocation() {
+          if (!this.selectedCategory) return;
+          const locations = this.currentLocations;
+          if (locations.length === 0) return;
+
+          let currentIndex = -1;
+          if (this.selectedLocation) {
+            currentIndex = locations.findIndex(loc => loc.name === this.selectedLocation.name);
+          }
+
+          const nextIndex = (currentIndex + 1) % locations.length;
+          this.selectedLocation = locations[nextIndex];
+        },
+        jumpToRandomLocation() {
+          if (!this.selectedCategory) return;
+          const locations = this.currentLocations;
+          if (locations.length === 0) return;
+
+          let randomIndex;
+          // Avoid selecting the same location twice in a row
+          do {
+            randomIndex = Math.floor(Math.random() * locations.length);
+          } while (locations.length > 1 && this.selectedLocation && locations[randomIndex].name === this.selectedLocation.name);
+
+          this.selectedLocation = locations[randomIndex];
+        }
+      },
+      mounted() {
+        // To select the first location on initial load (optional)
+        // if (this.currentLocations.length > 0) {
+        //   this.selectedLocation = this.currentLocations[0];
+        // }
+      }
+    })
+  </script>
+</body>
+
+</html>

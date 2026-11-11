@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="Asset/Image/Icon_1_2.png">
+  <link href="Asset/CSS/Common.css?v=1.5" rel="stylesheet" />
+
+  <title>Image Editor</title>
+  <meta name="description" content="Display, pan, zoom and crop images in your browser.">
+  <link rel="canonical" href="https://fum0000.github.io/FUM_WebSite/Service_Creator_ImageEditor.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="FUM Website">
+  <meta property="og:title" content="Image Editor">
+  <meta property="og:description" content="Display, pan, zoom and crop images in your browser.">
+  <meta property="og:url" content="https://fum0000.github.io/FUM_WebSite/Service_Creator_ImageEditor.html">
+  <meta property="og:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Image Editor">
+  <meta name="twitter:description" content="Display, pan, zoom and crop images in your browser.">
+  <meta name="twitter:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+
+  <style>
+    .edit-layout {
+      display: flex;
+      flex-direction: column;
+height: calc(100vh - 120px);
+      height: calc(100dvh - 120px);
+    }
+    .preview-section {
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 0;
+      background: inherit;
+      border-bottom: 1px solid rgba(128,128,128,0.25);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .edit-scroll {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 200px;
+      padding-top: 4px;
+    }
+    .edit-scroll::-webkit-scrollbar { width: 6px; }
+    .edit-scroll::-webkit-scrollbar-track { background: transparent; }
+    .edit-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+    .preview-wrap {
+      position: relative;
+      overflow: hidden;
+      border-radius: 4px;
+      background: #111;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grab;
+      max-height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-wrap.dragging { cursor: grabbing; }
+    .crop-border {
+      position: absolute;
+      border: 2px dashed rgba(255,200,0,0.9);
+      pointer-events: none;
+      z-index: 2;
+      box-sizing: border-box;
+    }
+    .preview-img {
+      display: block;
+      width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      object-position: center;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+    .preview-inner {
+      transform-origin: center center;
+    }
+    .shader-canvas {
+      display: block;
+      width: 100%;
+      border-radius: 4px;
+    }
+    .zoom-badge {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.6);
+      color: #ccc;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      pointer-events: none;
+      font-family: 'Space Mono', monospace;
+      z-index: 2;
+    }
+    .curve-canvas {
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      cursor: crosshair;
+      touch-action: none;
+      max-width: 100%;
+    }
+    .curve-wrap { display: flex; justify-content: center; margin: 8px 0; }
+    .section-card { border-left: 2px solid transparent; transition: border-color 0.2s; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .stitch-thumbs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0;
+    }
+    .stitch-thumb {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: #111;
+    }
+    .stitch-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .stitch-thumb .remove-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 18px;
+      text-align: center;
+      padding: 0;
+    }
+    .v-slider { margin-top: 2px; }
+    .slider-label-text {
+      width: 100px;
+      min-width: 100px;
+      flex-shrink: 0;
+      font-size: 14px;
+      color: inherit;
+    }
+
+    @media (max-width: 600px) {
+      .preview-wrap { max-height: 180px; }
+      .preview-img { max-height: 180px; }
+      .edit-scroll { padding-bottom: 80px; }
+    }
+  </style>
+    <meta name="robots" content="index, follow">
+</head>
+
+<body>
+    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Image Editor</h1>
+
+  <v-app id="App" v-cloak>
+    <template>
+
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Image Editor</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid class="pa-3">
+
+            <v-row justify="center">
+              <v-col xs="12" md="8" lg="7">
+
+                <div class="edit-layout">
+
+                  <!-- ===== PREVIEW SECTION (sticky top) ===== -->
+                  <div class="preview-section mb-2" v-if="imagePreview">
+                    <v-card>
+                      <v-card-text class="py-2 px-3">
+
+                        <div v-if="imagePreview"
+                          class="preview-wrap"
+                          ref="previewWrap"
+                          :class="{ dragging: dragging }"
+                          @wheel.prevent="onZoom"
+                          @mousedown="onDragStart"
+                          @mousemove="onDragMove"
+                          @mouseup="onDragEnd"
+                          @mouseleave="onDragEnd"
+                          @touchstart.prevent="onTouchStart"
+                          @touchmove.prevent="onTouchMove"
+                          @touchend="onTouchEnd">
+                          <div ref="previewInner" class="preview-inner" :style="previewInnerStyle">
+                            <img ref="previewImg" :src="showOriginal ? originalImage : previewImage"
+                              :style="stdFilterStyle" class="preview-img" draggable="false" @load="measureContainer">
+                            <canvas ref="shaderCanvas" class="shader-canvas" style="display:none"></canvas>
+                          </div>
+                          <div class="crop-border" v-if="showCropBorder" :style="cropBorderStyle"></div>
+                          <div class="zoom-badge" v-if="zoom !== 1">{{ Math.round(zoom * 100) }}%</div>
+                        </div>
+
+                        <v-btn v-if="imagePreview" block text color="primary" class="mt-1 mb-0"
+                          @mousedown="showOriginalImage" @mouseup="hideOriginalImage" @mouseleave="hideOriginalImage"
+                          @touchstart.prevent="showOriginalImage" @touchend.prevent="hideOriginalImage">
+                          Hold to show original
+                        </v-btn>
+
+                      </v-card-text>
+                    </v-card>
+                  </div>
+
+                  <!-- ===== EDITING SECTIONS (scrollable) ===== -->
+                  <div class="edit-scroll" ref="editScroll">
+
+                    <!-- Input -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+
+                        <v-btn-toggle v-model="inputMode" mandatory dense class="mb-2">
+                          <v-btn small value="single">Single Image</v-btn>
+                          <v-btn small value="stitch">Stitch</v-btn>
+                        </v-btn-toggle>
+
+                        <template v-if="inputMode === 'single'">
+                          <v-file-input v-model="file" accept="image/*" label="Select Image" prepend-icon="mdi-image"
+                            @change="onFileSelected" class="mb-1"></v-file-input>
+                        </template>
+
+                        <template v-if="inputMode === 'stitch'">
+                          <v-file-input v-model="stitchFiles" accept="image/*" label="Add images" prepend-icon="mdi-plus"
+                            multiple dense hide-details class="mb-2" @change="onStitchFilesAdded"></v-file-input>
+                          <div class="stitch-thumbs" v-if="stitchImages.length">
+                            <div class="stitch-thumb" v-for="(img, i) in stitchImages" :key="i">
+                              <img :src="img" alt="">
+                              <button class="remove-btn" @click="removeStitchImage(i)">&times;</button>
+                            </div>
+                          </div>
+                          <v-row dense class="mt-1">
+                            <v-col cols="6">
+                              <v-select v-model="stitchLayout" :items="stitchLayouts" label="Layout" dense hide-details></v-select>
+                            </v-col>
+                            <v-col cols="3" v-if="stitchLayout === 'grid'">
+                              <v-text-field v-model.number="stitchCols" label="Cols" type="number" min="1" dense hide-details></v-text-field>
+                            </v-col>
+                            <v-col cols="3" v-if="stitchLayout === 'grid'">
+                              <v-text-field v-model.number="stitchRows" label="Rows" type="number" min="1" dense hide-details></v-text-field>
+                            </v-col>
+                          </v-row>
+                        </template>
+
+                        <v-text-field v-model="outputFileName" label="Output filename" class="my-0 py-0"></v-text-field>
+
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Resize -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-5">
+                          <v-icon small class="mr-1">mdi-arrow-expand-all</v-icon>Resize
+                        </div>
+
+                        <v-row dense>
+                          <v-col cols="6">
+                            <v-text-field v-model.number="width" label="Width (px)" type="number" min="1" dense></v-text-field>
+                          </v-col>
+                          <v-col cols="6">
+                            <v-text-field v-model.number="height" label="Height (px)" type="number" min="1" dense></v-text-field>
+                          </v-col>
+                        </v-row>
+                        <v-checkbox v-model="maintainAspectRatio" label="Maintain aspect ratio" dense></v-checkbox>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Crop -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-5">
+                          <v-icon small class="mr-1">mdi-crop</v-icon>Crop
+                        </div>
+
+                        <v-select v-model="cropAspect" :items="cropAspects" label="Crop" dense hide-details
+                          class="mb-2"></v-select>
+
+                        <div class="d-flex align-center">
+                          <span class="slider-label-text">Zoom</span>
+                          <v-slider v-model="zoom" min="1" max="10" step="0.1" hide-details thumb-label
+                            class="flex-grow-1"></v-slider>
+                        </div>
+                        <div class="caption grey--text mb-2">Scroll or pinch to zoom, drag to pan, then crop.</div>
+
+                        <v-btn small color="primary" block @click="applyCrop" :disabled="!cropRegion">
+                          <v-icon small left>mdi-crop</v-icon>Apply Crop
+                        </v-btn>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Tilt -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-5">
+                          <v-icon small class="mr-1">mdi-rotate-right</v-icon>Tilt
+                          <span class="ml-auto caption grey--text">{{ rotation.toFixed(1) }}&deg;</span>
+                        </div>
+
+                        <div class="d-flex align-center">
+                          <span class="slider-label-text">Angle</span>
+                          <v-slider v-model="rotation" min="-45" max="45" step="0.1" hide-details thumb-label
+                            :disabled="!imagePreview" class="flex-grow-1"></v-slider>
+                        </div>
+                        <div class="caption grey--text mb-2">Rotate to straighten the image. Edges are trimmed automatically.</div>
+
+                        <v-btn text small block color="primary" @click="rotation = 0" :disabled="!rotation">
+                          <v-icon small left>mdi-restore</v-icon>Reset Tilt
+                        </v-btn>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Effects -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-5">
+                          <v-icon small class="mr-1">mdi-shimmer</v-icon>Effects
+                        </div>
+
+                        <v-select v-model="selectedEffect" :items="effects" label="Effect" dense hide-details class="mb-2"></v-select>
+
+                        <template v-if="selectedEffect === 'color'">
+                          <div class="adjust-sliders">
+                            <div class="d-flex align-center">
+                              <span class="slider-label-text">Brightness</span>
+                              <v-slider v-model="brightness" min="-100" max="100" hide-details thumb-label class="flex-grow-1"></v-slider>
+                            </div>
+                            <div class="d-flex align-center">
+                              <span class="slider-label-text">Contrast</span>
+                              <v-slider v-model="contrast" min="-100" max="100" hide-details thumb-label class="flex-grow-1"></v-slider>
+                            </div>
+                            <div class="d-flex align-center">
+                              <span class="slider-label-text">Saturation</span>
+                              <v-slider v-model="saturation" min="-100" max="100" hide-details thumb-label class="flex-grow-1"></v-slider>
+                            </div>
+                          </div>
+                          <v-switch class="mt-0" inset v-model="grayscale" label="Grayscale"></v-switch>
+                        </template>
+
+                        <template v-if="selectedEffect === 'glitch'">
+                          <v-slider v-model="glitchIntensity" min="0" max="1" step="0.01" label="Glitch Intensity" thumb-label></v-slider>
+                          <v-slider v-model="glitchFrequency" min="0" max="1" step="0.01" label="Glitch Frequency" thumb-label></v-slider>
+                        </template>
+
+                        <template v-if="selectedEffect === 'noise'">
+                          <v-slider v-model="noiseIntensity" min="0" max="1" step="0.01" label="Noise Intensity" thumb-label></v-slider>
+                        </template>
+
+                        <template v-if="selectedEffect === 'edge'">
+                          <v-slider v-model="edgeIntensity" min="0" max="1" step="0.01" label="Edge Intensity" thumb-label></v-slider>
+                        </template>
+
+                        <template v-if="selectedEffect === 'blur'">
+                          <v-slider v-model="blurIntensity" min="0" max="1" step="0.01" label="Blur Intensity" thumb-label></v-slider>
+                        </template>
+
+                        <template v-if="selectedEffect === 'mosaic'">
+                          <v-slider v-model="mosaicIntensity" min="0" max="1" step="0.01" label="Mosaic Intensity" thumb-label></v-slider>
+                          <v-slider v-model="mosaicSize" min="2" max="64" step="1" label="Block Size" thumb-label></v-slider>
+                        </template>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- Export -->
+                    <v-card class="mb-3 section-card">
+                      <v-card-text class="pa-3">
+                        <div class="section-header mb-5">
+                          <v-icon small class="mr-1">mdi-export</v-icon>Export
+                        </div>
+
+                        <v-select v-model="format" :items="formats" label="Output format" dense hide-details class="mb-2"></v-select>
+                        <v-slider v-if="format === 'image/jpeg'" v-model="quality" min="0" max="100" label="Quality" thumb-label></v-slider>
+
+                        <v-btn color="primary" block :disabled="(!file && !imagePreview) || !outputFileName" @click="processImage" class="mt-2">
+                          <v-icon small left>mdi-download</v-icon>Save Image
+                        </v-btn>
+                      </v-card-text>
+                    </v-card>
+
+                  </div>
+                </div>
+
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer-simple></main-footer-simple>
+
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js" integrity="sha384-smVS78N63G0uFpVH9bKdb+2YIW7Q9eFrle79imo+AWW6YLluQxAEK7kxLOt1bNex" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js" integrity="sha384-IufsRL4FQ+k4aWgxYvH6I1RoIrzL8Ynna+E/AavDQE9hD+UBZQLSTX2+7pPQWNsr" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha384-fJU6sGmyn07b+uD1nMk7/iSb4yvaowcueiQhfVgQuD98rfva8mcr1eSvjchfpMrH" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
+  <script src="Asset/Javascript/Common.js?v=1.05"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: function () {
+        return {
+          // ---- image ----
+          imagePreview: null,
+          file: null,
+          originalImage: null,
+          previewImage: null,
+          showOriginal: false,
+          width: 1024,
+          height: 1024,
+          maintainAspectRatio: true,
+          originalAspectRatio: null,
+          outputFileName: '',
+          inputMode: 'single',
+
+          // ---- stitch ----
+          stitchFiles: null,
+          stitchImages: [],
+          stitchLayout: 'vertical',
+          stitchLayouts: [
+            { text: 'Horizontal', value: 'horizontal' },
+            { text: 'Vertical', value: 'vertical' },
+            { text: 'Grid', value: 'grid' },
+          ],
+          stitchCols: 2,
+          stitchRows: 2,
+          // ---- edit controls ----
+          brightness: 0,
+          contrast: 0,
+          saturation: 0,
+          grayscale: false,
+          glitchIntensity: 0,
+          glitchFrequency: 0.5,
+          noiseIntensity: 0,
+          edgeIntensity: 0,
+          blurIntensity: 0,
+          mosaicIntensity: 0,
+          mosaicSize: 16,
+          format: 'image/png',
+          formats: [
+            { text: 'PNG', value: 'image/png' },
+            { text: 'JPEG', value: 'image/jpeg' }
+          ],
+          quality: 90,
+
+          // ---- effects ----
+          selectedEffect: 'none',
+          effects: [
+            { text: 'None', value: 'none' },
+            { text: 'Color Adjust', value: 'color' },
+            { text: 'Glitch', value: 'glitch' },
+            { text: 'Noise', value: 'noise' },
+            { text: 'Edge', value: 'edge' },
+            { text: 'Blur', value: 'blur' },
+            { text: 'Mosaic', value: 'mosaic' },
+          ],
+
+          // ---- crop ----
+          cropAspect: 'original',
+          cropAspects: [
+            { text: 'Original', value: 'original' },
+            { text: '1:1', value: 1 },
+            { text: '1:2', value: 1 / 2 },
+            { text: '2:1', value: 2 },
+            { text: '2:3', value: 2 / 3 },
+            { text: '3:2', value: 3 / 2 },
+            { text: '3:4', value: 3 / 4 },
+            { text: '4:3', value: 4 / 3 },
+            { text: '4:5', value: 4 / 5 },
+            { text: '5:4', value: 5 / 4 },
+            { text: '9:16', value: 9 / 16 },
+            { text: '16:9', value: 16 / 9 },
+            { text: '21:9', value: 21 / 9 },
+          ],
+          imgDisplay: null,
+
+          // ---- tilt ----
+          rotation: 0,
+
+          // ---- zoom / drag ----
+          zoom: 1,
+          panX: 0,
+          panY: 0,
+          dragging: false,
+          dragStartX: 0,
+          dragStartY: 0,
+          panStartX: 0,
+          panStartY: 0,
+          pinchDist: 0,
+          pinchZoomStart: 1,
+          containerW: 0,
+          containerH: 0,
+
+          // ---- three.js ----
+          threeReady: false,
+          threeInitialized: false,
+          _scene: null,
+          _camera: null,
+          _renderer: null,
+          _material: null,
+          _mesh: null,
+          _texture: null,
+          _animId: null,
+          _renderPending: false,
+        };
+      },
+
+      computed: {
+        enableShader: function () {
+          return this.selectedEffect !== 'none';
+        },
+        useThreePreview: function () {
+          return this.enableShader && this.threeReady;
+        },
+        stdFilterStyle: function () {
+          if (this.showOriginal || this.useThreePreview) return {};
+          return {
+            filter: 'brightness(' + (100 + this.brightness) + '%) ' +
+              'contrast(' + (100 + this.contrast) + '%) ' +
+              'saturate(' + (100 + this.saturation) + '%) ' +
+              (this.grayscale ? 'grayscale(100%)' : '')
+          };
+        },
+        previewInnerStyle: function () {
+          if (this.showOriginal) return {};
+          var rotate = this.rotation ? ' rotate(' + this.rotation + 'deg)' : '';
+          return {
+            transform: 'translate(' + this.panX + 'px,' + this.panY + 'px) scale(' +
+              (this.zoom * this.rotationCoverScale) + ')' + rotate
+          };
+        },
+        // Zoom needed so the rotated image still covers the whole output frame.
+        rotationCoverScale: function () {
+          if (!this.rotation || !this.width || !this.height) return 1;
+          var rad = Math.abs(this.rotation) * Math.PI / 180;
+          var aspect = this.width / this.height;
+          return Math.cos(rad) + Math.max(aspect, 1 / aspect) * Math.sin(rad);
+        },
+        showCropBorder: function () {
+          return !!this.cropRegion;
+        },
+        // Crop region in normalized image coordinates (0-1), matching what is visible on screen.
+        cropRegion: function () {
+          var d = this.imgDisplay;
+          var W = this.containerW;
+          var H = this.containerH;
+          if (!d || !d.w || !d.h || !W || !H) return null;
+
+          var z = this.zoom;
+          var cx = d.x + d.w / 2;
+          var cy = d.y + d.h / 2;
+
+          // Visible window in unzoomed (layout) coordinates.
+          var visX = cx + (0 - cx - this.panX) / z;
+          var visY = cy + (0 - cy - this.panY) / z;
+          var visW = W / z;
+          var visH = H / z;
+
+          var x0 = Math.max(d.x, visX);
+          var y0 = Math.max(d.y, visY);
+          var x1 = Math.min(d.x + d.w, visX + visW);
+          var y1 = Math.min(d.y + d.h, visY + visH);
+          var w = x1 - x0;
+          var h = y1 - y0;
+          if (w <= 0 || h <= 0) return null;
+
+          // Fit the requested aspect ratio inside the visible area.
+          var aspect;
+          if (this.cropAspect === 'original') {
+            aspect = (this.originalAspectRatio && this.originalAspectRatio > 0) ? this.originalAspectRatio : (d.w / d.h);
+          } else if (this.cropAspect && this.cropAspect > 0) {
+            aspect = this.cropAspect;
+          } else {
+            aspect = (this.originalAspectRatio && this.originalAspectRatio > 0) ? this.originalAspectRatio : (d.w / d.h);
+          }
+          var tw = Math.min(w, h * aspect);
+          var th = tw / aspect;
+          x0 += (w - tw) / 2;
+          y0 += (h - th) / 2;
+          w = tw;
+          h = th;
+
+          return {
+            u0: (x0 - d.x) / d.w,
+            v0: (y0 - d.y) / d.h,
+            uw: w / d.w,
+            vh: h / d.h
+          };
+        },
+        cropBorderStyle: function () {
+          var d = this.imgDisplay;
+          var r = this.cropRegion;
+          if (!d || !r) return { display: 'none' };
+
+          var z = this.zoom;
+          var cx = d.x + d.w / 2;
+          var cy = d.y + d.h / 2;
+
+          return {
+            left: (cx + this.panX + z * ((d.x + r.u0 * d.w) - cx)) + 'px',
+            top: (cy + this.panY + z * ((d.y + r.v0 * d.h) - cy)) + 'px',
+            width: (z * r.uw * d.w) + 'px',
+            height: (z * r.vh * d.h) + 'px'
+          };
+        },
+      },
+
+      watch: {
+        width: function (v) {
+          if (this.maintainAspectRatio && this.originalAspectRatio) {
+            this.height = Math.round(v / this.originalAspectRatio);
+          }
+          this._refreshPreview();
+        },
+        height: function (v) {
+          if (this.maintainAspectRatio && this.originalAspectRatio) {
+            this.width = Math.round(v * this.originalAspectRatio);
+          }
+          this._refreshPreview();
+        },
+        brightness: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        contrast: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        saturation: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        grayscale: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        glitchIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        glitchFrequency: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        noiseIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        edgeIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        blurIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        mosaicIntensity: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        mosaicSize: function () { this._syncShaderUniforms(); this.requestShaderRender(); },
+        selectedEffect: function (v) {
+          this.glitchIntensity = 0;
+          this.noiseIntensity = 0;
+          this.edgeIntensity = 0;
+          this.blurIntensity = 0;
+          this.mosaicIntensity = 0;
+          if (v !== 'none' && !this.threeInitialized) {
+            var self = this;
+            this.$nextTick(function () {
+              self.initThreeJS();
+            });
+          }
+          this._refreshPreview();
+        },
+        inputMode: function () {
+          this.originalImage = null;
+          this.previewImage = null;
+          this.imagePreview = null;
+          this.originalAspectRatio = null;
+          this.zoom = 1;
+          this.panX = 0;
+          this.panY = 0;
+          this.rotation = 0;
+          this.stitchImages = [];
+          this.cropAspect = 'original';
+          this.outputFileName = '';
+        },
+        stitchLayout: function () { this._autoStitch(); },
+        stitchCols: function () { this._autoStitch(); },
+        stitchRows: function () { this._autoStitch(); },
+      },
+
+      mounted: function () {
+        var self = this;
+        window.addEventListener('resize', self.onResize);
+        this.$nextTick(function () {
+          self.measureContainer();
+        });
+      },
+
+      beforeDestroy: function () {
+        if (this._animId) cancelAnimationFrame(this._animId);
+        window.removeEventListener('resize', this.onResize);
+        if (this._renderer) this._renderer.dispose();
+      },
+
+      methods: {
+
+        // ========================
+        //  FILE HANDLING
+        // ========================
+
+        onFileSelected: function (file) {
+          var self = this;
+          if (file) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              self.originalImage = e.target.result;
+              self.previewImage = e.target.result;
+              self.imagePreview = e.target.result;
+              self.rotation = 0;
+              self.cropAspect = 'original';
+              var img = new Image();
+              img.onload = function () {
+                self.originalAspectRatio = img.width / img.height;
+                self.width = img.width;
+                self.height = img.height;
+                var base = file.name.substring(0, file.name.lastIndexOf('.'));
+                self.outputFileName = base + '_edited';
+                self._refreshPreview();
+                if (!self.threeInitialized) {
+                  self.$nextTick(self.initThreeJS);
+                } else {
+                  self._loadTexture(self.originalImage);
+                  self.$nextTick(self._refreshPreview);
+                }
+              };
+              img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          } else {
+            self.originalImage = null;
+            self.previewImage = null;
+            self.originalAspectRatio = null;
+            self.outputFileName = '';
+            self.rotation = 0;
+            self.cropAspect = 'original';
+          }
+        },
+
+        showOriginalImage: function () {
+          this.showOriginal = true;
+          this.zoom = 1; this.panX = 0; this.panY = 0;
+          this._syncShaderUniforms();
+        },
+        hideOriginalImage: function () {
+          this.showOriginal = false;
+          this._syncShaderUniforms();
+        },
+
+        // ========================
+        //  ZOOM / DRAG
+        // ========================
+
+        onZoom: function (e) {
+          if (!this.imagePreview || this.showOriginal) return;
+          var d = e.deltaY > 0 ? -0.1 : 0.1;
+          this.zoom = Math.max(1, Math.min(10, this.zoom + d));
+        },
+        onDragStart: function (e) {
+          if (this.zoom <= 1) return;
+          this.dragging = true;
+          this.dragStartX = e.clientX;
+          this.dragStartY = e.clientY;
+          this.panStartX = this.panX;
+          this.panStartY = this.panY;
+        },
+        onDragMove: function (e) {
+          if (!this.dragging) return;
+          this.panX = this.panStartX + (e.clientX - this.dragStartX);
+          this.panY = this.panStartY + (e.clientY - this.dragStartY);
+        },
+        onDragEnd: function () { this.dragging = false; },
+        onTouchStart: function (e) {
+          if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            this.pinchDist = Math.sqrt(dx * dx + dy * dy);
+            this.pinchZoomStart = this.zoom;
+            return;
+          }
+          if (this.zoom <= 1 || e.touches.length !== 1) return;
+          this.dragging = true;
+          this.dragStartX = e.touches[0].clientX;
+          this.dragStartY = e.touches[0].clientY;
+          this.panStartX = this.panX;
+          this.panStartY = this.panY;
+        },
+        onTouchMove: function (e) {
+          if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (this.pinchDist > 0) {
+              var s = dist / this.pinchDist;
+              this.zoom = Math.max(1, Math.min(10, this.pinchZoomStart * s));
+            }
+            return;
+          }
+          if (!this.dragging || e.touches.length !== 1) return;
+          this.panX = this.panStartX + (e.touches[0].clientX - this.dragStartX);
+          this.panY = this.panStartY + (e.touches[0].clientY - this.dragStartY);
+        },
+        onTouchEnd: function () { this.dragging = false; this.pinchDist = 0; },
+
+        // ========================
+        //  STITCH
+        // ========================
+
+        onStitchFilesAdded: function (files) {
+          var self = this;
+          if (!files || !files.length) return;
+          var total = files.length;
+          var loadedCount = 0;
+          var loadNext = function (idx) {
+            if (idx >= total) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              self.stitchImages.push(e.target.result);
+              loadedCount++;
+              if (loadedCount >= total) self._autoStitch();
+              else loadNext(idx + 1);
+            };
+            reader.readAsDataURL(files[idx]);
+          };
+          loadNext(0);
+          this.stitchFiles = null;
+        },
+
+        removeStitchImage: function (idx) {
+          this.stitchImages.splice(idx, 1);
+          this.stitchImages = this.stitchImages.slice();
+          this._autoStitch();
+        },
+
+        _autoStitch: function () {
+          if (this.stitchImages.length >= 2) this.doStitch();
+        },
+
+        doStitch: function () {
+          var self = this;
+          var images = this.stitchImages;
+          if (images.length < 2) return;
+
+          // Load all images first
+          var loaded = [];
+          var loadCount = 0;
+
+          var combine = function () {
+            var layout = self.stitchLayout;
+            var cols = self.stitchCols || 2;
+            var rows = self.stitchRows || 2;
+
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+
+            if (layout === 'horizontal') {
+              var totalW = 0, maxH = 0;
+              for (var i = 0; i < loaded.length; i++) {
+                totalW += loaded[i].width;
+                if (loaded[i].height > maxH) maxH = loaded[i].height;
+              }
+              canvas.width = totalW;
+              canvas.height = maxH;
+              var x = 0;
+              for (var i = 0; i < loaded.length; i++) {
+                ctx.drawImage(loaded[i], x, 0);
+                x += loaded[i].width;
+              }
+            } else if (layout === 'vertical') {
+              var maxW = 0, totalH = 0;
+              for (var i = 0; i < loaded.length; i++) {
+                if (loaded[i].width > maxW) maxW = loaded[i].width;
+                totalH += loaded[i].height;
+              }
+              canvas.width = maxW;
+              canvas.height = totalH;
+              var y = 0;
+              for (var i = 0; i < loaded.length; i++) {
+                ctx.drawImage(loaded[i], 0, y);
+                y += loaded[i].height;
+              }
+            } else if (layout === 'grid') {
+              var cells = Math.min(loaded.length, cols * rows);
+              var cellW = 0, cellH = 0;
+              for (var i = 0; i < cells; i++) {
+                if (loaded[i].width > cellW) cellW = loaded[i].width;
+                if (loaded[i].height > cellH) cellH = loaded[i].height;
+              }
+              if (cols > cells) cols = cells;
+              if (rows > Math.ceil(cells / cols)) rows = Math.ceil(cells / cols);
+              canvas.width = cellW * cols;
+              canvas.height = cellH * rows;
+              for (var i = 0; i < cells; i++) {
+                var cx = (i % cols) * cellW;
+                var cy = Math.floor(i / cols) * cellH;
+                ctx.drawImage(loaded[i], cx, cy, cellW, cellH);
+              }
+            }
+
+            var dataUrl = canvas.toDataURL('image/png');
+            self.originalImage = dataUrl;
+            self.previewImage = dataUrl;
+            self.imagePreview = dataUrl;
+            self.width = canvas.width;
+            self.height = canvas.height;
+            self.originalAspectRatio = canvas.width / canvas.height;
+            self.rotation = 0;
+            self.cropAspect = 'original';
+            if (!self.outputFileName) self.outputFileName = 'stitch_combined';
+            self._refreshPreview();
+            if (self.threeReady) self._loadTexture(dataUrl);
+          };
+
+          for (var i = 0; i < images.length; i++) {
+            (function (src) {
+              var img = new Image();
+              img.onload = function () {
+                loaded.push(img);
+                loadCount++;
+                if (loadCount === images.length) combine();
+              };
+              img.src = src;
+            })(images[i]);
+          }
+        },
+
+        // ========================
+        //  THREE.JS
+        // ========================
+
+        initThreeJS: function () {
+          if (this.threeInitialized) return;
+          var self = this;
+          var canvas = self.$refs.shaderCanvas;
+          if (!canvas) return;
+
+          try {
+            self._renderer = new THREE.WebGLRenderer({
+              canvas: canvas,
+              preserveDrawingBuffer: true,
+              antialias: true
+            });
+            self._renderer.setClearColor(0x111111, 1);
+            self._scene = new THREE.Scene();
+            self._camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
+            self._camera.position.z = 1;
+
+            var u = {
+              tDiffuse: { value: null },
+              tCurve: { value: null },
+              uBrightness: { value: 0 },
+              uContrast: { value: 1 },
+              uSaturation: { value: 1 },
+              uGrayscale: { value: 0 },
+              uGlitchIntensity: { value: 0 },
+              uGlitchFrequency: { value: 0.5 },
+              uNoiseIntensity: { value: 0 },
+              uEdgeIntensity: { value: 0 },
+              uBlurIntensity: { value: 0 },
+              uMosaicIntensity: { value: 0 },
+              uMosaicSize: { value: 16 },
+              uShowOriginal: { value: 0 },
+              uResolution: { value: new THREE.Vector2(512, 512) }
+            };
+
+            var vert = [
+              'varying vec2 vUv;',
+              'void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}'
+            ].join('\n');
+
+            var frag = [
+              'precision highp float;',
+              'uniform sampler2D tDiffuse;',
+              'uniform float uBrightness,uContrast,uSaturation,uGrayscale,uShowOriginal;',
+              'uniform float uGlitchIntensity,uGlitchFrequency,uNoiseIntensity;',
+              'uniform float uEdgeIntensity,uBlurIntensity,uMosaicIntensity,uMosaicSize;',
+              'uniform vec2 uResolution;',
+              'varying vec2 vUv;',
+              'float r2(vec2 n){return fract(sin(dot(n,vec2(12.9898,78.233)))*43758.5453);}',
+              'float lum(vec3 c){return dot(c,vec3(0.299,0.587,0.114));}',
+              'void main(){',
+              'vec2 uv=vUv;vec4 col=texture2D(tDiffuse,uv);',
+              'if(uShowOriginal>0.5){gl_FragColor=col;return;}',
+              'vec3 c=col.rgb;c+=uBrightness;',
+              'c=(c-0.5)*uContrast+0.5;',
+              'float l=lum(c);c=mix(vec3(l),c,uSaturation);',
+              'if(uGrayscale>0.5)c=vec3(lum(c));',
+
+              // Glitch (static)
+              'float gi=uGlitchIntensity;',
+              'if(gi>0.001){',
+              'float bh=0.02+gi*0.08;float bn=floor(uv.y/bh);',
+              'float br=r2(vec2(bn,floor(uv.x*100.0)));',
+              'if(br<gi*2.0){',
+              'vec2 duv=uv;duv.x+=(br-0.5)*0.1*gi;',
+              'float sp=0.02*gi*br;',
+              'c.r=texture2D(tDiffuse,duv+vec2(sp,0.0)).r;',
+              'c.g=texture2D(tDiffuse,duv).g;',
+              'c.b=texture2D(tDiffuse,duv-vec2(sp,0.0)).b;',
+              '}',
+              'float sl=sin(uv.y*uResolution.y*0.5)*0.04*gi;c-=sl;',
+              '}',
+
+              // Noise (static)
+              'float ni=uNoiseIntensity;',
+              'if(ni>0.001){',
+              'float n=r2(floor(uv*uResolution*0.5));',
+              'c=mix(c,vec3(lum(c)),ni*n*0.6);',
+              'c+=vec3(n-0.5)*ni*0.15;',
+              '}',
+
+              // Edge detection (Sobel)
+              'float ei=uEdgeIntensity;',
+              'if(ei>0.001){',
+              'vec2 st=1.0/uResolution;',
+              'float tl=texture2D(tDiffuse,uv+vec2(-1,-1)*st).r;',
+              'float tc_=texture2D(tDiffuse,uv+vec2(0,-1)*st).r;',
+              'float tr=texture2D(tDiffuse,uv+vec2(1,-1)*st).r;',
+              'float ml=texture2D(tDiffuse,uv+vec2(-1,0)*st).r;',
+              'float mr=texture2D(tDiffuse,uv+vec2(1,0)*st).r;',
+              'float bl=texture2D(tDiffuse,uv+vec2(-1,1)*st).r;',
+              'float bc_=texture2D(tDiffuse,uv+vec2(0,1)*st).r;',
+              'float br_=texture2D(tDiffuse,uv+vec2(1,1)*st).r;',
+              'float gx=-tl+tr-2.0*ml+2.0*mr-bl+br_;',
+              'float gy=-tl-2.0*tc_-tr+bl+2.0*bc_+br_;',
+              'float edge=sqrt(gx*gx+gy*gy);',
+              'c=mix(c,vec3(edge),ei);',
+              '}',
+
+              // Blur (box blur)
+              'float bi=uBlurIntensity;',
+              'if(bi>0.001){',
+              'vec2 st=1.0/uResolution;',
+              'vec3 blur=vec3(0.0);float n=0.0;',
+              'for(int x=-2;x<=2;x++){for(int y=-2;y<=2;y++){',
+              'blur+=texture2D(tDiffuse,uv+vec2(float(x),float(y))*st).rgb;n+=1.0;',
+              '}}',
+              'c=mix(c,blur/n,bi);',
+              '}',
+
+              // Mosaic (pixelate)
+              'float mi=uMosaicIntensity;',
+              'if(mi>0.001){',
+              'vec2 mos=floor(uv*uResolution/uMosaicSize)*uMosaicSize/uResolution;',
+              'vec4 mosCol=texture2D(tDiffuse,mos);',
+              'c=mix(c,mosCol.rgb,mi);',
+              '}',
+
+              'gl_FragColor=vec4(c,1.0);',
+              '}'
+            ].join('\n');
+
+            self._material = new THREE.ShaderMaterial({
+              uniforms: u,
+              vertexShader: vert,
+              fragmentShader: frag
+            });
+            self._mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), self._material);
+            self._scene.add(self._mesh);
+
+            self.threeReady = true;
+            self.threeInitialized = true;
+            if (self.originalImage) self._loadTexture(self.originalImage);
+            self._startAnimLoop();
+            self.$nextTick(self._refreshPreview);
+          } catch (e) {
+            console.error('Three.js init failed:', e);
+          }
+        },
+
+        _loadTexture: function (src) {
+          var self = this;
+          var img = new Image();
+          img.onload = function () {
+            if (self._texture) self._texture.dispose();
+            var tex = new THREE.Texture(img);
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            tex.needsUpdate = true;
+            self._texture = tex;
+            if (self._material) {
+              self._material.uniforms.tDiffuse.value = tex;
+              self._refreshPreview();
+            }
+          };
+          img.src = src;
+        },
+
+        _startAnimLoop: function () {
+          var self = this;
+          var tick = function () {
+            if (self._renderer && self.threeReady && self._material) {
+              if (self._renderPending) {
+                self._renderer.render(self._scene, self._camera);
+                self.previewImage = self._renderer.domElement.toDataURL(self.format, self.quality / 100);
+                self._renderPending = false;
+              }
+            }
+            self._animId = requestAnimationFrame(tick);
+          };
+          tick();
+        },
+
+        // ========================
+        //  SHADER RENDER
+        // ========================
+
+        requestShaderRender: function () {
+          this._renderPending = true;
+        },
+
+        measureContainer: function () {
+          var wrap = this.$refs.previewWrap;
+          if (!wrap) return;
+          var cw = wrap.clientWidth;
+          var ch = wrap.clientHeight;
+          if (cw > 0) this.containerW = cw;
+          if (ch > 0) this.containerH = ch;
+
+          var img = this.$refs.previewImg;
+          if (!img || !img.offsetWidth || !img.offsetHeight) {
+            this.imgDisplay = null;
+            return;
+          }
+
+          // Layout position of the image relative to the preview wrap (transforms ignored).
+          var x = 0;
+          var y = 0;
+          var node = img;
+          while (node && node !== wrap) {
+            x += node.offsetLeft;
+            y += node.offsetTop;
+            node = node.offsetParent;
+          }
+
+          var boxW = img.offsetWidth;
+          var boxH = img.offsetHeight;
+          var natW = img.naturalWidth || this.width || boxW;
+          var natH = img.naturalHeight || this.height || boxH;
+
+          // Account for object-fit: contain letterboxing inside the img box.
+          var scale = Math.min(boxW / natW, boxH / natH);
+          var disW = natW * scale;
+          var disH = natH * scale;
+
+          this.imgDisplay = {
+            x: x + (boxW - disW) / 2,
+            y: y + (boxH - disH) / 2,
+            w: disW,
+            h: disH
+          };
+        },
+
+        onResize: function () {
+          this.measureContainer();
+        },
+
+        _refreshPreview: function () {
+          this.measureContainer();
+          if (this.useThreePreview) {
+            this._renderShaderPreview();
+          } else {
+            this._renderStandardPreview();
+          }
+        },
+
+        _renderStandardPreview: function () {
+          if (!this.originalImage) return;
+          var self = this;
+          var c = document.createElement('canvas');
+          var ctx = c.getContext('2d');
+          var img = new Image();
+          img.onload = function () {
+            c.width = self.width;
+            c.height = self.height;
+            ctx.drawImage(img, 0, 0, self.width, self.height);
+            self._applyCssFilters(ctx);
+            self.previewImage = c.toDataURL(self.format, self.quality / 100);
+            self.measureContainer();
+          };
+          img.src = self.originalImage;
+        },
+
+        _applyCssFilters: function (ctx) {
+          var temp = document.createElement('canvas');
+          temp.width = ctx.canvas.width;
+          temp.height = ctx.canvas.height;
+          var tc = temp.getContext('2d');
+          tc.drawImage(ctx.canvas, 0, 0);
+          if (this.grayscale) {
+            var d = tc.getImageData(0, 0, temp.width, temp.height);
+            var pix = d.data;
+            for (var i = 0; i < pix.length; i += 4) {
+              var avg = (pix[i] + pix[i + 1] + pix[i + 2]) / 3;
+              pix[i] = avg; pix[i + 1] = avg; pix[i + 2] = avg;
+            }
+            tc.putImageData(d, 0, 0);
+          }
+          ctx.filter = 'brightness(' + (100 + this.brightness) + '%) ' +
+            'contrast(' + (100 + this.contrast) + '%) ' +
+            'saturate(' + (100 + this.saturation) + '%)';
+          ctx.drawImage(temp, 0, 0);
+          ctx.filter = 'none';
+        },
+
+        _renderShaderPreview: function () {
+          if (!this.threeReady || !this._renderer || !this._material) return;
+          var canvas = this.$refs.shaderCanvas;
+          if (!canvas) return;
+
+          var wrap = canvas.parentElement;
+          var w = wrap ? wrap.clientWidth : 512;
+          if (w < 1) w = 512;
+          var aspect = this.width / this.height;
+          var h = Math.min(w / aspect, 320);
+
+          canvas.style.height = h + 'px';
+          var dpr = Math.min(window.devicePixelRatio || 1, 2);
+          this._renderer.setSize(Math.round(w * dpr), Math.round(h * dpr), false);
+          this._renderer.setViewport(0, 0, Math.round(w * dpr), Math.round(h * dpr));
+
+          this._syncShaderUniforms();
+          this._material.uniforms.uResolution.value.set(w * dpr, h * dpr);
+          this._renderer.render(this._scene, this._camera);
+          this.previewImage = this._renderer.domElement.toDataURL(this.format, this.quality / 100);
+          this._renderPending = false;
+        },
+
+        _syncShaderUniforms: function () {
+          if (!this._material) return;
+          var u = this._material.uniforms;
+          u.uBrightness.value = this.showOriginal ? 0 : this.brightness / 100;
+          u.uContrast.value = this.showOriginal ? 1 : 1 + this.contrast / 100;
+          u.uSaturation.value = this.showOriginal ? 1 : 1 + this.saturation / 100;
+          u.uGrayscale.value = this.showOriginal ? 0 : (this.grayscale ? 1 : 0);
+          u.uGlitchIntensity.value = this.showOriginal ? 0 : this.glitchIntensity;
+          u.uGlitchFrequency.value = this.showOriginal ? 0.5 : this.glitchFrequency;
+          u.uNoiseIntensity.value = this.showOriginal ? 0 : this.noiseIntensity;
+          u.uEdgeIntensity.value = this.showOriginal ? 0 : this.edgeIntensity;
+          u.uBlurIntensity.value = this.showOriginal ? 0 : this.blurIntensity;
+          u.uMosaicIntensity.value = this.showOriginal ? 0 : this.mosaicIntensity;
+          u.uMosaicSize.value = this.showOriginal ? 16 : this.mosaicSize;
+          u.uShowOriginal.value = this.showOriginal ? 1 : 0;
+        },
+
+        // ========================
+        //  TILT
+        // ========================
+
+        _rotationScaleFor: function (w, h, deg) {
+          if (!deg || !w || !h) return 1;
+          var rad = Math.abs(deg) * Math.PI / 180;
+          var aspect = w / h;
+          return Math.cos(rad) + Math.max(aspect, 1 / aspect) * Math.sin(rad);
+        },
+
+        // Returns a canvas of the same size with the image rotated and scaled to fill it.
+        _rotateCanvas: function (source, deg) {
+          var w = source.naturalWidth || source.width;
+          var h = source.naturalHeight || source.height;
+          if (!deg || !w || !h) return source;
+
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          var rad = deg * Math.PI / 180;
+          var scale = this._rotationScaleFor(w, h, deg);
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate(rad);
+          ctx.scale(scale, scale);
+          ctx.drawImage(source, -w / 2, -h / 2, w, h);
+          return canvas;
+        },
+
+        // ========================
+        //  SAVE / EXPORT
+        // ========================
+
+        processImage: function () {
+          if (this.useThreePreview) this._saveShader();
+          else this._saveStandard();
+        },
+
+        _saveStandard: function () {
+          var self = this;
+          var c = document.createElement('canvas');
+          var ctx = c.getContext('2d');
+          var img = new Image();
+          img.onload = function () {
+            c.width = self.width;
+            c.height = self.height;
+            ctx.drawImage(img, 0, 0, self.width, self.height);
+            self._applyCssFilters(ctx);
+            var out = self._rotateCanvas(c, self.rotation);
+            self._download(out.toDataURL(self.format, self.quality / 100));
+          };
+          img.src = this.previewImage || this.originalImage;
+        },
+
+        _saveShader: function () {
+          var self = this;
+          if (!self.threeReady) { self._saveStandard(); return; }
+          var curW = self._renderer.domElement.width;
+          var curH = self._renderer.domElement.height;
+          self._syncShaderUniforms();
+          self._material.uniforms.uResolution.value.set(self.width, self.height);
+          self._renderer.setSize(self.width, self.height, false);
+          self._renderer.render(self._scene, self._camera);
+          var out = self.rotation ? self._rotateCanvas(self._renderer.domElement, self.rotation) : self._renderer.domElement;
+          var data = out.toDataURL(self.format, self.quality / 100);
+          self._renderer.setSize(curW, curH, false);
+          self._refreshPreview();
+          self._download(data);
+        },
+
+        _download: function (dataUrl) {
+          var link = document.createElement('a');
+          link.download = this.outputFileName + '.' + this.format.split('/')[1];
+          link.href = dataUrl;
+          link.click();
+        },
+
+        // ========================
+        //  ZOOM & CROP
+        // ========================
+
+        applyCrop: function () {
+          if (!this.originalImage) return;
+          var self = this;
+          var region = this.cropRegion;
+          if (!region) return;
+
+          // Nothing to crop: the region covers the whole image and there is no tilt to bake.
+          if (!this.rotation && region.u0 <= 0.0005 && region.v0 <= 0.0005 &&
+            region.uw >= 0.999 && region.vh >= 0.999) return;
+
+          var img = new Image();
+          img.onload = function () {
+            var base = self.rotation ? self._rotateCanvas(img, self.rotation) : img;
+            var baseW = base.naturalWidth || base.width;
+            var baseH = base.naturalHeight || base.height;
+
+            var srcX = region.u0 * baseW;
+            var srcY = region.v0 * baseH;
+            var srcW = region.uw * baseW;
+            var srcH = region.vh * baseH;
+
+            srcX = Math.max(0, Math.min(baseW - 1, srcX));
+            srcY = Math.max(0, Math.min(baseH - 1, srcY));
+            srcW = Math.max(1, Math.min(baseW - srcX, srcW));
+            srcH = Math.max(1, Math.min(baseH - srcY, srcH));
+
+            var c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(srcW));
+            c.height = Math.max(1, Math.round(srcH));
+            var ctx = c.getContext('2d');
+            ctx.drawImage(base, srcX, srcY, srcW, srcH, 0, 0, c.width, c.height);
+
+            var dataUrl = c.toDataURL(self.format, self.quality / 100);
+            self.originalImage = dataUrl;
+            self.previewImage = dataUrl;
+            self.imagePreview = dataUrl;
+            self.width = c.width;
+            self.height = c.height;
+            self.originalAspectRatio = c.width / c.height;
+            self.zoom = 1;
+            self.panX = 0;
+            self.panY = 0;
+            self.rotation = 0;
+            self.cropAspect = 'original';
+            self._refreshPreview();
+            if (self.threeReady) self._loadTexture(dataUrl);
+          };
+          img.src = this.originalImage;
+        }
+
+      }
+    });
+  </script>
+
+</body>
+
+</html>

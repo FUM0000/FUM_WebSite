@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="Asset/Image/Icon_1_2.png">
+  
+  <link href="Asset/CSS/Common.css?v=1.5" rel="stylesheet" />
+
+  <title>Image Layout</title>
+  <meta name="description" content="Drag and drop your photos into a 3x3 grid to compose image layouts.">
+  <link rel="canonical" href="https://fum0000.github.io/FUM_WebSite/Service_Creator_ImageLayout.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="FUM Website">
+  <meta property="og:title" content="Image Layout">
+  <meta property="og:description" content="Drag and drop your photos into a 3x3 grid to compose image layouts.">
+  <meta property="og:url" content="https://fum0000.github.io/FUM_WebSite/Service_Creator_ImageLayout.html">
+  <meta property="og:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Image Layout">
+  <meta name="twitter:description" content="Drag and drop your photos into a 3x3 grid to compose image layouts.">
+  <meta name="twitter:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+    <meta name="robots" content="index, follow">
+</head>
+
+<body>
+    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Image Layout</h1>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Service > Image Layout</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" fluid fill-height style="display: flex; align-content: center;">
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card>
+                  <v-card-title>Stock</v-card-title>
+                  <v-card-text>
+                    <v-file-input v-model="files" accept="image/*" label="Upload Images" prepend-icon="mdi-image"
+                      multiple dense @change="onFilesSelected"></v-file-input>
+                    <v-row justify="start" dense v-if="stockImages.length > 0">
+                      <v-col xs="3" md="2" v-for="(image, index) in stockImages" :key="index">
+                        <v-card flat class="stock-card">
+                          <v-img :src="image.src" class="square-image stock-image" @click="addToGrid(index)">
+                            <v-icon class="plus-icon" color="white" style="opacity: 0.5;">mdi-plus-circle</v-icon>
+                            <v-btn icon x-small color="error" class="close-btn" @click.stop="removeImage(index)">
+                              <v-icon small>mdi-close</v-icon>
+                            </v-btn>
+                          </v-img>
+                        </v-card>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <v-row justify="center">
+              <v-col xs="12" md="6">
+                <v-card>
+                  <v-card-title>Grid</v-card-title>
+                  <v-card-text>
+                    <v-row dense>
+                      <v-col v-for="(image, index) in gridImages" :key="index" cols="4" class="grid-col"
+                        :draggable="!!image" @dragstart="onDragStart($event, index)" @dragover.prevent
+                        @drop="onDrop($event, index)" @touchstart="onTouchStart($event, index)"
+                        @touchmove.prevent="onTouchMove($event)" @touchend="onTouchEnd($event)">
+                        <v-card flat class="grid-cell" :class="{ 'empty': !image }">
+                          <v-img v-if="image" :src="image.src" class="square-image">
+                            <v-btn icon x-small color="error" class="close-btn" @click.stop="clearGridSlot(index)">
+                              <v-icon small>mdi-close</v-icon>
+                            </v-btn>
+                          </v-img>
+                          <v-icon v-else :size="$vuetify.breakpoint.xs || $vuetify.breakpoint.sm ? '32' : '64'"
+                            color="grey">mdi-image-off</v-icon>
+                        </v-card>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js" integrity="sha384-smVS78N63G0uFpVH9bKdb+2YIW7Q9eFrle79imo+AWW6YLluQxAEK7kxLOt1bNex" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js" integrity="sha384-IufsRL4FQ+k4aWgxYvH6I1RoIrzL8Ynna+E/AavDQE9hD+UBZQLSTX2+7pPQWNsr" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha384-fJU6sGmyn07b+uD1nMk7/iSb4yvaowcueiQhfVgQuD98rfva8mcr1eSvjchfpMrH" crossorigin="anonymous"></script>
+  <script src="Asset/Javascript/Common.js?v=1.05"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: {
+        files: [],
+        stockImages: [],
+        gridImages: Array(9).fill(null),
+        draggedIndex: null,
+        touchStartIndex: null,
+        touchTargetIndex: null
+      },
+      methods: {
+        onFilesSelected(files) {
+          if (!files || files.length === 0) return;
+          files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.stockImages.push({
+                src: e.target.result,
+                name: file.name
+              });
+            };
+            reader.readAsDataURL(file);
+          });
+          this.files = [];
+        },
+        removeImage(index) {
+          this.stockImages.splice(index, 1);
+          this.gridImages = this.gridImages.map(img =>
+            img && img.src === this.stockImages[index]?.src ? null : img
+          );
+        },
+        addToGrid(index) {
+          const emptySlot = this.gridImages.findIndex(slot => slot === null);
+          if (emptySlot !== -1 && this.stockImages[index]) {
+            this.gridImages.splice(emptySlot, 1, this.stockImages[index]);
+          } else if (emptySlot === -1) {
+            alert('Grid is full! Remove an image to add another.');
+          }
+        },
+        clearGridSlot(index) {
+          this.gridImages.splice(index, 1, null);
+        },
+        onDragStart(event, index) {
+          if (this.gridImages[index]) {
+            this.draggedIndex = index;
+            event.dataTransfer.setData('text/plain', index);
+          }
+        },
+        onDrop(event, targetIndex) {
+          event.preventDefault();
+          const sourceIndex = this.draggedIndex;
+          if (sourceIndex !== null && sourceIndex !== targetIndex) {
+            const sourceImage = this.gridImages[sourceIndex];
+            const targetImage = this.gridImages[targetIndex];
+            this.$set(this.gridImages, sourceIndex, targetImage);
+            this.$set(this.gridImages, targetIndex, sourceImage);
+          }
+          this.draggedIndex = null;
+        },
+        onTouchStart(event, index) {
+          if (this.gridImages[index]) {
+            this.touchStartIndex = index;
+            const el = event.currentTarget;
+            el.classList.add('dragging');
+          }
+        },
+        onTouchMove(event) {
+          event.preventDefault();
+          const touch = event.touches[0];
+          const target = document.elementFromPoint(touch.clientX, touch.clientY);
+          document.querySelectorAll('.grid-col').forEach(el => {
+            el.classList.remove('drag-over');
+          });
+          if (!target) return;
+          const col = target.closest('.grid-col');
+          if (col) {
+            const index = Array.from(col.parentNode.children).indexOf(col);
+            this.touchTargetIndex = index;
+            col.classList.add('drag-over');
+          } else {
+            this.touchTargetIndex = null;
+          }
+        },
+        onTouchEnd(event) {
+          const sourceIndex = this.touchStartIndex;
+          const targetIndex = this.touchTargetIndex;
+          if (sourceIndex !== null && targetIndex !== null && sourceIndex !== targetIndex) {
+            const sourceImage = this.gridImages[sourceIndex];
+            const targetImage = this.gridImages[targetIndex];
+            this.$set(this.gridImages, sourceIndex, targetImage);
+            this.$set(this.gridImages, targetIndex, sourceImage);
+          }
+          this.touchStartIndex = null;
+          this.touchTargetIndex = null;
+          document.querySelectorAll('.grid-col').forEach(el => {
+            el.classList.remove('dragging', 'drag-over');
+          });
+        },
+      }
+    });
+  </script>
+
+  <style>
+    .grid-cell {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #ccc;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 1/1 !important;
+      width: 100%;
+      margin: 0 auto;
+      /* 中央揃え */
+    }
+
+    .empty {
+      background-color: #f5f5f5;
+    }
+
+    .stock-card {
+      position: relative;
+      aspect-ratio: 1/1 !important;
+      width: 100%;
+      max-width: 100px;
+      /* ストック画像の最大サイズ */
+      margin: 0 auto;
+    }
+
+    .stock-image {
+      background-color: #f5f5f5;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .square-image {
+      aspect-ratio: 1/1 !important;
+      object-fit: cover !important;
+      object-position: center !important;
+      width: 100%;
+      height: 100%;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background-color: rgba(255, 255, 255, 0.7);
+    }
+
+    .plus-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+    }
+
+    .grid-col[draggable="true"] {
+      cursor: move;
+    }
+
+    .dragging {
+      opacity: 0.5;
+      border: 2px dashed #888;
+    }
+
+    .drag-over {
+      background-color: rgba(0, 150, 255, 0.2);
+    }
+
+    .grid-col {
+      aspect-ratio: 1/1 !important;
+      padding: 2px !important;
+    }
+
+    .v-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+
+    /* スマートフォン用のメディアクエリ */
+    @media (max-width: 600px) {
+      .grid-cell {
+        max-width: 100px;
+        /* スマートフォンでのグリッドセルサイズ */
+        height: 100px;
+      }
+
+      .stock-card {
+        max-width: 80px;
+        /* スマートフォンでのストック画像サイズ */
+        height: 80px;
+      }
+
+      .grid-col {
+        padding: 2px !important;
+        /* スマートフォンでのパディングを小さく */
+      }
+
+      .v-container {
+        padding: 8px !important;
+        /* スマートフォンでのコンテナパディング */
+      }
+
+      .close-btn {
+        top: 2px;
+        right: 2px;
+      }
+
+      .plus-icon {
+        font-size: 24px;
+        /* スマートフォンでのアイコンサイズを小さく */
+      }
+
+      .square-image {
+        aspect-ratio: 1/1 !important;
+        object-fit: cover !important;
+        /* 切り抜き方法を維持 */
+        width: 100%;
+        height: 100%;
+      }
+    }
+  </style>
+</body>
+
+</html>

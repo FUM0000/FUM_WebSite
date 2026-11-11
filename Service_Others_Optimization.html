@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="author" content="F U M">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="汎用の意思決定・最適化計算機。損益分岐、価格設定、期待値、予算配分、素材配合、アイテム合成などの問題を1つのエンジンで解決します。">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-B89KY0993B');
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="Asset/Image/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="Asset/Image/Icon_1_2.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <link href="Asset/CSS/Common.css?v=1.5" rel="stylesheet" />
+
+  <title>最適化</title>
+  <link rel="canonical" href="https://fum0000.github.io/FUM_WebSite/Service_Others_Optimization.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="FUM Website">
+  <meta property="og:title" content="最適化">
+  <meta property="og:description" content="汎用の意思決定・最適化計算機。損益分岐、価格設定、期待値、予算配分、素材配合、アイテム合成などの問題を1つのエンジンで解決します。">
+  <meta property="og:url" content="https://fum0000.github.io/FUM_WebSite/Service_Others_Optimization.html">
+  <meta property="og:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="最適化">
+  <meta name="twitter:description" content="汎用の意思決定・最適化計算機。損益分岐、価格設定、期待値、予算配分、素材配合、アイテム合成などの問題を1つのエンジンで解決します。">
+  <meta name="twitter:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+  <meta name="robots" content="index, follow">
+
+  <style>
+    .opt-canvas-wrap { width: 100%; min-height: 280px; }
+    .opt-concept-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(25, 118, 210, 0.08); color: #1a5276; font-size: 12px; margin: 2px 4px 2px 0; }
+    .opt-best-card { border-left: 4px solid #1976d2; }
+    .opt-note { font-size: 12px; color: #777; }
+    .opt-section-title { font-weight: 600; color: #333; margin: 10px 0 6px; }
+    .opt-th { background: #f5f7fa; }
+    td.v-input__slot,
+    td.v-text-field input { margin: 0 !important; }
+    .opt-cell-input { padding: 4px 2px; }
+  </style>
+</head>
+
+<body>
+  <v-app id="App" v-cloak>
+    <template>
+      <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">サービス > 最適化</main-system-bar>
+
+      <v-main id="Main">
+        <transition name="Fade_Page">
+          <v-container v-show="Ready_Page" class="lp-page">
+            <section class="hero-shell">
+              <div class="hero-grid">
+                <div class="hero-copy">
+                  <h1>最適化</h1>
+                  <p class="hero-lead">
+                    複雑な条件下で<b>最善の意思決定</b>を探す汎用計算機です。
+                    問題の種類を選び、数値で状況を記述すると、エンジンが解を探索し
+                    制約をチェックして目的を最大化（または最小化）します。
+                  </p>
+                  <div class="mt-2">
+                    <span class="opt-concept-chip">変数</span>
+                    <span class="opt-concept-chip">関係式</span>
+                    <span class="opt-concept-chip">制約</span>
+                    <span class="opt-concept-chip">確率</span>
+                    <span class="opt-concept-chip">コスト/価値</span>
+                    <span class="opt-concept-chip">目的</span>
+                    <span class="opt-concept-chip">探索空間</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <v-card>
+              <v-tabs v-model="tab" background-color="#1976d2" dark grow>
+                <v-tab>価格設定</v-tab>
+                <v-tab>損益分岐</v-tab>
+                <v-tab>期待値</v-tab>
+                <v-tab>予算</v-tab>
+                <v-tab>素材配合</v-tab>
+                <v-tab>合成</v-tab>
+                <v-tab>カスタム</v-tab>
+                <v-tab>需要感度</v-tab>
+              </v-tabs>
+
+              <!-- ============================ 価格設定 ============================ -->
+              <v-card-text v-if="tab === 0">
+                <p class="opt-note">需要が価格に依存するとき、利益を最大化する価格を求めます。</p>
+                <v-row>
+                  <v-col cols="6" sm="3"><v-text-field label="原価（1個あたり）" type="number" v-model.number="models.pricing.cost"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="固定費" type="number" v-model.number="models.pricing.fixed"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="価格0のときの需要（a）" type="number" v-model.number="models.pricing.a"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="価格1あたりに減る需要（b）" type="number" v-model.number="models.pricing.b"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="探索する最低価格" type="number" v-model.number="models.pricing.minPrice"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="探索する最高価格" type="number" v-model.number="models.pricing.maxPrice"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="解像度" type="number" v-model.number="models.pricing.res"></v-text-field></v-col>
+                </v-row>
+                <p class="opt-note">モデル: 需要 = a − b × 価格、利益 = (価格 − 原価) × 需要 − 固定費</p>
+                <p class="opt-note">a・b の値が不明な場合は <a href="javascript:void(0)" @click.prevent="tab = 7" style="color:#1976d2; text-decoration:underline;">過去データから算出する</a> で推定できます。</p>
+                <v-btn color="primary" @click="solvePricing">計算する</v-btn>
+
+                <v-alert v-if="models.pricing.error" type="error" class="mt-4">{{ models.pricing.error }}</v-alert>
+
+                <template v-if="models.pricing.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">最適価格</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.pricing.result.r.best.values.price) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">最適時の予想需要</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.pricing.result.r.best.values.demand) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">最大利益</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.pricing.result.r.best.value) }}</div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <canvas ref="chartPricing"></canvas>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">上位候補</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">順位</th>
+                              <th class="opt-th">価格</th>
+                              <th class="opt-th">需要</th>
+                              <th class="opt-th">利益</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(c, i) in models.pricing.result.r.candidates" :key="'pc' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td>{{ fmt(c.values.price) }}</td>
+                              <td>{{ fmt(c.values.demand) }}</td>
+                              <td>{{ fmt(c.value) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">{{ fmt(models.pricing.result.r.evals, 0) }} 個の格子点を探索しました。</p>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ 損益分岐 ============================ -->
+              <v-card-text v-if="tab === 1">
+                <p class="opt-note">固定費を回収するには何個（または売上いくら）必要なでしょうか？</p>
+                <v-row>
+                  <v-col cols="6" sm="3"><v-text-field label="固定費" type="number" v-model.number="models.breakeven.fixed"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="変動費（1個あたり）" type="number" v-model.number="models.breakeven.varCost"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="販売価格" type="number" v-model.number="models.breakeven.price"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="最大需要（個）" type="number" v-model.number="models.breakeven.maxDemand"></v-text-field></v-col>
+                </v-row>
+                <p class="opt-note">利益 = (販売価格 − 変動費) × 数量 − 固定費</p>
+                <v-btn color="primary" @click="solveBreakeven">計算する</v-btn>
+
+                <v-alert v-if="models.breakeven.error" type="error" class="mt-4">{{ models.breakeven.error }}</v-alert>
+
+                <template v-if="models.breakeven.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">損益分岐数量</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.breakeven.result.beQty) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">損益分岐売上</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.breakeven.result.beRevenue) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">最大需要時の利益</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.breakeven.result.profitAtMax) }}</div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-alert v-if="!models.breakeven.result.reachable" type="warning" class="mt-3">最大需要でも損益分岐に達しません。価格を上げるかコストを抑えてください。</v-alert>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <canvas ref="chartBreakeven"></canvas>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ 期待値 ============================ -->
+              <v-card-text v-if="tab === 2">
+                <p class="opt-note">期待値（確率で重み付けした結果）で選択肢を比較します。</p>
+                <div class="opt-section-title">選択肢</div>
+                <v-card v-for="(alt, ai) in models.expected.alts" :key="'alt' + ai" outlined class="mb-3">
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="8">
+                        <v-text-field label="名前" v-model="alt.name"></v-text-field>
+                      </v-col>
+                      <v-col cols="4" class="d-flex align-center">
+                        <v-btn small color="error" @click="removeAlt(ai)">削除</v-btn>
+                      </v-col>
+                    </v-row>
+                    <v-simple-table dense>
+                      <template v-slot:default>
+                        <thead>
+                          <tr>
+                            <th class="opt-th">結果（値）</th>
+                            <th class="opt-th" style="width: 200px;">確率</th>
+                            <th class="opt-th" style="width: 80px;"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(o, oi) in alt.outcomes" :key="'oc' + ai + oi">
+                            <td class="opt-cell-input">
+                              <v-text-field dense type="number" v-model.number="o.value" hide-details></v-text-field>
+                            </td>
+                            <td class="opt-cell-input">
+                              <v-text-field dense type="number" v-model.number="o.prob" hide-details></v-text-field>
+                            </td>
+                            <td>
+                              <v-btn small icon color="error" @click="removeOutcome(alt, oi)"><v-icon>mdi-delete</v-icon></v-btn>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </template>
+                    </v-simple-table>
+                    <v-btn small text color="primary" @click="addOutcome(alt)">+ 結果</v-btn>
+                  </v-card-text>
+                </v-card>
+                <v-btn small color="primary" outlined @click="addAlt">+ 選択肢</v-btn>
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveExpected">計算する</v-btn>
+                </div>
+
+                <v-alert v-if="models.expected.error" type="error" class="mt-4">{{ models.expected.error }}</v-alert>
+
+                <template v-if="models.expected.result">
+                  <v-card flat outlined class="mt-4">
+                    <v-card-text>
+                      <canvas ref="chartEV"></canvas>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">ランキング（期待値が高い順）</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">順位</th>
+                              <th class="opt-th">選択肢</th>
+                              <th class="opt-th">期待値</th>
+                              <th class="opt-th">最悪</th>
+                              <th class="opt-th">最良</th>
+                              <th class="opt-th">標準偏差</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(r, i) in models.expected.result.ranking" :key="'ev' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td>{{ r.name }}</td>
+                              <td style="font-weight: 700;">{{ fmt(r.E) }}</td>
+                              <td>{{ fmt(r.min) }}</td>
+                              <td>{{ fmt(r.max) }}</td>
+                              <td>{{ fmt(r.sigma) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ 予算（ナップサック） ============================ -->
+              <v-card-text v-if="tab === 3">
+                <p class="opt-note">限られた予算を、総価値が最大になる項目に配分します。</p>
+                <v-row>
+                  <v-col cols="12" sm="4">
+                    <v-text-field label="総予算" type="number" v-model.number="models.knapsack.budget"></v-text-field>
+                  </v-col>
+                </v-row>
+                <div class="opt-section-title">候補項目</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th">名前</th>
+                        <th class="opt-th" style="width: 180px;">コスト</th>
+                        <th class="opt-th" style="width: 180px;">価値</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(it, i) in models.knapsack.items" :key="'kpi' + i">
+                        <td class="opt-cell-input"><v-text-field dense v-model="it.name" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="it.cost" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="it.value" hide-details></v-text-field></td>
+                        <td><v-btn small icon color="error" @click="removeItem(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addItem" class="mt-2">+ 項目</v-btn>
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveKnapsackFun">計算する</v-btn>
+                </div>
+
+                <v-alert v-if="models.knapsack.error" type="error" class="mt-4">{{ models.knapsack.error }}</v-alert>
+
+                <template v-if="models.knapsack.result">
+                  <v-row class="mt-4">
+                    <v-col cols="6" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">総価値</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.knapsack.result.totalValue) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="6" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">使用予算</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.knapsack.result.totalCost) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="6" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">余り</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.knapsack.result.leftover) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="6" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">選択された項目数</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ models.knapsack.result.chosen.length }}</div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">推奨する選択</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">#</th>
+                              <th class="opt-th">項目</th>
+                              <th class="opt-th">コスト</th>
+                              <th class="opt-th">価値</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(c, i) in models.knapsack.result.chosen" :key="'kp' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td>{{ c.name }}</td>
+                              <td>{{ fmt(c.cost) }}</td>
+                              <td>{{ fmt(c.value) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">{{ models.knapsack.result.note }}</p>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ 素材配合 ============================ -->
+              <v-card-text v-if="tab === 4">
+                <p class="opt-note">すべての要件を満たす、最も安い素材の組み合わせを求めます（合計量は固定）。</p>
+                <v-row>
+                  <v-col cols="6" sm="3"><v-text-field label="合計量" type="number" v-model.number="models.mixing.total"></v-text-field></v-col>
+                  <v-col cols="6" sm="3"><v-text-field label="探索の解像度" type="number" v-model.number="models.mixing.res"></v-text-field></v-col>
+                </v-row>
+
+                <div class="opt-section-title">要件（合計量あたり）</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th">成分</th>
+                        <th class="opt-th" style="width: 160px;">最小</th>
+                        <th class="opt-th" style="width: 160px;">最大</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(n, i) in models.mixing.nutrients" :key="'nut' + i">
+                        <td class="opt-cell-input"><v-text-field dense v-model="n.name" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="n.min" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="n.max" hide-details></v-text-field></td>
+                        <td><v-btn small icon color="error" @click="removeNutrient(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addNutrient" class="mt-2">+ 成分</v-btn>
+
+                <div class="opt-section-title mt-4">素材（1単位あたりの含有量、1単位あたりのコスト）</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th">素材</th>
+                        <th class="opt-th" style="width: 110px;">コスト</th>
+                        <th class="opt-th" v-for="(n, ni) in models.mixing.nutrients" :key="'mh' + ni + n.name">{{ n.name }}</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(mat, i) in models.mixing.materials" :key="'mat' + i">
+                        <td class="opt-cell-input"><v-text-field dense v-model="mat.name" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="mat.cost" hide-details></v-text-field></td>
+                        <td class="opt-cell-input" v-for="n in models.mixing.nutrients" :key="'mc' + i + n.name">
+                          <v-text-field dense type="number" v-model.number="mat.amounts[n.name]" hide-details></v-text-field>
+                        </td>
+                        <td><v-btn small icon color="error" @click="removeMaterial(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addMaterial" class="mt-2">+ 素材</v-btn>
+
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveMixing">計算する</v-btn>
+                </div>
+
+                <v-alert v-if="models.mixing.error" type="error" class="mt-4">{{ models.mixing.error }}</v-alert>
+
+                <template v-if="models.mixing.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">最小総コスト</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.mixing.result.cost) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="8">
+                      <v-card outlined flat pa-3 class="pa-3">
+                        <div class="opt-note">達成された成分</div>
+                        <div>
+                          <span v-for="(nn, nk) in models.mixing.result.nutrients" :key="'nr' + nk" class="opt-concept-chip">
+                            {{ nn.name }}: {{ fmt(nn.value) }} ({{ nutriRange(nn) }})
+                          </span>
+                        </div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">推奨する配合量</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">素材</th>
+                              <th class="opt-th">量</th>
+                              <th class="opt-th">コスト</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(a, i) in models.mixing.result.amounts" :key="'mx' + i">
+                              <td>{{ a.name }}</td>
+                              <td style="font-weight: 700;">{{ fmt(a.value) }}</td>
+                              <td>{{ fmt(a.cost) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">{{ models.mixing.result.evals }} 個の格子点を探索しました。分布探索＋局所改良による近似解です。</p>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <canvas ref="chartMix"></canvas>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ 合成 ============================ -->
+              <v-card-text v-if="tab === 5">
+                <p class="opt-note">アイテムのレアリティを合成すべきでしょうか？各レアリティの基本価値と、合成後の最適期待値を（確率付きで）比較します。</p>
+                <div class="opt-section-title">レアリティ定義</div>
+                <v-card v-for="(r, ri) in models.merge.rarities" :key="'rar' + ri" outlined class="mb-3">
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="6" sm="3"><v-text-field label="名前" v-model="r.name"></v-text-field></v-col>
+                      <v-col cols="6" sm="3"><v-text-field label="基本価値" type="number" v-model.number="r.value"></v-text-field></v-col>
+                      <v-col cols="6" sm="3"><v-text-field label="所持数" type="number" v-model.number="r.count"></v-text-field></v-col>
+                      <v-col cols="6" sm="2"><v-text-field label="合成に必要な数" type="number" v-model.number="r.need"></v-text-field></v-col>
+                      <v-col cols="12" sm="1" class="d-flex align-center">
+                        <v-btn small icon color="error" @click="removeRarity(ri)"><v-icon>mdi-delete</v-icon></v-btn>
+                      </v-col>
+                    </v-row>
+                    <div class="opt-note mb-1">合成結果テーブル（各結果の確率）</div>
+                    <v-simple-table dense>
+                      <template v-slot:default>
+                        <thead>
+                          <tr>
+                            <th class="opt-th" style="width: 260px;">結果レアリティ</th>
+                            <th class="opt-th" style="width: 160px;">確率</th>
+                            <th class="opt-th" style="width: 80px;"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(o, oi) in r.outcomes" :key="'ro' + ri + oi">
+                            <td class="opt-cell-input">
+                              <v-select dense :items="rarityNames" v-model="o.target" hide-details></v-select>
+                            </td>
+                            <td class="opt-cell-input">
+                              <v-text-field dense type="number" v-model.number="o.prob" hide-details></v-text-field>
+                            </td>
+                            <td><v-btn small icon color="error" @click="removeRarityOutcome(r, oi)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                          </tr>
+                        </tbody>
+                      </template>
+                    </v-simple-table>
+                    <v-btn small text color="primary" @click="addRarityOutcome(r)">+ 結果</v-btn>
+                  </v-card-text>
+                </v-card>
+                <v-btn small color="primary" outlined @click="addRarity">+ レアリティ</v-btn>
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveMergeS">計算する</v-btn>
+                </div>
+
+                <v-alert v-if="models.merge.error" type="error" class="mt-4">{{ models.merge.error }}</v-alert>
+
+                <template v-if="models.merge.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">保持した場合の価値</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.merge.result.totalBase) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">最適期待値</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.merge.result.totalBest) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">期待ゲイン</div>
+                        <div :style="'font-size: 22px; font-weight: 700; color:' + (models.merge.result.expectedGain >= 0 ? '#1b5e20' : '#b71c1c')">
+                          {{ fmt(models.merge.result.expectedGain) }}
+                        </div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <canvas ref="chartMerge"></canvas>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">レアリティ別の最適戦略</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">レアリティ</th>
+                              <th class="opt-th">基本価値</th>
+                              <th class="opt-th">1個あたりの最適価値</th>
+                              <th class="opt-th">1個あたりのゲイン</th>
+                              <th class="opt-th">戦略</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(rw, i) in models.merge.result.rows" :key="'mrw' + i">
+                              <td>{{ rw.name }}</td>
+                              <td>{{ fmt(rw.value) }}</td>
+                              <td style="font-weight: 700;">{{ fmt(rw.W) }}</td>
+                              <td>{{ fmt(rw.gain) }}</td>
+                              <td>
+                                <span v-if="rw.mergeable && rw.gain > 1e-9" style="color:#1b5e20; font-weight:700;">合成</span>
+                                <span v-else style="color:#777;">保持</span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3" v-if="models.merge.result.actions.length">
+                    <v-card-text>
+                      <div class="opt-section-title">今すぐできる最適な合成アクション（所持数ベース）</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">#</th>
+                              <th class="opt-th">元</th>
+                              <th class="opt-th">必要数</th>
+                              <th class="opt-th">所持</th>
+                              <th class="opt-th">1アクションあたり期待ゲイン</th>
+                              <th class="opt-th">実行可能</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(ac, i) in models.merge.result.actions" :key="'mac' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td>{{ ac.from }}</td>
+                              <td>{{ ac.need }}</td>
+                              <td>{{ ac.owned }}</td>
+                              <td :style="'font-weight:700; color:' + (ac.gainPerAction >= 0 ? '#1b5e20' : '#b71c1c')">{{ fmt(ac.gainPerAction) }}</td>
+                              <td>{{ ac.feasible ? 'はい' : 'いいえ' }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">ゲインが正なら、そのレアリティの合成で総価値が増える見込みです（価値反復法 / ベルマンの最適性）。</p>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ カスタム ============================ -->
+              <v-card-text v-if="tab === 6">
+                <p class="opt-note">変数・目的・制約を自由に定義して、エンジンに空間探索させます。</p>
+                <div class="opt-section-title">変数</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th">名前</th>
+                        <th class="opt-th" style="width: 130px;">最小</th>
+                        <th class="opt-th" style="width: 130px;">最大</th>
+                        <th class="opt-th" style="width: 200px;">選択肢（カンマ区切り、省略可）</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(v, i) in models.custom.vars" :key="'cv' + i">
+                        <td class="opt-cell-input"><v-text-field dense v-model="v.name" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="v.min" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="v.max" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense v-model="v.options" hide-details></v-text-field></td>
+                        <td><v-btn small icon color="error" @click="removeVar(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addVar" class="mt-2">+ 変数</v-btn>
+
+                <v-row class="mt-3">
+                  <v-col cols="12" sm="4">
+                    <v-select :items="[{text:'最大化', value:'max'}, {text:'最小化', value:'min'}]" label="方向" v-model="models.custom.dir"></v-select>
+                  </v-col>
+                  <v-col cols="4" sm="2">
+                    <v-text-field label="解像度" type="number" v-model.number="models.custom.res"></v-text-field>
+                  </v-col>
+                </v-row>
+
+                <v-text-field label="目的式" v-model="models.custom.objective" placeholder="(price - 30) * (1000 - 2 * price) - 1500"></v-text-field>
+                <v-textarea label="制約（1行に1つ。例: `expr >= 0`）" v-model="models.custom.constraints" rows="3"></v-textarea>
+
+                <p class="opt-note">使用可能な関数: sqrt, abs, exp, log, log10, floor, ceil, round, pow, min, max, sin, cos, tan。演算子: + - * / ^ ( ) と比較演算子。</p>
+                <v-btn color="primary" @click="solveCustom">計算する</v-btn>
+
+                <v-alert v-if="models.custom.error" type="error" class="mt-4">{{ models.custom.error }}</v-alert>
+
+                <template v-if="models.custom.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="4">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">最適目的値（{{ models.custom.dir }}）</div>
+                        <div style="font-size: 24px; font-weight: 700;">{{ fmt(models.custom.result.r.best.value) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="8">
+                      <v-card outlined flat pa-3 class="pa-3">
+                        <div class="opt-note">最適変数</div>
+                        <div>
+                          <span v-for="(v, vi) in models.custom.vars" :key="'cvr' + vi" class="opt-concept-chip" v-if="v.name">
+                            {{ v.name }} = {{ fmt(modelVar(models.custom.result.r.best.values, v.name)) }}
+                          </span>
+                        </div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-card flat outlined class="mt-3" v-if="models.custom.result.curve">
+                    <v-card-text>
+                      <canvas ref="chartCustom"></canvas>
+                    </v-card-text>
+                  </v-card>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">上位候補</div>
+                      <v-simple-table dense>
+                        <template v-slot:default>
+                          <thead>
+                            <tr>
+                              <th class="opt-th">順位</th>
+                              <th class="opt-th" v-for="v in customVarNames()" :key="'chn' + v">{{ v }}</th>
+                              <th class="opt-th">目的</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="(c, i) in models.custom.result.r.candidates" :key="'cc' + i">
+                              <td>{{ i + 1 }}</td>
+                              <td v-for="v in customVarNames()" :key="'ccv' + i + v">{{ fmt(c.values[v]) }}</td>
+                              <td style="font-weight: 700;">{{ fmt(c.value) }}</td>
+                            </tr>
+                          </tbody>
+                        </template>
+                      </v-simple-table>
+                      <p class="opt-note mt-2">{{ fmt(models.custom.result.r.evals, 0) }} 個の格子点を探索しました。</p>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+
+              <!-- ============================ 需要感度 ============================ -->
+              <v-card-text v-if="tab === 7">
+                <p class="opt-note">過去の価格と販売数のデータから、価格設定モデルの係数 a（価格0のときの需要）と b（価格1あたりに減る需要）を回帰分析で推定します。</p>
+
+                <div class="opt-section-title">データ入力</div>
+                <v-simple-table dense>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="opt-th" style="width: 180px;">価格</th>
+                        <th class="opt-th" style="width: 180px;">販売数（需要）</th>
+                        <th class="opt-th" style="width: 80px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(pt, i) in models.sensitivity.points" :key="'sp' + i">
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="pt.price" hide-details></v-text-field></td>
+                        <td class="opt-cell-input"><v-text-field dense type="number" v-model.number="pt.qty" hide-details></v-text-field></td>
+                        <td><v-btn small icon color="error" @click="removePoint(i)"><v-icon>mdi-delete</v-icon></v-btn></td>
+                      </tr>
+                    </tbody>
+                  </template>
+                </v-simple-table>
+                <v-btn small color="primary" outlined @click="addPoint" class="mt-2">+ データ追加</v-btn>
+                <div class="mt-3">
+                  <v-btn color="primary" @click="solveSensitivity">推定する</v-btn>
+                </div>
+
+                <v-alert v-if="models.sensitivity.error" type="error" class="mt-4">{{ models.sensitivity.error }}</v-alert>
+
+                <template v-if="models.sensitivity.result">
+                  <v-row class="mt-4">
+                    <v-col cols="12" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">a（価格0のときの需要）</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.sensitivity.result.a) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">b（価格1あたりに減る需要）</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.sensitivity.result.b) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">相関係数 R²</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ fmt(models.sensitivity.result.r2, 4) }}</div>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="3">
+                      <v-card outlined class="opt-best-card pa-3">
+                        <div class="opt-note">データ件数</div>
+                        <div style="font-size: 22px; font-weight: 700;">{{ models.sensitivity.result.n }}</div>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <v-alert v-if="models.sensitivity.result.r2 < 0.5" type="warning" class="mt-3">
+                    R² が低いため、線形モデルではデータの説明が不十分です。データの散らばりが大きい場合、推定値の精度にご注意ください。
+                  </v-alert>
+                  <v-card flat outlined class="mt-3">
+                    <v-card-text>
+                      <div class="opt-section-title">推定結果</div>
+                      <p class="opt-note">
+                        需要 = {{ fmt(models.sensitivity.result.a) }} − {{ fmt(models.sensitivity.result.b) }} × 価格
+                      </p>
+                      <v-btn color="primary" @click="applySensitivity">価格設定に反映する</v-btn>
+                    </v-card-text>
+                  </v-card>
+                </template>
+              </v-card-text>
+            </v-card>
+          </v-container>
+        </transition>
+      </v-main>
+
+      <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+      <main-footer></main-footer>
+    </template>
+  </v-app>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js" integrity="sha384-smVS78N63G0uFpVH9bKdb+2YIW7Q9eFrle79imo+AWW6YLluQxAEK7kxLOt1bNex" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js" integrity="sha384-IufsRL4FQ+k4aWgxYvH6I1RoIrzL8Ynna+E/AavDQE9hD+UBZQLSTX2+7pPQWNsr" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha384-fJU6sGmyn07b+uD1nMk7/iSb4yvaowcueiQhfVgQuD98rfva8mcr1eSvjchfpMrH" crossorigin="anonymous"></script>
+  <script src="Asset/Javascript/Common.js?v=1.05"></script>
+  <script src="Asset/Javascript/Optimizer.js?v=1.0"></script>
+
+  <script>
+    new Vue({
+      el: '#App',
+      vuetify: new Vuetify(),
+      mixins: [window.Mixins_Common],
+      data: function () {
+        return {
+          tab: 0,
+          models: {
+            pricing: {
+              cost: 30, fixed: 1000, a: 1000, b: 2, minPrice: 0, maxPrice: 500, res: 200,
+              result: null, error: ''
+            },
+            breakeven: {
+              fixed: 1000, varCost: 20, price: 50, maxDemand: 100,
+              result: null, error: ''
+            },
+            expected: {
+              alts: [
+                { name: 'プランA（安全）', outcomes: [{ prob: 1, value: 80 }] },
+                { name: 'プランB（リスクあり）', outcomes: [{ prob: 0.5, value: 200 }, { prob: 0.5, value: -40 }] }
+              ],
+              result: null, error: ''
+            },
+            knapsack: {
+              budget: 500,
+              items: [
+                { name: '図書室', cost: 150, value: 40 },
+                { name: 'マーケティング', cost: 200, value: 60 },
+                { name: '研究開発', cost: 250, value: 80 },
+                { name: 'サポート', cost: 100, value: 30 },
+                { name: 'オフィス', cost: 120, value: 25 }
+              ],
+              result: null, error: ''
+            },
+            mixing: {
+              total: 100, res: 40,
+              nutrients: [
+                { name: 'タンパク質', min: 30, max: null },
+                { name: 'カロリー', min: null, max: 900 }
+              ],
+              materials: [
+                { name: '鶏肉', cost: 8, amounts: { タンパク質: 7, カロリー: 150 } },
+                { name: '米', cost: 2, amounts: { タンパク質: 2, カロリー: 200 } },
+                { name: '豆', cost: 1, amounts: { タンパク質: 5, カロリー: 120 } },
+                { name: '水', cost: 0, amounts: { タンパク質: 0, カロリー: 0 } }
+              ],
+              result: null, error: ''
+            },
+            merge: {
+              rarities: [
+                { name: 'コモン', value: 10, count: 20, need: 3, mergeCost: 0, outcomes: [{ target: 'レア', prob: 0.6 }, { target: 'コモン', prob: 0.4 }] },
+                { name: 'レア', value: 50, count: 6, need: 3, mergeCost: 0, outcomes: [{ target: 'エピック', prob: 0.4 }, { target: 'レア', prob: 0.6 }] },
+                { name: 'エピック', value: 200, count: 2, need: 3, mergeCost: 0, outcomes: [] }
+              ],
+              result: null, error: ''
+            },
+            custom: {
+              vars: [{ name: 'price', min: 0, max: 500, options: '' }],
+              objective: '(price - 30) * (1000 - 2 * price) - 1500',
+              constraints: '(1000 - 2 * price) >= 0\nprice >= 30',
+              dir: 'max', res: 200,
+              result: null, error: ''
+            },
+            sensitivity: {
+              points: [
+                { price: 100, qty: 500 },
+                { price: 110, qty: 480 },
+                { price: 120, qty: 455 },
+                { price: 130, qty: 430 },
+                { price: 140, qty: 410 }
+              ],
+              result: null, error: ''
+            }
+          }
+        };
+      },
+      computed: {
+        rarityNames: function () {
+          return this.models.merge.rarities.map(function (r) { return r.name }).filter(function (x) { return x !== ''; });
+        }
+      },
+      methods: {
+        fmt: function (x, d) { return window.Opt.fmt(x, d); },
+        modelVar: function (values, name) { return values[name]; },
+        nutriRange: function (nn) {
+          var parts = [];
+          if (nn.min !== null && nn.min !== undefined && isFinite(Number(nn.min))) parts.push('≥ ' + this.fmt(nn.min));
+          if (nn.max !== null && nn.max !== undefined && isFinite(Number(nn.max))) parts.push('≤ ' + this.fmt(nn.max));
+          return parts.join(', ');
+        },
+
+        // ---- 動的テーブル用ヘルパー ----
+        addAlt: function () { this.models.expected.alts.push({ name: '新しい選択肢', outcomes: [{ prob: 1, value: 0 }] }); },
+        removeAlt: function (i) { this.models.expected.alts.splice(i, 1); },
+        addOutcome: function (alt) { alt.outcomes.push({ prob: 0.5, value: 0 }); },
+        removeOutcome: function (alt, i) { alt.outcomes.splice(i, 1); },
+
+        addItem: function () { this.models.knapsack.items.push({ name: '新しい項目', cost: 10, value: 1 }); },
+        removeItem: function (i) { this.models.knapsack.items.splice(i, 1); },
+
+        addNutrient: function () {
+          var name = '成分' + (this.models.mixing.nutrients.length + 1);
+          var self = this;
+          this.models.mixing.nutrients.push({ name: name, min: null, max: null });
+          this.models.mixing.materials.forEach(function (m) { self.$set(m.amounts, name, 0); });
+        },
+        removeNutrient: function (i) {
+          var self = this;
+          var name = this.models.mixing.nutrients[i].name;
+          this.models.mixing.nutrients.splice(i, 1);
+          this.models.mixing.materials.forEach(function (m) { self.$delete(m.amounts, name); });
+        },
+        addMaterial: function () {
+          var amounts = {};
+          var self = this;
+          this.models.mixing.nutrients.forEach(function (n) { amounts[n.name] = 0; });
+          this.models.mixing.materials.push({ name: '素材', cost: 1, amounts: amounts });
+        },
+        removeMaterial: function (i) { this.models.mixing.materials.splice(i, 1); },
+
+        addRarity: function () {
+          this.models.merge.rarities.push({ name: '新規', value: 10, count: 0, need: 3, mergeCost: 0, outcomes: [] });
+        },
+        removeRarity: function (i) { this.models.merge.rarities.splice(i, 1); },
+        addRarityOutcome: function (r) { r.outcomes.push({ target: this.rarityNames[0] || '', prob: 0.5 }); },
+        removeRarityOutcome: function (r, i) { r.outcomes.splice(i, 1); },
+
+        addVar: function () { this.models.custom.vars.push({ name: 'var' + (this.models.custom.vars.length + 1), min: 0, max: 10, options: '' }); },
+        removeVar: function (i) { this.models.custom.vars.splice(i, 1); },
+        customVarNames: function () {
+          return this.models.custom.vars.filter(function (v) { return v.name && v.name !== ''; }).map(function (v) { return v.name; });
+        },
+
+        addPoint: function () { this.models.sensitivity.points.push({ price: 100, qty: 100 }); },
+        removePoint: function (i) { this.models.sensitivity.points.splice(i, 1); },
+
+        // ---- ソルバー ----
+        solvePricing: function () {
+          var m = this.models.pricing;
+          m.error = ''; m.result = null;
+          try {
+            var lo = Number(m.minPrice) || 0;
+            var hi = Number(m.maxPrice) || 1;
+            if (hi <= lo) { m.error = '最高価格は最低価格より大きくしてください。'; return; }
+            var problem = {
+              vars: [{ name: 'price', min: lo, max: hi }],
+              derived: [
+                { name: 'demand', expr: '(' + m.a + ') - (' + m.b + ') * price' },
+                { name: 'profit', expr: '(price - (' + m.cost + ')) * demand - (' + m.fixed + ')' }
+              ],
+              constraints: ['demand >= 0', 'price >= (' + m.cost + ')'],
+              objective: 'profit',
+              dir: 'max',
+              resolution: Number(m.res) || 200
+            };
+            var r = window.Opt.solveGrid(problem);
+            if (r.status !== 'ok') { m.error = r.message || '実行可能な解が見つかりません。'; return; }
+            var curve = [];
+            var N = 80;
+            for (var i = 0; i <= N; i++) {
+              var px = lo + (hi - lo) * i / N;
+              var pt = window.Opt.evalPoint(problem, { price: px });
+              if (pt.feasible) curve.push({ x: px, y: pt.value });
+            }
+            m.result = { r: r, curve: curve };
+            this.$nextTick(function () { this.drawCharts(0); });
+          } catch (e) { m.error = String(e.message || e); }
+        },
+
+        solveBreakeven: function () {
+          var m = this.models.breakeven;
+          m.error = ''; m.result = null;
+          var fixed = Number(m.fixed) || 0;
+          var vc = Number(m.varCost) || 0;
+          var price = Number(m.price) || 0;
+          var maxD = Number(m.maxDemand) || 0;
+          var margin = price - vc;
+          if (margin <= 0) { m.error = '損益分岐にするには販売価格を変動費より高くしてください。'; return; }
+          var beQty = fixed / margin;
+          var profitAtMax = margin * maxD - fixed;
+          var curve = [];
+          var N = 100;
+          var maxX = Math.max(maxD, beQty * 1.2, 1);
+          for (var i = 0; i <= N; i++) {
+            var q = maxX * i / N;
+            curve.push({ x: q, y: margin * q - fixed });
+          }
+          m.result = {
+            beQty: beQty,
+            beRevenue: beQty * price,
+            profitAtMax: profitAtMax,
+            reachable: profitAtMax >= 0,
+            curve: curve
+          };
+          this.$nextTick(function () { this.drawCharts(1); });
+        },
+
+        solveExpected: function () {
+          var m = this.models.expected;
+          m.error = ''; m.result = null;
+          var r = window.Opt.solveExpected(m.alts);
+          if (!r.ranking.length) { m.error = '選択肢を1つ以上追加してください。'; return; }
+          m.result = r;
+          this.$nextTick(function () { this.drawCharts(2); });
+        },
+
+        solveKnapsackFun: function () {
+          var m = this.models.knapsack;
+          m.error = ''; m.result = null;
+          var r = window.Opt.solveKnapsack(m.items, m.budget);
+          if (r.status === 'error') { m.error = r.message; return; }
+          m.result = r;
+        },
+
+        solveMixing: function () {
+          var m = this.models.mixing;
+          m.error = ''; m.result = null;
+          try {
+            var mats = m.materials.filter(function (x) { return x.name && x.name !== ''; });
+            if (!mats.length) { m.error = '素材を1つ以上追加してください。'; return; }
+            var nutrients = m.nutrients.filter(function (n) { return n.name && n.name !== ''; });
+            var T = Number(m.total) || 0;
+            if (T <= 0) { m.error = '合計量は正の数にしてください。'; return; }
+            var others = mats.slice(0, -1);
+            var varNames = others.map(function (_, i) { return 'x' + i; });
+
+            var vars = others.map(function (o, i) { return { name: varNames[i], min: 0, max: T }; });
+            var derived = [];
+            derived.push({
+              name: 'xLast',
+              expr: varNames.length ? '(' + T + ') - (' + varNames.join(' + ') + ')' : '(' + T + ')'
+            });
+
+            var constraints = [];
+            if (varNames.length) constraints.push('xLast >= 0');
+            var coefTerms = [];
+            mats.forEach(function (mat, idx) {
+              var ident = idx < others.length ? varNames[idx] : 'xLast';
+              coefTerms.push('(' + mat.cost + ') * ' + ident);
+            });
+            var costExpr = coefTerms.join(' + ');
+
+            var self = this;
+            nutrients.forEach(function (n) {
+              var terms = mats.map(function (mat, idx) {
+                var ident = idx < others.length ? varNames[idx] : 'xLast';
+                var c = Number(mat.amounts[n.name]) || 0;
+                return '(' + c + ') * ' + ident;
+              });
+              var expr = terms.join(' + ');
+              if (n.min !== null && n.min !== undefined && isFinite(Number(n.min))) constraints.push(expr + ' >= (' + Number(n.min) + ')');
+              if (n.max !== null && n.max !== undefined && isFinite(Number(n.max))) constraints.push(expr + ' <= (' + Number(n.max) + ')');
+            });
+
+            var problem = {
+              vars: vars,
+              derived: derived,
+              constraints: constraints,
+              objective: costExpr,
+              dir: 'min',
+              resolution: Math.max(2, Math.min(200, Number(m.res) || 40))
+            };
+
+            var r = window.Opt.solveGrid(problem);
+            if (r.status !== 'ok') { m.error = r.message || '実行可能な配合が見つかりません（要件を満たせません）。'; return; }
+
+            var vv = r.best.values;
+            var amounts = mats.map(function (mat, idx) {
+              var amt = idx < others.length ? (vv[varNames[idx]] || 0) : (vv.xLast || 0);
+              var amtC = Math.max(0, Math.min(T, amt));
+              return { name: mat.name, value: amtC, cost: amtC * Number(mat.cost) };
+            });
+            var cost = amounts.reduce(function (s, a) { return s + a.cost; }, 0);
+            var nutriRes = nutrients.map(function (n) {
+              var values = mats.map(function (mat, idx) {
+                var amt = idx < others.length ? (amounts[idx].value) : amounts[mats.length - 1].value;
+                return amt * (Number(mat.amounts[n.name]) || 0);
+              });
+              var totalV = values.reduce(function (s, v) { return s + v; }, 0);
+              return { name: n.name, value: totalV, min: n.min, max: n.max };
+            });
+
+            m.result = { cost: cost, amounts: amounts, nutrients: nutriRes, evals: r.evals };
+            this.$nextTick(function () { this.drawCharts(4); });
+          } catch (e) { m.error = String(e.message || e); }
+        },
+
+        solveMergeS: function () {
+          var m = this.models.merge;
+          m.error = ''; m.result = null;
+          var r = window.Opt.solveMerge(m.rarities);
+          if (r.status === 'error') { m.error = r.message; return; }
+          m.result = r;
+          this.$nextTick(function () { this.drawCharts(5); });
+        },
+
+        solveCustom: function () {
+          var m = this.models.custom;
+          m.error = ''; m.result = null;
+          try {
+            var vars = [];
+            var self = this;
+            m.vars.forEach(function (v) {
+              if (!v.name || v.name === '') return;
+              var optsStr = (v.options || '').trim();
+              if (optsStr) {
+                var opts = optsStr.split(/[,、]/).map(function (s) { return Number(s); }).filter(function (x) { return isFinite(x); });
+                if (opts.length) { vars.push({ name: v.name, options: opts }); return; }
+              }
+              var lo = Number(v.min) || 0;
+              var hi = Number(v.max) || 1;
+              if (hi <= lo) hi = lo + 1;
+              vars.push({ name: v.name, min: lo, max: hi });
+            });
+            if (!vars.length) { m.error = '変数を1つ以上定義してください。'; return; }
+            if (!m.objective.trim()) { m.error = '目的式を入力してください。'; return; }
+            var constraints = String(m.constraints || '').split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l !== ''; });
+            var problem = {
+              vars: vars,
+              constraints: constraints,
+              objective: m.objective.trim(),
+              dir: m.dir,
+              resolution: Math.max(2, Math.min(500, Number(m.res) || 200))
+            };
+            var r = window.Opt.solveGrid(problem);
+            if (r.status !== 'ok') { m.error = r.message || '実行可能な解が見つかりません。'; return; }
+            var curve = null;
+            if (vars.length === 1 && !(vars[0].options && vars[0].options.length)) {
+              curve = [];
+              var lo = vars[0].min, hi = vars[0].max, N = 80;
+              for (var i = 0; i <= N; i++) {
+                var px = lo + (hi - lo) * i / N;
+                var o = {};
+                o[vars[0].name] = px;
+                var pt2 = window.Opt.evalPoint(problem, o);
+                if (pt2.feasible) curve.push({ x: px, y: pt2.value });
+              }
+            }
+            m.result = { r: r, curve: curve };
+            this.$nextTick(function () { this.drawCharts(6); });
+          } catch (e) { m.error = String(e.message || e); }
+        },
+
+        solveSensitivity: function () {
+          var m = this.models.sensitivity;
+          m.error = ''; m.result = null;
+          var pts = m.points.filter(function (p) {
+            return isFinite(Number(p.price)) && isFinite(Number(p.qty));
+          });
+          if (pts.length < 2) { m.error = '有効なデータを2点以上入力してください。'; return; }
+          var n = pts.length;
+          var sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, sumYY = 0;
+          pts.forEach(function (p) {
+            var x = Number(p.price), y = Number(p.qty);
+            sumX += x; sumY += y; sumXY += x * y; sumXX += x * x; sumYY += y * y;
+          });
+          var xm = sumX / n, ym = sumY / n;
+          var sxx = sumXX - n * xm * xm;
+          if (Math.abs(sxx) < 1e-12) { m.error = '価格がすべて同じ値です。異なる価格を入力してください。'; return; }
+          var slope = (sumXY - n * xm * ym) / sxx;
+          var intercept = ym - slope * xm;
+          var sxy = sumXY - n * xm * ym;
+          var syy = sumYY - n * ym * ym;
+          var r2 = (Math.abs(syy) < 1e-12) ? 1 : (sxy * sxy) / (sxx * syy);
+          m.result = { a: intercept, b: -slope, r2: r2, n: n };
+        },
+
+        applySensitivity: function () {
+          var r = this.models.sensitivity.result;
+          if (!r) return;
+          this.models.pricing.a = Number(r.a);
+          this.models.pricing.b = Number(r.b);
+          this.models.pricing.result = null;
+          this.models.pricing.error = '';
+          this.tab = 0;
+        },
+
+        // ---- グラフ ----
+        drawCharts: function (ti) {
+          var m = this.models;
+          if (ti === 0 && m.pricing.result) {
+            window.Opt.drawLineChart(this.$refs.chartPricing, m.pricing.result.curve, { title: '利益と価格', xlabel: '価格', ylabel: '利益', zeroLine: true, color: '#1976d2' });
+          } else if (ti === 1 && m.breakeven.result) {
+            window.Opt.drawLineChart(this.$refs.chartBreakeven, m.breakeven.result.curve, { title: '利益と数量', xlabel: '数量', ylabel: '利益', zeroLine: true, color: '#e67e22' });
+          } else if (ti === 2 && m.expected.result) {
+            var groups = m.expected.result.ranking.map(function (r) {
+              return { label: r.name, bars: [{ value: r.E, color: '#1976d2' }] };
+            });
+            window.Opt.drawBarChart(this.$refs.chartEV, groups, { title: '選択肢ごとの期待値' });
+          } else if (ti === 4 && m.mixing.result) {
+            window.Opt.drawBarChart(this.$refs.chartMix, m.mixing.result.amounts.map(function (a) {
+              return { label: a.name, bars: [{ value: a.value, color: '#388e3c' }] };
+            }), { title: '推奨する素材量' });
+          } else if (ti === 5 && m.merge.result) {
+            window.Opt.drawBarChart(this.$refs.chartMerge, m.merge.result.rows.map(function (rw) {
+              return { label: rw.name, bars: [{ value: rw.value, color: '#bdbdbd' }, { value: rw.W, color: '#1976d2' }] };
+            }), { title: 'アイテムの基本価値と最適期待値' });
+          } else if (ti === 6 && m.custom.result && m.custom.result.curve) {
+            window.Opt.drawLineChart(this.$refs.chartCustom, m.custom.result.curve, { title: '目的と' + this.customVarNames()[0], xlabel: this.customVarNames()[0], ylabel: '目的', zeroLine: true, color: '#1976d2' });
+          }
+        }
+      },
+      watch: {
+        tab: function (nv) {
+          this.$nextTick(function () { this.drawCharts(nv); });
+        }
+      },
+      mounted: function () {
+        var self = this;
+        var onResize = function () { self.$nextTick(function () { self.drawCharts(self.tab); }); };
+        window.addEventListener('resize', onResize);
+        this._optResize = onResize;
+      },
+      beforeDestroy: function () {
+        if (this._optResize) window.removeEventListener('resize', this._optResize);
+      }
+    });
+  </script>
+</body>
+
+</html>

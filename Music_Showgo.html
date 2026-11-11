@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="Asset/Image/Icon_1_2.png">
+    <link href="Asset/CSS/Common.css?v=1.5" rel="stylesheet" />
+
+    <title>Show-Go</title>
+    <meta name="description" content="About the beatboxer Show-Go who went viral on YouTube, with videos to play.">
+    <link rel="canonical" href="https://fum0000.github.io/FUM_WebSite/Music_Showgo.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="FUM Website">
+    <meta property="og:title" content="Show-Go">
+    <meta property="og:description" content="About the beatboxer Show-Go who went viral on YouTube, with videos to play.">
+    <meta property="og:url" content="https://fum0000.github.io/FUM_WebSite/Music_Showgo.html">
+    <meta property="og:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Show-Go">
+    <meta name="twitter:description" content="About the beatboxer Show-Go who went viral on YouTube, with videos to play.">
+    <meta name="twitter:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+    <style>
+        #YouTubePlayerContainer {
+            position: fixed;
+            bottom: 52px;
+            right: 20px;
+            width: 480px;
+            height: 270px;
+            z-index: -1;
+            pointer-events: auto;
+            transition: z-index 0.1s;
+        }
+
+        #YouTubePlayerContainer.active {
+            z-index: 5;
+        }
+
+        #ClosePlayerButton {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 12;
+            transition: background-color 0.3s;
+        }
+
+        #ClosePlayerButton:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        #PlaybackOptions {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            z-index: 12;
+        }
+
+        #PlaybackOptions label {
+            margin-right: 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        #PlaybackOptions input[type="radio"] {
+            margin-right: 4px;
+        }
+
+        .timeline-item-clickable {
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            #YouTubePlayerContainer {
+                width: 90vw;
+                height: calc(90vw * 9 / 16);
+                bottom: 52px;
+                right: 10px;
+            }
+
+            #ClosePlayerButton {
+                top: -36px;
+                right: 5px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            #PlaybackOptions {
+                top: -36px;
+                left: 5px;
+                padding: 6px;
+            }
+
+            #PlaybackOptions label {
+                font-size: 12px;
+                margin-right: 8px;
+            }
+        }
+    </style>
+    <meta name="robots" content="index, follow">
+</head>
+
+<body>
+
+    <v-app id="App" class="Gradient_Nature">
+        <template>
+
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Music > Show-Go</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container v-show="Ready_Page" fluid fill-height class="pa-5">
+
+                        <div id="YouTubePlayerContainer">
+                            <button id="ClosePlayerButton" @click="closePlayer" v-show="isPlayerActive">Close Player</button>
+                            <div id="PlaybackOptions" v-show="isPlayerActive">
+                                <label><input type="radio" name="playMode" value="loop" v-model="playMode"> Loop</label>
+                                <label><input type="radio" name="playMode" value="next" v-model="playMode"> Next Video</label>
+                            </div>
+                            <div id="YouTubePlayer"></div>
+                        </div>
+
+                        <div class="year-navigation-minimal" style="z-index: 1;">
+                            <v-btn @click="Toggle_PageNavigation" class="toggle-btn"
+                                style="color: white; background-color: transparent;">
+                                <v-icon>mdi-menu</v-icon>
+                            </v-btn>
+                            <div v-if="Showing_PageNavigation">
+                                <div v-for="year in Get_Years" :key="year" :style="{ color: Get_YearColor(year) }"
+                                    @click="Scroll_Year(year)" class="year-btn">
+                                    {{ year }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <v-row align="center" justify="center">
+                            <v-col cols="12" md="6">
+                                <v-card dark elevation="10" class="pa-6">
+
+                                    <v-row align="center" justify="center">
+                                        <v-col cols="12" md="8">
+                                            <h1 class="text-h3 font-weight-bold mb-4">Show-Go</h1>
+                                            <h2 class="text-h5 font-weight-light mb-6">Show-Go</h2>
+                                            <v-card class="mb-4" elevation="2">
+                                                <v-card-title>Artist Introduction</v-card-title>
+                                                <v-card-text>
+                                                    <p>　He gained attention through his performances on YouTube, which seamlessly blend musicality with advanced beatboxing techniques.</p>
+                                                    <p>　His music evokes the tranquility and natural beauty of Japan, harmonizing technical precision with an approachable sound. While exploring new forms of expression, he cherishes traditional musical elements and natural sensibilities, shaping his unique appeal.</p>
+                                                </v-card-text>
+                                            </v-card>
+                                        </v-col>
+                                    </v-row>
+
+                                </v-card>
+                            </v-col>
+                        </v-row>
+
+                        <v-row align="center" justify="center">
+                            <v-col cols="12" md="6">
+                                <v-timeline>
+                                    <v-timeline-item v-for="(content, i) in Contents" :key="i" :color="content.color"
+                                        small>
+                                        <template v-slot:opposite>
+                                            <span :style="`color: ${content.color};`"
+                                                :class="`headline font-weight-bold`" v-text="content.year"></span>
+                                        </template>
+                                        <v-row justify="center">
+                                            <v-col cols="12" md="8">
+                                                <h2 :style="`color: ${content.color};`"
+                                                    :class="`timeline-title font-weight-light mb-4`">
+                                                    {{ content.title }}
+                                                </h2>
+                                                <v-img :src="getThumbnailUrl(content.url)"
+                                                    class="Youtube_Animation timeline-item-clickable"
+                                                    @click="playVideo(content, i)" aspect-ratio="1.77"
+                                                    gradient="to top right, rgba(100,115,201,.1), rgba(25,32,72,.4)">
+                                                    <v-row class="fill-height ma-0" align="center" justify="center">
+                                                        <v-icon size="32" color="rgba(255, 255, 255, 0.7)">
+                                                            mdi-play-circle-outline</v-icon>
+                                                    </v-row>
+                                                </v-img>
+                                            </v-col>
+                                        </v-row>
+                                    </v-timeline-item>
+                                </v-timeline>
+                            </v-col>
+                        </v-row>
+
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+
+        </template>
+    </v-app>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js" integrity="sha384-smVS78N63G0uFpVH9bKdb+2YIW7Q9eFrle79imo+AWW6YLluQxAEK7kxLOt1bNex" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js" integrity="sha384-IufsRL4FQ+k4aWgxYvH6I1RoIrzL8Ynna+E/AavDQE9hD+UBZQLSTX2+7pPQWNsr" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha384-fJU6sGmyn07b+uD1nMk7/iSb4yvaowcueiQhfVgQuD98rfva8mcr1eSvjchfpMrH" crossorigin="anonymous"></script>
+    <script src="Asset/Javascript/Common.js?v=1.05"></script>
+
+    <script>
+        let vue = new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Youtube],
+            data: {
+                Contents: [
+                    { year: '2020/12', color: 'hsl(0, 75%, 65%)', title: 'A LOVESONG FOR KYOTO', url: 'https://www.youtube-nocookie.com/embed/dN_0salO_m0' },
+                    { year: '2021/04/06', color: 'hsl(40, 75%, 65%)', title: 'Jasmine', url: 'https://www.youtube-nocookie.com/embed/eg9_ymCEAF8' },
+                    { year: '2021/04/11', color: 'hsl(40, 75%, 65%)', title: 'SOMEHOW', url: 'https://www.youtube-nocookie.com/embed/lRPZw8isGGA' },
+                    { year: '2021/04/23', color: 'hsl(40, 75%, 65%)', title: 'A Lil Bit More', url: 'https://www.youtube-nocookie.com/embed/Jbp0f244FR8' },
+                    { year: '2021/05', color: 'hsl(80, 75%, 65%)', title: 'Outstanding', url: 'https://www.youtube-nocookie.com/embed/D-CqhAWMQzw' },
+                    { year: '2021/07', color: 'hsl(120, 75%, 65%)', title: 'Restless', url: 'https://www.youtube-nocookie.com/embed/204BiTEpo7s' },
+                    { year: '2021/09', color: 'hsl(160, 75%, 65%)', title: 'You\'re Gone', url: 'https://www.youtube-nocookie.com/embed/EyCbBHvMQh4' },
+                    { year: '2021/12', color: 'hsl(200, 75%, 65%)', title: 'Unforgettable', url: 'https://www.youtube-nocookie.com/embed/dx6sMwCHYqE' },
+                    { year: '2022/04/22', color: 'hsl(240, 75%, 65%)', title: 'Silver', url: 'https://www.youtube-nocookie.com/embed/yT3_vLQ3jbM' },
+                    { year: '2022/04/30', color: 'hsl(240, 75%, 65%)', title: 'Movement', url: 'https://www.youtube-nocookie.com/embed/U59lnLlU6S4' },
+                    { year: '2023/02', color: 'hsl(280, 75%, 65%)', title: 'Kuon', url: 'https://www.youtube-nocookie.com/embed/Ye9Qwzj1BEE' },
+                    { year: '2023/03', color: 'hsl(320, 75%, 65%)', title: 'Trial And Error', url: 'https://www.youtube-nocookie.com/embed/7b-ckCNA5oE' },
+                    { year: '2024/03', color: 'hsl(20, 75%, 65%)', title: 'Shine Bright!', url: 'https://www.youtube-nocookie.com/embed/VYB0dwezfdk' },
+                    { year: '2025/03', color: 'hsl(60, 75%, 65%)', title: 'Freesia', url: 'https://www.youtube-nocookie.com/embed/x5nJy2Lot8U' },
+                    { year: '2026/02', color: 'hsl(100, 75%, 65%)', title: 'Polaris', url: 'https://www.youtube-nocookie.com/embed/-YLaE6RDJ28' },
+                    { year: '2026/03', color: 'hsl(140, 75%, 65%)', title: 'Ocean Voices', url: 'https://www.youtube-nocookie.com/embed/PoJEp1fElNQ' },
+                ],
+                currentPlayer: null,
+                playerContainer: null,
+                closeButton: null,
+                playbackOptions: null,
+                playMode: 'loop',
+                currentVideoIndex: -1,
+                isErrorProcessing: false,
+
+                isPlayerActive: false, 
+            },
+            mounted() {
+                this.playerContainer = document.getElementById('YouTubePlayerContainer');
+                this.closeButton = document.getElementById('ClosePlayerButton');
+                this.playbackOptions = document.getElementById('PlaybackOptions');
+            },
+            methods: {
+                getThumbnailUrl(youtubeUrl) {
+                    const videoId = this.getVideoId(youtubeUrl);
+                    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '';
+                },
+                getVideoId(url) {
+                    if (!url) return null;
+                    const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube-nocookie\.com\/embed\/|youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/;
+                    const match = url.match(regex);
+                    return match ? match[1] : null;
+                },
+                playVideo(content, index) {
+                    this.currentVideoIndex = index;
+                    const videoId = this.getVideoId(content.url);
+                    if (!videoId) return;
+
+                    if (this.currentPlayer) {
+                        this.currentPlayer.destroy();
+                    }
+
+                    this.currentPlayer = new YT.Player('YouTubePlayer', {
+                        height: '100%',
+                        width: '100%',
+                        videoId: videoId,
+                        playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0 },
+                        events: {
+                            'onReady': this.onPlayerReady,
+                            'onStateChange': this.onPlayerStateChange,
+                            'onError': this.onPlayerError
+                        }
+                    });
+                },
+                onPlayerReady(event) {
+                    event.target.playVideo();
+                    this.playerContainer.classList.add('active');
+                    this.isPlayerActive = true; 
+                    this.isErrorProcessing = false;
+                },
+                onPlayerStateChange(event) {
+                    if (event.data === YT.PlayerState.ENDED) {
+                        if (this.playMode === 'loop') {
+                            event.target.playVideo();
+                        } else if (this.playMode === 'next') {
+                            this.playNextVideo();
+                        }
+                    }
+                },
+                onPlayerError(event) {
+                    if (this.isErrorProcessing) return;
+                    this.isErrorProcessing = true;
+                    console.error('YouTube Player error:', event.data);
+                    if (this.playMode === 'next') {
+                        this.playNextVideo();
+                    }
+                    setTimeout(() => { this.isErrorProcessing = false; }, 300);
+                },
+                closePlayer() {
+                    if (this.currentPlayer) {
+                        this.currentPlayer.destroy();
+                        this.currentPlayer = null;
+                        this.playerContainer.classList.remove('active');
+                        this.isPlayerActive = false;
+                        this.currentVideoIndex = -1;
+                        this.isErrorProcessing = false;
+                    }
+                },
+                playNextVideo() {
+                    if (this.currentVideoIndex === -1) return;
+                    const nextIndex = (this.currentVideoIndex + 1) % this.Contents.length;
+                    const nextContent = this.Contents[nextIndex];
+                    this.playVideo(nextContent, nextIndex);
+                }
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>

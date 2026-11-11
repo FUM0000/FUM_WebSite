@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="F U M">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B89KY0993B"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-B89KY0993B');
+    </script>
+
+    <link rel="icon" type="image/x-icon" href="Asset/Image/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="Asset/Image/Icon_1_2.png">
+    <link href="Asset/CSS/Common.css?v=1.5" rel="stylesheet" />
+
+    <title>Block Rush</title>
+    <meta name="description" content="Block Rush - a 3-minute block puzzle. Move the falling block, fill a full row to clear it, and score before time runs out.">
+    <link rel="canonical" href="https://fum0000.github.io/FUM_WebSite/Game_BlockRush.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="FUM Website">
+    <meta property="og:title" content="Block Rush">
+    <meta property="og:description" content="Block Rush - a 3-minute block puzzle. Move the falling block, fill a full row to clear it, and score before time runs out.">
+    <meta property="og:url" content="https://fum0000.github.io/FUM_WebSite/Game_BlockRush.html">
+    <meta property="og:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Block Rush">
+    <meta name="twitter:description" content="Block Rush - a 3-minute block puzzle. Move the falling block, fill a full row to clear it, and score before time runs out.">
+    <meta name="twitter:image" content="https://fum0000.github.io/FUM_WebSite/Asset/Image/Icon_1_2.png">
+    <meta name="robots" content="index, follow">
+
+    <style>
+        .blockrush-card {
+            background: #ffffff;
+            border: 1px solid rgba(120, 144, 156, 0.28);
+            border-radius: 22px !important;
+            box-shadow: 0 18px 48px rgba(38, 50, 56, 0.18) !important;
+        }
+
+        .blockrush-hud {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .blockrush-hud__item {
+            display: flex;
+            flex-direction: column;
+            min-width: 72px;
+        }
+
+        .blockrush-hud__label {
+            color: #78909c;
+            font-family: "Space Mono", monospace;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            line-height: 1.2;
+        }
+
+        .blockrush-hud__value {
+            color: #102a43;
+            font-family: "Space Mono", monospace;
+            font-size: 1.7rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .blockrush-hud__value--best {
+            color: #0284c7;
+        }
+
+        .blockrush-hud__value--time {
+            color: #0f766e;
+            transition: color 0.2s ease;
+        }
+
+        .blockrush-hud__value--time.is-low {
+            color: #dc2626;
+            animation: blockrush-time-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes blockrush-time-pulse {
+            50% {
+                opacity: 0.45;
+            }
+        }
+
+        .blockrush-stage {
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            background: #060a12;
+            box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.18);
+        }
+
+        #BlockRushCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 400 / 430;
+            touch-action: none;
+        }
+
+        .blockrush-gameover {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: rgba(4, 8, 16, 0.74);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            color: #f8fafc;
+            text-align: center;
+        }
+
+        .blockrush-fade-enter-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .blockrush-fade-leave-active {
+            transition: opacity 1s ease;
+        }
+
+        .blockrush-fade-enter,
+        .blockrush-fade-leave-to {
+            opacity: 0;
+        }
+
+        .blockrush-gameover__label {
+            font-family: "Space Grotesk", "Outfit", sans-serif;
+            font-size: clamp(1.7rem, 6vw, 2.4rem);
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            color: #fca5a5;
+            text-shadow: 0 0 24px rgba(248, 113, 113, 0.45);
+        }
+
+        .blockrush-gameover__score {
+            margin-bottom: 12px;
+            font-family: "Space Mono", monospace;
+            font-size: 1.1rem;
+            color: #bae6fd;
+        }
+
+        .blockrush-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .blockrush-controls .v-btn {
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .blockrush-help {
+            margin-top: 12px;
+            color: #78909c;
+            font-family: "Space Mono", monospace;
+            font-size: 0.68rem;
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
+
+        @media (max-width: 600px) {
+            .blockrush-hud {
+                gap: 6px;
+            }
+
+            .blockrush-hud__item {
+                min-width: 50px;
+            }
+
+            .blockrush-hud__value {
+                font-size: 1.2rem;
+            }
+
+            .blockrush-controls {
+                gap: 10px;
+            }
+
+            .blockrush-help {
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Block Rush</h1>
+
+    <v-app id="App" v-cloak>
+        <template>
+            <main-system-bar :drawer="Drawer" @change-drawer="ChangeDrawer">Game > Block Rush</main-system-bar>
+
+            <v-main id="Main">
+                <transition name="Fade_Page">
+                    <v-container fluid class="pa-4 pa-sm-6">
+                        <v-row justify="center">
+                            <v-col cols="12" sm="10" md="8" lg="6" xl="5">
+                                <v-card class="blockrush-card mx-auto pa-4 pa-sm-6" max-width="448">
+                                    <div class="blockrush-hud">
+                                        <div class="blockrush-hud__item">
+                                            <span class="blockrush-hud__label">TIME</span>
+                                            <span class="blockrush-hud__value blockrush-hud__value--time"
+                                                :class="{ 'is-low': timeLeft <= 30 && state === 'playing' }">{{ time }}</span>
+                                        </div>
+                                        <div class="blockrush-hud__item">
+                                            <span class="blockrush-hud__label">LINES</span>
+                                            <span class="blockrush-hud__value">{{ lines }}</span>
+                                        </div>
+                                        <div class="blockrush-hud__item">
+                                            <span class="blockrush-hud__label">SCORE</span>
+                                            <span class="blockrush-hud__value">{{ score }}</span>
+                                        </div>
+                                        <div class="blockrush-hud__item">
+                                            <span class="blockrush-hud__label">BEST</span>
+                                            <span class="blockrush-hud__value blockrush-hud__value--best">{{ best }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="blockrush-stage">
+                                        <canvas id="BlockRushCanvas" width="400" height="430"
+                                            aria-label="Block Rush game board"></canvas>
+
+                                        <transition name="blockrush-fade">
+                                            <div v-if="state === 'gameover'" class="blockrush-gameover">
+                                                <div class="blockrush-gameover__label">{{ reason === 'time' ? 'TIME UP' : 'GAME OVER' }}</div>
+                                                <div class="blockrush-gameover__score">{{ score }} points</div>
+                                                <v-btn color="primary" rounded large @click="restart">
+                                                    <v-icon left>mdi-restart</v-icon>
+                                                    Play Again
+                                                </v-btn>
+                                            </div>
+                                        </transition>
+                                    </div>
+
+                                    <div class="blockrush-controls">
+                                        <v-btn fab large color="blue-grey darken-4" @click="moveLeft"
+                                            aria-label="Move block left">
+                                            <v-icon large>mdi-chevron-left</v-icon>
+                                        </v-btn>
+
+                                        <v-btn fab large color="primary" @pointerdown.prevent="pressDrop"
+                                            @pointerleave="releaseDrop" @keydown.enter.prevent="pressDrop"
+                                            @keyup.enter="releaseDrop" @contextmenu.prevent
+                                            aria-label="Drop block (hold to drop faster)">
+                                            <v-icon large>mdi-chevron-down</v-icon>
+                                        </v-btn>
+
+                                        <v-btn fab large color="blue-grey darken-4" @click="moveRight"
+                                            aria-label="Move block right">
+                                            <v-icon large>mdi-chevron-right</v-icon>
+                                        </v-btn>
+                                    </div>
+
+                                    <div class="blockrush-help">
+                                        ← → move &nbsp;·&nbsp; ↓ hold to drop fast &nbsp;·&nbsp; R restart<br>
+                                        Orange blocks are obstacles and keep appearing over time
+                                    </div>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </transition>
+            </v-main>
+
+            <main-navigation :drawer="Drawer" @change-drawer="ChangeDrawer"></main-navigation>
+            <main-footer></main-footer>
+        </template>
+    </v-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js" integrity="sha384-smVS78N63G0uFpVH9bKdb+2YIW7Q9eFrle79imo+AWW6YLluQxAEK7kxLOt1bNex" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.js" integrity="sha384-IufsRL4FQ+k4aWgxYvH6I1RoIrzL8Ynna+E/AavDQE9hD+UBZQLSTX2+7pPQWNsr" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha384-fJU6sGmyn07b+uD1nMk7/iSb4yvaowcueiQhfVgQuD98rfva8mcr1eSvjchfpMrH" crossorigin="anonymous"></script>
+    <script src="Asset/Javascript/Common.js?v=1.05"></script>
+    <script src="Asset/Javascript/BlockRush.js?v=1.2"></script>
+
+    <script>
+        let BlockRushGameInstance = null;
+
+        new Vue({
+            el: '#App',
+            vuetify: new Vuetify(),
+            mixins: [window.Mixins_Common],
+            data: {
+                score: 0,
+                best: 0,
+                lines: 0,
+                time: '3:00',
+                timeLeft: 180,
+                reason: '',
+                state: 'playing'
+            },
+            methods: {
+                restart() {
+                    if (BlockRushGameInstance) BlockRushGameInstance.reset();
+                },
+                moveLeft() {
+                    if (BlockRushGameInstance) BlockRushGameInstance.move(-1);
+                },
+                moveRight() {
+                    if (BlockRushGameInstance) BlockRushGameInstance.move(1);
+                },
+                pressDrop() {
+                    if (BlockRushGameInstance) BlockRushGameInstance.pressDrop();
+                },
+                releaseDrop() {
+                    if (BlockRushGameInstance) BlockRushGameInstance.releaseDrop();
+                }
+            },
+            mounted() {
+                const vm = this;
+
+                BlockRushGameInstance = new BlockRushGame(
+                    document.getElementById('BlockRushCanvas'),
+                    {
+                        onChange(snapshot) {
+                            vm.score = snapshot.score;
+                            vm.best = snapshot.best;
+                            vm.lines = snapshot.lines;
+                            vm.time = snapshot.timeText;
+                            vm.timeLeft = snapshot.timeLeft;
+                            vm.reason = snapshot.reason;
+                            vm.state = snapshot.state;
+                        }
+                    }
+                );
+            },
+            beforeDestroy() {
+                if (BlockRushGameInstance) {
+                    BlockRushGameInstance.destroy();
+                    BlockRushGameInstance = null;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

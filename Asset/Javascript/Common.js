@@ -82,7 +82,7 @@ $(function () {
 
             // Settingから最新のBGM設定を取得
             Name = Get_Name_BGM();
-            audio.src = "../../Asset/Audio/BGM/" + Name;
+            audio.src = "Asset/Audio/BGM/" + Name;
 
             audio.oncanplaythrough = function () {
                 $this.removeClass("mdi-loading mdi-spin");
@@ -106,7 +106,7 @@ function Change_BGM() {
     if (Playing) {
         const audio = $("#BGM")[0];
         audio.pause();
-        audio.src = "../../Asset/Audio/BGM/" + Get_Name_BGM();
+        audio.src = "Asset/Audio/BGM/" + Get_Name_BGM();
         audio.play();
     }
 }
@@ -172,7 +172,7 @@ function Get_Page_Json_Path() {
             return src.replace(/Common\.js.*/, '') + '../Data/Page.json';
         }
     }
-    return '../../Asset/Data/Page.json';
+    return 'Asset/Data/Page.json';
 }
 function Build_Flat_Pages(_data) {
     const flat = [];
