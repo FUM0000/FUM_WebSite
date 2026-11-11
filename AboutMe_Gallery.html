@@ -2429,6 +2429,8 @@
                             }
                         }
 
+                        // パーティクルで登場するまで中心で待機し、勝手に歩き出さないようにする
+                        this._PauseAnimation = true;
                         this._Flag_Loaded = true;
                         this._PickRandomWanderDir();
                     },
@@ -2484,6 +2486,13 @@
             Update(playerFloor, isPlayerInElevator, playerPos, isCrouched, isMovingInput, deltaTime = null) {
                 if (!this._Flag_Loaded || !this._Object) return;
                 if (this._PauseAnimation) {
+                    // 登場前は中心(0, floorY, 0)で待機。床から浮かないようYも合わせる。
+                    const pausedFloorY = playerFloor * 5;
+                    if (!Manager._Elevator.isMoving &&
+                        (Math.abs(this.Position.x) > 0.001 || Math.abs(this.Position.z) > 0.001 ||
+                            Math.abs(this.Position.y - pausedFloorY) > 0.01)) {
+                        this.Position = new THREE.Vector3(0, pausedFloorY, 0);
+                    }
                     this._LastUpdateTime = performance.now();
                     return;
                 }
