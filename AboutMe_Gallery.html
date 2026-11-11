@@ -19,6 +19,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="Asset/Image/Icon_1_2.png">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="Asset/CSS/Game.css" rel="stylesheet" />
+    <link href="Asset/CSS/Loading.css" rel="stylesheet" />
 
     <title>Gallery</title>
     <meta name="description" content="An interactive 3D virtual gallery where you can walk around and view the author's artworks.">
@@ -39,6 +40,38 @@
 
 <body>
     <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Gallery</h1>
+
+    <!-- ローディング画面（猫の読み込み完了まで表示） -->
+    <div id="loading-overlay">
+        <div class="intro-circle">
+            <div class="inner-circle">
+                <div class="loading-galaxy-mask">
+                    <canvas id="loadingGalaxyCanvas" aria-hidden="true"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="text-orbit">
+            <span class="orbit-letter">F</span><span class="orbit-letter">U</span><span
+                class="orbit-letter">M</span><span class="orbit-letter"></span><span class="orbit-letter"></span><span
+                class="orbit-letter"></span><span class="orbit-letter"></span><span class="orbit-letter"></span><span
+                class="orbit-letter"></span><span class="orbit-letter"></span><span class="orbit-letter"></span><span
+                class="orbit-letter"></span>
+        </div>
+        <svg class="progress-ring" width="330" height="330" viewBox="-25 -25 330 330">
+            <path class="progress-ring-bg" id="loadingRingBg" fill="none" stroke="rgba(255,255,255,0.05)"
+                stroke-width="2.5" transform="rotate(-90 140 140)" />
+            <path class="progress-ring-fill" id="loadingRing" fill="none" stroke="#00ffcc"
+                stroke-width="2.5" stroke-linecap="round" stroke-dasharray="9999" stroke-dashoffset="9999"
+                transform="rotate(-90 140 140)" />
+        </svg>
+        <div class="loading-text">
+            <div class="loading-text-row">
+                <span class="loading-label">Loading</span>
+                <span class="loading-percent" id="loadingPercent">0%</span>
+            </div>
+            <span class="loading-stage" id="loadingStage">Initializing</span>
+        </div>
+    </div>
 
     <div id="Joystick_Left" class="Joystick_Area"></div>
     <div id="Joystick_Right" class="Joystick_Area"></div>
@@ -115,6 +148,493 @@
             FC_Player_Controller,
             FC_Manager,
         } from "./Asset/Javascript/Game.js";
+
+        // ===================== Loading Screen =====================
+        // index.html と同じローディング演出。猫(Cat)の読み込みが終わるまで表示する。
+        const _LoadingScreen = (() => {
+            const overlay = document.getElementById('loading-overlay');
+            if (!overlay) return { finish() { }, setStage() { }, isClosed() { return true; } };
+
+            const loadingRing = document.getElementById('loadingRing');
+            const loadingRingBg = document.getElementById('loadingRingBg');
+            const loadingPercent = document.getElementById('loadingPercent');
+            const loadingLabel = document.querySelector('.loading-label');
+            const progressRing = document.querySelector('.progress-ring');
+            const loadingStage = document.getElementById('loadingStage');
+            const loadingGalaxyCanvas = document.getElementById('loadingGalaxyCanvas');
+            const orbitContainer = document.querySelector('.text-orbit');
+            const innerCircle = document.querySelector('.inner-circle');
+
+            // ── 銀河円盤テクスチャ（低周波ノイズで滑らかなベースグロー） ──
+            function createGalaxyDiskTexture(seed, holeRadiusParam) {
+                const size = 512;
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.createImageData(size, size);
+                const data = imageData.data;
+
+                let s = seed || 1;
+                function rand() {
+                    s |= 0; s = (s + 0x6D2B79F5) | 0;
+                    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+                    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+                }
+
+                const perm = new Uint8Array(512);
+                const p = new Uint8Array(256);
+                for (let i = 0; i < 256; i++) p[i] = i;
+                for (let i = 255; i > 0; i--) {
+                    const j = Math.floor(rand() * (i + 1));
+                    const tmp = p[i]; p[i] = p[j]; p[j] = tmp;
+                }
+                for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+
+                function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+                function lerp(a, b, t) { return a + (b - a) * t; }
+                function grad(h, x, y) {
+                    const hh = h & 7;
+                    const u = hh < 4 ? x : y;
+                    const v = hh < 4 ? y : x;
+                    return ((hh & 1) ? -u : u) + ((hh & 2) ? -2 * v : 2 * v);
+                }
+                function noise(x, y) {
+                    const X = Math.floor(x) & 255;
+                    const Y = Math.floor(y) & 255;
+                    x -= Math.floor(x);
+                    y -= Math.floor(y);
+                    const u = fade(x);
+                    const v = fade(y);
+                    const A = perm[X] + Y;
+                    const B = perm[X + 1] + Y;
+                    return lerp(
+                        lerp(grad(perm[A], x, y), grad(perm[B], x - 1, y), u),
+                        lerp(grad(perm[A + 1], x, y - 1), grad(perm[B + 1], x - 1, y - 1), u),
+                        v
+                    );
+                }
+                function fbm(x, y) {
+                    let value = 0;
+                    let amp = 0.5;
+                    let freq = 1;
+                    for (let o = 0; o < 5; o++) {
+                        value += amp * noise(x * freq, y * freq);
+                        amp *= 0.5;
+                        freq *= 2;
+                    }
+                    return value;
+                }
+
+                const offX = rand() * 100;
+                const offY = rand() * 100;
+
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const nx = (x / size) * 2 - 1;
+                        const ny = (y / size) * 2 - 1;
+                        const dist = Math.sqrt(nx * nx + ny * ny);
+                        const falloff = Math.max(0, 1 - Math.max(0, (dist - 0.05) / 0.95));
+                        const falloffSoft = falloff * falloff * (3 - 2 * falloff);
+
+                        const holeRadius = holeRadiusParam !== undefined ? holeRadiusParam : 0.02;
+                        const holeFeather = 0.18;
+                        const holeMaskRaw = holeRadius > 0
+                            ? Math.max(0, Math.min(1, (dist - holeRadius) / holeFeather))
+                            : 1;
+                        const holeMask = holeMaskRaw;
+                        const holeSmooth = holeMask * holeMask * (3 - 2 * holeMask);
+
+                        const n = fbm(nx * 0.9 + offX, ny * 0.9 + offY);
+                        const n2 = fbm(nx * 2.1 + offX * 2, ny * 2.1 + offY * 2);
+
+                        const density = Math.max(0, n * 0.65 + 0.45);
+                        let alpha = Math.pow(density, 1.3) * falloffSoft * holeSmooth;
+                        alpha = Math.min(1, alpha);
+
+                        const mixT = Math.max(0, Math.min(1, (n2 + n) * 0.3 + 0.5));
+
+                        const warmT = Math.max(0, Math.min(1, (1 - dist) * 1.5));
+                        const coolR = lerp(185, 220, mixT);
+                        const coolG = lerp(225, 250, mixT);
+                        const coolB = lerp(235, 255, mixT);
+                        let r = lerp(coolR, 255, warmT * 0.9);
+                        let g = lerp(coolG, 215, warmT * 0.9);
+                        let b = lerp(coolB, 115, warmT * 0.9);
+
+                        const luma = r * 0.299 + g * 0.587 + b * 0.114;
+                        const sat = 1.35;
+                        r = Math.max(0, luma + (r - luma) * sat);
+                        g = Math.max(0, luma + (g - luma) * sat);
+                        b = Math.max(0, luma + (b - luma) * sat);
+
+                        const idx = (y * size + x) * 4;
+                        data[idx] = r;
+                        data[idx + 1] = g;
+                        data[idx + 2] = b;
+                        data[idx + 3] = alpha * 255;
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+                return new THREE.CanvasTexture(canvas);
+            }
+
+            // ── 銀河全体を覆う円盤（xz平面に寝かせた1枚板） ──
+            function createGalaxyDiskMesh(parent, opts) {
+                opts = opts || {};
+                const size = opts.size || 420;
+                const opacity = opts.opacity || 0.3;
+                const tex = createGalaxyDiskTexture(opts.seed || 7, opts.holeRadius);
+                const geometry = new THREE.PlaneGeometry(size, size);
+                const material = new THREE.MeshBasicMaterial({
+                    map: tex,
+                    transparent: true,
+                    opacity: opacity,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    fog: false,
+                    side: THREE.DoubleSide
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.position.y = opts.y || 0;
+                mesh.renderOrder = opts.renderOrder || 1;
+                parent.add(mesh);
+                return mesh;
+            }
+
+            // ── ローディング用の渦巻銀河 ──
+            const setupLoadingGalaxy = (canvas, opts) => {
+                if (!canvas) return null;
+                opts = opts || {};
+
+                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+                renderer.setClearColor(0x000000, 0);
+                renderer.outputEncoding = THREE.sRGBEncoding;
+
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 2000);
+                camera.position.set(0, 600, 0);
+                camera.up.set(0, 0, -1);
+                camera.lookAt(0, 0, 0);
+
+                const galaxyGroup = new THREE.Group();
+                scene.add(galaxyGroup);
+
+                const ambientLight = new THREE.AmbientLight(0xa8bfff, 0.05);
+                scene.add(ambientLight);
+
+                function createLoadingParticleTexture() {
+                    const s = 32;
+                    const c = document.createElement('canvas');
+                    c.width = c.height = s;
+                    const ctx = c.getContext('2d');
+                    const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+                    g.addColorStop(0, 'rgba(255,255,255,1)');
+                    g.addColorStop(0.3, 'rgba(255,255,255,0.85)');
+                    g.addColorStop(0.6, 'rgba(255,255,255,0.2)');
+                    g.addColorStop(1, 'rgba(255,255,255,0)');
+                    ctx.fillStyle = g;
+                    ctx.fillRect(0, 0, s, s);
+                    return new THREE.CanvasTexture(c);
+                }
+                const loadingParticleTex = createLoadingParticleTexture();
+
+                const milkyWayTotal = 5000;
+                const armConfig = [
+                    { armCount: 2, weight: 0.65, twist: 0.045, scatterBase: 0.4, scatterGrowth: 0.008 },
+                    { armCount: 2, weight: 0.35, twist: 0.030, scatterBase: 0.6, scatterGrowth: 0.012 },
+                ];
+                const diskSpread = 10;
+                const starSizeGroups = [
+                    { ratio: 0.40, size: 0.18, opacity: 1.0 },
+                    { ratio: 0.30, size: 0.35, opacity: 1.0 },
+                    { ratio: 0.18, size: 0.6, opacity: 1.0 },
+                    { ratio: 0.09, size: 1.0, opacity: 1.0 },
+                    { ratio: 0.03, size: 2.0, opacity: 1.0 },
+                ];
+
+                for (let g = 0; g < starSizeGroups.length; g++) {
+                    const group = starSizeGroups[g];
+                    const count = Math.floor(milkyWayTotal * group.ratio);
+                    if (count < 5) continue;
+                    const positions = new Float32Array(count * 3);
+                    const colors = new Float32Array(count * 3);
+
+                    for (let i = 0; i < count; i++) {
+                        const isMain = Math.random() < armConfig[0].weight;
+                        const cfg = isMain ? armConfig[0] : armConfig[1];
+                        const armIdx = Math.floor(Math.random() * cfg.armCount);
+                        const baseAngle = (Math.PI * 2 * armIdx) / cfg.armCount;
+
+                        const radius = 10 + Math.pow(Math.random(), 0.65) * 190;
+                        const armAngle = radius * cfg.twist;
+                        const scatter = cfg.scatterBase + cfg.scatterGrowth * radius;
+                        const angle = baseAngle + armAngle + (Math.random() - 0.5) * scatter;
+
+                        const x = Math.cos(angle) * radius + (Math.random() - 0.5) * diskSpread;
+                        const y = (Math.random() - 0.5) * (diskSpread * 0.3);
+                        const z = Math.sin(angle) * radius + (Math.random() - 0.5) * diskSpread;
+
+                        let color;
+                        const t = radius / 200;
+                        const isOrangeSpot = Math.random() < 0.18;
+                        if (isOrangeSpot) {
+                            color = new THREE.Color().setHSL(0.07 + Math.random() * 0.06, 0.5 + Math.random() * 0.3, 0.6 + Math.random() * 0.3);
+                        } else if (t < 0.18) {
+                            color = new THREE.Color().setHSL(0.07 + Math.random() * 0.05, 0.5 + Math.random() * 0.3, 0.6 + Math.random() * 0.25);
+                        } else {
+                            color = new THREE.Color().setHSL(0.58 + Math.random() * 0.07, 0.15 + Math.random() * 0.2, 0.85 + Math.random() * 0.15);
+                        }
+
+                        positions[i * 3] = x;
+                        positions[i * 3 + 1] = y;
+                        positions[i * 3 + 2] = z;
+                        colors[i * 3] = color.r;
+                        colors[i * 3 + 1] = color.g;
+                        colors[i * 3 + 2] = color.b;
+                    }
+
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                    const material = new THREE.PointsMaterial({
+                        map: loadingParticleTex,
+                        vertexColors: true,
+                        size: group.size,
+                        transparent: true,
+                        opacity: group.opacity,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        sizeAttenuation: true
+                    });
+                    galaxyGroup.add(new THREE.Points(geometry, material));
+                }
+
+                const coreCount = 420;
+                const corePositions = new Float32Array(coreCount * 3);
+                const coreColors = new Float32Array(coreCount * 3);
+                for (let i = 0; i < coreCount; i++) {
+                    const radius = Math.pow(Math.random(), 1.9) * 3.4;
+                    const angle = Math.random() * Math.PI * 2;
+                    corePositions[i * 3] = Math.cos(angle) * radius;
+                    corePositions[i * 3 + 1] = (Math.random() - 0.5) * 0.08;
+                    corePositions[i * 3 + 2] = Math.sin(angle) * radius;
+
+                    const color = new THREE.Color().setHSL(0.08 + Math.random() * 0.04, 0.5 + Math.random() * 0.3, 0.7 + Math.random() * 0.25);
+                    coreColors[i * 3] = color.r;
+                    coreColors[i * 3 + 1] = color.g;
+                    coreColors[i * 3 + 2] = color.b;
+                }
+                const coreGeometry = new THREE.BufferGeometry();
+                coreGeometry.setAttribute('position', new THREE.BufferAttribute(corePositions, 3));
+                coreGeometry.setAttribute('color', new THREE.BufferAttribute(coreColors, 3));
+                const coreMaterial = new THREE.PointsMaterial({
+                    size: 0.52,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.09,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    sizeAttenuation: true
+                });
+                const core = new THREE.Points(coreGeometry, coreMaterial);
+                galaxyGroup.add(core);
+
+                const blackholeRadius = 4.5;
+                const blackholeSphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(blackholeRadius, 48, 48),
+                    new THREE.MeshBasicMaterial({ color: 0x000000 })
+                );
+                blackholeSphere.position.set(0, 0, 0);
+                galaxyGroup.add(blackholeSphere);
+
+                createGalaxyDiskMesh(galaxyGroup, {
+                    size: 700,
+                    opacity: 0.25,
+                    seed: 7,
+                    y: 0,
+                    holeRadius: opts.holeRadius !== undefined ? opts.holeRadius : 0.02
+                });
+
+                let rafId = 0;
+                let active = true;
+                const clock = new THREE.Clock();
+
+                const resize = () => {
+                    const size = canvas.parentElement?.clientWidth || 198;
+                    renderer.setSize(size, size, false);
+                    camera.aspect = 1;
+                    camera.updateProjectionMatrix();
+                };
+
+                const animateGalaxy = () => {
+                    if (!active) return;
+                    rafId = requestAnimationFrame(animateGalaxy);
+                    const delta = clock.getDelta();
+                    const elapsed = clock.elapsedTime;
+                    const galaxySpeed = 0.08;
+                    galaxyGroup.rotation.y += delta * galaxySpeed;
+                    galaxyGroup.rotation.x = 0;
+                    core.material.opacity = 0.085 + Math.sin(elapsed * 1.8) * 0.006;
+                    renderer.render(scene, camera);
+                };
+
+                resize();
+                animateGalaxy();
+                window.addEventListener('resize', resize);
+
+                return () => {
+                    active = false;
+                    cancelAnimationFrame(rafId);
+                    window.removeEventListener('resize', resize);
+                    galaxyGroup.children.forEach(child => {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) child.material.dispose();
+                    });
+                    renderer.dispose();
+                };
+            };
+
+            let destroyLoadingGalaxy = setupLoadingGalaxy(loadingGalaxyCanvas, { holeRadius: 0 });
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    overlay.classList.add('is-visible');
+                });
+            });
+
+            // 周回する FUM の文字を配置
+            if (orbitContainer) {
+                const letters = orbitContainer.querySelectorAll('.orbit-letter');
+                const letterCount = letters.length;
+                const radius = 112.5;
+                const angleStep = 360 / letterCount;
+                letters.forEach((letter, index) => {
+                    const angleDeg = index * angleStep - 90;
+                    const angleRad = angleDeg * (Math.PI / 180);
+                    const x = radius * Math.cos(angleRad);
+                    const y = radius * Math.sin(angleRad);
+                    letter.style.left = `calc(50% + ${x}px)`;
+                    letter.style.top = `calc(50% + ${y}px)`;
+                    letter.style.transform = `translate(-50%, -50%) rotate(${index * angleStep}deg)`;
+                    setTimeout(() => letter.classList.add('positioned'), index * 50);
+                });
+            }
+
+            // 波打つプログレスリングのパス
+            let circumference = 0;
+            if (loadingRing) {
+                const RING_CENTER = 140;
+                const RING_RADIUS = 146;
+                const WAVE_COUNT = 8;
+                const WAVE_AMPLITUDE = 12;
+                const WAVE_STEPS = 720;
+                let ringPathData = '';
+                for (let i = 0; i <= WAVE_STEPS; i++) {
+                    const t = (i / WAVE_STEPS) * Math.PI * 2;
+                    const r = RING_RADIUS + WAVE_AMPLITUDE * Math.sin(WAVE_COUNT * t);
+                    const x = RING_CENTER + r * Math.cos(t);
+                    const y = RING_CENTER + r * Math.sin(t);
+                    ringPathData += (i === 0 ? 'M' : 'L') + x.toFixed(2) + ' ' + y.toFixed(2);
+                    if (i !== WAVE_STEPS) ringPathData += ' ';
+                }
+                loadingRing.setAttribute('d', ringPathData);
+                if (loadingRingBg) loadingRingBg.setAttribute('d', ringPathData);
+                circumference = loadingRing.getTotalLength();
+                loadingRing.style.transition = 'none';
+                loadingRing.style.strokeDasharray = circumference;
+                loadingRing.style.strokeDashoffset = circumference;
+                void loadingRing.getBoundingClientRect();
+                loadingRing.style.transition = '';
+            }
+
+            if (loadingLabel) loadingLabel.classList.add('glitch');
+            if (loadingPercent) loadingPercent.classList.add('glitch');
+            if (progressRing) progressRing.classList.add('glitch');
+
+            // 文字の周回
+            let orbitAngle = 0;
+            let lastRafTime = 0;
+            let removed = false;
+            function tickRotation(time) {
+                if (removed) return;
+                if (!lastRafTime) lastRafTime = time;
+                const delta = Math.min((time - lastRafTime) / 16.67, 3);
+                lastRafTime = time;
+                if (orbitContainer) {
+                    orbitAngle += 2 * delta;
+                    orbitContainer.style.transform = `translate(-50%, -50%) rotate(${orbitAngle}deg)`;
+                }
+                requestAnimationFrame(tickRotation);
+            }
+            requestAnimationFrame(tickRotation);
+
+            const MIN_DURATION = 3200;
+            const MAX_DURATION = 20000;
+            const startTime = performance.now();
+            let progress = 0;
+            let finishRequested = false;
+            let done = false;
+
+            const renderProgress = () => {
+                if (loadingRing && circumference) {
+                    loadingRing.style.strokeDashoffset = circumference * (1 - progress / 100);
+                }
+                if (loadingPercent) loadingPercent.textContent = Math.round(progress) + '%';
+                if (loadingStage) {
+                    loadingStage.textContent = finishRequested
+                        ? (progress >= 100 ? 'Ready' : 'Almost ready')
+                        : 'Loading cat';
+                }
+                if (innerCircle) {
+                    const n = progress / 100;
+                    innerCircle.style.boxShadow = `0 0 ${n * 15}px rgba(0,100,150,${0.2 + n * 0.5})`;
+                }
+            };
+
+            const cleanup = () => {
+                if (removed) return;
+                removed = true;
+                if (destroyLoadingGalaxy) { destroyLoadingGalaxy(); destroyLoadingGalaxy = null; }
+                overlay.remove();
+            };
+
+            const finishNow = () => {
+                if (done) return;
+                done = true;
+                clearInterval(timer);
+                overlay.classList.add('fade-out');
+                setTimeout(cleanup, 2000);
+            };
+
+            const timer = setInterval(() => {
+                if (done) return;
+                const elapsed = performance.now() - startTime;
+                if (!finishRequested && elapsed >= MAX_DURATION) finishRequested = true;
+                // 猫の読み込みが終わっても、最低表示時間(MIN_DURATION)は確保する
+                const readyToFinish = finishRequested && elapsed >= MIN_DURATION;
+                const target = readyToFinish ? 100 : Math.min(90, (elapsed / MIN_DURATION) * 90);
+                progress += (target - progress) * (readyToFinish ? 0.3 : 0.08) + (readyToFinish ? 1.2 : 0.05);
+                if (progress > 100) progress = 100;
+                renderProgress();
+                if (readyToFinish && progress >= 99.9) {
+                    progress = 100;
+                    renderProgress();
+                    finishNow();
+                }
+            }, 50);
+
+            renderProgress();
+
+            return {
+                finish() { if (!done) finishRequested = true; },
+                setStage(text) { if (loadingStage && !finishRequested) loadingStage.textContent = text; },
+                isClosed() { return removed; },
+            };
+        })();
+
         const Scene = new THREE.Scene();
         const Renderer = new THREE.WebGLRenderer({ canvas: document.querySelector("#Canvas"), antialias: true });
         Scene.fog = new THREE.Fog(0x070B14, 0, 6);
@@ -4431,6 +4951,7 @@
             _MorphParticles = null;
             _MorphTriggered = false;
             _CatAppearComplete = false;
+            _LoadingRevealed = false;
             _Aurora = null;
             _MorphPostTimer = null;
             _LastFrameTime = null;
@@ -4786,6 +5307,11 @@
                         Manager.Update_System();
                     }
                 }
+                // 猫(Cat)とシーンの読み込みが終わったらローディング画面を閉じる
+                if (!this._LoadingRevealed && this.Loaded && Cat && Cat._Flag_Loaded) {
+                    this._LoadingRevealed = true;
+                    _LoadingScreen.finish();
+                }
                 if (_MC_Enabled) {
                     Renderer.setRenderTarget(_SampledTarget);
                     Renderer.render(Scene, Camera.Object);
@@ -5125,7 +5651,7 @@
                 const isMovingInput = this._Input_Move.length() > 0;
                 Cat.Update(playerFloor, isInElevator, Player.Position, isCrouched, isMovingInput, this._RealDelta);
 
-                if (!this._MorphTriggered && Cat._Flag_Loaded && this._MorphParticles && this._Elevator) {
+                if (!this._MorphTriggered && _LoadingScreen.isClosed() && Cat._Flag_Loaded && this._MorphParticles && this._Elevator) {
                     const targets = Cat._CollectMorphTargets(500);
                     if (targets.length > 0) {
                         Cat._PauseAnimation = true;
