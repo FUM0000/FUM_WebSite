@@ -751,7 +751,8 @@
                 if (targetFloor < 0 || targetFloor >= this.floors) return;
                 if (targetFloor === this.currentFloor) return;
 
-                const catInElevator = Cat && Cat._Flag_Loaded && Cat._Object &&
+                const catAppeared = typeof Manager !== 'undefined' && Manager && Manager._CatAppearComplete;
+                const catInElevator = catAppeared && Cat && Cat._Flag_Loaded && Cat._Object &&
                     this.checkCatInElevator(Cat);
 
                 if (!catInElevator) {
@@ -1080,19 +1081,35 @@
                 this._scene.add(this._points);
             }
 
-            Start(playerPos, targets) {
+            Start(playerPos, targets, baseY = null) {
                 this._Active = true;
                 this._Done = false;
                 this._Time = 0;
                 this._points.visible = true;
 
+                // Spawn the burst around the cat and on the SAME floor as the cat,
+                // so the effect never reaches across the floor slabs.
+                let centerX = 0, centerZ = 0;
+                const targetCount = targets.length / 3;
+                for (let i = 0; i < targetCount; i++) {
+                    centerX += targets[i * 3];
+                    centerZ += targets[i * 3 + 2];
+                }
+                if (targetCount > 0) {
+                    centerX /= targetCount;
+                    centerZ /= targetCount;
+                }
+                const floorY = baseY !== null
+                    ? baseY
+                    : (playerPos ? playerPos.y - (1.74 - 0.08) : 0);
+
                 const numTargets = Math.max(1, Math.floor(targets.length / 3));
                 for (let i = 0; i < this._count; i++) {
                     const angle = Math.random() * Math.PI * 2;
                     const r = Math.random() * 2.0;
-                    const sx = Math.cos(angle) * r;
-                    const sy = -5.0 + (Math.random() - 0.5) * 0.8;
-                    const sz = Math.sin(angle) * r;
+                    const sx = centerX + Math.cos(angle) * r;
+                    const sy = floorY + (Math.random() - 0.5) * 0.8;
+                    const sz = centerZ + Math.sin(angle) * r;
                     this._startPos[i * 3] = sx;
                     this._startPos[i * 3 + 1] = sy;
                     this._startPos[i * 3 + 2] = sz;
@@ -4413,6 +4430,7 @@
             _FishVizTriggered = false;
             _MorphParticles = null;
             _MorphTriggered = false;
+            _CatAppearComplete = false;
             _Aurora = null;
             _MorphPostTimer = null;
             _LastFrameTime = null;
@@ -4892,7 +4910,7 @@
                     this._Elevator.Update(t);
                 }
                 if (this._Elevator && this._Elevator._waitingForCat) {
-                    const catInElevator = Cat && Cat._Flag_Loaded && Cat._Object &&
+                    const catInElevator = this._CatAppearComplete && Cat && Cat._Flag_Loaded && Cat._Object &&
                         this._Elevator.checkCatInElevator(Cat);
                     if (catInElevator) {
                         this._Elevator._startElevator(this._Elevator._pendingPlayer, this._Elevator._pendingTargetFloor);
@@ -5112,7 +5130,8 @@
                     if (targets.length > 0) {
                         Cat._PauseAnimation = true;
                         Cat.CapturePointsSnapshot();
-                        this._MorphParticles.Start(Player.Position, targets);
+                        const morphFloorBaseY = this.getFloorIndexFromY(Player.Position.y) * this._Floor_Height;
+                        this._MorphParticles.Start(Player.Position, targets, morphFloorBaseY);
                         this._MorphTriggered = true;
                     }
                 }
@@ -5132,6 +5151,7 @@
                             this._MorphParticles.destructor();
                             this._MorphParticles = null;
                             this._MorphPostTimer = null;
+                            this._CatAppearComplete = true;
                         }
                     } else if (this._MorphParticles._Active) {
                         this._MorphParticles.Update(this._RealDelta);
