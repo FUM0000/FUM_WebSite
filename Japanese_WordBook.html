@@ -330,6 +330,37 @@
             vertical-align: middle;
         }
 
+        .wordbook-save-slot {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: #f5f7fa;
+            margin-bottom: 8px;
+        }
+
+        .wordbook-save-slot:last-child {
+            margin-bottom: 0;
+        }
+
+        .wordbook-save-slot--active {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+        }
+
+        .wordbook-save-slot__name {
+            font-size: 13px;
+            font-weight: 800;
+            color: #263238;
+        }
+
+        .wordbook-save-slot__meta {
+            margin-top: 2px;
+            font-size: 11px;
+            color: #78909c;
+        }
+
         .wordbook-table {
             border-radius: 10px;
             overflow: hidden;
@@ -1224,6 +1255,56 @@
                                     </div>
                                 </div>
 
+                                <!-- Settings -->
+                                <div v-else-if="Active_Tab === 'setting'">
+                                    <div class="wordbook-toolbar">
+                                        <div>
+                                            <div class="wordbook-toolbar__title">Settings</div>
+                                            <div class="wordbook-panel__sub">Switch or delete your save data</div>
+                                        </div>
+                                    </div>
+
+                                    <v-row dense>
+                                        <v-col cols="12" md="8" lg="7">
+                                            <v-card outlined class="wordbook-panel">
+                                                <div class="wordbook-panel__head">
+                                                    <div>
+                                                        <div class="wordbook-panel__title">Save Data</div>
+                                                        <div class="wordbook-panel__sub">{{ Save_Slots.length }} slots · the active slot is used everywhere</div>
+                                                    </div>
+                                                    <v-icon color="blue-grey darken-1">mdi-content-save-cog-outline</v-icon>
+                                                </div>
+
+                                                <div v-for="slot in Save_Slots" :key="slot.index"
+                                                    class="wordbook-save-slot" :class="{ 'wordbook-save-slot--active': slot.active }">
+                                                    <div class="flex-grow-1">
+                                                        <div class="wordbook-save-slot__name">
+                                                            Slot {{ slot.index + 1 }}
+                                                            <v-chip v-if="slot.active" x-small color="primary" text-color="white" class="ml-2">Active</v-chip>
+                                                        </div>
+                                                        <div class="wordbook-save-slot__meta">
+                                                            Level {{ slot.level }} · {{ slot.points.toLocaleString('en-US') }} pts ·
+                                                            {{ slot.weak }} tricky · {{ slot.graduated }} graduated
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex flex-shrink-0">
+                                                        <v-btn v-if="!slot.active" small text color="primary" @click="Select_Save_Slot(slot.index)">Switch</v-btn>
+                                                        <v-btn small text color="red darken-1" title="Delete this slot"
+                                                            aria-label="Delete this slot" @click="Open_Delete_Dialog(slot.index)">
+                                                            <v-icon small>mdi-delete-outline</v-icon>
+                                                        </v-btn>
+                                                    </div>
+                                                </div>
+
+                                                <div class="text-caption grey--text text--darken-1 mt-3">
+                                                    Switching a slot changes the records used by every word card page.
+                                                    Deleting a slot erases its points, level, tricky and graduated words, trophies and history.
+                                                </div>
+                                            </v-card>
+                                        </v-col>
+                                    </v-row>
+                                </div>
+
                             </v-card-text>
                         </v-card>
 
@@ -1281,6 +1362,33 @@
                 </v-card>
             </v-dialog>
 
+            <!-- Save slot delete confirmation -->
+            <v-dialog v-model="Slot_Delete_Dialog" max-width="440">
+                <v-card>
+                    <v-system-bar>Delete Save Data</v-system-bar>
+                    <v-card-text class="pt-4">
+                        <div class="font-weight-bold">Delete save slot {{ Slot_Delete_Target + 1 }}?</div>
+                        <div class="text-body-2 grey--text text--darken-1 mt-2">
+                            Everything saved in this slot will be erased: points, level, tricky and graduated words, trophies and history.
+                            This cannot be undone.
+                        </div>
+                        <div v-if="Save_Slots[Slot_Delete_Target]" class="wordbook-save-slot mt-3">
+                            <div class="wordbook-save-slot__meta">
+                                Level {{ Save_Slots[Slot_Delete_Target].level }} ·
+                                {{ Save_Slots[Slot_Delete_Target].points.toLocaleString('en-US') }} pts ·
+                                {{ Save_Slots[Slot_Delete_Target].weak }} tricky ·
+                                {{ Save_Slots[Slot_Delete_Target].graduated }} graduated
+                            </div>
+                        </div>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn text @click="Slot_Delete_Dialog = false">Cancel</v-btn>
+                        <v-btn color="red darken-1" dark @click="Confirm_Delete_Slot">Delete</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
         </template>
     </v-app>
 
@@ -1326,11 +1434,16 @@
                 Snackbar: false,
                 Snackbar_Text: '',
                 Points_Dialog: false,
+                Save_Slots: [],
+                Save_Notified_Slot: -1,
+                Slot_Delete_Dialog: false,
+                Slot_Delete_Target: 0,
                 Tabs: [
                     { value: 'overview', label: 'Overview', icon: 'mdi-view-dashboard-outline' },
                     { value: 'weak', label: 'Tricky Words', icon: 'mdi-bookmark-multiple-outline' },
                     { value: 'graduated', label: 'Graduated Words', icon: 'mdi-check-circle-outline' },
-                    { value: 'trophies', label: 'Trophies', icon: 'mdi-trophy-outline' }
+                    { value: 'trophies', label: 'Trophies', icon: 'mdi-trophy-outline' },
+                    { value: 'setting', label: 'Setting', icon: 'mdi-cog-outline' }
                 ],
                 Sort_Options: [
                     { text: 'Newest first', value: 'newest' },
@@ -1662,18 +1775,24 @@
                 },
                 Refresh_All(notify) {
                     if (!window.FUM_WordBook) return;
-                    this.Stats = window.FUM_WordBook.Get_Stats();
-                    this.Weak_Words = window.FUM_WordBook.Get_Weak();
-                    this.Graduated_Words = window.FUM_WordBook.Get_Graduated();
-                    this.History = window.FUM_WordBook.Get_History();
+                    const store = window.FUM_WordBook;
+                    this.Stats = store.Get_Stats();
+                    this.Weak_Words = store.Get_Weak();
+                    this.Graduated_Words = store.Get_Graduated();
+                    this.History = store.Get_History();
+                    this.Save_Slots = store.Get_Slots();
 
-                    const previous = this.Unlocked_Ids || [];
-                    this.Trophies = window.FUM_WordBook.Get_Trophies();
+                    this.Trophies = store.Get_Trophies();
                     const unlocked = this.Trophies.filter(function (trophy) { return trophy.unlocked; }).map(function (trophy) {
                         return trophy.id;
                     });
 
-                    if (notify) {
+                    // Announce only trophies earned while staying in the same
+                    // save slot, so switching to a slot that already has them
+                    // does not replay the notifications.
+                    const activeSlot = store.Get_Active_Slot();
+                    if (notify && this.Save_Notified_Slot === activeSlot) {
+                        const previous = this.Unlocked_Ids || [];
                         const newly = unlocked.filter(function (id) { return previous.indexOf(id) === -1; });
                         if (newly.length) {
                             const names = this.Trophies.filter(function (trophy) {
@@ -1685,6 +1804,22 @@
                         }
                     }
                     this.Unlocked_Ids = unlocked;
+                    this.Save_Notified_Slot = activeSlot;
+                },
+                Select_Save_Slot(index) {
+                    if (!window.FUM_WordBook.Select_Slot(index)) return;
+                    this.Notify('Switched to save slot ' + (Number(index) + 1) + '.');
+                },
+                Open_Delete_Dialog(index) {
+                    this.Slot_Delete_Target = Math.floor(Number(index) || 0);
+                    this.Slot_Delete_Dialog = true;
+                },
+                Confirm_Delete_Slot() {
+                    const index = this.Slot_Delete_Target;
+                    this.Slot_Delete_Dialog = false;
+                    if (!window.FUM_WordBook.Delete_Slot(index)) return;
+                    this.Notify('Save slot ' + (index + 1) + ' deleted.');
+                    this.Refresh_All(false);
                 },
                 Reset_Filters() {
                     this.Search_Text = '';

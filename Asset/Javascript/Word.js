@@ -47,8 +47,51 @@
             // No CustomEvent support: pages keep the previous view until reload.
         }
     }
+
+    // Save slots. Every record lives in a per-slot namespace so two
+    // separate saves can be kept and switched between.
+    const SAVE_SLOTS = 2;
+    const STORAGE_SAVE_SLOT = 'fum-wordbook-save-slot-v1';
+    const SLOT_RECORD_KEYS = [STORAGE_WEAK, STORAGE_GRADUATED, STORAGE_STATS, STORAGE_TROPHIES, STORAGE_HISTORY, STORAGE_FLIP_GUARD, STORAGE_REVIEW_GUARD];
+    function Slot_Meta() {
+        const meta = Read_Json(STORAGE_SAVE_SLOT, { active: 0 });
+        return meta && typeof meta === 'object' ? meta : { active: 0 };
+    }
+    function Get_Active_Slot() {
+        const active = Math.floor(Number(Slot_Meta().active) || 0);
+        return active >= 0 && active < SAVE_SLOTS ? active : 0;
+    }
+    function Slot_Key(_key) {
+        return _key + '-s' + Get_Active_Slot();
+    }
+    function Read_Save(_key, _fallback) {
+        return Read_Json(Slot_Key(_key), _fallback);
+    }
+    function Write_Save(_key, _value) {
+        Write_Json(Slot_Key(_key), _value);
+    }
+    function Migrate_Legacy_Save() {
+        // Records saved before slots existed become the first slot.
+        // The original keys are kept as an untouched safety copy.
+        const meta = Slot_Meta();
+        if (meta.migrated) return;
+        SLOT_RECORD_KEYS.forEach(function (_key) {
+            let raw = null;
+            try { raw = localStorage.getItem(_key); } catch (_error) { return; }
+            if (raw === null || raw === undefined) return;
+            try {
+                if (localStorage.getItem(_key + '-s0') === null) {
+                    localStorage.setItem(_key + '-s0', raw);
+                }
+            } catch (_error) {
+                // Storage unavailable: pages keep working without migration.
+            }
+        });
+        meta.migrated = true;
+        Write_Json(STORAGE_SAVE_SLOT, meta);
+    }
     function Get_Flip_Guard() {
-        const guard = Read_Json(STORAGE_FLIP_GUARD, {});
+        const guard = Read_Save(STORAGE_FLIP_GUARD, {});
         return guard && typeof guard === 'object' ? guard : {};
     }
     function Hash_Text(_text) {
@@ -96,7 +139,7 @@
         };
     }
     function Get_Stats() {
-        const saved = Read_Json(STORAGE_STATS, {});
+        const saved = Read_Save(STORAGE_STATS, {});
         const stats = New_Stats();
         if (saved && typeof saved === 'object') {
             Object.keys(stats).forEach(function (_key) {
@@ -119,17 +162,17 @@
             });
             stats.totalPoints = total;
             stats.totalEarned = total;
-            Write_Json(STORAGE_STATS, stats);
+            Write_Save(STORAGE_STATS, stats);
         } else if (saved.totalEarned === undefined) {
             // The lifetime counter was added when points became spendable:
             // everything owned so far counts as earned.
             stats.totalEarned = stats.totalPoints;
-            Write_Json(STORAGE_STATS, stats);
+            Write_Save(STORAGE_STATS, stats);
         }
         return stats;
     }
     function Save_Stats(_stats) {
-        Write_Json(STORAGE_STATS, _stats);
+        Write_Save(STORAGE_STATS, _stats);
     }
     function Ensure_Day(_stats, _key) {
         if (!_stats.days[_key]) _stats.days[_key] = New_Day();
@@ -287,18 +330,18 @@
         };
     }
     function Get_Weak() {
-        const rows = Read_Json(STORAGE_WEAK, []);
+        const rows = Read_Save(STORAGE_WEAK, []);
         return Array.isArray(rows) ? rows : [];
     }
     function Save_Weak(_rows) {
-        Write_Json(STORAGE_WEAK, _rows);
+        Write_Save(STORAGE_WEAK, _rows);
     }
     function Get_Graduated() {
-        const rows = Read_Json(STORAGE_GRADUATED, []);
+        const rows = Read_Save(STORAGE_GRADUATED, []);
         return Array.isArray(rows) ? rows : [];
     }
     function Get_History() {
-        const rows = Read_Json(STORAGE_HISTORY, []);
+        const rows = Read_Save(STORAGE_HISTORY, []);
         return Array.isArray(rows) ? rows : [];
     }
     function Add_History(_type, _word) {
@@ -314,7 +357,7 @@
             correct: word.correct === true,
             at: Date.now()
         });
-        Write_Json(STORAGE_HISTORY, history.slice(0, 80));
+        Write_Save(STORAGE_HISTORY, history.slice(0, 80));
     }
     function Reading_Key(_japanese, _english) {
         return (_japanese || '') + '\u0001' + (_english || '');
@@ -433,7 +476,7 @@
         // re-adding and removing the same word cannot farm points.
         const firstGraduation = !graduated.some(function (_row) { return _row.id === entry.id; });
         graduated.unshift(Object.assign({}, entry, { graduatedAt: Date.now() }));
-        Write_Json(STORAGE_GRADUATED, graduated.slice(0, 300));
+        Write_Save(STORAGE_GRADUATED, graduated.slice(0, 300));
 
         const stats = Get_Stats();
         stats.totalGraduated += 1;
@@ -472,7 +515,7 @@
         // Review points for the same word are limited to once per interval,
         // so finishing a session and instantly replaying it cannot farm points.
         // Right or wrong pays the same: results are self-reported anyway.
-        const reviewGuard = Read_Json(STORAGE_REVIEW_GUARD, {});
+        const reviewGuard = Read_Save(STORAGE_REVIEW_GUARD, {});
         const reviewKey = Make_Id(entry.japanese, entry.english);
         let reviewPoints = 0;
         if (now - (Number(reviewGuard[reviewKey]) || 0) >= REVIEW_POINT_INTERVAL) {
@@ -481,7 +524,7 @@
                 if (now - (Number(reviewGuard[_key]) || 0) >= REVIEW_POINT_INTERVAL) delete reviewGuard[_key];
             });
             reviewGuard[reviewKey] = now;
-            Write_Json(STORAGE_REVIEW_GUARD, reviewGuard);
+            Write_Save(STORAGE_REVIEW_GUARD, reviewGuard);
         }
 
         const stats = Get_Stats();
@@ -520,7 +563,7 @@
             if (now - (Number(guard[_key]) || 0) >= FLIP_INTERVAL) delete guard[_key];
         });
         guard[id] = now;
-        Write_Json(STORAGE_FLIP_GUARD, guard);
+        Write_Save(STORAGE_FLIP_GUARD, guard);
 
         const stats = Get_Stats();
         stats.totalFlips += 1;
@@ -651,7 +694,7 @@
     ];
 
     function Get_Trophies() {
-        const earned = Read_Json(STORAGE_TROPHIES, {});
+        const earned = Read_Save(STORAGE_TROPHIES, {});
         const stats = Get_Stats();
         const weakCount = Get_Weak().length;
         let changed = false;
@@ -682,9 +725,56 @@
             };
         });
 
-        if (changed) Write_Json(STORAGE_TROPHIES, earned);
+        if (changed) Write_Save(STORAGE_TROPHIES, earned);
         return list;
     }
+
+    // Save slot management -------------------------------------------------
+    function Slot_Summary(_index) {
+        // Read a slot's records directly, without touching the active slot.
+        const suffix = '-s' + _index;
+        const stats = Read_Json(STORAGE_STATS + suffix, {});
+        const weak = Read_Json(STORAGE_WEAK + suffix, []);
+        const graduated = Read_Json(STORAGE_GRADUATED + suffix, []);
+        const earned = Number(stats.totalEarned !== undefined ? stats.totalEarned : stats.totalPoints) || 0;
+        return {
+            index: _index,
+            active: _index === Get_Active_Slot(),
+            level: Get_Level(earned).level,
+            points: Number(stats.totalPoints) || 0,
+            weak: Array.isArray(weak) ? weak.length : 0,
+            graduated: Array.isArray(graduated) ? graduated.length : 0,
+            lastStudyAt: Number(stats.lastStudyAt) || 0
+        };
+    }
+    function Get_Slots() {
+        const out = [];
+        for (let i = 0; i < SAVE_SLOTS; i++) out.push(Slot_Summary(i));
+        return out;
+    }
+    function Select_Slot(_index) {
+        const index = Math.floor(Number(_index) || 0);
+        if (index < 0 || index >= SAVE_SLOTS) return false;
+        const meta = Slot_Meta();
+        if ((Math.floor(Number(meta.active) || 0)) === index) return true;
+        meta.active = index;
+        Write_Json(STORAGE_SAVE_SLOT, meta);
+        Emit_Change();
+        return true;
+    }
+    function Delete_Slot(_index) {
+        const index = Math.floor(Number(_index) || 0);
+        if (index < 0 || index >= SAVE_SLOTS) return false;
+        // Erase every record namespace of the slot. The slot itself stays
+        // selected and simply starts empty again.
+        SLOT_RECORD_KEYS.forEach(function (_key) {
+            try { localStorage.removeItem(_key + '-s' + index); } catch (_error) { }
+        });
+        Emit_Change();
+        return true;
+    }
+
+    Migrate_Legacy_Save();
 
     window.FUM_WordBook = {
         Change_Event: CHANGE_EVENT,
@@ -702,6 +792,11 @@
         Get_Display_Streak: Get_Display_Streak,
         Count_Studied_Pages: Count_Studied_Pages,
         Accuracy: Accuracy,
+        Save_Slot_Count: SAVE_SLOTS,
+        Get_Active_Slot: Get_Active_Slot,
+        Get_Slots: Get_Slots,
+        Select_Slot: Select_Slot,
+        Delete_Slot: Delete_Slot,
         Is_Weak: Is_Weak,
         Add_Weak: Add_Weak,
         Remove_Weak: Remove_Weak,
