@@ -9,6 +9,21 @@
     const STORAGE_HISTORY = 'fum-wordbook-history-v1';
     const STORAGE_FLIP_GUARD = 'fum-wordbook-flip-guard-v1';
     const FLIP_INTERVAL = 10 * 60 * 1000;
+    const STORAGE_REVIEW_GUARD = 'fum-wordbook-review-guard-v1';
+    const REVIEW_POINT_INTERVAL = 10 * 60 * 1000;
+    const STORAGE_WEAK_POINTS = 'fum-wordbook-weak-points-v1';
+
+    // Study points. Reviews and daily streaks are worth the most so that
+    // repeated practice and consistency outweigh simply opening cards.
+    const POINTS = {
+        flip: 1,
+        weak: 3,
+        review: 5,
+        correct: 5,
+        graduate: 20,
+        streakPerDay: 5,
+        streakCap: 30
+    };
 
     const runtimeReading = {};
 
@@ -64,7 +79,7 @@
         return To_Date_Key(d);
     }
     function New_Day() {
-        return { flips: 0, weakAdded: 0, reviews: 0, correct: 0, wrong: 0, graduated: 0 };
+        return { flips: 0, weakAdded: 0, reviews: 0, correct: 0, wrong: 0, graduated: 0, points: 0 };
     }
     function New_Stats() {
         return {
@@ -74,6 +89,7 @@
             totalCorrect: 0,
             totalWrong: 0,
             totalGraduated: 0,
+            totalPoints: 0,
             pages: {},
             days: {},
             streak: 0,
@@ -93,9 +109,21 @@
             if (!stats.pages || typeof stats.pages !== 'object') stats.pages = {};
             if (!stats.days || typeof stats.days !== 'object') stats.days = {};
         }
-        ['totalFlips', 'totalWeakAdded', 'totalReviews', 'totalCorrect', 'totalWrong', 'totalGraduated', 'streak', 'bestStreak', 'firstStudyAt', 'lastStudyAt'].forEach(function (_key) {
+        ['totalFlips', 'totalWeakAdded', 'totalReviews', 'totalCorrect', 'totalWrong', 'totalGraduated', 'totalPoints', 'streak', 'bestStreak', 'firstStudyAt', 'lastStudyAt'].forEach(function (_key) {
             stats[_key] = Number(stats[_key]) || 0;
         });
+        // Older saves have no points yet. Derive a starting balance from the
+        // stored day records so the total is not stuck at zero after upgrade.
+        if (!saved || saved.totalPoints === undefined) {
+            let total = 0;
+            Object.keys(stats.days).forEach(function (_key) {
+                const day = stats.days[_key] || {};
+                if (day.points === undefined) day.points = Day_Points(day);
+                total += Number(day.points) || 0;
+            });
+            stats.totalPoints = total;
+            Write_Json(STORAGE_STATS, stats);
+        }
         return stats;
     }
     function Save_Stats(_stats) {
@@ -104,7 +132,7 @@
     function Ensure_Day(_stats, _key) {
         if (!_stats.days[_key]) _stats.days[_key] = New_Day();
         const day = _stats.days[_key];
-        ['flips', 'weakAdded', 'reviews', 'correct', 'wrong', 'graduated'].forEach(function (_name) {
+        ['flips', 'weakAdded', 'reviews', 'correct', 'wrong', 'graduated', 'points'].forEach(function (_name) {
             day[_name] = Number(day[_name]) || 0;
         });
         return day;
@@ -122,6 +150,7 @@
     }
     function Touch_Study(_stats) {
         const today = To_Date_Key();
+        let streakBonus = 0;
         if (_stats.lastStudyDate !== today) {
             if (_stats.lastStudyDate === Yesterday_Key()) {
                 _stats.streak = (_stats.streak || 0) + 1;
@@ -129,10 +158,131 @@
                 _stats.streak = 1;
             }
             _stats.lastStudyDate = today;
+            // Reward continuity once per day: the longer the streak, the more
+            // the first activity of the day is worth.
+            streakBonus = Math.min(_stats.streak, POINTS.streakCap) * POINTS.streakPerDay;
         }
         _stats.bestStreak = Math.max(_stats.bestStreak || 0, _stats.streak || 0);
         if (!_stats.firstStudyAt) _stats.firstStudyAt = Date.now();
         _stats.lastStudyAt = Date.now();
+        return streakBonus;
+    }
+    function Day_Points(_day) {
+        const day = _day || {};
+        return (Number(day.flips) || 0) * POINTS.flip +
+            (Number(day.weakAdded) || 0) * POINTS.weak +
+            (Number(day.reviews) || 0) * POINTS.review +
+            (Number(day.correct) || 0) * POINTS.correct +
+            (Number(day.graduated) || 0) * POINTS.graduate;
+    }
+    function Add_Points(_stats, _day, _points) {
+        const points = Number(_points) || 0;
+        if (!points) return 0;
+        _stats.totalPoints = (Number(_stats.totalPoints) || 0) + points;
+        if (_day) _day.points = (Number(_day.points) || 0) + points;
+        return points;
+    }
+    function Award_Weak_Points(_japanese, _english) {
+        // Adding the same word over and over must not farm points, so the
+        // bonus is paid only the first time a word is bookmarked.
+        const seen = Read_Json(STORAGE_WEAK_POINTS, {});
+        const key = Make_Id(_japanese, _english);
+        if (seen[key]) return 0;
+        seen[key] = Date.now();
+        const keys = Object.keys(seen);
+        if (keys.length > 500) {
+            keys.sort(function (a, b) { return (Number(seen[a]) || 0) - (Number(seen[b]) || 0); });
+            keys.slice(0, keys.length - 500).forEach(function (_key) { delete seen[_key]; });
+        }
+        Write_Json(STORAGE_WEAK_POINTS, seen);
+        return POINTS.weak;
+    }
+    function Start_Of_Week(_date) {
+        const d = new Date(_date.getFullYear(), _date.getMonth(), _date.getDate());
+        const offset = (d.getDay() + 6) % 7; // Monday = 0
+        d.setDate(d.getDate() - offset);
+        return d;
+    }
+    function Period_Bounds(_mode, _date) {
+        const now = _date || new Date();
+        let start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (_mode === 'week') {
+            start = Start_Of_Week(now);
+            end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+        } else if (_mode === 'month') {
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (_mode === 'year') {
+            start = new Date(now.getFullYear(), 0, 1);
+            end = new Date(now.getFullYear(), 11, 31);
+        }
+        return {
+            start: To_Date_Key(start),
+            end: To_Date_Key(end),
+            startDate: start,
+            endDate: end
+        };
+    }
+    function Is_Active_Day(_day) {
+        return ((Number(_day.flips) || 0) + (Number(_day.weakAdded) || 0) +
+            (Number(_day.reviews) || 0) + (Number(_day.graduated) || 0)) > 0;
+    }
+    function Get_Period(_stats, _mode) {
+        const stats = _stats || Get_Stats();
+        const mode = _mode || 'today';
+        const out = {
+            mode: mode,
+            flips: 0,
+            weakAdded: 0,
+            reviews: 0,
+            correct: 0,
+            wrong: 0,
+            graduated: 0,
+            points: 0,
+            activeDays: 0
+        };
+
+        if (mode === 'all') {
+            out.flips = Number(stats.totalFlips) || 0;
+            out.weakAdded = Number(stats.totalWeakAdded) || 0;
+            out.reviews = Number(stats.totalReviews) || 0;
+            out.correct = Number(stats.totalCorrect) || 0;
+            out.wrong = Number(stats.totalWrong) || 0;
+            out.graduated = Number(stats.totalGraduated) || 0;
+            out.points = Number(stats.totalPoints) || 0;
+            out.activeDays = Object.keys(stats.days || {}).filter(function (_key) {
+                return Is_Active_Day(stats.days[_key] || {});
+            }).length;
+            return out;
+        }
+
+        const bounds = Period_Bounds(mode);
+        const days = stats.days || {};
+        Object.keys(days).forEach(function (_key) {
+            if (_key < bounds.start || _key > bounds.end) return;
+            const day = days[_key] || {};
+            out.flips += Number(day.flips) || 0;
+            out.weakAdded += Number(day.weakAdded) || 0;
+            out.reviews += Number(day.reviews) || 0;
+            out.correct += Number(day.correct) || 0;
+            out.wrong += Number(day.wrong) || 0;
+            out.graduated += Number(day.graduated) || 0;
+            out.points += Number(day.points) || 0;
+            if (Is_Active_Day(day)) out.activeDays += 1;
+        });
+        return out;
+    }
+    function Get_Level(_points) {
+        const points = Math.max(0, Number(_points) || 0);
+        const current = points % 100;
+        return {
+            level: Math.floor(points / 100) + 1,
+            current: current,
+            next: 100,
+            remaining: 100 - current,
+            progress: current
+        };
     }
     function Get_Weak() {
         const rows = Read_Json(STORAGE_WEAK, []);
@@ -227,8 +377,10 @@
 
         const stats = Get_Stats();
         stats.totalWeakAdded += 1;
-        Touch_Study(stats);
-        Ensure_Day(stats, To_Date_Key()).weakAdded += 1;
+        const streakBonus = Touch_Study(stats);
+        const day = Ensure_Day(stats, To_Date_Key());
+        day.weakAdded += 1;
+        Add_Points(stats, day, Award_Weak_Points(entry.japanese, entry.english) + streakBonus);
         const page = Ensure_Page(stats, sourceUrl);
         if (page) {
             if (entry.source) page.title = entry.source;
@@ -275,13 +427,18 @@
         const entry = rows.splice(index, 1)[0];
         Save_Weak(rows);
         const graduated = Get_Graduated();
+        // Graduation points are only paid the first time a word graduates, so
+        // re-adding and removing the same word cannot farm points.
+        const firstGraduation = !graduated.some(function (_row) { return _row.id === entry.id; });
         graduated.unshift(Object.assign({}, entry, { graduatedAt: Date.now() }));
         Write_Json(STORAGE_GRADUATED, graduated.slice(0, 300));
 
         const stats = Get_Stats();
         stats.totalGraduated += 1;
-        Touch_Study(stats);
-        Ensure_Day(stats, To_Date_Key()).graduated += 1;
+        const streakBonus = Touch_Study(stats);
+        const day = Ensure_Day(stats, To_Date_Key());
+        day.graduated += 1;
+        Add_Points(stats, day, (firstGraduation ? POINTS.graduate : 0) + streakBonus);
         const page = Ensure_Page(stats, entry.sourceUrl);
         if (page) {
             if (entry.source) page.title = entry.source;
@@ -296,9 +453,10 @@
         const index = rows.findIndex(function (_word) { return _word.id === _id; });
         if (index < 0) return null;
 
+        const now = Date.now();
         const entry = rows[index];
         entry.reviewCount = (Number(entry.reviewCount) || 0) + 1;
-        entry.lastReviewed = Date.now();
+        entry.lastReviewed = now;
         if (_correct) {
             entry.correctCount = (Number(entry.correctCount) || 0) + 1;
             entry.lastResult = 'correct';
@@ -309,20 +467,35 @@
         rows[index] = entry;
         Save_Weak(rows);
 
+        // Review points for the same word are limited to once per interval,
+        // so finishing a session and instantly replaying it cannot farm points.
+        const reviewGuard = Read_Json(STORAGE_REVIEW_GUARD, {});
+        const reviewKey = Make_Id(entry.japanese, entry.english);
+        let reviewPoints = 0;
+        if (now - (Number(reviewGuard[reviewKey]) || 0) >= REVIEW_POINT_INTERVAL) {
+            reviewPoints = POINTS.review + (_correct ? POINTS.correct : 0);
+            Object.keys(reviewGuard).forEach(function (_key) {
+                if (now - (Number(reviewGuard[_key]) || 0) >= REVIEW_POINT_INTERVAL) delete reviewGuard[_key];
+            });
+            reviewGuard[reviewKey] = now;
+            Write_Json(STORAGE_REVIEW_GUARD, reviewGuard);
+        }
+
         const stats = Get_Stats();
         stats.totalReviews += 1;
         if (_correct) stats.totalCorrect += 1;
         else stats.totalWrong += 1;
-        Touch_Study(stats);
+        const streakBonus = Touch_Study(stats);
         const day = Ensure_Day(stats, To_Date_Key());
         day.reviews += 1;
         if (_correct) day.correct += 1;
         else day.wrong += 1;
+        Add_Points(stats, day, reviewPoints + streakBonus);
         const page = Ensure_Page(stats, entry.sourceUrl);
         if (page) {
             if (entry.source) page.title = entry.source;
             page.reviews += 1;
-            page.lastVisit = Date.now();
+            page.lastVisit = now;
         }
         Save_Stats(stats);
         Add_History('review', Object.assign({}, entry, { correct: _correct === true }));
@@ -348,8 +521,10 @@
 
         const stats = Get_Stats();
         stats.totalFlips += 1;
-        Touch_Study(stats);
-        Ensure_Day(stats, To_Date_Key()).flips += 1;
+        const streakBonus = Touch_Study(stats);
+        const day = Ensure_Day(stats, To_Date_Key());
+        day.flips += 1;
+        Add_Points(stats, day, POINTS.flip + streakBonus);
         const page = Ensure_Page(stats, sourceUrl);
         if (page) {
             if (word.source) page.title = word.source;
@@ -429,6 +604,8 @@
         { id: 'pages_30', title: 'Word Traveler', description: 'Study on 30 word pages', icon: 'mdi-earth', tier: 'gold', category: 'explore', target: 30, value: function (s) { return Count_Studied_Pages(s); } },
 
         { id: 'accuracy_80', title: 'Sharp Shooter', description: 'Reach 80% accuracy with 20+ reviews', icon: 'mdi-target', tier: 'gold', category: 'special', target: 80, value: function (s) { return Accuracy_Value(s); } },
+        { id: 'points_100', title: 'Point Collector', description: 'Earn 100 study points', icon: 'mdi-star-circle-outline', tier: 'silver', category: 'points', target: 100, value: function (s) { return s.totalPoints; } },
+        { id: 'points_1000', title: 'Point Master', description: 'Earn 1,000 study points', icon: 'mdi-seal', tier: 'gold', category: 'points', target: 1000, value: function (s) { return s.totalPoints; } },
         { id: 'zero_weak', title: 'Clean Slate', description: 'Graduate 5+ words and empty your tricky list', icon: 'mdi-shield-star', tier: 'gold', category: 'special', target: 1, value: function (s, weakCount) { return (s.totalGraduated >= 5 && weakCount === 0) ? 1 : 0; } }
     ];
 
@@ -477,6 +654,10 @@
         Get_History: Get_History,
         Get_Trophies: Get_Trophies,
         Get_Today: Get_Today,
+        Get_Period: Get_Period,
+        Get_Period_Bounds: Period_Bounds,
+        Get_Level: Get_Level,
+        Points_Rules: POINTS,
         Get_Display_Streak: Get_Display_Streak,
         Count_Studied_Pages: Count_Studied_Pages,
         Accuracy: Accuracy,

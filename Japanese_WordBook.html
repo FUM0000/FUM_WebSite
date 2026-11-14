@@ -288,6 +288,39 @@
             color: #607d8b;
         }
 
+        .wordbook-today-stat--points {
+            background: linear-gradient(135deg, #fff8e1, #ffecb3);
+        }
+
+        .wordbook-today-stat--points .wordbook-today-stat__value {
+            color: #ef6c00;
+        }
+
+        .wordbook-today-stat--points .wordbook-today-stat__label {
+            color: #a1662f;
+        }
+
+        .wordbook-period {
+            display: flex;
+            overflow-x: auto;
+            margin-top: 4px;
+            padding-bottom: 2px;
+        }
+
+        .wordbook-period .v-btn {
+            letter-spacing: 0;
+            text-transform: none;
+            white-space: nowrap;
+        }
+
+        .wordbook-points-note {
+            margin-top: 10px;
+            font-size: 10px;
+            line-height: 1.55;
+            color: #90a4ae;
+            text-align: center;
+        }
+
         .wordbook-table {
             border-radius: 10px;
             overflow: hidden;
@@ -460,6 +493,17 @@
             box-shadow: 0 12px 28px rgba(38, 50, 56, 0.09) !important;
         }
 
+        .wordbook-review-card__bookmark {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            transition: transform 0.15s ease;
+        }
+
+        .wordbook-review-card__bookmark:hover {
+            transform: scale(1.12);
+        }
+
         .wordbook-review-card__source {
             font-size: 10px;
             font-weight: 700;
@@ -467,6 +511,7 @@
             color: #90a4ae;
             text-transform: uppercase;
             min-height: 15px;
+            padding: 0 40px;
         }
 
         .wordbook-review-card__jp {
@@ -741,7 +786,7 @@
                         </section>
 
                         <v-row dense class="mt-2">
-                            <v-col v-for="stat in Overview_Stats" :key="stat.key" cols="6" sm="4" :md="true">
+                            <v-col v-for="stat in Overview_Stats" :key="stat.key" cols="6" sm="4" md="4" lg="2">
                                 <v-card outlined class="wordbook-stat-card">
                                     <div class="wordbook-stat-card__icon">
                                         <v-icon :color="stat.color">{{ stat.icon }}</v-icon>
@@ -773,27 +818,41 @@
                                             <v-card outlined class="wordbook-panel">
                                                 <div class="wordbook-panel__head">
                                                     <div>
-                                                        <div class="wordbook-panel__title">Today's Study</div>
-                                                        <div class="wordbook-panel__sub">{{ Today_Label }}</div>
+                                                        <div class="wordbook-panel__title">{{ Period_Title }}</div>
+                                                        <div class="wordbook-panel__sub">{{ Period_Sub }}</div>
                                                     </div>
                                                     <v-icon color="indigo">mdi-calendar-today</v-icon>
                                                 </div>
 
-                                                <v-row dense>
-                                                    <v-col v-for="item in Today_Items" :key="item.key" cols="3">
-                                                        <div class="wordbook-today-stat">
+                                                <div class="wordbook-period">
+                                                    <v-btn-toggle v-model="Period" mandatory dense>
+                                                        <v-btn v-for="option in Period_Options" :key="option.value"
+                                                            :value="option.value" small>
+                                                            {{ option.text }}
+                                                        </v-btn>
+                                                    </v-btn-toggle>
+                                                </div>
+
+                                                <v-row dense class="mt-2">
+                                                    <v-col v-for="item in Period_Items" :key="item.key" cols="6" sm="4">
+                                                        <div :class="['wordbook-today-stat', { 'wordbook-today-stat--points': item.highlight }]">
                                                             <div class="wordbook-today-stat__value">{{ item.value }}</div>
                                                             <div class="wordbook-today-stat__label">{{ item.label }}</div>
                                                         </div>
                                                     </v-col>
                                                 </v-row>
 
+                                                <div class="wordbook-points-note">
+                                                    Points: card +1 · tricky word +3 (first time) · review +5 · correct +5 · graduation +20 · daily bonus +5 × streak.
+                                                    The same word earns card and review points at most once per 10 minutes.
+                                                </div>
+
                                                 <v-divider class="my-4"></v-divider>
 
                                                 <div class="d-flex align-center">
                                                     <div class="flex-grow-1">
                                                         <div class="wordbook-panel__title small">Studied Pages</div>
-                                                        <div class="wordbook-panel__sub">{{ Plural(Source_Rows.length, 'page') }}</div>
+                                                        <div class="wordbook-panel__sub">All time · {{ Plural(Source_Rows.length, 'page') }}</div>
                                                     </div>
                                                     <v-btn small text color="primary" @click="Active_Tab = 'weak'">View tricky words</v-btn>
                                                 </div>
@@ -959,6 +1018,62 @@
                                     </v-expansion-panels>
                                 </div>
 
+                                <!-- Graduated words -->
+                                <div v-else-if="Active_Tab === 'graduated'">
+                                    <div class="wordbook-toolbar">
+                                        <div class="wordbook-toolbar__title">
+                                            <span>Graduated Words</span>
+                                            <v-chip small color="green lighten-4" text-color="green darken-3">{{ Plural(Graduated_Words.length, 'word') }}</v-chip>
+                                        </div>
+                                        <div class="wordbook-toolbar__actions">
+                                            <v-btn small color="primary" :disabled="!Filtered_Graduated.length" @click="Start_Graduated_Review(Filtered_Graduated)">
+                                                Review this page
+                                            </v-btn>
+                                        </div>
+                                    </div>
+
+                                    <v-row dense>
+                                        <v-col cols="12" md="6" lg="4">
+                                            <v-text-field v-model="Search_Text" label="Search word, meaning or page"
+                                                prepend-inner-icon="mdi-magnify" dense outlined hide-details clearable>
+                                            </v-text-field>
+                                        </v-col>
+                                        <v-col cols="12" sm="6" md="3" lg="4">
+                                            <v-select v-model="Source_Filter" :items="Graduated_Source_Options" label="Page"
+                                                dense outlined hide-details></v-select>
+                                        </v-col>
+                                        <v-col cols="12" sm="6" md="3" lg="4">
+                                            <v-select v-model="Sort_Mode" :items="Sort_Options" label="Sort"
+                                                dense outlined hide-details></v-select>
+                                        </v-col>
+                                    </v-row>
+
+                                    <div v-if="!Graduated_Words.length" class="wordbook-empty mt-2">
+                                        <v-icon large color="green lighten-2">mdi-check-circle-outline</v-icon>
+                                        <div class="wordbook-empty__title">No graduated words yet</div>
+                                        <div class="wordbook-empty__text">Words that have been mastered and removed from tricky list.</div>
+                                    </div>
+                                    <div v-else-if="!Filtered_Graduated.length" class="wordbook-empty mt-2">
+                                        <v-icon large color="grey lighten-1">mdi-filter-remove-outline</v-icon>
+                                        <div class="wordbook-empty__title">No words match your filters</div>
+                                        <v-btn text color="primary" class="mt-2" @click="Reset_Filters">Reset filters</v-btn>
+                                    </div>
+
+                                    <v-row v-else dense class="mt-2">
+                                        <v-col v-for="word in Filtered_Graduated" :key="word.id" cols="12" md="6" lg="4">
+                                            <card-word-general :japanese="word.japanese" :reading="word.reading"
+                                                :english="word.english" :source-url="word.sourceUrl"
+                                                :source-label="word.source">
+                                                <template v-slot:first>
+                                                    {{ word.japanese }}<br>
+                                                    <font size="5">{{ word.reading }}</font>
+                                                </template>
+                                                <template v-slot:second>{{ word.english }}</template>
+                                            </card-word-general>
+                                        </v-col>
+                                    </v-row>
+                                </div>
+
                                 <!-- Review session -->
                                 <div v-else-if="Active_Tab === 'review'">
                                     <div v-if="Review_Finished" class="wordbook-review-summary">
@@ -978,6 +1093,10 @@
                                                 <div class="wordbook-review-stat__value">{{ Review_Accuracy }}%</div>
                                                 <div class="wordbook-review-stat__label">Accuracy</div>
                                             </div>
+                                            <div class="wordbook-review-stat">
+                                                <div class="wordbook-review-stat__value">{{ Review_Points }}</div>
+                                                <div class="wordbook-review-stat__label">Points</div>
+                                            </div>
                                         </div>
                                         <div class="mt-3">
                                             <v-btn color="primary" @click="Restart_Review">Review again</v-btn>
@@ -994,6 +1113,12 @@
                                         <v-progress-linear :value="Review_Progress" color="teal" height="7" rounded class="mt-2"></v-progress-linear>
 
                                         <v-card v-if="Current_Review_Word" outlined class="wordbook-review-card mt-4">
+                                            <v-btn v-if="Review_Revealed" icon small class="wordbook-review-card__bookmark"
+                                                color="deep-orange" title="Remove from tricky words"
+                                                aria-label="Remove from tricky words" @click="Remove_Current_Review_Word">
+                                                <v-icon>mdi-bookmark</v-icon>
+                                            </v-btn>
+
                                             <div class="wordbook-review-card__source">{{ Current_Review_Word.source }}</div>
                                             <div class="wordbook-review-card__jp">{{ Current_Review_Word.japanese }}</div>
                                             <div v-if="Current_Review_Word.reading" class="wordbook-review-card__reading">
@@ -1031,7 +1156,7 @@
                                         </v-card>
 
                                         <div class="text-caption grey--text text--darken-1 text-center mt-3">
-                                            "Got it!" only records the result. Words stay on your tricky list.
+                                            "Got it!" only records the result. Use the bookmark to remove a word.
                                         </div>
                                     </div>
                                 </div>
@@ -1132,6 +1257,14 @@
                 Source_Filter: 'all',
                 Sort_Mode: 'newest',
                 Trophy_Filter: 'all',
+                Period: 'today',
+                Period_Options: [
+                    { text: 'Today', value: 'today' },
+                    { text: 'Week', value: 'week' },
+                    { text: 'Month', value: 'month' },
+                    { text: 'Year', value: 'year' },
+                    { text: 'All', value: 'all' }
+                ],
                 Review_Shuffle: true,
                 Review_Finished: false,
                 Review_Queue: [],
@@ -1139,11 +1272,13 @@
                 Review_Revealed: false,
                 Review_Answered: 0,
                 Review_Correct: 0,
+                Review_Points: 0,
                 Snackbar: false,
                 Snackbar_Text: '',
                 Tabs: [
                     { value: 'overview', label: 'Overview', icon: 'mdi-view-dashboard-outline' },
                     { value: 'weak', label: 'Tricky Words', icon: 'mdi-bookmark-multiple-outline' },
+                    { value: 'graduated', label: 'Graduated Words', icon: 'mdi-check-circle-outline' },
                     { value: 'trophies', label: 'Trophies', icon: 'mdi-trophy-outline' }
                 ],
                 Sort_Options: [
@@ -1175,23 +1310,81 @@
                         year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
                     });
                 },
-                Today_Items() {
-                    const today = this.Today;
+                Period_Stats() {
+                    return window.FUM_WordBook.Get_Period(this.Stats, this.Period);
+                },
+                Period_Short() {
+                    const labels = {
+                        today: 'Today', week: 'This week', month: 'This month',
+                        year: 'This year', all: 'All time'
+                    };
+                    return labels[this.Period] || 'Today';
+                },
+                Period_Title() {
+                    const titles = {
+                        today: "Today's Study", week: 'This Week', month: 'This Month',
+                        year: 'This Year', all: 'All Time'
+                    };
+                    return titles[this.Period] || "Today's Study";
+                },
+                Period_Label() {
+                    const now = new Date();
+                    if (this.Period === 'week') {
+                        const bounds = window.FUM_WordBook.Get_Period_Bounds('week');
+                        return bounds.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+                            ' – ' + bounds.endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                    if (this.Period === 'month') {
+                        return now.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+                    }
+                    if (this.Period === 'year') {
+                        return String(now.getFullYear());
+                    }
+                    if (this.Period === 'all') {
+                        return 'All recorded study';
+                    }
+                    return this.Today_Label;
+                },
+                Period_Sub() {
+                    if (this.Period === 'today') return this.Today_Label;
+                    return this.Period_Label + ' · ' + this.Plural(this.Period_Stats.activeDays || 0, 'active day');
+                },
+                Period_Items() {
+                    const period = this.Period_Stats;
                     return [
-                        { key: 'flips', label: 'Cards', value: today.flips || 0 },
-                        { key: 'weakAdded', label: 'Added', value: today.weakAdded || 0 },
-                        { key: 'reviews', label: 'Reviews', value: today.reviews || 0 },
-                        { key: 'graduated', label: 'Graduated', value: today.graduated || 0 }
+                        { key: 'flips', label: 'Cards', value: period.flips },
+                        { key: 'weakAdded', label: 'Added', value: period.weakAdded },
+                        { key: 'reviews', label: 'Reviews', value: period.reviews },
+                        { key: 'correct', label: 'Correct', value: period.correct },
+                        { key: 'graduated', label: 'Graduated', value: period.graduated },
+                        {
+                            key: 'points',
+                            label: 'Points',
+                            value: Number(period.points || 0).toLocaleString('en-US'),
+                            highlight: true
+                        }
                     ];
+                },
+                Points_Level() {
+                    return window.FUM_WordBook.Get_Level(Number(this.Stats.totalPoints) || 0);
                 },
                 Overview_Stats() {
                     const stats = this.Stats || {};
+                    const period = this.Period_Stats;
                     return [
+                        {
+                            key: 'points',
+                            label: 'Study points',
+                            value: (Number(stats.totalPoints) || 0).toLocaleString('en-US'),
+                            sub: 'Level ' + this.Points_Level.level + ' · ' + this.Points_Level.current + ' / 100',
+                            icon: 'mdi-star-circle-outline',
+                            color: 'amber darken-3'
+                        },
                         {
                             key: 'flips',
                             label: 'Cards flipped',
                             value: Number(stats.totalFlips) || 0,
-                            sub: 'Today: ' + (this.Today.flips || 0),
+                            sub: this.Period_Short + ': ' + (period.flips || 0),
                             icon: 'mdi-cards-outline',
                             color: 'indigo'
                         },
@@ -1241,6 +1434,18 @@
                     });
                     return options;
                 },
+                Graduated_Source_Options() {
+                    const counts = {};
+                    this.Graduated_Words.forEach(function (word) {
+                        if (!word.source) return;
+                        counts[word.source] = (counts[word.source] || 0) + 1;
+                    });
+                    const options = [{ text: 'All pages', value: 'all' }];
+                    Object.keys(counts).sort().forEach(function (source) {
+                        options.push({ text: source + ' (' + counts[source] + ')', value: source });
+                    });
+                    return options;
+                },
                 Filtered_Weak() {
                     let rows = (this.Weak_Words || []).slice();
                     const query = (this.Search_Text || '').trim().toLowerCase();
@@ -1257,6 +1462,29 @@
                         rows.sort(function (a, b) { return (b.addedAt || 0) - (a.addedAt || 0); });
                     } else if (this.Sort_Mode === 'oldest') {
                         rows.sort(function (a, b) { return (a.addedAt || 0) - (b.addedAt || 0); });
+                    } else if (this.Sort_Mode === 'hardest') {
+                        rows.sort(function (a, b) { return (b.wrongCount || 0) - (a.wrongCount || 0); });
+                    } else {
+                        rows.sort(function (a, b) { return (a.japanese || '').localeCompare(b.japanese || '', 'ja'); });
+                    }
+                    return rows;
+                },
+                Filtered_Graduated() {
+                    let rows = (this.Graduated_Words || []).slice();
+                    const query = (this.Search_Text || '').trim().toLowerCase();
+                    if (query) {
+                        rows = rows.filter(function (word) {
+                            return [word.japanese, word.reading, word.english, word.source]
+                                .join(' ').toLowerCase().indexOf(query) !== -1;
+                        });
+                    }
+                    if (this.Source_Filter !== 'all') {
+                        rows = rows.filter(function (word) { return word.source === this.Source_Filter; }, this);
+                    }
+                    if (this.Sort_Mode === 'newest') {
+                        rows.sort(function (a, b) { return (b.graduatedAt || 0) - (a.graduatedAt || 0); });
+                    } else if (this.Sort_Mode === 'oldest') {
+                        rows.sort(function (a, b) { return (a.graduatedAt || 0) - (b.graduatedAt || 0); });
                     } else if (this.Sort_Mode === 'hardest') {
                         rows.sort(function (a, b) { return (b.wrongCount || 0) - (a.wrongCount || 0); });
                     } else {
@@ -1398,6 +1626,25 @@
                     this.Review_Revealed = false;
                     this.Review_Answered = 0;
                     this.Review_Correct = 0;
+                    this.Review_Points = 0;
+                    this.Review_Finished = false;
+                    this.Active_Tab = 'review';
+                },
+                Start_Graduated_Review(words) {
+                    let queue = Array.isArray(words) && words.length ? words.slice() : this.Graduated_Words.slice();
+                    if (!queue.length) {
+                        this.Notify('No graduated words yet.');
+                        this.Active_Tab = 'graduated';
+                        return;
+                    }
+                    if (this.Review_Shuffle) queue = this.Shuffle(queue);
+
+                    this.Review_Queue = queue;
+                    this.Review_Index = 0;
+                    this.Review_Revealed = false;
+                    this.Review_Answered = 0;
+                    this.Review_Correct = 0;
+                    this.Review_Points = 0;
                     this.Review_Finished = false;
                     this.Active_Tab = 'review';
                 },
@@ -1405,16 +1652,56 @@
                     const word = this.Current_Review_Word;
                     if (!word) return;
 
+                    const beforePoints = Number(this.Stats.totalPoints) || 0;
                     window.FUM_WordBook.Record_Review(word.id, !!correct);
+                    this.Refresh_All(true);
+                    this.Review_Points += Math.max(0, (Number(this.Stats.totalPoints) || 0) - beforePoints);
                     this.Review_Answered += 1;
                     if (correct) this.Review_Correct += 1;
-                    this.Refresh_All(true);
 
                     if (this.Review_Index + 1 >= this.Review_Queue.length) {
                         this.Review_Finished = true;
                     } else {
                         this.Review_Index += 1;
                         this.Review_Revealed = false;
+                    }
+                },
+                Remove_Current_Review_Word() {
+                    const word = this.Current_Review_Word;
+                    if (!word) return;
+
+                    // Removing the bookmark mid-review means the word leaves the
+                    // tricky list. Reviewed words become graduated (the store
+                    // decides), so the queue has to drop the current card too.
+                    const beforePoints = Number(this.Stats.totalPoints) || 0;
+                    const before = Number(this.Stats.totalGraduated) || 0;
+                    const previousUnlocked = this.Unlocked_Ids || [];
+                    window.FUM_WordBook.Remove_Weak(word.id);
+                    this.Refresh_All(false);
+
+                    this.Review_Queue.splice(this.Review_Index, 1);
+                    this.Review_Revealed = false;
+                    this.Review_Points += Math.max(0, (Number(this.Stats.totalPoints) || 0) - beforePoints);
+
+                    const graduated = (Number(this.Stats.totalGraduated) || 0) > before;
+                    let message = graduated
+                        ? 'Moved to your graduated words.'
+                        : 'Removed from your tricky list.';
+                    const unlocked = (this.Unlocked_Ids || []).filter(function (_id) {
+                        return previousUnlocked.indexOf(_id) === -1;
+                    });
+                    if (unlocked.length) {
+                        const names = this.Trophies.filter(function (_trophy) {
+                            return unlocked.indexOf(_trophy.id) !== -1;
+                        }).map(function (_trophy) {
+                            return _trophy.title;
+                        });
+                        message += ' Trophy unlocked: ' + names.join(' / ');
+                    }
+                    this.Notify(message);
+
+                    if (!this.Review_Queue.length || this.Review_Index >= this.Review_Queue.length) {
+                        this.Review_Finished = true;
                     }
                 },
                 Finish_Review() {
