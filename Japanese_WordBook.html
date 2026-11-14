@@ -321,6 +321,15 @@
             text-align: center;
         }
 
+        .wordbook-points-table__note {
+            font-size: 11px;
+            color: #607d8b;
+        }
+
+        .wordbook-points-table td {
+            vertical-align: middle;
+        }
+
         .wordbook-table {
             border-radius: 10px;
             overflow: hidden;
@@ -843,8 +852,9 @@
                                                 </v-row>
 
                                                 <div class="wordbook-points-note">
-                                                    Points: card +1 · tricky word +3 (first time) · review +5 · correct +5 · graduation +20 · daily bonus +5 × streak.
-                                                    The same word earns card and review points at most once per 10 minutes.
+                                                    <v-btn small text color="amber darken-3" @click="Points_Dialog = true">
+                                                        <v-icon left small>mdi-help-circle-outline</v-icon>How to earn points
+                                                    </v-btn>
                                                 </div>
 
                                                 <v-divider class="my-4"></v-divider>
@@ -1231,6 +1241,46 @@
                 </template>
             </v-snackbar>
 
+            <!-- Points guide dialog -->
+            <v-dialog v-model="Points_Dialog" max-width="560" scrollable>
+                <v-card>
+                    <v-system-bar>Points Guide</v-system-bar>
+                    <v-card-text class="pt-4">
+                        <v-simple-table dense class="wordbook-table wordbook-points-table">
+                            <template v-slot:default>
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">Action</th>
+                                        <th class="text-center">Points</th>
+                                        <th class="text-left">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="rule in Point_Rules" :key="rule.action">
+                                        <td class="text-left">
+                                            <v-icon small :color="rule.color" class="mr-1">{{ rule.icon }}</v-icon>{{ rule.action }}
+                                        </td>
+                                        <td class="text-center font-weight-bold amber--text text--darken-3 text-no-wrap">+{{ rule.points }}</td>
+                                        <td class="text-left wordbook-points-table__note">{{ rule.note }}</td>
+                                    </tr>
+                                </tbody>
+                            </template>
+                        </v-simple-table>
+
+                        <div class="text-caption grey--text text--darken-1 mt-3">
+                            Your level grows from the points you have earned in total and never goes down.
+                            The points balance is separate and can be spent on rewards in a future update.
+                            The limits above keep study points fair: the same word pays card and review points at most once per 10 minutes,
+                            and the graduation bonus is paid only the first time.
+                        </div>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn color="primary" @click="Points_Dialog = false">Close</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
         </template>
     </v-app>
 
@@ -1275,6 +1325,7 @@
                 Review_Points: 0,
                 Snackbar: false,
                 Snackbar_Text: '',
+                Points_Dialog: false,
                 Tabs: [
                     { value: 'overview', label: 'Overview', icon: 'mdi-view-dashboard-outline' },
                     { value: 'weak', label: 'Tricky Words', icon: 'mdi-bookmark-multiple-outline' },
@@ -1366,17 +1417,63 @@
                     ];
                 },
                 Points_Level() {
-                    return window.FUM_WordBook.Get_Level(Number(this.Stats.totalPoints) || 0);
+                    // Level grows from lifetime earned points, never from the
+                    // spendable balance, so spending cannot lower it.
+                    const earned = this.Stats.totalEarned === undefined ? this.Stats.totalPoints : this.Stats.totalEarned;
+                    return window.FUM_WordBook.Get_Level(Number(earned) || 0);
+                },
+                Point_Rules() {
+                    // Read the live rule values from the store so the guide can
+                    // never drift away from what the store actually pays.
+                    const rules = window.FUM_WordBook && window.FUM_WordBook.Points_Rules ? window.FUM_WordBook.Points_Rules : {};
+                    const value = function (key, fallback) {
+                        const raw = Number(rules[key]);
+                        return raw > 0 ? raw : fallback;
+                    };
+                    return [
+                        {
+                            action: 'Flip a card',
+                            points: value('flip', 1),
+                            icon: 'mdi-cards-outline', color: 'indigo',
+                            note: 'The same card counts only once per 10 minutes.'
+                        },
+                        {
+                            action: 'Review a word',
+                            points: value('review', 5),
+                            icon: 'mdi-repeat', color: 'teal',
+                            note: 'Right or wrong, it pays the same. The same word counts only once per 10 minutes.'
+                        },
+                        {
+                            action: 'Graduate a word',
+                            points: value('graduate', 5),
+                            icon: 'mdi-school-outline', color: 'primary',
+                            note: 'Paid for the first graduation of each word only.'
+                        },
+                        {
+                            action: 'Daily bonus',
+                            points: 'streak days',
+                            icon: 'mdi-fire', color: 'orange',
+                            note: 'First activity of the day: the streak day count itself is the bonus.'
+                        }
+                    ];
                 },
                 Overview_Stats() {
                     const stats = this.Stats || {};
                     const period = this.Period_Stats;
                     return [
                         {
+                            key: 'level',
+                            label: 'Level',
+                            value: this.Points_Level.level,
+                            sub: this.Points_Level.current + ' / ' + this.Points_Level.next + ' to next',
+                            icon: 'mdi-medal-outline',
+                            color: 'blue-grey darken-1'
+                        },
+                        {
                             key: 'points',
                             label: 'Study points',
                             value: (Number(stats.totalPoints) || 0).toLocaleString('en-US'),
-                            sub: 'Level ' + this.Points_Level.level + ' · ' + this.Points_Level.current + ' / 100',
+                            sub: 'Spendable balance',
                             icon: 'mdi-star-circle-outline',
                             color: 'amber darken-3'
                         },

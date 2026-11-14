@@ -11,18 +11,13 @@
     const FLIP_INTERVAL = 10 * 60 * 1000;
     const STORAGE_REVIEW_GUARD = 'fum-wordbook-review-guard-v1';
     const REVIEW_POINT_INTERVAL = 10 * 60 * 1000;
-    const STORAGE_WEAK_POINTS = 'fum-wordbook-weak-points-v1';
-
-    // Study points. Reviews and daily streaks are worth the most so that
-    // repeated practice and consistency outweigh simply opening cards.
+    // Study points. Reviews pay the same whether the answer is right or
+    // wrong (results are self-reported anyway), so honest daily practice
+    // is what earns points.
     const POINTS = {
         flip: 1,
-        weak: 3,
         review: 5,
-        correct: 5,
-        graduate: 20,
-        streakPerDay: 5,
-        streakCap: 30
+        graduate: 5
     };
 
     const runtimeReading = {};
@@ -90,6 +85,7 @@
             totalWrong: 0,
             totalGraduated: 0,
             totalPoints: 0,
+            totalEarned: 0,
             pages: {},
             days: {},
             streak: 0,
@@ -109,7 +105,7 @@
             if (!stats.pages || typeof stats.pages !== 'object') stats.pages = {};
             if (!stats.days || typeof stats.days !== 'object') stats.days = {};
         }
-        ['totalFlips', 'totalWeakAdded', 'totalReviews', 'totalCorrect', 'totalWrong', 'totalGraduated', 'totalPoints', 'streak', 'bestStreak', 'firstStudyAt', 'lastStudyAt'].forEach(function (_key) {
+        ['totalFlips', 'totalWeakAdded', 'totalReviews', 'totalCorrect', 'totalWrong', 'totalGraduated', 'totalPoints', 'totalEarned', 'streak', 'bestStreak', 'firstStudyAt', 'lastStudyAt'].forEach(function (_key) {
             stats[_key] = Number(stats[_key]) || 0;
         });
         // Older saves have no points yet. Derive a starting balance from the
@@ -122,6 +118,12 @@
                 total += Number(day.points) || 0;
             });
             stats.totalPoints = total;
+            stats.totalEarned = total;
+            Write_Json(STORAGE_STATS, stats);
+        } else if (saved.totalEarned === undefined) {
+            // The lifetime counter was added when points became spendable:
+            // everything owned so far counts as earned.
+            stats.totalEarned = stats.totalPoints;
             Write_Json(STORAGE_STATS, stats);
         }
         return stats;
@@ -158,9 +160,9 @@
                 _stats.streak = 1;
             }
             _stats.lastStudyDate = today;
-            // Reward continuity once per day: the longer the streak, the more
-            // the first activity of the day is worth.
-            streakBonus = Math.min(_stats.streak, POINTS.streakCap) * POINTS.streakPerDay;
+            // Reward continuity once per day: the streak day count itself
+            // is the bonus for the first activity of the day.
+            streakBonus = Number(_stats.streak) || 0;
         }
         _stats.bestStreak = Math.max(_stats.bestStreak || 0, _stats.streak || 0);
         if (!_stats.firstStudyAt) _stats.firstStudyAt = Date.now();
@@ -170,32 +172,18 @@
     function Day_Points(_day) {
         const day = _day || {};
         return (Number(day.flips) || 0) * POINTS.flip +
-            (Number(day.weakAdded) || 0) * POINTS.weak +
             (Number(day.reviews) || 0) * POINTS.review +
-            (Number(day.correct) || 0) * POINTS.correct +
             (Number(day.graduated) || 0) * POINTS.graduate;
     }
     function Add_Points(_stats, _day, _points) {
         const points = Number(_points) || 0;
         if (!points) return 0;
         _stats.totalPoints = (Number(_stats.totalPoints) || 0) + points;
+        // Lifetime counter for levels and trophies: spending points later
+        // must never lower them.
+        _stats.totalEarned = (Number(_stats.totalEarned) || 0) + points;
         if (_day) _day.points = (Number(_day.points) || 0) + points;
         return points;
-    }
-    function Award_Weak_Points(_japanese, _english) {
-        // Adding the same word over and over must not farm points, so the
-        // bonus is paid only the first time a word is bookmarked.
-        const seen = Read_Json(STORAGE_WEAK_POINTS, {});
-        const key = Make_Id(_japanese, _english);
-        if (seen[key]) return 0;
-        seen[key] = Date.now();
-        const keys = Object.keys(seen);
-        if (keys.length > 500) {
-            keys.sort(function (a, b) { return (Number(seen[a]) || 0) - (Number(seen[b]) || 0); });
-            keys.slice(0, keys.length - 500).forEach(function (_key) { delete seen[_key]; });
-        }
-        Write_Json(STORAGE_WEAK_POINTS, seen);
-        return POINTS.weak;
     }
     function Start_Of_Week(_date) {
         const d = new Date(_date.getFullYear(), _date.getMonth(), _date.getDate());
@@ -250,7 +238,7 @@
             out.correct = Number(stats.totalCorrect) || 0;
             out.wrong = Number(stats.totalWrong) || 0;
             out.graduated = Number(stats.totalGraduated) || 0;
-            out.points = Number(stats.totalPoints) || 0;
+            out.points = Number(stats.totalEarned !== undefined ? stats.totalEarned : stats.totalPoints) || 0;
             out.activeDays = Object.keys(stats.days || {}).filter(function (_key) {
                 return Is_Active_Day(stats.days[_key] || {});
             }).length;
@@ -273,15 +261,29 @@
         });
         return out;
     }
+    // Level-up requirements grow exponentially: 10 points for the first
+    // level, then doubling with every level (10, 20, 40, 80, ...).
+    const LEVEL_BASE = 10;
+    const LEVEL_GROWTH = 2;
+    function Level_Cost(_level) {
+        return LEVEL_BASE * Math.pow(LEVEL_GROWTH, Math.max(1, Number(_level) || 1) - 1);
+    }
     function Get_Level(_points) {
-        const points = Math.max(0, Number(_points) || 0);
-        const current = points % 100;
+        const points = Math.max(0, Math.floor(Number(_points) || 0));
+        let level = 1;
+        let current = points;
+        let next = Level_Cost(level);
+        while (current >= next && level < 999) {
+            current -= next;
+            level += 1;
+            next = Level_Cost(level);
+        }
         return {
-            level: Math.floor(points / 100) + 1,
+            level: level,
             current: current,
-            next: 100,
-            remaining: 100 - current,
-            progress: current
+            next: next,
+            remaining: next - current,
+            progress: Math.round((current / next) * 100)
         };
     }
     function Get_Weak() {
@@ -380,7 +382,7 @@
         const streakBonus = Touch_Study(stats);
         const day = Ensure_Day(stats, To_Date_Key());
         day.weakAdded += 1;
-        Add_Points(stats, day, Award_Weak_Points(entry.japanese, entry.english) + streakBonus);
+        Add_Points(stats, day, streakBonus);
         const page = Ensure_Page(stats, sourceUrl);
         if (page) {
             if (entry.source) page.title = entry.source;
@@ -469,11 +471,12 @@
 
         // Review points for the same word are limited to once per interval,
         // so finishing a session and instantly replaying it cannot farm points.
+        // Right or wrong pays the same: results are self-reported anyway.
         const reviewGuard = Read_Json(STORAGE_REVIEW_GUARD, {});
         const reviewKey = Make_Id(entry.japanese, entry.english);
         let reviewPoints = 0;
         if (now - (Number(reviewGuard[reviewKey]) || 0) >= REVIEW_POINT_INTERVAL) {
-            reviewPoints = POINTS.review + (_correct ? POINTS.correct : 0);
+            reviewPoints = POINTS.review;
             Object.keys(reviewGuard).forEach(function (_key) {
                 if (now - (Number(reviewGuard[_key]) || 0) >= REVIEW_POINT_INTERVAL) delete reviewGuard[_key];
             });
@@ -576,36 +579,74 @@
         if (stats.totalReviews < 20) return 0;
         return Accuracy(stats);
     }
+    function Max_Day_Value(_stats, _field) {
+        // Largest single-day record of one activity, used for
+        // "in one day" reward milestones.
+        const stats = _stats || Get_Stats();
+        let max = 0;
+        Object.keys(stats.days || {}).forEach(function (_key) {
+            const day = stats.days[_key] || {};
+            max = Math.max(max, Number(day[_field]) || 0);
+        });
+        return max;
+    }
+    function Count_Days(_stats) {
+        const stats = _stats || Get_Stats();
+        return Object.keys(stats.days || {}).length;
+    }
 
     const TROPHY_DEFS = [
         { id: 'first_flip', title: 'First Step', description: 'Flip a word card once', icon: 'mdi-sprout', tier: 'bronze', category: 'start', target: 1, value: function (s) { return s.totalFlips; } },
         { id: 'flip_25', title: 'Card Rookie', description: 'Flip word cards 25 times', icon: 'mdi-cards-outline', tier: 'bronze', category: 'start', target: 25, value: function (s) { return s.totalFlips; } },
         { id: 'flip_100', title: 'Card Master', description: 'Flip word cards 100 times', icon: 'mdi-cards', tier: 'silver', category: 'start', target: 100, value: function (s) { return s.totalFlips; } },
         { id: 'flip_300', title: 'Word Explorer', description: 'Flip word cards 300 times', icon: 'mdi-compass-outline', tier: 'gold', category: 'start', target: 300, value: function (s) { return s.totalFlips; } },
+        { id: 'flip_600', title: 'Card Legend', description: 'Flip word cards 600 times', icon: 'mdi-crown-outline', tier: 'gold', category: 'start', target: 600, value: function (s) { return s.totalFlips; } },
 
         { id: 'weak_1', title: 'First Note', description: 'Add 1 tricky word', icon: 'mdi-bookmark-plus-outline', tier: 'bronze', category: 'weak', target: 1, value: function (s) { return s.totalWeakAdded; } },
         { id: 'weak_10', title: 'Tricky Collector', description: 'Add 10 tricky words', icon: 'mdi-bookmark-multiple', tier: 'silver', category: 'weak', target: 10, value: function (s) { return s.totalWeakAdded; } },
         { id: 'weak_30', title: 'Weakness Hunter', description: 'Add 30 tricky words', icon: 'mdi-crosshairs-gps', tier: 'gold', category: 'weak', target: 30, value: function (s) { return s.totalWeakAdded; } },
+        { id: 'weak_75', title: 'Tricky Archivist', description: 'Add 75 tricky words', icon: 'mdi-bookmark-multiple-outline', tier: 'silver', category: 'weak', target: 75, value: function (s) { return s.totalWeakAdded; } },
+        { id: 'weak_150', title: 'Trickiest Collector', description: 'Add 150 tricky words', icon: 'mdi-bookshelf', tier: 'gold', category: 'weak', target: 150, value: function (s) { return s.totalWeakAdded; } },
 
         { id: 'review_1', title: 'Review Debut', description: 'Review tricky words once', icon: 'mdi-repeat', tier: 'bronze', category: 'review', target: 1, value: function (s) { return s.totalReviews; } },
         { id: 'review_25', title: 'Review Habit', description: 'Review tricky words 25 times', icon: 'mdi-calendar-check-outline', tier: 'silver', category: 'review', target: 25, value: function (s) { return s.totalReviews; } },
         { id: 'review_100', title: 'Memory Artisan', description: 'Review tricky words 100 times', icon: 'mdi-brain', tier: 'gold', category: 'review', target: 100, value: function (s) { return s.totalReviews; } },
+        { id: 'review_300', title: 'Memory Master', description: 'Review tricky words 300 times', icon: 'mdi-head-cog-outline', tier: 'gold', category: 'review', target: 300, value: function (s) { return s.totalReviews; } },
+
+        { id: 'correct_50', title: 'Sharp Eye', description: 'Answer 50 reviews correctly', icon: 'mdi-eye-check-outline', tier: 'bronze', category: 'review', target: 50, value: function (s) { return s.totalCorrect; } },
+        { id: 'correct_250', title: 'Sharpness Expert', description: 'Answer 250 reviews correctly', icon: 'mdi-check-decagram-outline', tier: 'silver', category: 'review', target: 250, value: function (s) { return s.totalCorrect; } },
+        { id: 'correct_600', title: 'Unshakeable Eye', description: 'Answer 600 reviews correctly', icon: 'mdi-check-underline', tier: 'gold', category: 'review', target: 600, value: function (s) { return s.totalCorrect; } },
 
         { id: 'graduate_1', title: 'First Graduation', description: 'Graduate 1 tricky word', icon: 'mdi-school-outline', tier: 'bronze', category: 'review', target: 1, value: function (s) { return s.totalGraduated; } },
         { id: 'graduate_10', title: 'Weak Breaker', description: 'Graduate 10 tricky words', icon: 'mdi-hammer-screwdriver', tier: 'silver', category: 'review', target: 10, value: function (s) { return s.totalGraduated; } },
         { id: 'graduate_30', title: 'Weakness Master', description: 'Graduate 30 tricky words', icon: 'mdi-crown', tier: 'gold', category: 'review', target: 30, value: function (s) { return s.totalGraduated; } },
+        { id: 'graduate_60', title: 'Weakness Scholar', description: 'Graduate 60 tricky words', icon: 'mdi-school', tier: 'silver', category: 'review', target: 60, value: function (s) { return s.totalGraduated; } },
+        { id: 'graduate_100', title: 'Professor of Mastery', description: 'Graduate 100 tricky words', icon: 'mdi-account-school', tier: 'gold', category: 'review', target: 100, value: function (s) { return s.totalGraduated; } },
 
         { id: 'streak_3', title: 'Three-Day Streak', description: 'Study 3 days in a row', icon: 'mdi-fire', tier: 'bronze', category: 'streak', target: 3, value: function (s) { return s.bestStreak; } },
         { id: 'streak_7', title: 'Week Streak', description: 'Study 7 days in a row', icon: 'mdi-calendar-week-outline', tier: 'silver', category: 'streak', target: 7, value: function (s) { return s.bestStreak; } },
         { id: 'streak_14', title: 'Two-Week Streak', description: 'Study 14 days in a row', icon: 'mdi-lightning-bolt', tier: 'gold', category: 'streak', target: 14, value: function (s) { return s.bestStreak; } },
+        { id: 'streak_30', title: 'Monthly Flame', description: 'Study 30 days in a row', icon: 'mdi-fire-alert', tier: 'gold', category: 'streak', target: 30, value: function (s) { return s.bestStreak; } },
+        { id: 'streak_60', title: 'Eternal Flame', description: 'Study 60 days in a row', icon: 'mdi-fire-circle', tier: 'gold', category: 'streak', target: 60, value: function (s) { return s.bestStreak; } },
 
         { id: 'pages_5', title: 'Page Hopper', description: 'Study on 5 word pages', icon: 'mdi-map-marker', tier: 'bronze', category: 'explore', target: 5, value: function (s) { return Count_Studied_Pages(s); } },
         { id: 'pages_15', title: 'Genre Explorer', description: 'Study on 15 word pages', icon: 'mdi-map-outline', tier: 'silver', category: 'explore', target: 15, value: function (s) { return Count_Studied_Pages(s); } },
         { id: 'pages_30', title: 'Word Traveler', description: 'Study on 30 word pages', icon: 'mdi-earth', tier: 'gold', category: 'explore', target: 30, value: function (s) { return Count_Studied_Pages(s); } },
+        { id: 'pages_50', title: 'World Wanderer', description: 'Study on 50 word pages', icon: 'mdi-earth-box', tier: 'gold', category: 'explore', target: 50, value: function (s) { return Count_Studied_Pages(s); } },
 
         { id: 'accuracy_80', title: 'Sharp Shooter', description: 'Reach 80% accuracy with 20+ reviews', icon: 'mdi-target', tier: 'gold', category: 'special', target: 80, value: function (s) { return Accuracy_Value(s); } },
-        { id: 'points_100', title: 'Point Collector', description: 'Earn 100 study points', icon: 'mdi-star-circle-outline', tier: 'silver', category: 'points', target: 100, value: function (s) { return s.totalPoints; } },
-        { id: 'points_1000', title: 'Point Master', description: 'Earn 1,000 study points', icon: 'mdi-seal', tier: 'gold', category: 'points', target: 1000, value: function (s) { return s.totalPoints; } },
+        { id: 'points_100', title: 'Point Collector', description: 'Earn 100 study points', icon: 'mdi-star-circle-outline', tier: 'silver', category: 'points', target: 100, value: function (s) { return s.totalEarned !== undefined ? s.totalEarned : s.totalPoints; } },
+        { id: 'points_1000', title: 'Point Master', description: 'Earn 1,000 study points', icon: 'mdi-seal', tier: 'gold', category: 'points', target: 1000, value: function (s) { return s.totalEarned !== undefined ? s.totalEarned : s.totalPoints; } },
+        { id: 'points_250', title: 'Point Hunter', description: 'Earn 250 study points', icon: 'mdi-star-four-points-outline', tier: 'silver', category: 'points', target: 250, value: function (s) { return s.totalEarned !== undefined ? s.totalEarned : s.totalPoints; } },
+        { id: 'points_2500', title: 'Point Champion', description: 'Earn 2,500 study points', icon: 'mdi-star-shooting', tier: 'gold', category: 'points', target: 2500, value: function (s) { return s.totalEarned !== undefined ? s.totalEarned : s.totalPoints; } },
+        { id: 'points_5000', title: 'Point Grandmaster', description: 'Earn 5,000 study points', icon: 'mdi-creation', tier: 'gold', category: 'points', target: 5000, value: function (s) { return s.totalEarned !== undefined ? s.totalEarned : s.totalPoints; } },
+
+        { id: 'day_flips_50', title: 'Card Marathon', description: 'Flip 50 cards in one day', icon: 'mdi-run-fast', tier: 'gold', category: 'special', target: 50, value: function (s) { return Max_Day_Value(s, 'flips'); } },
+        { id: 'day_reviews_20', title: 'Focused Reviewer', description: 'Complete 20 reviews in one day', icon: 'mdi-timer-outline', tier: 'gold', category: 'special', target: 20, value: function (s) { return Max_Day_Value(s, 'reviews'); } },
+        { id: 'day_graduated_5', title: 'Graduation Day', description: 'Graduate 5 words in one day', icon: 'mdi-party-popper', tier: 'gold', category: 'special', target: 5, value: function (s) { return Max_Day_Value(s, 'graduated'); } },
+        { id: 'wrong_50', title: 'Resilient Learner', description: 'Miss 50 reviews and keep going', icon: 'mdi-hand-heart', tier: 'silver', category: 'special', target: 50, value: function (s) { return s.totalWrong; } },
+        { id: 'days_30', title: 'Monthly Veteran', description: 'Record activity on 30 different days', icon: 'mdi-calendar-multiple-check', tier: 'gold', category: 'special', target: 30, value: function (s) { return Count_Days(s); } },
+        { id: 'all_rounder', title: 'Well Rounded', description: 'Flip 100+ cards, add 10+ words, review 25+ times and graduate 5+', icon: 'mdi-arm-flex', tier: 'gold', category: 'special', target: 1, value: function (s) { return (s.totalFlips >= 100 && s.totalWeakAdded >= 10 && s.totalReviews >= 25 && s.totalGraduated >= 5) ? 1 : 0; } },
         { id: 'zero_weak', title: 'Clean Slate', description: 'Graduate 5+ words and empty your tricky list', icon: 'mdi-shield-star', tier: 'gold', category: 'special', target: 1, value: function (s, weakCount) { return (s.totalGraduated >= 5 && weakCount === 0) ? 1 : 0; } }
     ];
 
