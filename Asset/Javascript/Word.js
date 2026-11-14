@@ -7,6 +7,8 @@
     const STORAGE_STATS = 'fum-wordbook-stats-v1';
     const STORAGE_TROPHIES = 'fum-wordbook-trophies-v1';
     const STORAGE_HISTORY = 'fum-wordbook-history-v1';
+    const STORAGE_FLIP_GUARD = 'fum-wordbook-flip-guard-v1';
+    const FLIP_INTERVAL = 10 * 60 * 1000;
 
     const runtimeReading = {};
 
@@ -26,6 +28,18 @@
         } catch (error) {
             // Storage can be unavailable (private mode / file://). Keep the page usable.
         }
+    }
+    const CHANGE_EVENT = 'fum-wordbook-change';
+    function Emit_Change() {
+        try {
+            window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+        } catch (error) {
+            // No CustomEvent support: pages keep the previous view until reload.
+        }
+    }
+    function Get_Flip_Guard() {
+        const guard = Read_Json(STORAGE_FLIP_GUARD, {});
+        return guard && typeof guard === 'object' ? guard : {};
     }
     function Hash_Text(_text) {
         let hash = 5381;
@@ -223,13 +237,23 @@
         }
         Save_Stats(stats);
         Add_History('weak', entry);
+        Emit_Change();
         return true;
     }
     function Remove_Weak(_id) {
         const rows = Get_Weak();
-        const next = rows.filter(function (_word) { return _word.id !== _id; });
-        if (next.length === rows.length) return false;
-        Save_Weak(next);
+        const index = rows.findIndex(function (_word) { return _word.id === _id; });
+        if (index < 0) return false;
+
+        // A word that has been reviewed at least once is graduated when its
+        // bookmark is turned off. Unreviewed words are simply removed.
+        if ((Number(rows[index].reviewCount) || 0) > 0) {
+            Graduate_Weak(_id);
+        } else {
+            rows.splice(index, 1);
+            Save_Weak(rows);
+        }
+        Emit_Change();
         return true;
     }
     function Toggle_Weak(_word) {
@@ -306,18 +330,35 @@
     }
     function Record_Flip(_word) {
         const word = _word || {};
+        const sourceUrl = word.sourceUrl || Get_Source_Url();
+        const now = Date.now();
+
+        // Same word can only add to the flip count once per interval, so
+        // rapidly opening / closing a card cannot farm points. The guard is
+        // keyed by the word itself, not by the page it appears on.
+        const guard = Get_Flip_Guard();
+        const id = Make_Id(word.japanese, word.english);
+        if (now - (Number(guard[id]) || 0) < FLIP_INTERVAL) return false;
+
+        Object.keys(guard).forEach(function (_key) {
+            if (now - (Number(guard[_key]) || 0) >= FLIP_INTERVAL) delete guard[_key];
+        });
+        guard[id] = now;
+        Write_Json(STORAGE_FLIP_GUARD, guard);
+
         const stats = Get_Stats();
         stats.totalFlips += 1;
         Touch_Study(stats);
         Ensure_Day(stats, To_Date_Key()).flips += 1;
-        const page = Ensure_Page(stats, word.sourceUrl || Get_Source_Url());
+        const page = Ensure_Page(stats, sourceUrl);
         if (page) {
             if (word.source) page.title = word.source;
             page.flips += 1;
-            page.lastVisit = Date.now();
+            page.lastVisit = now;
         }
         Save_Stats(stats);
         Add_History('flip', word);
+        return true;
     }
     function Record_Page_Visit(_word) {
         const word = _word || {};
@@ -428,6 +469,7 @@
     }
 
     window.FUM_WordBook = {
+        Change_Event: CHANGE_EVENT,
         To_Date_Key: To_Date_Key,
         Get_Stats: Get_Stats,
         Get_Weak: Get_Weak,
@@ -583,6 +625,24 @@ Vue.component('card-word-general', {
         ttsLang2: {
             type: String,
             default: 'en-US'
+        },
+        sourceUrl: {
+            type: String,
+            default: ''
+        },
+        sourceLabel: {
+            type: String,
+            default: ''
+        }
+    },
+    computed: {
+        Source_Url: function () {
+            if (this.sourceUrl) return this.sourceUrl;
+            return window.FUM_WordBook ? window.FUM_WordBook.Get_Source_Url() : '';
+        },
+        Source_Label: function () {
+            if (this.sourceLabel) return this.sourceLabel;
+            return window.FUM_WordBook ? window.FUM_WordBook.Get_Source_Label() : '';
         }
     },
     watch: {
@@ -599,7 +659,7 @@ Vue.component('card-word-general', {
     methods: {
         syncWeak: function () {
             if (!window.FUM_WordBook) return;
-            this.weak = window.FUM_WordBook.Is_Weak(this.japanese, this.english, window.FUM_WordBook.Get_Source_Url());
+            this.weak = window.FUM_WordBook.Is_Weak(this.japanese, this.english, this.Source_Url);
         },
         openAnswer: function () {
             const firstOpen = !this.show;
@@ -608,8 +668,8 @@ Vue.component('card-word-general', {
                 window.FUM_WordBook.Record_Flip({
                     japanese: this.japanese,
                     english: this.english,
-                    source: window.FUM_WordBook.Get_Source_Label(),
-                    sourceUrl: window.FUM_WordBook.Get_Source_Url()
+                    source: this.Source_Label,
+                    sourceUrl: this.Source_Url
                 });
             }
         },
@@ -619,12 +679,12 @@ Vue.component('card-word-general', {
         },
         onWeakChange: function () {
             if (!window.FUM_WordBook) return;
-            const sourceUrl = window.FUM_WordBook.Get_Source_Url();
+            const sourceUrl = this.Source_Url;
             const active = window.FUM_WordBook.Toggle_Weak({
                 japanese: this.japanese,
                 english: this.english,
                 reading: this.reading || window.FUM_WordBook.Lookup_Reading(this.japanese, this.english),
-                source: window.FUM_WordBook.Get_Source_Label(),
+                source: this.Source_Label,
                 sourceUrl: sourceUrl
             });
             this.weak = active;

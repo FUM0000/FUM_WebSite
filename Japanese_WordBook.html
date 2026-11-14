@@ -99,20 +99,13 @@
             opacity: 0.9;
         }
 
-        .wordbook-hero__actions {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 18px;
-        }
-
         .wordbook-hero__badge {
             position: relative;
             z-index: 1;
             flex-shrink: 0;
-            width: 150px;
+            width: 168px;
             min-height: 132px;
+            padding: 16px 12px 14px;
             border-radius: 18px;
             background: rgba(255, 255, 255, 0.13);
             border: 1px solid rgba(255, 255, 255, 0.22);
@@ -121,6 +114,11 @@
             align-items: center;
             justify-content: center;
             text-align: center;
+        }
+
+        .wordbook-hero__review {
+            margin-top: 12px;
+            white-space: nowrap;
         }
 
         .wordbook-hero__badge-value {
@@ -416,64 +414,6 @@
             color: #78909c;
         }
 
-        .wordbook-word {
-            height: 100%;
-            border-radius: 14px !important;
-            padding: 15px 16px 8px;
-            transition: box-shadow 0.18s ease, transform 0.18s ease;
-        }
-
-        .wordbook-word:hover {
-            box-shadow: 0 8px 22px rgba(38, 50, 56, 0.10) !important;
-            transform: translateY(-1px);
-        }
-
-        .wordbook-word__top {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .wordbook-word__jp {
-            font-size: 25px;
-            line-height: 1.25;
-            font-weight: 800;
-            color: #263238;
-            word-break: break-word;
-        }
-
-        .wordbook-word__reading {
-            margin-top: 2px;
-            font-size: 12px;
-            color: #1e88e5;
-            word-break: break-word;
-        }
-
-        .wordbook-word__en {
-            margin-top: 6px;
-            font-size: 14px;
-            line-height: 1.55;
-            color: #455a64;
-            word-break: break-word;
-        }
-
-        .wordbook-word__meta {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 6px 9px;
-            margin-top: 10px;
-            font-size: 10px;
-            color: #90a4ae;
-        }
-
-        .wordbook-word__actions {
-            display: flex;
-            align-items: center;
-            margin-top: 4px;
-        }
-
-        .wordbook-review-intro,
         .wordbook-review-summary {
             max-width: 620px;
             margin: 24px auto;
@@ -484,7 +424,6 @@
             background: linear-gradient(180deg, #f7fbfb 0%, #ffffff 100%);
         }
 
-        .wordbook-review-intro h3,
         .wordbook-review-summary h3 {
             margin: 10px 0 0;
             font-size: 24px;
@@ -492,7 +431,6 @@
             color: #263238;
         }
 
-        .wordbook-review-intro p,
         .wordbook-review-summary p {
             margin: 7px 0 0;
             font-size: 13px;
@@ -712,8 +650,34 @@
         }
 
         @media (max-width: 960px) {
+            .wordbook-hero {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
             .wordbook-hero__badge {
-                display: none;
+                width: 100%;
+                min-height: 0;
+                padding: 12px 16px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 10px;
+                text-align: left;
+            }
+
+            .wordbook-hero__badge-value,
+            .wordbook-hero__badge-label {
+                margin-top: 0;
+            }
+
+            .wordbook-hero__badge-value {
+                font-size: 26px;
+            }
+
+            .wordbook-hero__review {
+                margin-top: 0;
+                margin-left: auto;
             }
         }
 
@@ -764,17 +728,15 @@
                                 <div class="wordbook-hero__eyebrow">Japanese Learning</div>
                                 <h2>My Word Book</h2>
                                 <p>Collect tricky words, review them with cards, and keep your study record and trophies in one place.</p>
-                                <div class="wordbook-hero__actions">
-                                    <v-btn color="white" class="primary--text" rounded @click="Start_Review(Weak_Words)">
-                                        <v-icon left small>mdi-play</v-icon>Start reviewing
-                                    </v-btn>
-                                    <v-btn text color="white" @click="Active_Tab = 'weak'">View tricky words</v-btn>
-                                </div>
                             </div>
                             <div class="wordbook-hero__badge">
                                 <v-icon size="44">mdi-notebook-outline</v-icon>
                                 <div class="wordbook-hero__badge-value">{{ Weak_Words.length }}</div>
                                 <div class="wordbook-hero__badge-label">Tricky words</div>
+                                <v-btn small rounded color="white" class="primary--text wordbook-hero__review"
+                                    :disabled="!Weak_Words.length" @click="Start_Review(Weak_Words)">
+                                    <v-icon left small>mdi-play</v-icon>Quick review
+                                </v-btn>
                             </div>
                         </section>
 
@@ -794,7 +756,7 @@
                         <v-card outlined class="mt-4" style="border-radius: 18px; overflow: hidden;">
                             <div class="wordbook-tabs">
                                 <button v-for="tab in Tabs" :key="tab.value" type="button"
-                                    :class="['wordbook-tab', { active: Active_Tab === tab.value }]"
+                                    :class="['wordbook-tab', { active: Selected_Tab === tab.value }]"
                                     @click="Active_Tab = tab.value">
                                     <v-icon small>{{ tab.icon }}</v-icon>
                                     <span>{{ tab.label }}</span>
@@ -932,9 +894,8 @@
                                         </div>
                                         <div class="wordbook-toolbar__actions">
                                             <v-btn small color="primary" :disabled="!Filtered_Weak.length" @click="Start_Review(Filtered_Weak)">
-                                                Review shown
+                                                Review this page
                                             </v-btn>
-                                            <v-btn small outlined color="primary" @click="Active_Tab = 'review'">Review menu</v-btn>
                                         </div>
                                     </div>
 
@@ -967,29 +928,16 @@
                                     </div>
 
                                     <v-row v-else dense class="mt-2">
-                                        <v-col v-for="word in Filtered_Weak" :key="word.id" cols="12" md="6">
-                                            <v-card outlined class="wordbook-word">
-                                                <div class="wordbook-word__top">
-                                                    <div class="flex-grow-1">
-                                                        <div class="wordbook-word__jp">{{ word.japanese }}</div>
-                                                        <div v-if="word.reading" class="wordbook-word__reading">{{ word.reading }}</div>
-                                                    </div>
-                                                    <v-btn icon small color="primary" @click="Speak(word.japanese, 'ja-JP')" title="Listen in Japanese">
-                                                        <v-icon small>mdi-volume-high</v-icon>
-                                                    </v-btn>
-                                                </div>
-                                                <div class="wordbook-word__en">{{ word.english }}</div>
-                                                <div class="wordbook-word__meta">
-                                                    <v-chip x-small label color="blue-grey lighten-4" text-color="blue-grey darken-3">{{ word.source }}</v-chip>
-                                                    <span>Reviewed {{ Plural(word.reviewCount || 0, 'time') }}</span>
-                                                    <span v-if="word.wrongCount">· {{ word.wrongCount }} missed</span>
-                                                </div>
-                                                <div class="wordbook-word__actions">
-                                                    <v-btn small text color="teal darken-1" @click="Start_Single_Review(word)">Review this word</v-btn>
-                                                    <v-spacer></v-spacer>
-                                                    <v-btn small text color="grey darken-1" @click="Ask_Delete(word)">Delete</v-btn>
-                                                </div>
-                                            </v-card>
+                                        <v-col v-for="word in Filtered_Weak" :key="word.id" cols="12" md="6" lg="4">
+                                            <card-word-general :japanese="word.japanese" :reading="word.reading"
+                                                :english="word.english" :source-url="word.sourceUrl"
+                                                :source-label="word.source">
+                                                <template v-slot:first>
+                                                    {{ word.japanese }}<br>
+                                                    <font size="5">{{ word.reading }}</font>
+                                                </template>
+                                                <template v-slot:second>{{ word.english }}</template>
+                                            </card-word-general>
                                         </v-col>
                                     </v-row>
 
@@ -1011,28 +959,9 @@
                                     </v-expansion-panels>
                                 </div>
 
-                                <!-- Review -->
+                                <!-- Review session -->
                                 <div v-else-if="Active_Tab === 'review'">
-                                    <div v-if="!Review_Active" class="wordbook-review-intro">
-                                        <v-icon size="46" color="teal">mdi-repeat</v-icon>
-                                        <h3>Review Tricky Words</h3>
-                                        <p>
-                                            You have {{ Plural(Weak_Words.length, 'tricky word') }} right now.<br>
-                                            Reveal the answer, then choose "Got it!" to graduate the word from your list.
-                                        </p>
-                                        <v-switch v-model="Review_Shuffle" label="Shuffle cards" color="teal"
-                                            class="mt-4 d-inline-flex" hide-details></v-switch>
-                                        <div class="mt-3">
-                                            <v-btn large color="primary" :disabled="!Weak_Words.length" @click="Start_Review(Weak_Words)">
-                                                Start review
-                                            </v-btn>
-                                        </div>
-                                        <div v-if="!Weak_Words.length" class="text-caption grey--text text--darken-1 mt-3">
-                                            Add tricky words to start reviewing.
-                                        </div>
-                                    </div>
-
-                                    <div v-else-if="Review_Finished" class="wordbook-review-summary">
+                                    <div v-if="Review_Finished" class="wordbook-review-summary">
                                         <v-icon size="58" color="amber darken-3">mdi-trophy-outline</v-icon>
                                         <h3>Review Complete!</h3>
                                         <p>Here is how you did.</p>
@@ -1042,8 +971,8 @@
                                                 <div class="wordbook-review-stat__label">Answered</div>
                                             </div>
                                             <div class="wordbook-review-stat">
-                                                <div class="wordbook-review-stat__value">{{ Review_Graduated }}</div>
-                                                <div class="wordbook-review-stat__label">Graduated</div>
+                                                <div class="wordbook-review-stat__value">{{ Review_Correct }}</div>
+                                                <div class="wordbook-review-stat__label">Correct</div>
                                             </div>
                                             <div class="wordbook-review-stat">
                                                 <div class="wordbook-review-stat__value">{{ Review_Accuracy }}%</div>
@@ -1102,7 +1031,7 @@
                                         </v-card>
 
                                         <div class="text-caption grey--text text--darken-1 text-center mt-3">
-                                            "Got it!" graduates the word from your tricky list.
+                                            "Got it!" only records the result. Words stay on your tricky list.
                                         </div>
                                     </div>
                                 </div>
@@ -1177,21 +1106,6 @@
                 </template>
             </v-snackbar>
 
-            <v-dialog v-model="Delete_Dialog" max-width="420">
-                <v-card>
-                    <v-card-title class="text-h6">Remove from Tricky Words</v-card-title>
-                    <v-card-text>
-                        Remove <span class="font-weight-bold">{{ Delete_Target ? Delete_Target.japanese : '' }}</span>
-                        from your tricky list?
-                    </v-card-text>
-                    <v-card-actions>
-                        <v-spacer></v-spacer>
-                        <v-btn text @click="Delete_Dialog = false">Cancel</v-btn>
-                        <v-btn text color="error" @click="Confirm_Delete">Remove</v-btn>
-                    </v-card-actions>
-                </v-card>
-            </v-dialog>
-
         </template>
     </v-app>
 
@@ -1219,22 +1133,17 @@
                 Sort_Mode: 'newest',
                 Trophy_Filter: 'all',
                 Review_Shuffle: true,
-                Review_Active: false,
                 Review_Finished: false,
                 Review_Queue: [],
                 Review_Index: 0,
                 Review_Revealed: false,
                 Review_Answered: 0,
                 Review_Correct: 0,
-                Review_Graduated: 0,
-                Delete_Dialog: false,
-                Delete_Target: null,
                 Snackbar: false,
                 Snackbar_Text: '',
                 Tabs: [
                     { value: 'overview', label: 'Overview', icon: 'mdi-view-dashboard-outline' },
                     { value: 'weak', label: 'Tricky Words', icon: 'mdi-bookmark-multiple-outline' },
-                    { value: 'review', label: 'Review', icon: 'mdi-repeat' },
                     { value: 'trophies', label: 'Trophies', icon: 'mdi-trophy-outline' }
                 ],
                 Sort_Options: [
@@ -1245,6 +1154,11 @@
                 ]
             },
             computed: {
+                Selected_Tab() {
+                    // The review session renders in the same area as the tabs,
+                    // so keep "Tricky Words" highlighted while reviewing.
+                    return this.Active_Tab === 'review' ? 'weak' : this.Active_Tab;
+                },
                 Today() {
                     return window.FUM_WordBook.Get_Today(this.Stats);
                 },
@@ -1410,8 +1324,14 @@
             },
             created() {
                 this.Refresh_All(false);
+                if (window.FUM_WordBook) {
+                    window.addEventListener(window.FUM_WordBook.Change_Event, this.On_Store_Change);
+                }
             },
             beforeDestroy() {
+                if (window.FUM_WordBook) {
+                    window.removeEventListener(window.FUM_WordBook.Change_Event, this.On_Store_Change);
+                }
                 if (window.speechSynthesis) window.speechSynthesis.cancel();
             },
             methods: {
@@ -1478,13 +1398,8 @@
                     this.Review_Revealed = false;
                     this.Review_Answered = 0;
                     this.Review_Correct = 0;
-                    this.Review_Graduated = 0;
-                    this.Review_Active = true;
                     this.Review_Finished = false;
                     this.Active_Tab = 'review';
-                },
-                Start_Single_Review(word) {
-                    this.Start_Review([word]);
                 },
                 Answer_Review(correct) {
                     const word = this.Current_Review_Word;
@@ -1492,10 +1407,7 @@
 
                     window.FUM_WordBook.Record_Review(word.id, !!correct);
                     this.Review_Answered += 1;
-                    if (correct) {
-                        this.Review_Correct += 1;
-                        if (window.FUM_WordBook.Graduate_Weak(word.id)) this.Review_Graduated += 1;
-                    }
+                    if (correct) this.Review_Correct += 1;
                     this.Refresh_All(true);
 
                     if (this.Review_Index + 1 >= this.Review_Queue.length) {
@@ -1509,21 +1421,11 @@
                     this.Review_Finished = true;
                 },
                 Restart_Review() {
-                    this.Review_Active = false;
                     this.Review_Finished = false;
                     this.Start_Review(this.Weak_Words);
                 },
-                Ask_Delete(word) {
-                    this.Delete_Target = word;
-                    this.Delete_Dialog = true;
-                },
-                Confirm_Delete() {
-                    if (!this.Delete_Target) return;
-                    window.FUM_WordBook.Remove_Weak(this.Delete_Target.id);
-                    this.Delete_Dialog = false;
-                    this.Delete_Target = null;
-                    this.Refresh_All(false);
-                    this.Notify('Removed from your tricky list.');
+                On_Store_Change() {
+                    this.Refresh_All(true);
                 },
                 Speak(text, lang) {
                     if (!text || !window.speechSynthesis) return;
